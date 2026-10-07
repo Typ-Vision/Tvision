@@ -4,6 +4,10 @@
 #include <QCheckBox>
 #include <QDir>
 #include <QDoubleSpinBox>
+#include <QSpinBox>
+#include <QLockFile>
+#include <QJsonArray>
+#include <QTableWidget>
 #include <QFile>
 #include <QLineEdit>
 #include <QListWidget>
@@ -14,7 +18,53 @@
 #include <QComboBox>
 #include <QElapsedTimer>
 #include <QThread>
+#include <QSpinBox>
 namespace visionflow {
+bool MainWindow::verifyRuntime(const QString& artifacts) {
+    auto check=[](bool ok,const char* text){if(!ok)throw std::runtime_error(text);};
+    auto wait=[&]{QElapsedTimer timer;timer.start();while(runtimeJobs_.busy() && timer.elapsed()<10000){QApplication::processEvents();QThread::msleep(1);}check(!runtimeJobs_.busy(),"Runtime worker completed");};
+    service_.setCalibrationSetup("fixture-lens","fixture-plane");
+    const auto frame=RuntimeService::probe(*service_.activeRecipe(),QDir(artifacts).absolutePath(),{});
+    CalibrationWorkflow::bind(service_,frame,service_.path()+".calibrations.json","fixture-scale");
+    QString measurement;for(auto t:service_.tools())if(t.kind=="measurement"){measurement=t.id;t.parameters["upperMm"]=9.98;service_.updateTool(t);}service_.save();refreshWorkspace();selectPage("runtime");
+    check(!runtimeResult_ && !runtimeViewer_->hasImage() && !runtimeSummary_->text().contains("PASS"),"Runtime initial no invented result");
+    findChild<QPushButton*>("runtime_validate")->click();check(runtimeJobs_.busy(),"Runtime validation acquisition worker");check(!close(),"Runtime close guard");wait();check(runtime_->validation().has_value(),"Runtime validation accepted");workspaceError_->hide();
+    check(service_.activeRecipe()->status==RecipeStatus::Draft,"validation separate from recipe disk status");findChild<QPushButton*>("runtime_activate")->click();check(runtime_->active()!=nullptr && !runtimeResult_,"Runtime activate no fabricated PASS");const auto first=runtime_->active()->validation().id;
+    findChild<QPushButton*>("runtime_run")->click();wait();check(runtimeResult_ && runtimeResult_->state==ExecutionState::Done && runtimeSummary_->text().contains("9.975000 mm • PASS"),"Runtime real calibrated PASS");runtimeTools_->setCurrentIndex(runtimeTools_->findData(measurement));runtimeViewer_->fitImage();QApplication::processEvents();grab().save(QDir(artifacts).filePath("runtime-pass.png"));
+    resize(850,600);QApplication::processEvents();runtimeViewer_->fitImage();QApplication::processEvents();check(width()==850 && height()==600,"populated Runtime minimum size");grab().save(QDir(artifacts).filePath("runtime-pass-small.png"));resize(1400,900);QApplication::processEvents();runtimeViewer_->fitImage();
+    // A draft tolerance edit cannot alter the active worker's immutable snapshot.
+    findChild<QPushButton*>("runtime_run")->click();for(auto t:service_.tools())if(t.id==measurement){t.parameters["upperMm"]=9.9749;service_.updateTool(t);}refreshWorkspace();wait();check(runtimeResult_ && runtimeSummary_->text().contains("PASS") && runtime_->active()->validation().id==first,"draft edit preserves active result");
+    selectPage("runtime");findChild<QPushButton*>("runtime_validate")->click();wait();findChild<QPushButton*>("runtime_activate")->click();check(runtime_->active()->validation().id!=first && !runtimeResult_,"new activation clears old result");
+    findChild<QPushButton*>("runtime_run")->click();wait();check(runtimeResult_ && runtimeResult_->state==ExecutionState::Done && runtimeSummary_->text().contains("9.975000 mm • FAIL"),"Runtime raw tolerance FAIL");runtimeTools_->setCurrentIndex(runtimeTools_->findData(measurement));runtimeViewer_->fitImage();QApplication::processEvents();grab().save(QDir(artifacts).filePath("runtime-fail.png"));
+    findChild<QPushButton*>("runtime_run")->click();findChild<QPushButton*>("runtime_stop")->click();wait();check(runtimeResult_ && runtimeResult_->state==ExecutionState::Skipped && !runtimeSummary_->text().contains("mm •") && !runtimeViewer_->hasImage(),"Runtime Stop clears image and decision");
+    findChild<QPushButton*>("runtime_run")->click();QLockFile lock(service_.path()+".production/archive.lock");lock.setStaleLockTime(0);check(lock.tryLock(),"UI log lock fixture");wait();check(runtimePending_ && runtime_->busy() && !runtimeResult_ && !findChild<QPushButton*>("runtime_run")->isEnabled() && !runtimeSummary_->text().contains("mm •"),"UI failed log suppresses result blocks next cycle");QApplication::processEvents();grab().save(QDir(artifacts).filePath("runtime-record-pending.png"));lock.unlock();findChild<QPushButton*>("runtime_retry")->click();check(!runtimePending_ && !runtime_->busy() && runtimeResult_ && runtimeSummary_->text().contains("FAIL"),"UI retry same result accepted");
+    runtimeHistory_->setCurrentIndex(runtimeHistory_->findData(first));findChild<QPushButton*>("runtime_rollback")->click();check(runtime_->active()->validation().id==first && !runtimeResult_,"UI explicit rollback at cycle boundary");
+    selectPage("logs");check(logTable_->rowCount()>=5,"persistent Logs rows");logTable_->selectRow(0);QApplication::processEvents();grab().save(QDir(artifacts).filePath("runtime-logs.png"));
+    selectPage("runtime");service_.setCalibrationSetup("physical lens changed","fixture-plane");refreshWorkspace();findChild<QPushButton*>("runtime_run")->click();check(!runtimeJobs_.busy() && !runtimeResult_ && runtimeSummary_->text().contains("kurulum değişti"),"active setup invalidation blocks acquisition");QApplication::processEvents();grab().save(QDir(artifacts).filePath("runtime-invalid.png"));
+    RuntimeService restored(service_.path()+".production",service_.path()+".calibrations.json",RuntimeIdentity::localEngineer());check(!restored.active() && restored.records().size()>=5,"restart archive not activation permit");
+    resize(850,600);QApplication::processEvents();check(width()==850 && height()==600,"Runtime minimum size");grab().save(QDir(artifacts).filePath("runtime-small.png"));resize(1400,900);QApplication::processEvents();service_.save();return true;
+}
+bool MainWindow::verifyWebcam(const QString& artifacts) {
+    const auto recipe=service_.createRecipe("Webcam smoke","",ApplicationType::Measurement,"webcam");
+    selectPage("editor");refreshWorkspace();
+    for(int i=0;i<toolbox_->count();++i)if(toolbox_->item(i)->data(Qt::UserRole)=="webcam")toolbox_->setCurrentRow(i);
+    findChild<QPushButton*>("addTool")->click();
+    auto* index=propertiesBody_->findChild<QSpinBox*>("webcamIndex");
+    auto* timeout=propertiesBody_->findChild<QSpinBox*>("webcamTimeout");
+    if(!index || !timeout)return false;
+    index->setValue(1);timeout->setValue(10000);index->setValue(0);
+    const auto source=selectedToolId_;
+    service_.save();service_.openProject(service_.path());service_.selectRecipe(recipe);refreshWorkspace();selectTool(source);
+    if(service_.tools().size()!=1 || service_.tools().first().parameters["timeoutMs"]!=10000 || editorSession_.frame || editorSession_.cycle)return false;
+    QApplication::processEvents();grab().save(QDir(artifacts).filePath("webcam-properties.png"));
+    if(QCoreApplication::arguments().contains("--webcam-capture")) {
+        runFlow();QElapsedTimer timer;timer.start();
+        while(editorSession_.busy(SessionJob::Execution) && timer.elapsed()<15000){QApplication::processEvents();QThread::msleep(1);}
+        if(editorSession_.busy(SessionJob::Execution) || !editorSession_.cycle || editorSession_.cycle->state!=ExecutionState::Done || !editorSession_.frame)return false;
+        QApplication::processEvents();grab().save(QDir(artifacts).filePath("webcam-capture.png"));
+    }
+    return true;
+}
 bool MainWindow::verifyEditor(const QString& artifacts) {
     if (!service_.activeRecipe()) return false;
     const QString recipeId=service_.activeRecipe()->id;
@@ -76,6 +126,38 @@ bool MainWindow::verifyEditor(const QString& artifacts) {
     findChild<QPushButton*>("reloadImage")->click();
     if (!imageViewer_->hasImage() || !workspaceError_->isHidden() || service_.dirty()) return false;
     QApplication::processEvents(); grab().save(QDir(artifacts).filePath("step3-editor.png")); return true;
+}
+bool MainWindow::verifyMeasurement(const QString& artifacts) {
+    auto check=[](bool ok,const char* text){if(!ok)throw std::runtime_error(text);};
+    check(smokeMode_ && service_.path().startsWith(QDir(artifacts).absolutePath()),"isolated calibration fixture");
+    QFile::remove(service_.path()+".calibrations.json");
+    const auto recipeId=service_.createRecipe("Calibrated measurement","",ApplicationType::Measurement,"file");refreshWorkspace();selectPage("editor");
+    QImage fixture(1000,600,QImage::Format_Grayscale8);fixture.fill(0);{QPainter p(&fixture);p.fillRect(QRect(200,100,400,300),Qt::white);}const auto imagePath=QDir(artifacts).filePath("measurement-input.png");check(fixture.save(imagePath),"measurement image");check(loadEditorImage(imagePath),"measurement source");
+    const auto source=selectedToolId_,left=service_.addTool("edge"),right=service_.addTool("edge"),measurement=service_.addTool("measurement");
+    for(auto t:service_.tools())if(t.id==right){t.parameters["direction"]="right_to_left";service_.updateTool(t);}refreshWorkspace();
+    auto bind=[&](QString target,QString port,QString upstream,QString output){selectTool(target);auto* c=propertiesBody_->findChild<QComboBox*>("input_"+port);check(c!=nullptr,"measurement input");const auto i=c->findData(upstream+"/"+output);check(i>0,"measurement compatible input");c->setCurrentIndex(i);};
+    bind(left,"image",source,"image");bind(right,"image",source,"image");bind(measurement,"p1",left,"point");bind(measurement,"p2",right,"point");
+    selectTool(measurement);propertiesBody_->findChild<QDoubleSpinBox*>("lowerMm")->setValue(9.97);propertiesBody_->findChild<QDoubleSpinBox*>("upperMm")->setValue(9.98);check(applyToolProperties(),"measurement limits");
+    auto wait=[&]{QElapsedTimer t;t.start();while(editorSession_.busy() && t.elapsed()<15000){QApplication::processEvents();QThread::msleep(1);}check(!editorSession_.busy(),"calibration/UI worker timeout");};
+    auto result=[&]{check(editorSession_.cycle.has_value(),"measurement cycle");for(const auto& t:editorSession_.cycle->tools)if(t.toolId==measurement)return t;throw std::runtime_error("measurement result missing");};
+    runFlow();wait();check(result().errorCode=="CALIBRATION_INVALID" && result().outputs.isEmpty(),"UI unbound error without value");
+    selectPage("calibration");calibrationLens_->setText("fixture-lens");calibrationPlane_->setText("fixture-plane");findChild<QPushButton*>("calibrationSetup")->click();findChild<QPushButton*>("calibrationAcquire")->click();wait();
+    calibrationId_->setText("fixture-scale");
+    for(int r=0;r<3;++r)findChild<QPushButton*>("calibrationAddSample")->click();
+    const QVector<QStringList> rows{{"teach","100","100","500","100","10"},{"holdout-x","200","50","800","50","15"},{"holdout-y","300","20","300","520","12.5"}};
+    for(int r=0;r<rows.size();++r)for(int c=0;c<6;++c)calibrationSamples_->item(r,c)->setText(rows[r][c]);
+    findChild<QPushButton*>("calibration_calculate")->click();wait();check(calibrationCandidate_ && !calibrationCandidate_->validated() && !calibrationStatus_->text().contains("RMS"),"UI calculate candidate without invented validation error");
+    findChild<QPushButton*>("calibration_validate")->click();wait();check(calibrationCandidate_ && calibrationCandidate_->validated(),"UI independent holdout accepted");
+    QApplication::processEvents();grab().save(QDir(artifacts).filePath("calibration-validated.png"));
+    resize(850,600);QApplication::processEvents();check(width()==850 && height()==600,"calibration minimum size preserved");grab().save(QDir(artifacts).filePath("calibration-small.png"));resize(1400,900);QApplication::processEvents();
+    findChild<QPushButton*>("calibration_save")->click();wait();check(service_.activeRecipe()->calibrationBinding && service_.dirty(),"UI save/bind DRAFT");saveProject();
+    service_.openProject(service_.path());service_.selectRecipe(recipeId);refreshWorkspace();selectPage("calibration");findChild<QPushButton*>("calibration_load")->click();wait();check(calibrationSamples_->rowCount()==3 && !calibrationCandidate_,"UI saved evidence reopened without automatic acceptance");
+    selectPage("editor");selectTool(measurement);runFlow();wait();check(result().decision==PartDecision::Pass && std::abs(std::get<double>(result().outputs["value"].data)-9.975)<1e-12,"UI calibrated actual Edge PASS");
+    check(service_.activeRecipe()->status==RecipeStatus::Draft,"mm execution is not recipe validation");imageViewer_->fitImage();QApplication::processEvents();grab().save(QDir(artifacts).filePath("measurement-pass.png"));
+    propertiesBody_->findChild<QDoubleSpinBox*>("upperMm")->setValue(9.9749);check(applyToolProperties(),"UI raw fail boundary");runFlow();wait();check(result().state==ExecutionState::Done && result().decision==PartDecision::Fail,"UI FAIL separate from DONE");QApplication::processEvents();grab().save(QDir(artifacts).filePath("measurement-fail.png"));
+    runFlow();findChild<QPushButton*>("stopFlow")->click();wait();check(editorSession_.cycle->state==ExecutionState::Skipped && result().outputs.isEmpty() && result().decision==PartDecision::NotEvaluated,"UI stop clears decision");
+    selectPage("calibration");calibrationLens_->setText("changed-lens");findChild<QPushButton*>("calibrationSetup")->click();check(!service_.activeRecipe()->calibrationBinding,"UI installation invalidation");selectPage("editor");runFlow();wait();check(result().errorCode=="CALIBRATION_INVALID" && result().outputs.isEmpty() && !matchInfo_->text().contains("9.975"),"UI changed calibration suppresses previous mm output");QApplication::processEvents();grab().save(QDir(artifacts).filePath("measurement-invalid.png"));
+    saveProject();return true;
 }
 bool MainWindow::verifyExecution(const QString& artifacts) {
     auto check=[](bool ok,const char* message){if(!ok)throw std::runtime_error(message);};

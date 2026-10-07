@@ -29,7 +29,7 @@ QWidget* MainWindow::makeCameraManager() {
     cameraTable_=new QTableWidget(0,6);cameraTable_->setObjectName("cameraDevices");cameraTable_->setHorizontalHeaderLabels({"Marka","Model","Seri no","Transport","Interface ID","Device ID"});
     cameraTable_->setSelectionBehavior(QAbstractItemView::SelectRows);cameraTable_->setSelectionMode(QAbstractItemView::SingleSelection);cameraTable_->setEditTriggers(QAbstractItemView::NoEditTriggers);cameraTable_->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);cameraTable_->horizontalHeader()->setStretchLastSection(true);layout->addWidget(cameraTable_,1);
     auto* check=new QPushButton("Seçili cihazı salt okunur aç / kapat");check->setObjectName("cameraCheck");layout->addWidget(check);
-    connect(choose,&QPushButton::clicked,this,[this]{if(cameraSession_.busy())return;const auto file=QFileDialog::getOpenFileName(this,"Windows x64 GenTL producer",{},"GenTL producer (*.cti)");if(!file.isEmpty())cameraProducer_->setText(file);});
+    connect(choose,&QPushButton::clicked,this,[this]{if(cameraSession_.busy() || runtimeJobs_.busy() || (runtime_ && runtime_->busy()))return;const auto file=QFileDialog::getOpenFileName(this,"Windows x64 GenTL producer",{},"GenTL producer (*.cti)");if(!file.isEmpty())cameraProducer_->setText(file);});
     connect(scan,&QPushButton::clicked,this,&MainWindow::discoverCameras);
     connect(stop,&QPushButton::clicked,this,[this]{if(cameraSession_.token(SessionJob::Discovery) && cameraSession_.busy()){cameraSession_.stop(SessionJob::Discovery);cameraStatus_->setText("İptal istendi; producer çağrısının bitmesi bekleniyor.");}});
     connect(check,&QPushButton::clicked,this,&MainWindow::checkCameraConnection);
@@ -47,7 +47,7 @@ void MainWindow::updateCameraControls() {
     cameraProducer_->setEnabled(!cameraSession_.busy());
 }
 void MainWindow::discoverCameras() {
-    if(cameraSession_.busy())return;
+    if(cameraSession_.busy() || runtimeJobs_.busy() || (runtime_ && runtime_->busy()))return;
     auto* watcher=cameraSession_.watch<CameraDiscovery>(this,SessionJob::Discovery);cameraDevices_.clear();cameraTable_->setRowCount(0);cameraStatus_->setText("GenTL cihazları aranıyor…");
     updateCameraControls();
     const auto file=cameraProducer_->text().trimmed();const auto cancel=cameraSession_.token(SessionJob::Discovery);
@@ -62,7 +62,7 @@ void MainWindow::discoverCameras() {
     cameraSession_.launch(watcher,[file,cancel]{return CameraService{}.discover(file.isEmpty() ? QStringList{} : QStringList{file},1000,cancel);});
 }
 void MainWindow::checkCameraConnection() {
-    if(cameraSession_.busy())return;
+    if(cameraSession_.busy() || runtimeJobs_.busy() || (runtime_ && runtime_->busy()))return;
     const auto row=cameraTable_->currentRow();if(row<0 || row>=cameraDevices_.size()){cameraStatus_->setText("Bağlantı kontrolü için bir cihaz seçin.");return;}
     const auto device=cameraDevices_[row];auto* watcher=cameraSession_.watch<QString>(this,SessionJob::Connection);cameraStatus_->setText("Cihaz salt okunur açılıp kapatılıyor…");
     updateCameraControls();

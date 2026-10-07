@@ -12,7 +12,7 @@
 #include <stdexcept>
 namespace visionflow {
 QString executionStateName(ExecutionState s) {switch(s){case ExecutionState::Ready:return "READY";case ExecutionState::Busy:return "BUSY";case ExecutionState::Done:return "DONE";case ExecutionState::Error:return "ERROR";case ExecutionState::Skipped:return "SKIPPED";}return {};}
-CycleResult ExecutionService::run(const QJsonObject& definition,const QString& directory,const QString& recipeId,const QByteArray& configId,const std::shared_ptr<std::atomic_bool>& cancel,const QString& targetTool,const std::optional<ImageFrame>& frameSnapshot) const {
+CycleResult ExecutionService::run(const QJsonObject& definition,const QString& directory,const QString& recipeId,const QByteArray& configId,const std::shared_ptr<std::atomic_bool>& cancel,const QString& targetTool,const std::optional<ImageFrame>& frameSnapshot,const CalibrationResolver& resolver) const {
     CycleResult cycle;cycle.cycleId=QUuid::createUuid().toString(QUuid::WithoutBraces);cycle.frameId=QUuid::createUuid().toString(QUuid::WithoutBraces);cycle.recipeId=recipeId;cycle.configId=configId;
     QElapsedTimer total;total.start();
     try {
@@ -29,7 +29,7 @@ CycleResult ExecutionService::run(const QJsonObject& definition,const QString& d
         }
         auto graph=validateGraph(tools,connections);
         if(!graph.valid())throw std::runtime_error(graph.errors.join("\n").toUtf8().constData());
-        cycle.state=ExecutionState::Busy;QMap<QString,ToolResult> completed;bool error=false,stopped=false;
+        cycle.state=ExecutionState::Busy;QMap<QString,ToolResult> completed;bool error=false,stopped=false;MeasurementExecutionContext measurement;
         for(const auto& id:graph.order) {
             const auto t=*std::find_if(tools.begin(),tools.end(),[&](const auto& t){return t.id==id;});ToolResult r;r.toolId=id;QElapsedTimer timer;timer.start();
             if(cancel && cancel->load())stopped=true;
@@ -68,7 +68,12 @@ CycleResult ExecutionService::run(const QJsonObject& definition,const QString& d
                         if(metadata.coordinateSystemId.isEmpty())metadata.coordinateSystemId=t.id+"/image";
                         if(!metadata.completedAtUtc.isValid())metadata.completedAtUtc=QDateTime::currentDateTimeUtc();
                         r.state=ExecutionState::Done;r.outputs["image"]={outputPorts(t.kind).first(),frameSnapshot->withMetadata(metadata),true,cycle.frameId,cycle.cycleId,metadata};
-                    } else r=ToolExecutors::get(t.kind)(t,inputs,directory,cycle.frameId,cycle.cycleId,cancel);
+                    } else r=ToolExecutors::get(t.kind,measurement)(t,inputs,directory,cycle.frameId,cycle.cycleId,cancel);
+                    if(r.state==ExecutionState::Error)error=true;
+                    if(ToolRegistry::get(t.kind).acquisitionSource && r.state==ExecutionState::Done && resolver) {
+                        try {measurement=resolver(std::get<ImageFrame>(r.outputs.value("image").data));}
+                        catch(const std::exception& e){measurement={};measurement.error=QString::fromUtf8(e.what());}
+                    }
                 }catch(const std::exception& e) {r.state=ExecutionState::Error;r.message=QString::fromUtf8(e.what());error=true;}
             }
             for(const auto& value:r.outputs)if(value.valid && std::holds_alternative<ImageFrame>(value.data))cycle.frames.append(value.origin);
@@ -76,7 +81,7 @@ CycleResult ExecutionService::run(const QJsonObject& definition,const QString& d
         }
         if(cancel && cancel->load())stopped=true;
         cycle.state=stopped ? ExecutionState::Skipped : error ? ExecutionState::Error : ExecutionState::Done;
-        if(stopped) {cycle.frames.clear();cycle.error="Çevrim iptal edildi; sonuç yayımlanmaz.";for(auto& r:cycle.tools) {r.outputs.clear();r.regions.clear();r.points.clear();r.lines.clear();r.searchRegion={};}}
+        if(stopped) {cycle.frames.clear();cycle.error="Çevrim iptal edildi; sonuç yayımlanmaz.";for(auto& r:cycle.tools) {r.outputs.clear();r.regions.clear();r.points.clear();r.lines.clear();r.searchRegion={};r.decision=PartDecision::NotEvaluated;r.calibration.reset();}}
     } catch(const std::exception& e) {cycle.state=ExecutionState::Error;cycle.error=QString::fromUtf8(e.what());}
     cycle.milliseconds=total.nsecsElapsed()/1e6;return cycle;
 }

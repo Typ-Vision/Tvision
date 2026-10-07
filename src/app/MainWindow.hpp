@@ -7,6 +7,8 @@
 #include "application/ExecutionService.hpp"
 #include "application/CameraService.hpp"
 #include "application/EditorSession.hpp"
+#include "application/CalibrationWorkflow.hpp"
+#include "application/RuntimeService.hpp"
 class QVBoxLayout;
 class QTableWidget;
 class QComboBox;
@@ -30,6 +32,9 @@ public:
     bool verifyMatching(const QString& artifacts);
     bool verifyExecution(const QString& artifacts);
     bool verifyCamera(const QString& artifacts);
+    bool verifyWebcam(const QString& artifacts);
+    bool verifyMeasurement(const QString& artifacts);
+    bool verifyRuntime(const QString& artifacts);
 protected:
     void closeEvent(QCloseEvent* event) override;
 private:
@@ -39,6 +44,17 @@ private:
     void checkCameraConnection();
     void updateCameraControls();
     QWidget* makeEditor();
+    QWidget* makeCalibration();
+    QWidget* makeRuntime();
+    QWidget* makeLogs();
+    void refreshRuntime();
+    void runtimeAction(const QString&);
+    void showRuntimeResult();
+    void refreshLogs();
+    void ensureRuntime();
+    void refreshCalibration();
+    void calibrationAction(const QString& action);
+    void invalidateCalibrationDraft();
     QWidget* makeProjectManager();
     QWidget* makeRecipeManager();
     void showProjectDialog(bool edit = false);
@@ -118,5 +134,29 @@ private:
     QLabel* cameraStatus_{};
     QTableWidget* cameraTable_{};
     QVector<CameraDevice> cameraDevices_;
+    ImageViewer* calibrationViewer_{};
+    QLabel* calibrationFrameInfo_{};
+    QLabel* calibrationPixelInfo_{};
+    QWidget* calibrationControls_{};
+    QLabel* calibrationStatus_{};
+    QLineEdit* calibrationId_{};
+    QLineEdit* calibrationLens_{};
+    QLineEdit* calibrationPlane_{};
+    QTableWidget* calibrationSamples_{};
+    QString calibrationRecipeId_,calibrationFrameId_;
+    quint64 calibrationGeneration_=0;
+    std::optional<PlanarScaleCalibration> calibrationCandidate_;
+    JobSession runtimeJobs_;
+    std::unique_ptr<RuntimeService> runtime_;
+    QString runtimePath_;
+    ProductionCycle runtimeCycle_;
+    std::optional<CycleResult> runtimeResult_,runtimePending_;
+    ImageViewer* runtimeViewer_{};
+    QLabel* runtimeStatus_{};
+    QLabel* runtimeSummary_{};
+    QComboBox* runtimeTools_{};
+    QComboBox* runtimeHistory_{};
+    QTableWidget* logTable_{};
+    QLabel* logStatus_{};
 };
 }

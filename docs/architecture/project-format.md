@@ -20,6 +20,10 @@ Tarih: 7 Ekim 2026. Native format: `.vfproject`, UTF-8 JSON. Bu format HTML demo
 
 ## Dosya yapısı
 
+6C eklemesi: root schema 1 içinde recipe schema 1 ve 2 desteklenir. Schema 2 zorunlu `calibrationBinding` alanında CalibrationDependency schema 1 nesnesi veya null taşır. Referans ID ile binding ID eşleşmelidir; eksik/yanlış tip/future schema reddedilir. Legacy recipe schema 1 binding içeremez; açılışta sürüm/dirty değişmez. Explicit binding komutu 1→2 yükseltir; mevcut JSON/base64 ve atomik proje commit korunur. Kanıt katalog dosyası ayrı CalibrationService kaydıdır, `.vfproject` içine gömülmez; proje ile tek transaction veya taşınabilir paket değildir.
+
+Planar Calibration UI `definition.planarSetup` altında iki zorunlu metin alanı lensId/workingPlaneId taşır; alanlar 1–256 trimmed karakterdir. ProjectService setCalibrationSetup değişimi binding'i temizler ve DRAFT/dirty yapar. Source/raw resolution/coordinate current değerleri acquisition frame'den alınır; kurulum kaydı calibration dependency'den türetilmez. Evidence kataloğunun convention yolu `<proje.vfproject>.calibrations.json`; proje ve katalog birlikte taşınmalıdır. Runtime/provider henüz üretim kabulü değildir.
+
 Proje ve tüm reçete metadata/configuration verileri aynı dosyadadır. Görüntü/model/kalibrasyon varlıklarını paketleme sonraki aşamalarda tasarlanacaktır. Tek dosya bütün reçetelerin birlikte atomik kaydedilmesini sağlar.
 
 ```json
@@ -77,7 +81,7 @@ QSaveFile direct-write fallback kapalıdır: atomik commit başarısızsa dirty/
 - Dosya boyutu en fazla 16 MB. Yeni proje yolu mevcut olmamalı; üst klasör mevcut olmalı. İlk aşamada klasör açma veya Save As yoktur.
 - Hatalı açma mevcut proje/aktif reçeteyi değiştirmez. İşlem hatası dirty'yi kapatmaz ve pending sürümü artırmaz.
 - Kamera/robot/kalibrasyon alanları metadata referanslarıdır; fiziksel cihaz veya kalibrasyon geçerliliği bu adımda doğrulanmaz. Yeni reçeteler VALID olmaz. Diskten okunan VALID metadata üretim yetkisi anlamına gelmez; Runtime yürütmesi henüz yoktur.
-- Copy/Delete, bağımsız recipe import/export, tür değiştirme, şema migration, version history, rol/audit servisi henüz uygulanmadı.
+- Copy/Delete, bağımsız recipe import/export, tür değiştirme, genel paket migration, production version history ve rol/audit servisi henüz uygulanmadı. Recipe 1→2 explicit binding yükseltmesi ve ayrı calibration history uygulanmıştır.
 
 ## Doğrulama kanıtı
 

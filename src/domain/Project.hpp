@@ -3,6 +3,8 @@
 #include <QJsonObject>
 #include <QString>
 #include <QVector>
+#include "Coordinates.hpp"
+#include <optional>
 
 namespace visionflow {
 enum class ApplicationType { RobotGuidance, DefectInspection, Measurement };
@@ -20,6 +22,7 @@ struct Recipe {
     ApplicationType applicationType = ApplicationType::RobotGuidance;
     QString cameraReference;
     QString calibrationReference;
+    std::optional<CalibrationDependency> calibrationBinding;
     int schemaVersion = 1;
     int recipeVersion = 1;
     RecipeStatus status = RecipeStatus::Draft;

@@ -9,7 +9,7 @@
 namespace visionflow {
 enum class ProductionAction { Validate, Activate, Rollback, Run };
 enum class ProductionError { Unauthorized, Busy, InvalidConfiguration, DependencyChanged,
-                             UnknownValidation, HistoryFull, InvalidCompletion, WrongThread };
+                             UnknownValidation, HistoryFull, InvalidCompletion, WrongThread, PersistenceFailure };
 class ProductionException : public std::runtime_error {
 public:
     ProductionException(ProductionError code,const QString& message);
@@ -47,12 +47,13 @@ struct ProductionCycle {
     std::shared_ptr<const ProductionSnapshot> snapshot;
 };
 // Owner thread controller; snapshots may be captured by immutable worker jobs.
-// In-memory contract for 6C; not connected to Runtime or persisted as VALID.
+// Archive hooks persist evidence; restart never restores authorization as VALID.
 class ProductionRecipeService {
 public:
     using Authorize=std::function<bool(const QString&,ProductionAction)>;
     using Dependencies=std::function<ProductionDependencies(const Recipe&)>;
-    explicit ProductionRecipeService(Authorize authorize={},Dependencies dependencies={},int historyLimit=16);
+    using Persist=std::function<void(const QString& kind,const QString& id,const QJsonObject&)>;
+    explicit ProductionRecipeService(Authorize authorize={},Dependencies dependencies={},int historyLimit=16,Persist persist={});
     ProductionRecipeService(const ProductionRecipeService&)=delete;
     ProductionRecipeService& operator=(const ProductionRecipeService&)=delete;
     RecipeValidation validate(const QString& principal,const Recipe& draft,const QString& projectDirectory);
@@ -73,15 +74,20 @@ private:
     QThread* ownerThread_=QThread::currentThread();
     Authorize authorize_;
     Dependencies dependencies_;
+    Persist persist_;
+    void persist(const QString&,const QString&,const QJsonObject&) const;
+    void transition(const QString&,const QString&,const ProductionSnapshot&) const;
     int historyLimit_;
     QMap<QString,std::shared_ptr<const ProductionSnapshot>> validated_;
     QVector<QString> activated_;
     std::shared_ptr<const ProductionSnapshot> active_;
     ProductionCycle cycle_;
     QString cyclePrincipal_;
+    QString cycleBeginId_;
     QDateTime cycleStarted_;
     quint64 serial_=0;
     QVector<QJsonObject> records_;
+    QJsonObject pendingRecord_;
     void record(const CycleResult*,const QString& error);
 };
 }

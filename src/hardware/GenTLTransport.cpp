@@ -8,6 +8,7 @@
 #include <QElapsedTimer>
 #include <QScopeGuard>
 #include <mutex>
+#include <algorithm>
 #include <stdexcept>
 namespace visionflow {
 namespace {
@@ -87,16 +88,24 @@ GenTLTransport::GenTLTransport(const QString& path):impl_(std::make_unique<Impl>
     if(!impl_->tl)fail("GenTL producer boş system handle döndürdü.");
 }
 GenTLTransport::~GenTLTransport()=default;
-QVector<CameraDevice> GenTLTransport::discover(int timeoutMs,const std::shared_ptr<std::atomic_bool>& cancel) {
+QVector<CameraDevice> GenTLTransport::discover(int timeoutMs,const std::shared_ptr<std::atomic_bool>& cancel,int scanWaitMs) {
     if(timeoutMs<=0)fail("Keşif timeout değeri pozitif olmalı.");
+    if(scanWaitMs<=0)fail("Tarama bekleme değeri pozitif olmalı.");
     if(isDeviceOpen())fail("Keşiften önce cihazı kapatın.");
     QElapsedTimer timer;timer.start();
     auto remaining=[&]() -> uint64_t {
         if(cancel && cancel->load())fail("Kamera keşfi iptal edildi.");
         const auto left=timeoutMs-timer.elapsed();if(left<=0)fail("Kamera keşfi zaman aşımı.");return uint64_t(left);
     };
+    // GenTL list updates may use the entire supplied scan wait even on success.
+    // Do not give a scan the whole operation budget; keep time for later interfaces,
+    // metadata and cleanup. This is cooperative, not interruption of a vendor call.
+    auto scanWait=[&]() -> uint64_t {
+        const auto left=remaining();
+        return std::min(uint64_t(scanWaitMs),std::max(uint64_t(1),left/2));
+    };
     auto& p=*impl_;bool8_t changed=false;
-    p.check(p.updateInterfaces(p.tl,&changed,remaining()),"TLUpdateInterfaceList");remaining();
+    p.check(p.updateInterfaces(p.tl,&changed,scanWait()),"TLUpdateInterfaceList");remaining();
     uint32_t count=0;p.check(p.numInterfaces(p.tl,&count),"TLGetNumInterfaces");if(count>4096)fail("GenTL interface sayısı sınırı aşıyor.");
     QVector<CameraDevice> devices;
     for(uint32_t i=0;i<count;++i) {
@@ -104,7 +113,7 @@ QVector<CameraDevice> GenTLTransport::discover(int timeoutMs,const std::shared_p
         GenTL::IF_HANDLE iface=nullptr;p.check(p.openInterface(p.tl,ifaceId.constData(),&iface),"TLOpenInterface");
         if(!iface)fail("GenTL producer boş interface handle döndürdü.");
         auto cleanup=qScopeGuard([&]{p.ifClose(iface);});
-        p.check(p.updateDevices(iface,&changed,remaining()),"IFUpdateDeviceList");remaining();
+        p.check(p.updateDevices(iface,&changed,scanWait()),"IFUpdateDeviceList");remaining();
         uint32_t n=0;p.check(p.numDevices(iface,&n),"IFGetNumDevices");if(n>4096 || devices.size()+n>4096)fail("GenTL cihaz sayısı sınırı aşıyor.");
         for(uint32_t j=0;j<n;++j) {
             remaining();const auto id=text([&](char* data,size_t* size){return p.deviceId(iface,j,data,size);});

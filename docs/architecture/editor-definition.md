@@ -1,3 +1,7 @@
+## 7 Ekim 2026 güncel Webcam kaynağı
+
+Registry yedi built-in tool sunar. `webcam` params: `deviceIndex` integer 0–63, `backend` sabit `qt`, `timeoutMs` integer 1–60000. Input yok, output `image` Image/px/image. Tek Image File veya Webcam source desteklenir. Editor schema 5, root schema 1 ve recipe schema 1–2 korunur. Measurement lowerMm/upperMm ve p1/p2 bağlantıları ortak Properties'dedir; mm/px/pass typed outputs ve gerçek ölçüm kararı Results/overlay'de görünür. `definition.planarSetup` lensId/workingPlaneId beyanını calibration kaydından ayrı taşır; ProjectService komutu değişince binding/DRAFT invalidation üretir. Calibration ekranı aynı worker/servis/resolver yolunu kullanır. Aşağıdaki erken aşama kayıtları tarihsel kapsamdır; güncel detay [acquisition.md](acquisition.md), [measurement.md](measurement.md) ve README içindedir.
+
 # Recipe Editor / Image File sözleşmesi — Adım 3 temeli
 
 ## Güncel mimari çekirdek ve devam işleri

@@ -49,6 +49,7 @@ private:
 struct EditorContext {
     QString projectId,path,recipeId;
     QJsonObject definition;
+    QJsonObject calibrationBinding;
 };
 struct ImageLoad {std::optional<ImageFrame> frame;QString error;};
 struct ModelTeaching {QString model,error;};

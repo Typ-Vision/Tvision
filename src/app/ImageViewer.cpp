@@ -68,7 +68,7 @@ void ImageViewer::setRegions(const QRect& model,const QRect& search,const QRect&
     set(modelRegion_,model); set(searchRegion_,search); set(resultRegion_,result);
     if (resultRegion_) {auto pen=resultRegion_->pen(); pen.setColor(accepted ? QColor("#66e3c4") : QColor("#ff8585")); resultRegion_->setPen(pen);}
 }
-void ImageViewer::setToolOverlay(const QVector<QRect>& regions,const QVector<QPointF>& points,const QVector<QLineF>& lines) {
+void ImageViewer::setToolOverlay(const QVector<QRect>& regions,const QVector<QPointF>& points,const QVector<QLineF>& lines,const QString& annotation) {
     for(auto* item:toolOverlay_) {scene_->removeItem(item);delete item;}toolOverlay_.clear();
     if(!imageItem_)return;
     QPen pen(QColor("#66e3c4"));pen.setWidth(2);pen.setCosmetic(true);
@@ -84,7 +84,7 @@ void ImageViewer::setToolOverlay(const QVector<QRect>& regions,const QVector<QPo
     if(points.size()==2) {
         QPen distancePen(QColor("#ffd166"));distancePen.setWidth(3);distancePen.setCosmetic(true);
         toolOverlay_<<scene_->addLine(QLineF(points[0],points[1]),distancePen);
-        auto* label=scene_->addSimpleText(QString("%1 px").arg(QLineF(points[0],points[1]).length(),0,'f',2));
+        auto* label=scene_->addSimpleText(annotation.isEmpty() ? QString("%1 px").arg(QLineF(points[0],points[1]).length(),0,'f',2) : annotation);
         label->setBrush(QColor("#ffd166"));label->setPos((points[0]+points[1])/2);label->setFlag(QGraphicsItem::ItemIgnoresTransformations);toolOverlay_<<label;
     }
 }

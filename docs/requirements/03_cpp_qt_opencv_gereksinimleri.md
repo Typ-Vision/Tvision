@@ -1,5 +1,7 @@
 # C++ / Qt / OpenCV geliştirme gereksinimleri
 
+8 Ekim 2026 revizyonu: İki kalibrasyon akışı Camera Calibration ve Robot Calibration olarak korunur. Mevcut uniform scale temelinden sonra **6C-K geçici test görüntüsü import/plaka tespiti → tek görüntüden planar homography → Measurement/Runtime → fiziksel kabul (gerektiğinde ayrı lens düzeltmesi)**, ardından 6D PLC ve 6E Eye-to-Hand/Eye-in-Hand gelir. Yeni modeller henüz uygulanmadı; sonraki uygulama adımı 6C-K1 model sözleşmesi, geçici Calibration görüntü import ve otomatik plaka tespitidir. [Güncel kalibrasyon gereksinimleri ve kabul planı](../architecture/calibration-plan.md). Bu revizyon önceki geliştirme sırası ifadelerine göre önceliklidir.
+
 ## 7 Ekim 2026 — Onaylı mimari güçlendirme
 
 Güncel sıra ve kabul koşulları [development-plan.md](../architecture/development-plan.md) içindedir. C++20/Qt Widgets/OpenCV ve tek editor/Runtime kararları korunur; GUI görünümü ve menüler değişmez. 6A'da tek tool/tam flow ortak yürütme, versioned referans invalidation, statik ToolRegistry, ayrı yürütücüler, application session/controller ve kaynaktan bağımsız owned frame uygulanacaktır. Koordinat/Pose2D, kamera lifecycle/deadline/kuyruk ve üretim snapshot sözleşmeleri tanımlanacaktır.

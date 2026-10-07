@@ -46,7 +46,7 @@ QVector<ToolDefinition> editorTools(const QJsonObject& definition) {
         if(version.toInt()<4 && t.kind=="edge" && !t.parameters.contains("referenceOrigin"))t.parameters["referenceOrigin"]=QJsonObject{};
         if(version.toInt()<5 && t.kind=="edge" && !t.parameters.contains("referenceGeometry"))t.parameters["referenceGeometry"]="";
         ToolRegistry::validate(t);
-        if(t.kind=="image_file")require(++sourceCount<=1,"Bu aşamada reçetede tek Image File kaynağı desteklenir.");
+        if(ToolRegistry::get(t.kind).acquisitionSource)require(++sourceCount<=1,"Bu aşamada reçetede tek edinim kaynağı desteklenir; mevcut Image File/Webcam kaynağını önce kaldırın.");
         ids.insert(id.toString());names.insert(t.name.toCaseFolded());tools.append(t);
     }
     // Schema 3 used the match rectangle as an edge region. Preserve the drawn box

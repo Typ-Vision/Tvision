@@ -21,6 +21,7 @@ int main(int argc,char** argv) {
         QLibrary fixture(file);check(fixture.load(),"load test fixture");
         const auto live=reinterpret_cast<int(*)()>(fixture.resolve("FixtureLiveHandles"));
         const auto mode=reinterpret_cast<void(*)(int)>(fixture.resolve("FixtureMode"));check(live && mode,"fixture controls");
+        const auto maxScanWait=reinterpret_cast<uint64_t(*)()>(fixture.resolve("FixtureMaxScanWait"));check(maxScanWait,"fixture scan wait control");
         const auto original=qgetenv("GENICAM_GENTL64_PATH");qputenv("GENICAM_GENTL64_PATH","");
         QTemporaryDir directory(QDir(app.applicationDirPath()).filePath("camera-XXXXXX"));check(directory.isValid(),"test directory");
         const auto copy=directory.filePath("fixture.CTI");check(QFile::copy(file,copy),"copy uppercase producer");
@@ -38,6 +39,9 @@ int main(int argc,char** argv) {
         for(int failure:{1,2,6,7,9,12,13}){mode(failure);report=CameraService{}.discover({file});check(report.devices.isEmpty() && report.errors.size()==1,"failed discovery no devices");check(live()==0,"failed discovery releases handles");}
         mode(11);rejects([&]{CameraService{}.checkConnection(device);},"null device handle rejected");check(live()==0,"null device cleanup");
         mode(8);report=CameraService{}.discover({file},1);check(report.devices.isEmpty() && !report.errors.isEmpty() && live()==0,"late discovery suppressed");
+        mode(14);report=CameraService{}.discover({file},1000,{},100);check(report.errors.isEmpty() && report.devices.size()==2 && maxScanWait()==100 && live()==0,"full scan waits across interfaces leave enumeration budget");
+        mode(14);report=CameraService{}.discover({file},1000,{},2000);check(report.errors.isEmpty() && report.devices.size()==2 && maxScanWait()<=500 && live()==0,"scan wait larger than total budget is safely capped");
+        mode(15);report=CameraService{}.discover({file},200,{},20);check(report.devices.isEmpty() && report.errors.size()==1 && live()==0,"late metadata rejects entire producer result and cleans handles");
         mode(4);report=CameraService{}.discover({file});check(report.devices.isEmpty() && report.errors.isEmpty() && live()==0,"zero interface producer");
         mode(5);report=CameraService{}.discover({file});check(report.devices.size()==1 && report.devices[0].serialNumber.isEmpty(),"optional unsupported metadata");
         mode(0);report=CameraService{}.discover({incomplete,file});check(report.errors.size()==1 && report.devices.size()==1 && live()==0,"producer failure isolation and missing export");
@@ -47,6 +51,7 @@ int main(int argc,char** argv) {
         auto cancel=std::make_shared<std::atomic_bool>(true);report=CameraService{}.discover({file},1000,cancel);check(report.cancelled && report.devices.isEmpty() && live()==0,"pre-cancel discovery");
         mode(8);cancel->store(false);std::thread stopper([&]{std::this_thread::sleep_for(std::chrono::milliseconds(2));cancel->store(true);});report=CameraService{}.discover({file},1000,cancel);stopper.join();check(report.cancelled && report.devices.isEmpty() && live()==0,"cancel during producer call suppresses results");mode(0);
         report=CameraService{}.discover({file},0);check(report.errors.size()==1 && live()==0,"invalid timeout");
+        report=CameraService{}.discover({file},1000,{},0);check(report.errors.size()==1 && live()==0,"invalid scan wait before producer init");
         {GenTLTransport transport(file);auto bad=device;bad.deviceId="missing";rejects([&]{transport.openReadOnly(bad);},"device disappeared");check(!transport.isDeviceOpen(),"failed open state");transport.openReadOnly(device);}
         check(live()==0,"recovery after disappeared device");qputenv("GENICAM_GENTL64_PATH",original);
         QTextStream(stdout)<<"PASS: synthetic GenTL C ABI discovery, open/close, cleanup, errors, deadline and recovery\n";return 0;

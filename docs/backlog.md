@@ -1,10 +1,12 @@
 # VisionFlow iş listesi
 
+8 Ekim 2026 revizyonu: İki kalibrasyon akışı Camera Calibration ve Robot Calibration olarak korunur. Mevcut uniform scale temelinden sonra **6C-K geçici test görüntüsü import/plaka tespiti → tek görüntüden planar homography → Measurement/Runtime → fiziksel kabul (gerektiğinde ayrı lens düzeltmesi)**, ardından 6D PLC ve 6E Eye-to-Hand/Eye-in-Hand gelir. Yeni modeller henüz uygulanmadı; sonraki uygulama adımı 6C-K1 model sözleşmesi, geçici Calibration görüntü import ve otomatik plaka tespitidir. [Ayrıntılı plan](architecture/calibration-plan.md).
+
 7 Ekim 2026. Tamamlananların kabul kanıtları `progress.md` içindedir.
 
 ## Güncel onaylı sıra
 
-Genel incelemenin tüm önerileri kabul edildi. Ayrıntı ve kabul koşulları [geliştirme planında](architecture/development-plan.md). **GUI görünümü, tema, panel yerleşimleri, menüler ve navigasyon değişmeyecek.** A1–A9 çekirdek/sözleşme ve plan teslimleri tamamlandı; sıradaki 6B. Diğer yeni işler uygulanmış özellik değildir; sonraki tarihsel kayıtlar eski teslim kapsamını gösterir.
+Genel incelemenin tüm önerileri kabul edildi. Ayrıntı ve kabul koşulları [geliştirme planında](architecture/development-plan.md). **GUI görünümü, tema, panel yerleşimleri, menüler ve navigasyon değişmeyecek.** A1–A9 çekirdek/sözleşme ve plan teslimleri tamamlandı; kullanıcı yönlendirmesiyle webcam ve bağımsız 6C ilerler. Diğer yeni işler uygulanmış özellik değildir; sonraki tarihsel kayıtlar eski teslim kapsamını gösterir.
 
 | Sıra / iş | Durum | Bağımlılık / teslim |
 | --- | --- | --- |
@@ -17,9 +19,14 @@ Genel incelemenin tüm önerileri kabul edildi. Ayrıntı ve kabul koşulları [
 | 6A/A7 — Ortak Pose2D/koordinat/tracking ROI sözleşmesi | Tamamlandı (çekirdek/sözleşme) | Rigid 2D, birim/frame/eksen/sıra, dört köşe tracking, legacy Edge ve dependency kaydı; kalibrasyon uygulaması 6C |
 | 6A/A8 — Draft/doğrulama/aktif üretim snapshot sözleşmesi | Tamamlandı (çekirdek/sözleşme) | Immutable snapshot/dependency, servis policy, activation/rollback/cycle sınırı ve transient trace; Runtime/Users/kalıcı log 6C |
 | 6A/A9 — Varlık paketi/migration planı, bağımsız core build/test ve kaynak sürümleme | Tamamlandı (plan/build/test) | Manifest/migration/recovery planı; Widgets OFF 9/9, UI ON 11/11; yerel Git; gerçek paket/geçmiş 6C/7 |
-| 6B — GenApi/vendor API ve tek gerçek kamera trigger/grab → DAG | Bekliyor | 6A frame/session altyapısı; gerçek SDK/ABI/disconnect/recovery kabulü |
-| 6C — Measurement/kalibrasyon/tolerans/doğrulanmış reçete/Runtime | Bekliyor | Temel servis yetkisi, hata kodları ve cycle logları bu aşamada |
-| 6D — PLC handshake ve sonuç teslimi | Bekliyor | Cycle/request ID, ACK, timeout, duplicate/retry politikası |
+| 6B — GenApi/vendor API ve tek gerçek kamera trigger/grab → DAG | Başladı; GigE scan/total budget ayrımı tamamlandı | Galaxy GigE 1000/3000 ms DONE/0 cihaz; dar C ABI önceki 0/0/0. Basler önceki Runtime yolu bu oturumda erişilemiyor, Developer formu açık. Sonraki feature/worker/owned frame → DAG; fiziksel trigger/grab/disconnect/recovery açık |
+| 6B ek — Webcam tek kare → owned frame → DAG | Tamamlandı | Qt Multimedia worker, Properties/save/reopen; gerçek 1280×720 capture ve DAG DONE. Live/physical unplug/industrial trigger kabulü açık |
+| 6C ilk — Planar scale/Measurement/tolerans servis çekirdeği | Tamamlandı (servis) | Teaching/holdout, dependency/provenance invalidation, ham mm tolerans; UI/persistence/Runtime yok |
+| 6C kayıt — Kalibrasyon persistence/current resolver ve reçete binding | Tamamlandı (servis) | Atomik versioned evidence, kanıt replay, bağımsız kurulum, schema 2 binding ve eski production validation reddi; UI bağlantısı yok |
+| 6C UI — Ortak Measurement tool/Properties ve planar Calibration | Tamamlandı | Gerçek acquisition → Edge → mm/tolerans; Hesapla/Doğrula/Kaydet-bağla ve kanıt reopen; lens/perspective/robot/Runtime yok |
+| 6C devam — Yetkili production validation, Runtime ve cycle log | Tamamlandı (configuration scope) | Yerel OS Engineer policy; fresh acquisition/current resolver; immutable sürüm, activation/rollback/Stop; snapshot/event/cycle atomik arşiv, Logs ve failed-write retry. Fiziksel üretim/çok kullanıcı kabulü açık |
+| 6C-K — Plaka tabanlı kamera/düzlem kalibrasyonu | Sıradaki uygulama; plan güncellendi | K1 model/import/plaka, K2 homography/mm denemesi, K3 kayıt/Measurement/Runtime, gerektiğinde KL lens, K4 fiziksel kabul |
+| 6D — PLC handshake ve sonuç teslimi | 6C-K sonrası | Cycle/request ID, ACK, timeout, duplicate/retry politikası |
 | 6E — Robot dönüşümü/pick reference/guidance | Bekliyor | Kalibrasyon ve frame doğrulaması; hareket ayrı komut |
 | 7 — Ürünleştirme | Bekliyor | Ayrıntılı Users/Diagnostics, audit/retention, paketleme/geçmiş, app-data/kurulum |
 | Sonraki — Gelişmiş tool, multi-camera ve GPU | Bekliyor | Gerçek veri ve performans kabulü; GUI yeniden tasarımı kapsam dışı |

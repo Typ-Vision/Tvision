@@ -1,11 +1,13 @@
 # Onaylanan geliştirme ve mimari güçlendirme planı
 
-7 Ekim 2026. Kullanıcı genel mimari incelemesindeki önerilerin tamamını onayladı. A1–A9 çekirdek/sözleşme ve plan teslimleri tamamlandı; sıradaki 6B. Fiziksel kamera ve sonraki üretim aşamaları henüz tamamlanmış değildir. Güncel sıra için bu belge ve `../backlog.md`, tamamlanmış işlerin kanıtları için `../progress.md` esas alınır. Önceki teslim kayıtlarındaki “sonraki adım” ifadeleri tarihsel kayıttır.
+8 Ekim 2026 revizyonu: İki kalibrasyon akışı Camera Calibration ve Robot Calibration olarak korunur. Mevcut uniform scale temelinden sonra **6C-K geçici test görüntüsü import/plaka tespiti → tek görüntüden planar homography → Measurement/Runtime → fiziksel kabul (gerektiğinde ayrı lens düzeltmesi)**, ardından 6D PLC ve 6E Eye-to-Hand/Eye-in-Hand gelir. Yeni modeller henüz uygulanmadı; sonraki uygulama adımı 6C-K1 model sözleşmesi, geçici Calibration görüntü import ve otomatik plaka tespitidir. [Ayrıntılı plan](calibration-plan.md).
+
+7 Ekim 2026. Kullanıcı genel mimari incelemesindeki önerilerin tamamını onayladı. A1–A9 çekirdek/sözleşme ve plan teslimleri tamamlandı. Güncel kullanıcı yönlendirmesiyle webcam tek kare → DAG ve bağımsız 6C planar scale/Measurement/tolerans servis çekirdeği teslim edildi; 6C kalibrasyon persistence/current resolver ve reçete binding servisleri de tamamlandı; ortak Measurement tool/Properties ve planar Calibration UI tamamlandı; yerel servis yetkili production validation/Runtime/kalıcı snapshot-event-cycle kayıtları tamamlandı; sıradaki 6C-K plaka tabanlı kamera/düzlem kalibrasyonu; ardından 6D PLC handshake ve simülatör. Endüstriyel kamera kabulü açık. Fiziksel kamera ve sonraki üretim aşamaları henüz tamamlanmış değildir. Güncel sıra için bu belge ve `../backlog.md`, tamamlanmış işlerin kanıtları için `../progress.md` esas alınır. Önceki teslim kayıtlarındaki “sonraki adım” ifadeleri tarihsel kayıttır.
 
 ## Korunacak ürün ve GUI kararları
 
 - Mevcut GUI görünümü, tema, panel yerleşimleri, menü adları, menü sırası ve navigasyon korunur. Bu plan bir GUI yeniden tasarımı veya yeni menü/node canvas çalışması değildir.
-- Mevcut düğmeler ve ekranlar aynı yerlerinde kalır. Refactor davranış tutarlılığını düzeltir; yeni servisler mevcut ekranlara bağlanır. Planlanan Runtime/Calibration/Communication işlevleri mevcut ayrılmış ekranlarda geliştirilir; bunlar bugün çalışan özellik sayılmaz.
+- Mevcut düğmeler ve ekranlar aynı yerlerinde kalır. Refactor davranış tutarlılığını düzeltir; yeni servisler mevcut ekranlara bağlanır. Runtime/Communication işlevleri mevcut ayrılmış ekranlarda geliştirilecek. Calibration yalnız uniform planar scale için çalışır; lens/perspective/robot kalibrasyonu hazırlık kapsamındadır.
 - Üç applicationType tek Recipe Editor, ortak engine ve tek Runtime kullanır. UI algoritma veya donanım SDK'sı çağırmaz.
 - Reçete durumu, execution durumu ve parça kararı ayrı kalır. Gerçek sonuç olmadan PASS, skor veya robot pose gösterilmez.
 - Tamamlanan Adım 1–5 ve 6.1–6.2 yeniden yapılmaz. Büyük bir yeniden yazım yerine mevcut servislerin aşamalı ayrıştırılması tercih edilir.
@@ -17,6 +19,7 @@
 | 6A — Mimari güçlendirme | A1–A9: yürütme tutarlılığı, referans invalidation, tool/frame/session sınırları, üretim ve kayıt sözleşmeleri, bağımsız test yapısı | Davranış düzeltmeleri ve gerekli çekirdek sınırlar uygulanmış; kamera, koordinat ve üretime alma sözleşmeleri tanımlı; mevcut kabul testleri korunmuş |
 | 6B — Tek gerçek kamera | GenApi/runtime veya vendor C API seçimi, özellikler, trigger/stream/grab, owned buffer dönüşümü, kamera yapılandırmasının kaydı | Gerçek producer/modelle trigger → owned frame → mevcut DAG çalışır; disconnect, geç frame, Stop, yeniden bağlanma ve kuyruk davranışı sınanır |
 | 6C — Measurement ve ilk Runtime | Pixel ölçüm → kalibrasyon → tolerans → doğrulama → değişmez üretim reçetesi → mevcut Runtime ekranı | Ham değerle tolerans; geçersiz kalibrasyonda sonuç engeli; taslak düzenlemesi çalışan sürümü değiştirmez; servis yetkisi ve cycle logları çalışır |
+| 6C-K — Plaka tabanlı kamera kalibrasyonu | Target/model ve geçici import, tek görüntü H, Measurement/Runtime/kayıt; gerektiğinde lens desteği ve fiziksel kabul | Bağımsız mm doğruluğu, lens/perspektif dönüşümü ve dependency reddi; ayrıntılar calibration-plan.md |
 | 6D — PLC sonuç teslimi | Request/cycle ID, Ready/Busy/Done/ACK, mapping, timeout, tekrar istek ve yeniden bağlantı | Sonuç doğru isteğe bir kez mantıksal olarak teslim edilir; duplicate/retry ve ACK kaybı politikası test edilir; hata PASS olmaz |
 | 6E — Robot guidance | Koordinat dönüşümü, versioned calibration, pick reference ve robot çıktısı | Bilinen örneklerle dönüşüm/offset doğrulanır; geçersiz veri pose üretmez; sonuç gönderimi ve hareket komutu ayrıdır |
 | 7 — Ürünleştirme | Ayrıntılı Diagnostics/Users/Logs, audit/retention, revizyon geçmişi ve paketleme tamamlamaları, app-data, dağıtım ve native kabul | Kurulum/bağımlılık/lisans envanteri, recovery ve hedef makine kabul kanıtları |
@@ -102,3 +105,7 @@ Bu plan onayı kod değişikliği yapıldığı, kamera kabulünün tamamlandı�
 
 A9 teslim kanıtı: [persistence-plan.md](persistence-plan.md) manifest/hash/byte bütçesi, tek container atomik commit/recovery ve sıralı migration tasarımını belirler; mevcut format değişmedi. Widgets OFF Release core 9/9, UI ON 11/11 CTest; staging/cancel ve oversized persistence testleri eklendi. Windows doğrulama scripti temiz iki build üzerinde geçti; uzak CI yok. Yerel VisionFlow Git deposu kuruldu; TVis ayrı proje. Paket entry/import/retention ve kalıcı snapshot uygulaması 6C/7 kapsamındadır.
 
+
+## 6C ilk Runtime teslimi
+
+Mevcut Runtime/Logs ekranları aynı engine/resolver/snapshot yoluna bağlıdır. OS yerel Engineer policy, fresh frame validation, activation/rollback/cycle boundary, gerçek mm/PASS/FAIL, Stop ve başarısız kayıt retry kabulü; UI 16/16 ve Widgets OFF 14/14. Yapılandırma kabulü fiziksel lens/ölçüm kabulü değildir. Users/Operator ayrımı, sürekli stream, global recipe decision, PLC, robot, recovery/retention/paketleme açık kalır. Sonraki 6D komutu için kullanıcı onayı beklenir.

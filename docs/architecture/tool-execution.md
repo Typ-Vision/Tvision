@@ -1,3 +1,7 @@
+## 7 Ekim 2026 güncel Webcam ve Measurement sınırı
+
+ExecutionService version `visionflow.execution/3`: Webcam source ve Measurement executor, ortak AcquisitionService ve owned snapshot/DAG yolu. Registry yedi built-in tool ve tek acquisitionSource kuralı. Calculate px kalır; Measurement p1/p2 Point px/image → value Number mm/plane, pixels Number px/image, pass Boolean/plane. lowerMm/upperMm ham değerle dahil toleranstır. Acquisition sonrası worker resolver immutable recipe binding, uygulanan planarSetup ve actual raw frame/current katalog eşleşmesini denetler. Measurement ERROR/SKIPPED/Stop olduğunda sayısal çıktı/Pass-Fail yok; DONE ile tek ölçüm PartDecision ayrı. Calibration UI/evidence persistence bağlı; yerel yetkili production validation/Runtime/atomik cycle log bağlı; PLC sonraki iş. Ayrıntılar [acquisition.md](acquisition.md) ve [measurement.md](measurement.md).
+
 # 8dım 5: typed D8G ve editor çevrimi
 
 87 güncel koordinat/tracking ıözleşmeıi [coordinateı.md](coordinateı.md) içindedir. Engine tüketimden önce gerçek PortValue type/unit/frame ile input deıcriptor'ını karşılaştırır; yanlış unit/type/frame ERROR ve boş çıktı üretir. Edge referanı takibi domain tranılationTrackingRoi üzerinden yürür; ıchema 5, delta yuvarlama ve eıki migration/teaching invalidation korunur. Genel Poıe2D/TrackingRoi domain tipidir, yeni engine portu değildir; Match yönelim ölçümü, dönmüş crop ve kalibraıyon yürütmeıi henüz yoktur.

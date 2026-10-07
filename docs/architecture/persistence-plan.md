@@ -1,6 +1,6 @@
 # A9 kayıt, varlık bütünlüğü ve migration planı
 
-7 Ekim 2026. Bu belge sonraki paket uygulamasının tasarım kararıdır; çalışan paket/import/export veya kalıcı üretim geçmişi değildir. Mevcut `.vfproject` root/recipe schema 1, editor schema 5, inline base64 PNG ve 16 MB sınırı korunur. A8 doğrulaması bellektedir; disk VALID veya hash eşitliği üretim izni değildir.
+7 Ekim 2026. Bu belge sonraki paket uygulamasının tasarım kararıdır; çalışan paket/import/export değildir; 6C ayrı production snapshot/event/cycle arşivi uygulanmıştır. Mevcut `.vfproject` root schema 1, recipe schema 1–2, editor schema 5, inline base64 PNG ve 16 MB sınırı korunur. 6C sürümlü calibration/evidence kataloğu ayrı atomik JSON kaydıdır; taşınabilir container değildir. A8/6C authorization/active state bellektedir; snapshot/terminal kanıtlar ProductionStore ile disk arşivine yazılır. Disk VALID veya hash eşitliği restart üretim izni değildir.
 
 ## Paket ve manifest
 
@@ -24,7 +24,7 @@ Absolute path, drive/UNC, `..`, boş/duplicate entry, case-fold path collision, 
 
 ## Migration sınırı
 
-Mevcut root/recipe schema 1'in eski sürümü yoktur; future schema reddi sürer. Editor 1–4 mevcut reader tarafından schema 5 çalışma görünümüne normalize edilir; açılış dirty/revision değiştirmez. İlk gerçek değişiklik güncel editor kaydını yazar; inline model bytes, tool/project/recipe UUID, applicationType, bağlantılar ve bilinmeyen editor dışı definition alanları korunur. Legacy referenceGeometry başlangıcı geçmiş öğretim geçerliliğini kanıtlamaz.
+Root schema 1 için eski sürüm yoktur; future schema reddi sürer. Recipe schema 1 açılışta korunur; explicit kalibrasyon binding komutu 1→2 yükseltir ve kesin dependency/null alanını yazar. Editor 1–4 mevcut reader tarafından schema 5 çalışma görünümüne normalize edilir; açılış dirty/revision değiştirmez. İlk gerçek değişiklik güncel editor kaydını yazar; inline model bytes, tool/project/recipe UUID, applicationType, bağlantılar ve bilinmeyen editor dışı definition alanları korunur. Legacy referenceGeometry başlangıcı geçmiş öğretim geçerliliğini kanıtlamaz.
 
 Yeni format uygulamasında her geçiş `N -> N+1` saf dönüşüm olarak kayıtlı olacak. Eksik geçiş, future schema ve bilinmeyen alan hata üretir; skip/downgrade yapılmaz. Orijinal bytes korunur, migration raporu source/target schema ve uyarıları gösterir. Legacy inline PNG yeni manifest asset'ine byte değiştirmeden taşınır; eski dosya import sırasında üzerine yazılmaz. Yeni paket roundtrip ve ikinci migration idempotence testleri uygulama tesliminde zorunludur.
 
@@ -41,3 +41,7 @@ Yeni format uygulamasında her geçiş `N -> N+1` saf dönüşüm olarak kayıtl
 | Container hash/path/bomb/crash/import/retention | 6C/7 paket uygulamasında yeni testler; bugün kabul edildiği iddia edilmez |
 
 Windows Release CI planı: uygun Qt/OpenCV/MinGW ABI kurulu runner üzerinde `scripts/validate-local.ps1` çalıştır, core ve UI test sonuçları ile smoke PNG/ROI CSV'yi artifact olarak sakla. Remote repository/runner henüz yapılandırılmadı; yerel script CI çalıştığı anlamına gelmez. Donanım testleri ayrı producer/model/driver/SDK sürüm kaydıyla fiziksel runner'da yapılır.
+
+## 6C uygulanan ayrı production arşivi
+
+`<proje>.production` snapshots/events/cycles; per-record hash/kind/UUID wrapper, QLockFile + QSaveFile, append-only/idempotent. 20 MiB/kayıt, 512 MiB/10000 kayıt toplam; read son 128 (API en fazla 256)/64 MiB. Snapshot ve aktivasyon event commit'i başarısızsa servis izin/durumunu ilerletmez; CYCLE_BEGIN acquisition öncesi, terminal cycle commit tamamlanınca lease serbest kalır. Hata aynı terminal kaydı pending tutar ve Run'ı engeller. Restart arşiv auto-activate değildir. Katalog/proje/arşiv ortak transaction veya container değildir; crash reconciliation/retention/power loss fiziksel kabulü açık. Ayrıntı production-recipes.md.

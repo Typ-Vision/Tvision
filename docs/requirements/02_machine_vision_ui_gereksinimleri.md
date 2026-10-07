@@ -1,5 +1,7 @@
 # Endüstriyel Machine Vision Yazılımı — UI Sayfa ve Ekran Gereksinimleri
 
+8 Ekim 2026 revizyonu: İki kalibrasyon akışı Camera Calibration ve Robot Calibration olarak korunur. Mevcut uniform scale temelinden sonra **6C-K geçici test görüntüsü import/plaka tespiti → tek görüntüden planar homography → Measurement/Runtime → fiziksel kabul (gerektiğinde ayrı lens düzeltmesi)**, ardından 6D PLC ve 6E Eye-to-Hand/Eye-in-Hand gelir. Yeni modeller henüz uygulanmadı; sonraki uygulama adımı 6C-K1 model sözleşmesi, geçici Calibration görüntü import ve otomatik plaka tespitidir. [Güncel kalibrasyon gereksinimleri ve kabul planı](../architecture/calibration-plan.md). Bu revizyon önceki geliştirme sırası ifadelerine göre önceliklidir.
+
 ## 7 Ekim 2026 — Mevcut GUI'yi koruma kararı
 
 Kullanıcı mevcut GUI'den memnundur. [Onaylanan mimari plan](../architecture/development-plan.md) uygulanırken tema, görünüm, panel yerleşimleri, menü adları/sırası ve navigasyon değiştirilmeyecektir. Yeni menü, node canvas veya genel görsel yeniden tasarım bu çalışmanın kapsamında değildir. Sonraki işlevler mevcut ayrılmış ekranlara ve kontrollere bağlanır; bugünkü hazırlık ekranları çalışan özellik sayılmaz.

@@ -60,7 +60,11 @@ void validateProject(const Project& project) {
     require(project.createdAt.isValid() && project.modifiedAt.isValid(),"Proje tarihleri geçersiz.");
     QSet<QString> ids, names;
     for (const auto& recipe : project.recipes) {
-        require(recipe.schemaVersion==1,"Desteklenmeyen reçete şema sürümü.");
+        require(recipe.schemaVersion==1 || recipe.schemaVersion==2,"Desteklenmeyen reçete şema sürümü.");
+        if(recipe.calibrationBinding) {
+            recipe.calibrationBinding->validate();
+            require(recipe.schemaVersion==2 && recipe.calibrationReference==recipe.calibrationBinding->calibrationId,"Kalibrasyon sürüm bağlantısı uyumsuz.");
+        }
         const auto canonicalId = QUuid(recipe.id).toString(QUuid::WithoutBraces);
         require(!QUuid(recipe.id).isNull() && !ids.contains(canonicalId),"Reçete ID geçersiz veya tekrar ediyor.");
         require(validName(recipe.name),"Reçete adı 1–64 yazdırılabilir karakter olmalı.");
@@ -71,6 +75,11 @@ void validateProject(const Project& project) {
         require(recipe.createdAt.isValid() && recipe.modifiedAt.isValid(),"Reçete tarihleri geçersiz.");
         typeKey(recipe.applicationType); statusKey(recipe.status);
         validateEditorDefinition(recipe.definition);
+        if(recipe.definition.contains("planarSetup")) {
+            require(recipe.definition["planarSetup"].isObject(),"Planar kurulum nesne olmalı.");const auto setup=recipe.definition["planarSetup"].toObject();
+            require(setup.size()==2 && setup["lensId"].isString() && setup["workingPlaneId"].isString(),"Planar kurulum alanları hatalı.");
+            for(const auto key:{"lensId","workingPlaneId"}) {const auto text=setup[key].toString();require(!text.trimmed().isEmpty() && text==text.trimmed() && text.size()<=256,"Lens/düzlem kimliği 1–256 karakter olmalı.");}
+        }
         ids.insert(canonicalId); names.insert(recipe.name.toCaseFolded());
     }
 }

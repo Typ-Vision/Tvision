@@ -30,7 +30,7 @@ quint64 JobSession::begin(SessionJob job) {
 void JobSession::finish(quint64 ticket) {active_.remove(ticket);}
 QByteArray EditorSession::signature(const EditorContext& c) const {
     if(c.recipeId.isEmpty())return {};
-    return QCryptographicHash::hash(c.projectId.toUtf8()+c.path.toUtf8()+c.recipeId.toUtf8()+QByteArray::number(generation)+QJsonDocument(c.definition).toJson(QJsonDocument::Compact),QCryptographicHash::Sha256);
+    return QCryptographicHash::hash(c.projectId.toUtf8()+c.path.toUtf8()+c.recipeId.toUtf8()+QByteArray::number(generation)+QJsonDocument(c.definition).toJson(QJsonDocument::Compact)+QJsonDocument(c.calibrationBinding).toJson(QJsonDocument::Compact),QCryptographicHash::Sha256);
 }
 QByteArray EditorSession::referenceSignature(const EditorContext& c,const QString& tool) const {
     if(c.recipeId.isEmpty() || !frame)return {};
@@ -68,5 +68,5 @@ QJsonObject EditorSession::taughtSearch(const EditorContext& c,const ToolDefinit
         for(const auto& source:editorTools(c.definition))if(source.id==b.sourceTool)p["referenceGeometry"]=referenceGeometry(source);
     }p["searchRoi"]=MatchService::rectangle(roi);return p;
 }
-void EditorSession::suppressCancelled(CycleResult& c) {c.frames.clear();c.state=ExecutionState::Skipped;c.error="Çevrim iptal edildi.";for(auto& r:c.tools){r.outputs.clear();r.regions.clear();r.points.clear();r.lines.clear();r.searchRegion={};}}
+void EditorSession::suppressCancelled(CycleResult& c) {c.frames.clear();c.state=ExecutionState::Skipped;c.error="Çevrim iptal edildi.";for(auto& r:c.tools){r.outputs.clear();r.regions.clear();r.points.clear();r.lines.clear();r.searchRegion={};r.decision=PartDecision::NotEvaluated;r.calibration.reset();}}
 }

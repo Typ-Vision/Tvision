@@ -31,6 +31,9 @@ public:
     QString setImageFile(const QString& absolutePath);
     QString imageFilePath() const;
     void setConnections(const QVector<ToolConnection>& connections);
+    void bindCalibration(const CalibrationDependency&);
+    void clearCalibrationBinding();
+    void setCalibrationSetup(QString lensId,QString workingPlaneId);
 private:
     void setTools(const QVector<ToolDefinition>& tools);
     ProjectRepository repository_;

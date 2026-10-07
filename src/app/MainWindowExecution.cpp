@@ -1,5 +1,6 @@
 #include "MainWindow.hpp"
 #include "ImageViewer.hpp"
+#include "application/CalibrationWorkflow.hpp"
 #include <QFutureWatcher>
 #include <QtConcurrent/QtConcurrentRun>
 #include <QJsonDocument>
@@ -16,7 +17,7 @@
 namespace visionflow {
 EditorContext MainWindow::editorContext() const {
     if(!service_.activeRecipe())return {};
-    return {service_.project().id,service_.path(),service_.activeRecipe()->id,service_.activeRecipe()->definition};
+    const auto& r=*service_.activeRecipe();return {service_.project().id,service_.path(),r.id,r.definition,r.calibrationBinding ? r.calibrationBinding->toJson() : QJsonObject{}};
 }
 QByteArray MainWindow::flowSignature() const {return editorSession_.signature(editorContext());}
 void MainWindow::refreshFlow() {
@@ -51,7 +52,7 @@ void MainWindow::showExecutionResult() {
     std::stable_sort(ordered.begin(),ordered.end(),[this](const auto& a,const auto& b){return a.toolId==selectedToolId_ && b.toolId!=selectedToolId_;});
     for(const auto& r:ordered) {
         QString name=r.toolId;for(const auto& t:service_.tools())if(t.id==r.toolId)name=t.name;
-        lines<<name+" • "+executionStateName(r.state)+QString(" • %1 ms ").arg(r.milliseconds,0,'f',2)+r.message;
+        lines<<name+" • "+executionStateName(r.state)+QString(" • %1 ms ").arg(r.milliseconds,0,'f',2)+r.errorCode+" "+r.message;
         for(auto it=r.outputs.begin();it!=r.outputs.end();++it) {
             const auto& v=it.value();if(!v.valid) {lines<<"  "+it.key()+": geçersiz";continue;}
             QString value;
@@ -63,7 +64,9 @@ void MainWindow::showExecutionResult() {
             lines<<"  "+it.key()+": "+value+" "+v.port.unit;
         }
         if(r.toolId==selectedToolId_) {
-            imageViewer_->setToolOverlay(r.regions,r.points,r.lines);
+            QString annotation;
+            if(r.calibration && r.state==ExecutionState::Done && r.outputs.value("value").valid)annotation=QString("%1 mm • %2").arg(std::get<double>(r.outputs.value("value").data),0,'f',3).arg(r.decision==PartDecision::Pass ? "PASS" : "FAIL");
+            imageViewer_->setToolOverlay(r.regions,r.points,r.lines,annotation);
         }
     }
     matchInfo_->setText(lines.join("\n"));
@@ -73,8 +76,8 @@ void MainWindow::runFlow() {
     runExecution({});
 }
 void MainWindow::runExecution(const QString& targetTool) {
-    if(editorSession_.busy(SessionJob::Execution) || editorSession_.busy(SessionJob::Teaching) || editorSession_.busy(SessionJob::Image) || !applyToolProperties() || !service_.activeRecipe())return;
-    const auto definition=service_.activeRecipe()->definition;
+    if(runtimeJobs_.busy() || (runtime_ && runtime_->busy()) || editorSession_.busy(SessionJob::Execution) || editorSession_.busy(SessionJob::Teaching) || editorSession_.busy(SessionJob::Image) || !applyToolProperties() || !service_.activeRecipe())return;
+    const auto recipe=*service_.activeRecipe();const auto definition=recipe.definition;const auto catalogPath=service_.path()+".calibrations.json";
     editorSession_.references.clear();invalidateMatch();editorSession_.cycle.reset();editorSession_.frame.reset();imageViewer_->clearImage("BUSY — görüntü ediniliyor…");imageInfo_->setText("Yeni çevrim görüntüsü bekleniyor.");auto* watcher=editorSession_.watch<CycleResult>(this,SessionJob::Execution);
     refreshFlow();matchInfo_->setText("BUSY — acquisition ve DAG çalışıyor…");
     findChild<QTabWidget*>("editorTabs")->setCurrentWidget(findChild<QScrollArea*>("resultsScroll"));
@@ -91,9 +94,9 @@ void MainWindow::runExecution(const QString& targetTool) {
                 }
             }
         } else {editorSession_.cycle.reset();matchInfo_->setText("READY — değişen ayar/görüntü nedeniyle çevrim sonucu atıldı.");}
-        refreshMatchOverlay();refreshFlow();
+        refreshMatchOverlay();refreshFlow();refreshCalibration();
     });
-    editorSession_.launch(watcher,[definition,directory,id,signature,cancel,targetTool]{return ExecutionService{}.run(definition,directory,id,signature,cancel,targetTool);});
+    editorSession_.launch(watcher,[definition,directory,id,signature,cancel,targetTool,recipe,catalogPath]{return ExecutionService{}.run(definition,directory,id,signature,cancel,targetTool,{},[recipe,catalogPath](const ImageFrame& frame){return CalibrationWorkflow::resolve(recipe,frame,catalogPath);});});
 }
 void MainWindow::loadImageAsync(const QString& path,bool commit) {
     editorSession_.references.clear();

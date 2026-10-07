@@ -261,6 +261,8 @@ void MainWindow::refreshWorkspace() {
     if (auto* button=findChild<QPushButton*>("editActiveRecipe")) button->setEnabled(active!=nullptr);
     refreshRecipes();
     refreshEditor();
+    refreshCalibration();
+    refreshRuntime();
 }
 void MainWindow::saveProject() {
     if (!applyToolProperties()) return;

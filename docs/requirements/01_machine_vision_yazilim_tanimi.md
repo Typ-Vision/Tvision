@@ -1,5 +1,7 @@
 # Endüstriyel Machine Vision Yazılımı — Genel Tanım
 
+8 Ekim 2026 revizyonu: İki kalibrasyon akışı Camera Calibration ve Robot Calibration olarak korunur. Mevcut uniform scale temelinden sonra **6C-K geçici test görüntüsü import/plaka tespiti → tek görüntüden planar homography → Measurement/Runtime → fiziksel kabul (gerektiğinde ayrı lens düzeltmesi)**, ardından 6D PLC ve 6E Eye-to-Hand/Eye-in-Hand gelir. Yeni modeller henüz uygulanmadı; sonraki uygulama adımı 6C-K1 model sözleşmesi, geçici Calibration görüntü import ve otomatik plaka tespitidir. [Güncel kalibrasyon gereksinimleri ve kabul planı](../architecture/calibration-plan.md). Bu revizyon önceki geliştirme sırası ifadelerine göre önceliklidir.
+
 ## 7 Ekim 2026 onaylı geliştirme önceliği
 
 Ürün vizyonu korunur. Genel incelemedeki dokuz mimari öneri [geliştirme planına](../architecture/development-plan.md) alınmıştır: ortak yürütme, referans invalidation, registry, session/controller, owned frame, kamera yaşam döngüsü, koordinat modeli, doğrulanmış üretim snapshot'ı ve persistence/build/test güçlendirmesi. Önce 6A, sonra gerçek kamera (6B), Measurement/kalibrasyon/tolerans/Runtime (6C), PLC (6D), robot guidance (6E) ve ürünleştirme (7) uygulanır. Temel servis yetkisi, hata kodları ve cycle logları ilk Runtime'a dahildir.

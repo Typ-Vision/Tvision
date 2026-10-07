@@ -16,8 +16,10 @@ void roi(const QJsonValue& v) {
  require(o["width"].toInt()>0 && o["height"].toInt()>0,"ROI boyutu pozitif olmalı.");
 }
 }
-QString builtinLabel(const QString& k) {if(k=="image_file")return "Image File";if(k=="template_match")return "Template Match";if(k=="blob")return "Blob";if(k=="edge")return "Edge";return "Calculate";}
+QString builtinLabel(const QString& k) {if(k=="measurement")return "Measurement";if(k=="webcam")return "Webcam";if(k=="image_file")return "Image File";if(k=="template_match")return "Template Match";if(k=="blob")return "Blob";if(k=="edge")return "Edge";return "Calculate";}
 QJsonObject builtinDefaults(const QString& k) {
+ if(k=="measurement")return {{"lowerMm",0.0},{"upperMm",100.0}};
+ if(k=="webcam")return {{"deviceIndex",0},{"backend","qt"},{"timeoutMs",5000}};
  if(k=="image_file")return {{"path",""}};
  if(k=="template_match")return {{"minScore",0.7},{"modelRoi",QJsonObject{}},{"searchRoi",QJsonObject{}},{"modelPng",""}};
  if(k=="blob")return {{"threshold",128},{"searchRoi",QJsonObject{}}};
@@ -25,11 +27,14 @@ QJsonObject builtinDefaults(const QString& k) {
  return {{"operation","distance"}};
 }
 QVector<PortDefinition> builtinInputs(const QString& k) {
- if(k=="image_file")return {};if(k=="calculate")return {{"p1",PortType::Point,"px","image"},{"p2",PortType::Point,"px","image"}};
+ if(k=="webcam")return {};
+ if(k=="image_file")return {};if(k=="calculate" || k=="measurement")return {{"p1",PortType::Point,"px","image"},{"p2",PortType::Point,"px","image"}};
  if(k=="edge")return {{"image",PortType::Image,"px","image"},{"region",PortType::Region,"px","image",false},{"reference",PortType::Point,"px","image",false}};
  return {{"image",PortType::Image,"px","image"},{"region",PortType::Region,"px","image",false}};
 }
 QVector<PortDefinition> builtinOutputs(const QString& k) {
+ if(k=="measurement")return {{"value",PortType::Number,"mm","plane"},{"pixels",PortType::Number,"px","image"},{"pass",PortType::Boolean,"","plane"}};
+ if(k=="webcam")return {{"image",PortType::Image,"px","image"}};
  if(k=="image_file")return {{"image",PortType::Image,"px","image"}};if(k=="calculate")return {{"value",PortType::Number,"px","image"}};
  if(k=="edge")return {{"point",PortType::Point,"px","image"},{"strength",PortType::Number,"gray8","image"},{"found",PortType::Boolean,"","image"}};
  if(k=="blob")return {{"region",PortType::Region,"px","image"},{"point",PortType::Point,"px","image"},{"area",PortType::Number,"px2","image"},{"count",PortType::Number,"count","image"},{"found",PortType::Boolean,"","image"}};
@@ -37,7 +42,14 @@ QVector<PortDefinition> builtinOutputs(const QString& k) {
 }
 void builtinValidation(const ToolDefinition& t) {
  auto p=t.parameters;
- if(t.kind=="image_file")require(p["path"].isString() && p["path"].toString().size()<=4096,"Görüntü yolu hatalı.");
+ if(t.kind=="webcam") {
+  auto index=p["deviceIndex"],timeout=p["timeoutMs"];
+  require(index.isDouble() && index.toDouble()==index.toInt() && index.toInt()>=0 && index.toInt()<=63,"Webcam index 0–63 olmalı.");
+  require(timeout.isDouble() && timeout.toDouble()==timeout.toInt() && timeout.toInt()>=1 && timeout.toInt()<=60000,"Webcam timeout 1–60000 ms olmalı.");
+  require(p["backend"].isString() && QStringList{"qt"}.contains(p["backend"].toString()),"Webcam backend qt olmalı.");
+ } else if(t.kind=="measurement") {
+  const auto lower=p["lowerMm"],upper=p["upperMm"];require(lower.isDouble() && upper.isDouble() && std::isfinite(lower.toDouble()) && std::isfinite(upper.toDouble()) && lower.toDouble()>=0 && upper.toDouble()>=lower.toDouble(),"Tolerans 0 ≤ alt ≤ üst ve sonlu mm olmalı.");
+ } else if(t.kind=="image_file")require(p["path"].isString() && p["path"].toString().size()<=4096,"Görüntü yolu hatalı.");
  else if(t.kind=="template_match") {auto v=p["minScore"];require(v.isDouble() && v.toDouble()>=0 && v.toDouble()<=1,"Min Score 0–1 aralığında olmalı.");roi(p["modelRoi"]);roi(p["searchRoi"]);require(p["modelPng"].isString() && p["modelPng"].toString().size()<=4*1024*1024,"Model PNG sınırı 4 MB base64.");}
  else if(t.kind=="blob") {auto v=p["threshold"];require(v.isDouble() && v.toDouble()>=0 && v.toDouble()<=255 && v.toDouble()==v.toInt(),"Threshold 0–255 tamsayı olmalı.");roi(p["searchRoi"]);}
  else if(t.kind=="edge") {
@@ -54,7 +66,7 @@ void ToolRegistry::registerType(ToolDescriptor descriptor) {
     QMutexLocker lock(&registryMutex);extensions.append(std::move(descriptor));
 }
 QVector<ToolDescriptor> ToolRegistry::entries() {
- static const QVector<ToolDescriptor> builtins=[] {QVector<ToolDescriptor> result;for(const QString kind:{"image_file","template_match","blob","edge","calculate"})result.append({kind,builtinLabel(kind),1,builtinDefaults(kind),builtinInputs(kind),builtinOutputs(kind),builtinValidation,kind=="image_file"});return result;}();
+ static const QVector<ToolDescriptor> builtins=[] {QVector<ToolDescriptor> result;for(const QString kind:{"image_file","template_match","blob","edge","calculate","webcam","measurement"})result.append({kind,builtinLabel(kind),1,builtinDefaults(kind),builtinInputs(kind),builtinOutputs(kind),builtinValidation,kind=="image_file" || kind=="webcam"});return result;}();
     QMutexLocker lock(&registryMutex);auto result=builtins;result+=extensions;return result;
 }
 ToolDescriptor ToolRegistry::get(const QString& kind) {for(const auto& e:entries())if(e.kind==kind)return e;throw std::runtime_error(("Desteklenmeyen tool türü: "+kind).toUtf8().constData());}

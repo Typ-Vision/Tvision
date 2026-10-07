@@ -21,6 +21,7 @@
 #include <QVBoxLayout>
 #include <QShortcut>
 #include <QTimer>
+#include <QJsonDocument>
 #include <exception>
 namespace visionflow {
 namespace {
@@ -103,11 +104,13 @@ void MainWindow::refreshEditor() {
         if (t.id==selectedToolId_) { flowTools_->setCurrentItem(item); found=true; }
     }
     if (!found) selectedToolId_.clear();
-    const QString path=service_.imageFilePath(); const QString binding=recipeId+"|"+path;
+    const QString path=service_.imageFilePath(); QString binding=recipeId+"|"+path;
+    bool webcamSource=false;
+    for(const auto& t:tools)if(t.kind=="webcam") {webcamSource=true;binding+="|"+t.id+"|"+QString::fromUtf8(QJsonDocument(t.parameters).toJson(QJsonDocument::Compact))+"|"+QString::number(t.enabled);}
     if (binding!=imageBinding_) {
         ++editorSession_.generation; invalidateMatch();
         imageBinding_=binding; editorSession_.frame.reset();
-        imageViewer_->clearImage(recipe ? "Open Image ile görüntü yükleyin." : "Önce bir reçete açın."); imageInfo_->setText("Görüntü yok.");
+        imageViewer_->clearImage(webcamSource ? "Run Flow ile webcam'den tek kare alın." : recipe ? "Open Image ile görüntü yükleyin." : "Önce bir reçete açın."); imageInfo_->setText("Görüntü yok.");
         if (!path.isEmpty()) {
             loadImageAsync(path,false);
         }
@@ -152,6 +155,11 @@ void MainWindow::showToolProperties() {
     if (tool.kind=="image_file") {
         auto* path=new QLineEdit(tool.parameters["path"].toString()); path->setReadOnly(true); path->setCursorPosition(0); path->setPlaceholderText("Seçilmedi"); path->setToolTip(path->text()); form->addRow("File",path);
         auto* choose=new QPushButton("Open Image…"); form->addRow(choose); connect(choose,&QPushButton::clicked,this,&MainWindow::openImageDialog);
+    } else if(tool.kind=="webcam") {
+        auto* index=new QSpinBox;index->setObjectName("webcamIndex");index->setRange(0,63);index->setValue(tool.parameters["deviceIndex"].toInt());form->addRow("Device index",index);
+        auto* timeout=new QSpinBox;timeout->setObjectName("webcamTimeout");timeout->setRange(1,60000);timeout->setSuffix(" ms");timeout->setValue(tool.parameters["timeoutMs"].toInt());form->addRow("Timeout",timeout);
+        form->addRow(note("Run Flow: host isteğiyle tek kare. Donanım trigger/live/exposure/gain yok. Stop/deadline geç kareyi reddeder; sürücü çağrısını zorla kesmez. Index kalıcı cihaz kimliği değildir."));
+        connect(index,&QSpinBox::valueChanged,this,[this]{applyToolProperties();});connect(timeout,&QSpinBox::valueChanged,this,[this]{applyToolProperties();});
     } else if (tool.kind=="template_match") {
         auto* value=new QDoubleSpinBox; value->setObjectName("minScore"); value->setRange(0,100); value->setDecimals(1); value->setSuffix(" %"); value->setValue(tool.parameters["minScore"].toDouble()*100); form->addRow("Minimum Score",value);
         connect(value,&QDoubleSpinBox::valueChanged,this,[this]{applyToolProperties();});
@@ -180,6 +188,15 @@ void MainWindow::showToolProperties() {
         for (const auto key : {"left_to_right","right_to_left","top_to_bottom","bottom_to_top"}) value->addItem(QString(key).replace('_',' '),key);
         value->setCurrentIndex(value->findData(tool.parameters["direction"].toString())); form->addRow("Direction",value);
         connect(value,&QComboBox::currentIndexChanged,this,[this]{applyToolProperties();});
+    } else if(tool.kind=="measurement") {
+        form->addRow("Operation",note("Distance (mm) / inclusive tolerance"));
+        for(const auto key:{"lowerMm","upperMm"}) {
+            auto* value=new QDoubleSpinBox;value->setObjectName(key);value->setDecimals(6);value->setRange(0,1000000000);value->setSuffix(" mm");value->setValue(tool.parameters[key].toDouble());form->addRow(QString(key)=="lowerMm" ? "Alt tolerans" : "Üst tolerans",value);
+            connect(value,&QDoubleSpinBox::editingFinished,this,[this]{applyToolProperties();});
+        }
+        const auto binding=service_.activeRecipe()->calibrationBinding;
+        form->addRow("Calibration",note(binding ? QString("%1 v%2 • %3").arg(binding->calibrationId).arg(binding->version).arg(binding->contentId.left(12)) : "Bağlanmadı — mm sonucu engellenir."));
+        auto* calibration=new QPushButton("Calibration aç");form->addRow(calibration);connect(calibration,&QPushButton::clicked,this,[this]{selectPage("calibration");});
     } else form->addRow("Operation",note("Euclidean Distance (px)"));
     if(tool.kind=="edge") {
         auto* contrast=new QDoubleSpinBox;contrast->setObjectName("minContrast");contrast->setRange(1,255);contrast->setValue(tool.parameters["minContrast"].toDouble());form->addRow("Min Contrast",contrast);connect(contrast,&QDoubleSpinBox::valueChanged,this,[this]{applyToolProperties();});
@@ -234,7 +251,7 @@ void MainWindow::showToolProperties() {
     }
     for(const auto& output:outputPorts(tool.kind))form->addRow("Output "+output.id,note(portTypeName(output.type)+" · "+output.unit+" · "+output.frame));
     layout->addWidget(panel);
-    layout->addWidget(note(tool.kind=="image_file" ? "Görüntü piksel koordinatları kullanılır. Kamera bağlantısı yok." : tool.kind=="template_match" ? "Sabit açı/ölçek, tek sonuç. Skor olasılık değildir; sonuç Results sekmesinde." : "Run Flow ile gerçek sonucu hesaplayın. Parça kararı üretilmez."));
+    layout->addWidget(note(tool.kind=="measurement" ? "İki gerçek DONE nokta ve güncel kalibrasyon gerekir. PASS/FAIL tek ölçüm kararıdır; reçete veya üretim izni değildir. Karşılaştırma ham mm değeriyle yapılır." : tool.kind=="image_file" ? "Görüntü piksel koordinatları kullanılır. Kamera bağlantısı yok." : tool.kind=="template_match" ? "Sabit açı/ölçek, tek sonuç. Skor olasılık değildir; sonuç Results sekmesinde." : "Run Flow ile gerçek sonucu hesaplayın. Parça kararı üretilmez."));
     connect(name,&QLineEdit::editingFinished,this,[this]{applyToolProperties();});
     connect(name,&QLineEdit::textEdited,this,[this]{applyToolProperties();});
     connect(description,&QLineEdit::editingFinished,this,[this]{applyToolProperties();});
@@ -255,6 +272,9 @@ bool MainWindow::applyToolProperties() {
             if (auto* threshold=propertiesBody_->findChild<QSpinBox*>("threshold")) tool.parameters["threshold"]=threshold->value();
             if (auto* direction=propertiesBody_->findChild<QComboBox*>("edgeDirection")) tool.parameters["direction"]=direction->currentData().toString();
             if(auto* contrast=propertiesBody_->findChild<QDoubleSpinBox*>("minContrast"))tool.parameters["minContrast"]=contrast->value();
+            if(auto* index=propertiesBody_->findChild<QSpinBox*>("webcamIndex"))tool.parameters["deviceIndex"]=index->value();
+            if(auto* timeout=propertiesBody_->findChild<QSpinBox*>("webcamTimeout"))tool.parameters["timeoutMs"]=timeout->value();
+            for(const auto key:{"lowerMm","upperMm"})if(auto* value=propertiesBody_->findChild<QDoubleSpinBox*>(key))tool.parameters[key]=value->value();
             service_.updateTool(tool); propertiesEditing_=true; refreshWorkspace(); propertiesEditing_=false; return true;
         }
     } catch (const std::exception& e) {propertiesEditing_=false; displayError(QString::fromUtf8(e.what())); return false;}

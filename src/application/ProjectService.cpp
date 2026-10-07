@@ -2,6 +2,7 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QDir>
+#include <QJsonArray>
 #include <QLockFile>
 #include <QUuid>
 #include <stdexcept>
@@ -63,6 +64,7 @@ void ProjectService::editRecipe(const QString& id, QString name, QString descrip
     auto candidate=project();
     for (auto& recipe : candidate.recipes) if (recipe.id==id) {
         if (recipe.name==name.trimmed() && recipe.description==description && recipe.cameraReference==camera.trimmed() && recipe.calibrationReference==calibration.trimmed()) return;
+        if(recipe.cameraReference!=camera.trimmed() || recipe.calibrationReference!=calibration.trimmed())recipe.calibrationBinding.reset();
         recipe.name=name.trimmed(); recipe.description=description; recipe.cameraReference=camera.trimmed(); recipe.calibrationReference=calibration.trimmed();
         recipe.status=RecipeStatus::Draft; validateProject(candidate);
         project_=candidate; changedRecipes_.insert(id); dirty_=true; return;
@@ -113,6 +115,10 @@ void ProjectService::setTools(const QVector<ToolDefinition>& tools) {
         connections.erase(std::remove_if(connections.begin(),connections.end(),[&](const auto& c){return removed(c.sourceTool) || removed(c.targetTool);}),connections.end());
         definition=withEditorConnections(definition,connections);
         if (definition==r.definition || definition==withEditorTools(r.definition,editorTools(r.definition))) return;
+        if(r.calibrationBinding) {
+            auto sourceConfig=[](const QVector<ToolDefinition>& list){QJsonArray sources;for(const auto& t:list)if(t.kind=="image_file" || t.kind=="webcam")sources.append(QJsonObject{{"id",t.id},{"kind",t.kind},{"enabled",t.enabled},{"parameters",t.parameters}});return sources;};
+            if(sourceConfig(previous)!=sourceConfig(tools))r.calibrationBinding.reset();
+        }
         r.definition=definition; r.status=RecipeStatus::Draft; validateProject(candidate);
         project_=candidate; changedRecipes_.insert(id); dirty_=true; return;
     }
@@ -176,5 +182,31 @@ QString ProjectService::imageFilePath() const {
         return QDir::cleanPath(QDir(QFileInfo(path_).absolutePath()).absoluteFilePath(relative));
     }
     return {};
+}
+void ProjectService::bindCalibration(const CalibrationDependency& dependency) {
+    dependency.validate();if(!activeRecipe())fail("Önce reçete açın.");
+    const auto id=activeRecipe()->id;auto candidate=project();
+    for(auto& r:candidate.recipes)if(r.id==id) {
+        if(r.calibrationBinding==dependency)return;
+        r.schemaVersion=2;r.calibrationReference=dependency.calibrationId;r.calibrationBinding=dependency;r.status=RecipeStatus::Draft;
+        validateProject(candidate);project_=candidate;changedRecipes_.insert(id);dirty_=true;return;
+    }
+}
+void ProjectService::clearCalibrationBinding() {
+    if(!activeRecipe())fail("Önce reçete açın.");if(!activeRecipe()->calibrationBinding)return;
+    const auto id=activeRecipe()->id;auto candidate=project();
+    for(auto& r:candidate.recipes)if(r.id==id) {
+        r.calibrationBinding.reset();r.calibrationReference.clear();r.status=RecipeStatus::Draft;
+        project_=candidate;changedRecipes_.insert(id);dirty_=true;return;
+    }
+}
+void ProjectService::setCalibrationSetup(QString lensId,QString workingPlaneId) {
+    if(!activeRecipe())fail("Önce reçete açın.");const auto id=activeRecipe()->id;auto candidate=project();
+    const QJsonObject setup{{"lensId",lensId.trimmed()},{"workingPlaneId",workingPlaneId.trimmed()}};
+    for(auto& r:candidate.recipes)if(r.id==id) {
+        if(r.definition.value("planarSetup")==setup)return;
+        r.definition["planarSetup"]=setup;r.calibrationBinding.reset();r.status=RecipeStatus::Draft;
+        validateProject(candidate);project_=candidate;changedRecipes_.insert(id);dirty_=true;return;
+    }
 }
 }

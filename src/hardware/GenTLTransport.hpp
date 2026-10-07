@@ -16,7 +16,8 @@ public:
     ~GenTLTransport();
     GenTLTransport(const GenTLTransport&)=delete;
     GenTLTransport& operator=(const GenTLTransport&)=delete;
-    QVector<CameraDevice> discover(int timeoutMs,const std::shared_ptr<std::atomic_bool>& cancel={});
+    // Scan waits are capped separately and leave half the remaining total budget for enumeration.
+    QVector<CameraDevice> discover(int timeoutMs,const std::shared_ptr<std::atomic_bool>& cancel={},int scanWaitMs=250);
     void openReadOnly(const CameraDevice& device);
     void closeDevice();
     bool isDeviceOpen() const;

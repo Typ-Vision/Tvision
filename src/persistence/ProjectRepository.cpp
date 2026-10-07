@@ -39,11 +39,13 @@ QByteArray ProjectRepository::encode(const Project& project) {
     validateProject(project);
     QJsonArray recipes;
     for (const auto& r : project.recipes) {
-        recipes.append(QJsonObject{{"id",r.id},{"name",r.name},{"description",r.description},
+        QJsonObject recipe{{"id",r.id},{"name",r.name},{"description",r.description},
             {"schemaVersion",r.schemaVersion},{"recipeVersion",r.recipeVersion},
             {"applicationType",typeKey(r.applicationType)},{"status",statusKey(r.status)},
             {"cameraReference",r.cameraReference},{"calibrationReference",r.calibrationReference},
-            {"createdAt",utc(r.createdAt)},{"modifiedAt",utc(r.modifiedAt)},{"definition",r.definition}});
+            {"createdAt",utc(r.createdAt)},{"modifiedAt",utc(r.modifiedAt)},{"definition",r.definition}};
+        if(r.schemaVersion==2)recipe["calibrationBinding"]=r.calibrationBinding ? QJsonValue(r.calibrationBinding->toJson()) : QJsonValue(QJsonValue::Null);
+        recipes.append(recipe);
     }
     return QJsonDocument(QJsonObject{{"format","visionflow.project"},{"schemaVersion",project.schemaVersion},
         {"id",project.id},{"name",project.name},{"description",project.description},
@@ -75,9 +77,14 @@ Project ProjectRepository::load(const QString& path) const {
     for (const auto value : object.value("recipes").toArray()) {
         require(value.isObject(),"Hatalı reçete nesnesi."); const auto r = value.toObject(); Recipe recipe;
         checkKeys(r,{"id","name","description","schemaVersion","recipeVersion","applicationType","status",
-            "cameraReference","calibrationReference","createdAt","modifiedAt","definition"});
+            "cameraReference","calibrationReference","createdAt","modifiedAt","definition","calibrationBinding"});
         recipe.id=stringField(r,"id"); recipe.name=stringField(r,"name"); recipe.description=stringField(r,"description");
         recipe.schemaVersion=integerField(r,"schemaVersion"); recipe.recipeVersion=integerField(r,"recipeVersion");
+        if(recipe.schemaVersion==1)require(!r.contains("calibrationBinding"),"Schema 1 sürüm bağlantısı içeremez.");
+        else if(recipe.schemaVersion==2) {
+            require(r.contains("calibrationBinding") && (r["calibrationBinding"].isNull() || r["calibrationBinding"].isObject()),"Hatalı kalibrasyon sürüm bağlantısı.");
+            if(r["calibrationBinding"].isObject())recipe.calibrationBinding=CalibrationDependency::fromJson(r["calibrationBinding"].toObject());
+        } else require(false,"Desteklenmeyen reçete şema sürümü.");
         recipe.applicationType=parseType(stringField(r,"applicationType")); recipe.status=parseStatus(stringField(r,"status"));
         recipe.cameraReference=stringField(r,"cameraReference"); recipe.calibrationReference=stringField(r,"calibrationReference");
         recipe.createdAt=dateField(r,"createdAt"); recipe.modifiedAt=dateField(r,"modifiedAt");

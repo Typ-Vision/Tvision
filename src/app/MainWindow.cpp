@@ -83,7 +83,7 @@ MainWindow::MainWindow(const QString& settingsFile) : settingsFile_(settingsFile
         pageIds_.append(spec.id);
         const QString id(spec.id);
         pages_->addWidget(id=="dashboard" ? makeDashboard() : id=="projects" ? makeProjectManager() :
-                          id=="recipes" ? makeRecipeManager() : id=="camera" ? makeCameraManager() : makePlaceholder(spec.title,spec.description));
+                          id=="recipes" ? makeRecipeManager() : id=="camera" ? makeCameraManager() : id=="calibration" ? makeCalibration() : id=="runtime" ? makeRuntime() : id=="logs" ? makeLogs() : makePlaceholder(spec.title,spec.description));
         auto* item = new QListWidgetItem(spec.title,navigation_); item->setData(Qt::UserRole,QString(spec.id));
     }
     pageIds_.append("editor"); pages_->addWidget(makeEditor());
@@ -126,6 +126,9 @@ void MainWindow::selectPage(const QString& id) {
         }
     }
     pages_->setCurrentIndex(index);
+    if(id=="calibration")refreshCalibration();
+    if(id=="runtime")refreshRuntime();
+    if(id=="logs")refreshLogs();
 }
 void MainWindow::saveLayout() {
     QDir().mkpath(QFileInfo(settingsFile_).absolutePath()); QSettings settings(settingsFile_,QSettings::IniFormat);
@@ -175,7 +178,7 @@ void MainWindow::restoreLayout() {
     horizontal_->restoreState(settings.value("editor/horizontal").toByteArray()); vertical_->restoreState(settings.value("editor/vertical").toByteArray());
 }
 void MainWindow::closeEvent(QCloseEvent* event) {
-    if (editorSession_.busy(SessionJob::Teaching) || editorSession_.busy(SessionJob::Execution) || editorSession_.busy(SessionJob::Image) || cameraSession_.busy()) {displayError("Arka plan işi tamamlandıktan sonra pencereyi kapatın."); event->ignore(); return;}
+    if (editorSession_.busy(SessionJob::Teaching) || editorSession_.busy(SessionJob::Execution) || editorSession_.busy(SessionJob::Image) || cameraSession_.busy() || runtimeJobs_.busy() || (runtime_ && runtime_->busy())) {displayError("Arka plan işi tamamlandıktan sonra pencereyi kapatın."); event->ignore(); return;}
     if (!resolveUnsavedChanges()) { event->ignore(); return; }
     saveLayout(); QMainWindow::closeEvent(event);
 }

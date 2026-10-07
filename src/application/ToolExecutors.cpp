@@ -3,6 +3,8 @@
 #include "domain/Coordinates.hpp"
 #include "MatchService.hpp"
 #include "AcquisitionService.hpp"
+#include "WebcamAdapter.hpp"
+#include "MeasurementService.hpp"
 #include <QDir>
 #include <QElapsedTimer>
 #include <QUuid>
@@ -63,6 +65,16 @@ ToolResult ToolExecutors::imageFile(const ToolDefinition& t,const QMap<QString,P
             throw std::runtime_error(acquired.error.toUtf8().constData());
         }
         put("image",acquired.frame->image);return r;
+}
+ToolResult ToolExecutors::webcam(const ToolDefinition& t,const QMap<QString,PortValue>&,const QString&,const QString& frameId,const QString& cycleId,const std::shared_ptr<std::atomic_bool>& cancel) {
+    ToolRegistry::validate(t);
+    const WebcamAdapter adapter({t.parameters["deviceIndex"].toInt(),t.parameters["backend"].toString()});
+    const auto acquired=AcquisitionService{}.acquire(adapter,{t.id,cycleId,frameId,TriggerMode::Software,t.parameters["timeoutMs"].toInt(),cancel});
+    ToolResult result;result.toolId=t.id;
+    if(acquired.state==AcquisitionState::Cancelled){result.state=ExecutionState::Skipped;result.message=acquired.error;return result;}
+    if(acquired.state!=AcquisitionState::Done)throw std::runtime_error(acquired.error.toUtf8().constData());
+    result.state=ExecutionState::Done;
+    result.outputs["image"]={outputPorts(t.kind).first(),acquired.frame->image,true,frameId,cycleId,acquired.frame->image.metadata()};return result;
 }
 ToolResult ToolExecutors::calculate(const ToolDefinition& t,const QMap<QString,PortValue>& inputs,const QString& directory,const QString& frameId,const QString& cycleId,const std::shared_ptr<std::atomic_bool>& cancel) {
     ToolResult r; r.toolId=t.id;r.state=ExecutionState::Done;
@@ -146,11 +158,27 @@ namespace { QMutex executorMutex; QMap<QString,ToolExecutor> extensions; }
 void ToolExecutors::registerExecutor(const QString& kind,ToolExecutor executor) {
     ToolRegistry::get(kind);
     QMutexLocker lock(&executorMutex);
-    if(!executor || extensions.contains(kind) || QStringList{"image_file","template_match","blob","edge","calculate"}.contains(kind))throw std::runtime_error("Geçersiz/tekrar yürütücü kaydı.");
+    if(!executor || extensions.contains(kind) || QStringList{"image_file","webcam","template_match","blob","edge","calculate","measurement"}.contains(kind))throw std::runtime_error("Geçersiz/tekrar yürütücü kaydı.");
     extensions.insert(kind,std::move(executor));
 }
-ToolExecutor ToolExecutors::get(const QString& kind) {
-    static const QMap<QString,ToolExecutor> executors={{"image_file",imageFile},{"calculate",calculate},{"template_match",match},{"blob",blob},{"edge",edge}};
+ToolExecutor ToolExecutors::get(const QString& kind,const MeasurementExecutionContext& context) {
+    if(kind=="measurement")return [context](const ToolDefinition& t,const QMap<QString,PortValue>& inputs,const QString&,const QString& frameId,const QString& cycleId,const std::shared_ptr<std::atomic_bool>&) {
+        ToolResult r;r.toolId=t.id;r.state=ExecutionState::Error;r.errorCode="CALIBRATION_INVALID";
+        if(!context.calibration || !context.current) {r.message=context.error.isEmpty() ? "Kalibrasyon bağlantısı/güncel kurulum çözümlenmedi." : context.error;return r;}
+        ToolResult a,b;a.state=b.state=ExecutionState::Done;a.outputs["point"]=inputs.value("p1");b.outputs["point"]=inputs.value("p2");
+        const auto value=MeasurementService{}.distance(a,"point",b,"point",*context.calibration,*context.current,context.rawSize,t.parameters["lowerMm"].toDouble(),t.parameters["upperMm"].toDouble());
+        r.state=value.state;r.decision=value.decision;r.errorCode=value.errorCode;r.message=value.error;
+        if(value.state!=ExecutionState::Done)return r;
+        r.calibration=value.calibration;
+        for(const auto& p:outputPorts(t.kind)) {
+            const PortData data=p.id=="value" ? PortData(*value.millimetres) : p.id=="pixels" ? PortData(*value.pixels) : PortData(value.decision==PartDecision::Pass);
+            r.outputs[p.id]={p,data,true,frameId,cycleId,value.origin};
+        }
+        r.points={std::get<QPointF>(inputs.value("p1").data),std::get<QPointF>(inputs.value("p2").data)};
+        r.message=QString("%1 • [%2, %3] mm • Calibration %4 v%5").arg(value.decision==PartDecision::Pass ? "PASS" : "FAIL").arg(t.parameters["lowerMm"].toDouble()).arg(t.parameters["upperMm"].toDouble()).arg(value.calibration.calibrationId).arg(value.calibration.version);
+        return r;
+    };
+    static const QMap<QString,ToolExecutor> executors={{"image_file",imageFile},{"webcam",webcam},{"calculate",calculate},{"template_match",match},{"blob",blob},{"edge",edge}};
     ToolRegistry::get(kind);
     QMutexLocker lock(&executorMutex);
     if(extensions.contains(kind))return extensions.value(kind);

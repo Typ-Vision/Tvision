@@ -1,0 +1,93 @@
+# Kamera ve robot kalibrasyonu — revize ürün planı
+
+8 Ekim 2026. Kullanıcının iki kalibrasyon beklentisi üzerine kod/gereksinim incelemesi ve plan güncellemesidir; aşağıdaki yeni modeller henüz uygulanmadı. Güncel öncelik 6C-K kamera kalibrasyonunu PLC'den önce tamamlamaktır.
+
+## Ürün amacı ve mevcut durum
+
+VisionFlow; Measurement, Defect Inspection ve Robot Guidance için tek Recipe Editor, DAG ve Runtime sunar. Kalibrasyon ortak bir servistir: ölçüm fiziksel birim için kamera modelini, robot guidance ayrıca robot dönüşümünü kullanır. Piksel tabanlı kusur kontrolü kalibrasyonsuz çalışabilir; mm/mm² sonuçlar uygun model gerektirir.
+
+Mevcut MeasurementService::teach bir elle girilmiş segmentten `mmPerPx = knownMm / pixelLength` hesaplar; distance piksel mesafesini bu katsayıyla çarpar. En az iki ayrı holdout segmentiyle hata kontrolü vardır. CalibrationService sürümlü kanıt, bağımsız current resolver ve binding; RuntimeService immutable snapshot ve sonuç kaydı sağlar. Bu altyapı korunur.
+
+Eksik olan plaka bulma, kamera iç parametreleri/lens modeli, çalışma düzlemine nokta dönüşümü ve robot kalibrasyonudur. Mevcut scale dünya orijini veya robot koordinatı tanımlamaz. CalibrationService ve execution context somut PlanarScaleCalibration tipine bağlıdır; yeni modeller yalnız UI eklenerek desteklenemez. CMake şu anda core/imgproc/imgcodecs ister; yerel OpenCV 5 kalibrasyon modülü/API bağlantısı uygulama öncesi doğrulanmalıdır.
+
+Genel mimari yönü doğru; ancak scalar prototipten PLC'ye geçiş ölçüm ürününün temel beklentisini erken tamamlanmış kabul ediyordu. Öncelik plaka → gerçek mm → bağımsız doğruluk kabulü olmalıdır. Robot guidance için açı/Pose çıktısı, pick reference ve robot dönüşümü de gerekir; mevcut sabit açıdaki Match bunu sağlamaz.
+
+## Kullanıcıya iki kalibrasyon akışı
+
+### 1. Planar Calibration / Homography — tek görüntüden X-Y mm
+
+Kullanıcının son yönlendirmesiyle ilk hedef tek görüntüden planar homography'dir. Çok görüntülü intrinsic kalibrasyonu zorunlu başlangıç değildir; lens bozulmasının ihmal edilemediği kurulumlarda ayrıca gerekir. Sabit kamera ve sabit ölçüm düzlemi için H doğrudan hesaplanabilir; ayrı bir 3D plane pose çözmek şart değildir. Mevcut Calibration sayfası, genel tema/navigasyon/panel düzeni korunur; algoritmalar application/vision servislerinde worker üzerinde çalışır.
+
+1. İlk hedef chessboard: iç köşe satır/sütun sayısı, gerçek kare kenarı mm, target kimliği ve dünya orijin/eksenleri girilir. Kare sayısı ile iç köşe sayısı ayrılır. Circle grid ve ChArUco sonraki genişletmedir. Genel Template Match skoru yerine desene özel köşeler bulunur.
+2. **Kare al** veya **Test görüntüsü içe aktar (geçici)** ile görüntü edinilir. Tam çözünürlük kullanılır. Köşe tespiti, numaralandırılmış alt piksel overlay ve dünya orijin/eksen işaretleri gösterilir; kullanıcı eşleşmeyi inceleyebilir.
+3. Bilinen mm koordinatları ile görüntü noktalarından image → world yönünde 3×3 H hesaplanır. En az dört dejenere olmayan eşleşme gerekir (dört noktalı durumda herhangi üçü aynı doğru üzerinde olmamalı); pratikte tüm uygun, alana yayılmış köşeler kullanılır. Yanlış sıra, yetersiz dağılım, tekil/kararsız matris ve geçersiz dönüşüm reddedilir.
+4. Ölçüm noktaları H ile X-Y mm'ye dönüştürülür; mesafe/çap/genişlik/alan hesabı dünya düzleminde yapılır. Çap/merkez için kontur noktaları önce dönüştürülür, geometri sonra fit edilir; piksel çapı veya görüntü centroid'i körlemesine dönüştürülmez. İlk DAG entegrasyonu mevcut iki Edge noktası arasındaki mesafedir; diğer tool yetenekleri uygulanmış sayılmaz.
+5. Fit RMS mm, ters projeksiyon hatası px ve bağımsız validation RMS/maksimum hata mm ayrı gösterilir. Aynı fit köşeleri bağımsız kabul sayılmaz. Tek görüntü hesaplamaya yeter; doğruluk için fit dışında tutulan örnekler/ayrı referanslar ve fiziksel kullanımda merkez/kenar/farklı yönlerde kontrol gerekir. Kabul sınırı uygulama hata bütçesiyle belirlenir.
+6. H, target geometrisi/aralığı, dünya orijin/eksenleri, giriş koordinat türü, resolution, kamera/kurulum, doğrulanmış bölge, örnekler/hatalar ve varsa intrinsic dependency sürümlü kaydedilir. Reçete açıkça bağlanır; kabul edilmemiş aday otomatik etkinleşmez.
+
+Lens politikası iki açık yol içerir:
+
+- Bozulmanın hedef doğruluğa göre ihmal edilebilir olduğu doğrulanmış kurulum: raw pixel → H → world mm. İçe aktarılmış sentetik örnekte bu yalnız test varsayımıdır.
+- Bozulmanın ihmal edilemediği kurulum: raw pixel → undistort → H → world mm. Kabul edilmiş intrinsics kullanılabilir veya ayrı çok görüntülü lens kalibrasyonu yapılır. Bu yol uygulanmadan ihtiyaç duyan veri üretim doğruluğu kabulü alamaz; düzeltme yapılmış gibi gösterilmez.
+
+H öğretimi ve ölçüm aynı koordinat alanında çalışır. undistortPoints varsayılan normalize çıktısı ile düzeltilmiş piksel çıktısı karıştırılmaz; P/yeni kamera matrisi ve distortion modeli sürümlenir. Homography radyal distortion'u çözmez. Kamera, focus/zoom, crop/resize/orientation veya kamera–düzlem ilişkisi değişince ilgili kayıt yeniden doğrulanır. Plaka referans yüzeyi ile ölçülen özelliklerin yüksekliği aynı olmalıdır. Düzlem dışındaki noktalar genel 3D ölçüm değildir.
+
+OpenCV planı: findChessboardCorners + cornerSubPix veya doğrudan alt piksel veren findChessboardCornersSB; findHomography; perspectiveTransform. cornerSubPix circle-grid merkezleri için ortak zorunlu aşama değildir. Robust fit kullanılırsa eşik hedef koordinat birimiyle (image → world için mm) açık tanımlanır ve reddedilen noktalar raporlanır. warpPerspective yalnız isteğe bağlı görüntü sunumudur; çıktı mm/pixel, orijin ve boyutu ayrıca tanımlanır. İlk ölçüm teslimi görüntüyü yeniden örneklemeyi gerektirmez. Yerel OpenCV 5 modül/API doğrulaması K1'de yapılır.
+
+Uniform scale legacy/sınırlı mod olarak korunur; homography başarısızken sessiz fallback yapılmaz. Telecentrik/fisheye gibi optik modeller ayrıca değerlendirilir.
+
+### Geçici test görüntüsü içe aktarma ve gözlemlenebilir kabul
+
+Bu özellik ilk uygulama paketine dahildir; kullanıcı hazır chessboard görüntüsünü kamera olmadan deneyebilir. Calibration sayfasında geçici test komutu olur; Recipe Editor'ın mevcut Open Image özelliğinden bağımsız calibration çalışma oturumuna görüntü yükler. PNG/JPEG/BMP başlangıç kapsamıdır; mevcut image-file decode/owned-frame servisi yeniden kullanılır. UI doğrudan OpenCV çağırmaz.
+
+- Orijinal boyut ve piksel koordinatları korunur; viewer ölçeği kalibrasyonu değiştirmez. Dosya adı/içerik kimliği, çözünürlük ve **Dosyadan test** kaynak etiketi gösterilir. İçe aktarma aktif reçetenin kamera kaynağını sessizce değiştirmez; kendine ait source/frame/generation kökeni taşır.
+- Kullanıcı iç köşe sayısı ve kare aralığını mm olarak girer; program görselden gerçek fiziksel kare ölçüsünü tahmin etmez. İnternetten alınmış veya çizilmiş board'a girilen mm, test dünya ölçeğini tanımlar; kullanıcının fiziksel kamerasını kalibre etmiş sayılmaz.
+- Akış: **İçe aktar → target bilgilerini gir → Köşeleri bul → H hesapla → iki nokta seçerek mm mesafesini incele → bağımsız doğrulama**. Köşe sayısı/sırası, H, fit hataları ve seçilen noktaların px/mm değerleri gözlemlenir. K1 sonunda tespit overlay'i, K2 sonunda H ve mm denemesi çalışır.
+- İki nokta denemesi sonuç incelemesidir; ayrıca bilinen bağımsız referansla karşılaştırılmadıkça validation olmaz. H hesaplandı durumu ile doğrulandı durumu ayrıdır; eksik holdout varken H/deneme gösterilebilir ama üretim izni verilmez.
+- Yeni dosya/target/kurulum/lens seçimi eski köşeleri, H'yi, validation ve ölçüm sonucunu temizler. İptal/okunamayan/bozuk dosya veya bulunamayan/yanlış desen önceki başarılı sonucu yeni sonuç gibi sunmaz; worker stale-result kontrolleri korunur.
+- K3'te test kanıtı dosya kökeniyle kaydedilip yeniden açılabilir; fiziksel kamera binding'ine otomatik dönüştürülmez. Aynı gerçek kameradan alınmış offline görüntüyü üretimde kullanma ayrı, açık kurulum eşleştirmesi ve doğruluk kabulü gerektirir.
+- Kabul testleri: düz ve perspektifli sentetik board, yanlış target ölçüsü/sayısı (yanlış mm değerinin görselden kesin tespit edilemeyeceği açık), bulunamayan/bozuk görsel, yeniden import invalidation, zoom bağımsızlığı ve bilinen homography ile mm sonuçları. Otomatik testler yalnız fit residual'ını değil bağımsız bilinen dönüşümü de sınar. UI Release/CTest ve görsel kontrol; INI/fixture/görseller build altında, config/local.ui.ini korunur.
+- Geçici düğme kaldırıldığında kalibrasyon servisi ve test fixture yolu korunabilir. Bu aşamada otomatik kaldırma tarihi yok; kalıcı UI kararı daha sonra verilir.
+
+### 2. Robot Calibration — kamera, robot ve dünya ilişkisi
+
+Hand–eye genel problem adıdır; kullanıcı modları **Eye-to-Hand** (sabit kamera) ve **Eye-in-Hand** (robot üzerinde kamera) olur. Kamera iç kalibrasyonu bunların önkoşuludur; mm ölçeği tek başına robot dönüşümü değildir. Dünya/çalışma frame'i robot base ile otomatik eşit kabul edilmez.
+
+`T_A_B`, B koordinatlarını A'ya dönüştürür; C=camera, G=gripper/flange, B=robot base, T=target:
+
+- Eye-in-Hand: target dünyada sabit, kamera gripper'a sabittir. Eşleştirilmiş robot `T_B_G` ve vision `T_C_T` örnekleriyle `T_G_C` çözülür; `T_B_G * T_G_C * T_C_T` sabit target pose'u vermelidir.
+- Eye-to-Hand: kamera base'e, target gripper'a sabittir. `T_B_C * T_C_T = T_B_G * T_G_T` tutarlılığı çözülür; hedef `T_B_C`'dir. Target montaj dönüşümü biliniyor/çözülüyor ayrımı açık tutulur. Eye-in-Hand solver girişleri yön dönüşümleri yapılmadan aynen kullanılamaz.
+
+Çeşitli konum ve paralel olmayan dönme eksenlerini kapsayan robot pozları gerekir; yalnız öteleme veya tek örnek yeterli değildir. Görüntü ve robot pose'u aynı durağan örneğe ait olmalı; timestamp, frame, mm/açı birimi, Euler sırası veya quaternion konvansiyonu kayıtlı olmalıdır. Simetrik chessboard yön belirsizliği kontrol edilir; robot için işaretli/asimetrik hedef veya doğrulanmış köşe sırası gerekir.
+
+Bağımsız robot pozlarıyla konum (mm) ve yönelim (derece) hatası kabul edilir. TCP/tool, base/work frame, target montajı ve kamera montajı sürümlenir. Pick reference/TCP offset ayrı öğretimdir. Kalibre edilmiş 2D kamera keyfi parçanın altı serbestlik dereceli pose'unu üretmez: ilk guidance hedefi bilinen düzlemde X/Y/Rz; Z/Rx/Ry öğretim/sabit varsayım kaynakları açık etiketlenir. Tam 3D için ayrıca uygun gözlem/model gerekir. Sonuç gönderimi ve robot hareketi ayrı komut kalır.
+
+## Model, kayıt ve geçerlilik planı
+
+UI'da iki akış; içeride planar homography, gerektiğinde bağlı kamera intrinsics ve robot extrinsics ayrı sürümlü varlıklardır. Önerilen servis sınırları: CameraCalibrationService, PlaneMappingService, RobotCalibrationService ve mevcut katalog/resolver. Kesin sınıf adları uygulama adımında seçilir.
+
+- Yeni tipli model zarfı/modelVersion; legacy `uniform_planar_scale/1` kanıtı ve hash'i değiştirilmeden okunur. Otomatik olarak yeni model veya fiziksel kabul sayılmaz.
+- Recipe'nin mevcut tek calibrationBinding'i kamera/düzlem/opsiyonel robot bağımlılıklarını açıkça taşıyan sürümlü yapıya taşınır; migration açılışta sessiz üretim izni vermez. Her varlık ID/version/content ve dependency zincirini taşır.
+- Kamera kimliği, lens, focus/zoom, çözünürlük, crop/binning/resize/orientation ve koordinat alanı; düzlem pose/yükseklik/orijin; robot mount/TCP/frame değişimleri ilgili bağımlı modelleri geçersiz kılar. Kullanılan intrinsics değişimi ona bağlı plane/robot kabulünü düşürür; yalnız plane değişimi sabit camera–robot extrinsics'i zorunlu olarak yeniden çözmez, ancak plane kullanan reçete yeniden doğrulanır.
+- Fiziksel değişimler otomatik algılanamıyorsa operatör beyanı ve sınırı görünür olur. Webcam index kalıcı fiziksel kimlik sayılmaz.
+- Target tanımı, görüntü/robot örnekleri veya hash'li kanıt varlıkları, köşeler, rejection nedenleri, solver sürümü, fit ve holdout sonuçları saklanır. Mevcut 4 MiB katalog içine sınırsız görüntü gömülmez; sınırlı evidence dosyaları ve atomik manifest/eksik varlık reddi tasarlanır.
+- Candidate, matematiksel validation, fiziksel doğruluk kabulü ve Runtime configuration activation ayrı durumlar olarak korunur. Geçersiz modelde değer/PASS/robot pose üretilmez; sessiz scale fallback yoktur.
+
+## Uygulama sırası ve çıkış koşulları
+
+| İş | Teslim ve kabul |
+| --- | --- |
+| 6C-K1 — Model, geçici import ve plaka tespiti | Yerel OpenCV API/modül doğrulaması; target tanımı, Calibration test import, tam çözünürlüklü frame, gerçek corner overlay ve stale-result/red kontrolleri; legacy regresyonu |
+| 6C-K2 — Tek görüntüden homography ve mm denemesi | H hesaplama, iki nokta px/mm inceleme, bilinen perspektif geometri testleri, fit/holdout ayrımı, dejenere/alan dışı dönüşüm reddi; raw/undistorted giriş sözleşmesi |
+| 6C-K3 — Kayıt, Measurement ve Runtime | Tipli dependency migration; Calibration akışı; save/reopen, eski binding/invalidation, immutable snapshot; aynı Edge → dönüştürülmüş noktalar → mm/tolerans; Release/core/UI CTest ve görsel kontrol |
+| 6C-KL — Gerektiğinde lens desteği | Ayrı intrinsic oluşturma/kabul edilmiş model kullanma ve undistort yolu; bozulmanın hata bütçesini aştığı kurulumların K4 kabulünden önce tamamlanır; her planar testin önkoşulu değildir |
+| 6C-K4 — Fiziksel ölçüm kabulü | Gerçek plaka/bağımsız referans, merkez/kenar/yön dağılımı, tekrarlanabilirlik ve tolerans hata bütçesi raporu; donanım yoksa açık kabul maddesi |
+| 6D — PLC | Mevcut handshake/simülatör planı; K4 fiziksel olarak bloke ise bağımsız simülatör işi ilerleyebilir, üretim kabulü iddia edilmez |
+| 6E — Robot | Kamera modeline bağlı Eye-to-Hand/Eye-in-Hand servisleri ve simüle bilinen dönüşüm testleri; açı/Pose/pick reference, bağımsız fiziksel robot kabulü ve sonuç teslimi |
+
+Bir sonraki uygulama adımı 6C-K1'dir. Bu incelemede kod/UI değiştirilmedi; build/test kabulü yenilenmedi. Mevcut tamamlanmış altyapı yeniden yazılmayacak, modeller aşamalı genişletilecektir.
+
+## Teknik kaynaklar
+
+- [OpenCV kamera ve hand–eye referansı](https://docs.opencv.org/4.13.0/d9/d0c/group__calib3d.html): teknik model/solver referansı; yerel OpenCV 5 API/ABI doğrulamasının yerine geçmez.
+- [HALCON image_points_to_world_plane](https://www.mvtec.com/doc/halcon/2605/en/image_points_to_world_plane.html): kamera parametreleri ve dünya düzlemi pose'u ile pikselden fiziksel düzleme dönüşüm. HALCON bağımlılığı veya plaka format uyumluluğu bu planın kapsamında değildir.
