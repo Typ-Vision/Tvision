@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VisionFlow Industrial Vision Suite — UI Prototype</title>
+<style>
+:root{
+  --bg:#0b0f14;
+  --panel:#111720;
+  --panel2:#151d27;
+  --panel3:#1a2430;
+  --line:#263242;
+  --text:#edf4fb;
+  --muted:#8fa0b5;
+  --accent:#49a8ff;
+  --accent2:#66e3c4;
+  --ok:#3fd090;
+  --warn:#f6bd5c;
+  --bad:#ff6978;
+  --purple:#a98cff;
+  --radius:14px;
+  --shadow:0 18px 45px rgba(0,0,0,.28);
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;font-family:Inter,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg);color:var(--text);overflow:hidden}
+button,input,select{font:inherit}
+.app{height:100vh;display:grid;grid-template-columns:230px 1fr}
+.sidebar{background:linear-gradient(180deg,#0e141c,#0a0e13);border-right:1px solid #1d2734;padding:16px 12px;display:flex;flex-direction:column;gap:12px}
+.brand{display:flex;align-items:center;gap:10px;padding:4px 8px 16px}
+.logo{width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,var(--accent),var(--accent2));display:grid;place-items:center;color:#04111b;font-weight:900;box-shadow:0 8px 24px rgba(73,168,255,.25)}
+.brand b{font-size:15px}
+.brand small{display:block;color:var(--muted);font-size:11px;margin-top:2px}
+.nav-group-title{font-size:10px;color:#62768f;text-transform:uppercase;letter-spacing:.14em;padding:8px 10px 4px}
+.nav{display:flex;flex-direction:column;gap:3px}
+.nav button{border:0;background:transparent;color:#aebbc9;padding:10px 11px;text-align:left;border-radius:10px;cursor:pointer;display:flex;align-items:center;gap:10px}
+.nav button:hover{background:#121a24;color:#fff}
+.nav button.active{background:linear-gradient(90deg,rgba(73,168,255,.18),rgba(73,168,255,.05));color:#fff;border:1px solid rgba(73,168,255,.22)}
+.ico{width:18px;text-align:center;opacity:.9}
+.side-bottom{margin-top:auto;padding:12px 8px;border-top:1px solid #1d2734}
+.conn{display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--muted);margin:7px 0}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--ok);box-shadow:0 0 10px rgba(63,208,144,.65)}
+.main{display:grid;grid-template-rows:58px 1fr;min-width:0}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:0 18px;border-bottom:1px solid #1d2734;background:#0d131a}
+.crumb{display:flex;align-items:center;gap:10px}
+.crumb h1{font-size:16px;margin:0}
+.crumb span{color:#51677e}
+.top-actions{display:flex;align-items:center;gap:8px}
+.badge{padding:6px 9px;border:1px solid #2b394a;border-radius:999px;color:#aab9c8;font-size:11px;background:#121923}
+.icon-btn,.primary,.ghost,.danger{border:1px solid #2a3747;background:#151d27;color:#dce6ef;padding:8px 11px;border-radius:9px;cursor:pointer}
+.primary{border-color:#2f8edb;background:linear-gradient(180deg,#2d94e9,#1670b6);color:#fff}
+.ghost:hover,.icon-btn:hover{background:#1b2633}
+.page{display:none;height:100%;overflow:auto;padding:18px;background:
+ radial-gradient(circle at 85% 0%,rgba(73,168,255,.08),transparent 28%),
+ linear-gradient(180deg,#0d1218,#0b0f14)}
+.page.active{display:block}
+.grid{display:grid;gap:14px}
+.cards-4{grid-template-columns:repeat(4,minmax(0,1fr))}
+.card{background:linear-gradient(180deg,#141c26,#10161e);border:1px solid #233042;border-radius:var(--radius);box-shadow:var(--shadow);padding:15px}
+.card h3{font-size:12px;color:#9fb0c3;font-weight:600;margin:0 0 10px}
+.metric{font-size:26px;font-weight:800;letter-spacing:-.03em}
+.sub{font-size:11px;color:var(--muted);margin-top:5px}
+.row{display:flex;align-items:center;gap:10px}
+.space{justify-content:space-between}
+.status-ok{color:var(--ok)}
+.status-warn{color:var(--warn)}
+.status-bad{color:var(--bad)}
+.viewer{
+  min-height:360px;border-radius:14px;border:1px solid #283849;background:
+  linear-gradient(45deg,rgba(255,255,255,.03) 25%,transparent 25%) 0 0/22px 22px,
+  linear-gradient(-45deg,rgba(255,255,255,.03) 25%,transparent 25%) 0 11px/22px 22px,
+  #202a35;
+  position:relative;overflow:hidden
+}
+.viewer .part{position:absolute;left:42%;top:36%;width:190px;height:96px;border-radius:34px;background:linear-gradient(180deg,#8c99a5,#555f6a);transform:rotate(-7deg);box-shadow:0 22px 30px rgba(0,0,0,.35)}
+.viewer .part:before,.viewer .part:after{content:"";position:absolute;top:30px;width:26px;height:26px;border-radius:50%;background:#1e252c;border:5px solid #bdc5cd}
+.viewer .part:before{left:34px}.viewer .part:after{right:34px}
+.match-box{position:absolute;left:39.5%;top:29%;width:246px;height:150px;border:2px solid var(--bad);transform:rotate(-7deg);box-shadow:0 0 0 1px rgba(255,105,120,.18) inset}
+.cross{position:absolute;left:50%;top:50%;width:28px;height:28px;transform:translate(-50%,-50%)}
+.cross:before,.cross:after{content:"";position:absolute;background:#ffdf68}
+.cross:before{left:13px;top:0;width:2px;height:28px}.cross:after{top:13px;left:0;height:2px;width:28px}
+.overlay-label{position:absolute;left:62%;top:30%;background:rgba(8,12,17,.9);border:1px solid #35475c;border-radius:8px;padding:8px 10px;font-size:11px;line-height:1.5;color:#dfe8f1}
+.toolbar{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:10px}
+.toolbar button{padding:7px 9px;background:#151e28;border:1px solid #2a394a;color:#bfcddd;border-radius:8px}
+.panel-title{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.panel-title b{font-size:13px}
+.table{width:100%;border-collapse:collapse}
+.table th,.table td{padding:10px 10px;border-bottom:1px solid #223043;text-align:left;font-size:12px}
+.table th{color:#7f93aa;font-weight:600}
+.table tr:hover td{background:#141d27}
+.tag{display:inline-flex;align-items:center;padding:4px 7px;border-radius:999px;font-size:10px;border:1px solid #314053;background:#18212c}
+.tag.ok{border-color:rgba(63,208,144,.25);background:rgba(63,208,144,.08);color:#74e2b0}
+.tag.bad{border-color:rgba(255,105,120,.25);background:rgba(255,105,120,.08);color:#ff8c97}
+.tag.warn{border-color:rgba(246,189,92,.25);background:rgba(246,189,92,.08);color:#ffd382}
+.field{margin:11px 0}
+.field label{display:block;font-size:10px;color:#7890a7;text-transform:uppercase;letter-spacing:.08em;margin-bottom:5px}
+.field input,.field select{width:100%;padding:9px 10px;border:1px solid #2b3a4c;border-radius:9px;background:#0e151d;color:#dfe9f2;outline:none}
+.field input:focus,.field select:focus{border-color:#3a93d7}
+.split{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.kv{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #202c3b;font-size:12px}
+.kv span:first-child{color:#8699ad}
+.kv strong{font-weight:600}
+.project-layout{display:grid;grid-template-columns:280px 1fr;gap:14px;height:calc(100vh - 96px)}
+.tree .item{padding:8px 10px;border-radius:8px;font-size:12px;color:#adbdcc}
+.tree .item.sel{background:#172334;color:#fff}
+.tree .indent{padding-left:26px}
+.recipe-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+.search{width:320px;max-width:45%;padding:9px 11px;border-radius:9px;border:1px solid #2b3a4c;background:#101720;color:white}
+.editor{height:calc(100vh - 96px);display:grid;grid-template-columns:220px minmax(420px,1fr) 290px;grid-template-rows:1fr 210px;gap:10px}
+.editor .pane{background:#101720;border:1px solid #223043;border-radius:12px;overflow:hidden}
+.toolbox{grid-row:1/3;padding:10px}
+.properties{grid-row:1/3;grid-column:3;padding:12px;overflow:auto}
+.canvaspane{padding:10px;min-width:0}
+.bottompane{grid-column:2;padding:10px}
+.tool-cat{margin:10px 0}
+.tool-cat h4{margin:0 0 6px;font-size:10px;color:#657c94;text-transform:uppercase;letter-spacing:.1em}
+.tool{display:flex;gap:8px;align-items:center;padding:8px 9px;border-radius:8px;margin-bottom:4px;background:#131c26;border:1px solid #202d3d;font-size:11px;color:#bac9d7;cursor:grab}
+.tool:hover{border-color:#3a7eaf;background:#162231}
+.tabs{display:flex;gap:5px;border-bottom:1px solid #223043;margin-bottom:9px}
+.tab{padding:7px 10px;font-size:11px;color:#7f93aa;border-bottom:2px solid transparent;cursor:pointer}
+.tab.active{color:#fff;border-color:var(--accent)}
+.flow{display:flex;align-items:center;gap:12px;overflow:auto;padding:14px 4px;height:145px}
+.node{min-width:130px;padding:10px;border-radius:10px;border:1px solid #304055;background:#151e29}
+.node b{font-size:11px;display:block;margin-bottom:6px}
+.node small{font-size:10px;color:#8094aa}
+.arrow{color:#55708c;font-size:18px}
+.mini-viewer{height:210px;border-radius:12px;border:1px solid #2a394a;background:#1c2631;position:relative;overflow:hidden}
+.mini-viewer:before{content:"";position:absolute;width:135px;height:72px;border-radius:26px;background:#808a95;left:39%;top:35%;transform:rotate(-9deg)}
+.roi{position:absolute;border:2px dashed var(--accent2);left:36%;top:25%;width:210px;height:130px;transform:rotate(-9deg)}
+.blob{position:absolute;width:23px;height:17px;border-radius:50%;background:rgba(255,105,120,.75);left:51%;top:42%}
+.edge1,.edge2{position:absolute;width:3px;height:100px;background:#ffcf64;top:24%}.edge1{left:43%}.edge2{left:59%}
+.calib-grid{display:grid;grid-template-columns:1.25fr .75fr;gap:14px}
+.sample-dot{width:9px;height:9px;border-radius:50%;background:#57c7ff;position:absolute;box-shadow:0 0 10px rgba(87,199,255,.6)}
+.chart{height:230px;border-radius:12px;background:
+linear-gradient(#233040 1px,transparent 1px) 0 0/100% 40px,
+linear-gradient(90deg,#233040 1px,transparent 1px) 0 0/50px 100%,
+#111820;position:relative}
+.chart .line{position:absolute;height:2px;background:linear-gradient(90deg,var(--accent),var(--accent2));left:8%;right:8%;top:55%;transform:rotate(-7deg);box-shadow:0 0 14px rgba(73,168,255,.3)}
+.comm-layout{display:grid;grid-template-columns:.8fr 1.2fr;gap:14px}
+.runtime{height:calc(100vh - 96px);display:grid;grid-template-columns:1.4fr .6fr;gap:14px}
+.runtime .viewer{height:100%}
+.big-result{font-size:42px;font-weight:900;color:var(--ok);letter-spacing:.04em}
+.alarm{display:flex;gap:10px;padding:10px;border-radius:10px;background:#151d27;border:1px solid #263446;margin-bottom:8px}
+.alarm .severity{width:6px;border-radius:5px;background:var(--bad)}
+.alarm.warn .severity{background:var(--warn)}
+.settings-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
+.toggle{width:38px;height:22px;border-radius:999px;background:#26384a;position:relative}
+.toggle:after{content:"";position:absolute;width:16px;height:16px;border-radius:50%;background:#fff;top:3px;left:3px}
+.toggle.on{background:#2479b9}.toggle.on:after{left:19px}
+.section-title{font-size:11px;color:#7890a7;text-transform:uppercase;letter-spacing:.12em;margin:18px 0 8px}
+::-webkit-scrollbar{width:8px;height:8px}
+::-webkit-scrollbar-thumb{background:#28394a;border-radius:10px}
+@media (max-width:1050px){
+  .app{grid-template-columns:72px 1fr}
+  .brand b,.brand small,.nav button span:not(.ico),.nav-group-title,.side-bottom{display:none}
+  .nav button{justify-content:center}
+  .editor{grid-template-columns:180px 1fr 250px}
+  .cards-4{grid-template-columns:repeat(2,1fr)}
+}
+.editor-heading{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:12px;flex-wrap:wrap}
+.editor-heading .sub{margin-top:8px}.editor{height:calc(100vh - 170px);min-height:620px}.toolbox{overflow:auto}
+.recipe-action{display:flex;gap:6px}.recipe-action button{font-size:11px;padding:6px 9px}button{cursor:pointer}
+.selected-node{outline:2px solid var(--accent);outline-offset:2px}.node{cursor:pointer}
+.nav button[hidden],[hidden]{display:none!important}
+dialog{width:min(950px,calc(100vw - 40px));border:1px solid #33475f;border-radius:20px;background:#111923;color:var(--text);padding:26px;box-shadow:0 30px 120px #0008;max-height:90vh;overflow:auto}
+dialog::backdrop{background:#030810bb;backdrop-filter:blur(8px)}
+.type-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:24px 0}.type-card{display:flex;flex-direction:column;padding:18px;border-radius:14px;border:1px solid #2c3a4e;background:#131e2a;cursor:pointer;position:relative;min-height:235px}.type-card:has(input:checked){border-color:var(--accent);background:linear-gradient(160deg,#1a3550,#13212f);box-shadow:0 0 0 1px #49a8ff44}.type-card input{position:absolute;right:14px;top:14px;accent-color:var(--accent)}.type-icon{font-size:30px;color:var(--accent2);margin-bottom:22px}.type-card p{font-size:12px;line-height:1.65;color:#a6b7c9;flex:1}.type-card small{font-size:10px;color:#7493b0;line-height:1.5}
+#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:100;background:#1e3040;border:1px solid #4c7294;color:#edf4fb;border-radius:10px;padding:12px 20px;opacity:0;pointer-events:none;transition:opacity .2s;font-size:12px}#toast.visible{opacity:1}
+.result-summary{padding:16px;display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.result-summary .card{box-shadow:none}
+.editor .viewer{height:100%;min-height:330px}.canvaspane{display:flex;flex-direction:column}.canvaspane .mini-viewer{min-height:220px;flex:1}.canvaspane .viewer{flex:1}
+.tool:focus-visible,.node:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+@media(max-width:1200px){.editor{grid-template-columns:180px minmax(300px,1fr) 250px}.top-actions .badge{display:none}.crumb .badge{display:none}}
+@media(max-width:900px){.editor{grid-template-columns:180px minmax(300px,1fr);grid-template-rows:auto auto auto;height:auto}.editor .properties{grid-row:2;grid-column:1/3;max-height:450px}.editor .toolbox{grid-row:1;max-height:550px}.editor .bottompane{grid-column:1/3;grid-row:3}.type-cards{grid-template-columns:1fr}.type-card{min-height:160px}.type-icon{margin-bottom:12px}.runtime,.calib-grid,.comm-layout,.project-layout{grid-template-columns:1fr;height:auto}.runtime .viewer{min-height:350px}.recipe-top{gap:10px}.card{overflow:auto}}
+
+.viewer.no-result:before{display:none}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="logo">VF</div>
+      <div><b>VisionFlow</b><small>Industrial Vision Suite · Demo</small></div>
+    </div>
+
+    <div class="nav-group-title">Workspace</div>
+    <div class="nav">
+      <button class="active" data-page="dashboard"><span class="ico">◫</span><span>Dashboard</span></button>
+      <button data-page="projects"><span class="ico">⌂</span><span>Project Manager</span></button>
+      <button data-page="recipes"><span class="ico">☰</span><span>Recipe Manager</span></button>
+    </div>
+
+    <div class="nav-group-title">System</div>
+    <div class="nav">
+      <button data-page="robotcal"><span class="ico">✣</span><span>Robot Calibration</span></button>
+      <button data-page="calibration"><span class="ico">▦</span><span>Camera Calibration</span></button>
+      <button data-page="communication"><span class="ico">⇄</span><span>Communication</span></button>
+      <button data-page="runtime"><span class="ico">▶</span><span>Runtime</span></button>
+      <button data-page="diagnostics"><span class="ico">⚠</span><span>Diagnostics</span></button>
+      <button data-page="settings"><span class="ico">⚙</span><span>Settings</span></button>
+    </div>
+
+    <div class="side-bottom">
+      <div class="conn"><span>Camera</span><span class="dot"></span></div>
+      <div class="conn"><span>Robot</span><span class="dot"></span></div>
+      <div class="conn"><span>PLC</span><span class="dot"></span></div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <div class="crumb"><h1 id="pageTitle">Dashboard</h1><span>/</span><div class="badge">Project: CNC_Pick_01</div></div>
+      <div class="top-actions">
+        <div class="badge" id="activeRecipeBadge">Recipe: Part_A</div>
+        <div class="badge"><span class="status-ok">●</span> Demo / simulated data</div>
+        <button class="icon-btn">◐</button>
+        <button class="primary" id="saveRecipe">Save Recipe</button>
+      </div>
+    </header>
+
+    <section id="dashboard" class="page active">
+      <div class="grid cards-4">
+        <div class="card"><h3>Camera</h3><div class="metric status-ok">ONLINE</div><div class="sub">Basler acA1920-40gm · 38 FPS</div></div>
+        <div class="card"><h3>Robot</h3><div class="metric status-ok">READY</div><div class="sub">TCP Socket · 192.168.10.20</div></div>
+        <div class="card"><h3>Cycle Time</h3><div class="metric">82 <span style="font-size:13px;color:var(--muted)">ms</span></div><div class="sub">−7 ms from previous cycle</div></div>
+        <div class="card"><h3>Vision Result</h3><div class="metric status-ok">PASS</div><div class="sub">Score 96.4% · X 124.52 · Y 235.14</div></div>
+      </div>
+      <div class="grid" style="grid-template-columns:1.55fr .65fr;margin-top:14px">
+        <div class="card">
+          <div class="panel-title"><b>Live Camera</b><div class="toolbar" style="margin:0"><button>Live</button><button>Capture</button><button>Fit</button><button>Crosshair</button></div></div>
+          <div class="viewer">
+            <div class="part"></div><div class="match-box"></div><div class="cross"></div>
+            <div class="overlay-label">MATCH_1<br>X 124.52 px<br>Y 235.14 px<br>Angle −7.2°<br><span class="status-ok">Score 96.4%</span></div>
+          </div>
+        </div>
+        <div class="grid">
+          <div class="card">
+            <div class="panel-title"><b>System Status</b></div>
+            <div class="kv"><span>Camera</span><strong class="status-ok">Connected</strong></div>
+            <div class="kv"><span>Robot</span><strong class="status-ok">Connected</strong></div>
+            <div class="kv"><span>PLC</span><strong class="status-ok">Connected</strong></div>
+            <div class="kv"><span>Calibration</span><strong class="status-ok">Valid</strong></div>
+            <div class="kv"><span>Recipe</span><strong>Part_A</strong></div>
+          </div>
+          <div class="card">
+            <div class="panel-title"><b>Last Inspections</b></div>
+            <table class="table"><tr><th>Time</th><th>Result</th><th>ms</th></tr>
+              <tr><td>23:38:22</td><td><span class="tag ok">PASS</span></td><td>82</td></tr>
+              <tr><td>23:38:20</td><td><span class="tag ok">PASS</span></td><td>84</td></tr>
+              <tr><td>23:38:18</td><td><span class="tag bad">FAIL</span></td><td>88</td></tr>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="projects" class="page">
+      <div class="project-layout">
+        <div class="card tree">
+          <div class="panel-title"><b>Project Explorer</b><button class="ghost">＋</button></div>
+          <div class="item sel">▾ CNC_Pick_01</div>
+          <div class="item indent">▣ Cameras</div>
+          <div class="item indent">▣ Recipes</div>
+          <div class="item indent">▣ Calibration</div>
+          <div class="item indent">▣ Communication</div>
+          <div class="item indent">▣ Variables</div>
+          <div class="item indent">▣ Logs</div>
+        </div>
+        <div class="card">
+          <div class="panel-title"><b>Project Settings</b><span class="tag ok">VALID</span></div>
+          <div class="settings-grid">
+            <div><div class="field"><label>Project Name</label><input value="CNC_Pick_01"></div>
+            <div class="field"><label>Description</label><input value="Robot conveyor pick & place vision"></div>
+            <div class="field"><label>Project Location</label><input value="D:\VisionFlow\Projects\CNC_Pick_01"></div></div>
+            <div><div class="field"><label>Primary Camera</label><select><option>Basler acA1920-40gm</option></select></div>
+            <div class="field"><label>Robot</label><select><option>FANUC M-10iD/12</option></select></div>
+            <div class="field"><label>Communication</label><select><option>TCP Socket</option><option>Modbus TCP</option></select></div></div>
+          </div>
+          <div class="section-title">Project Health</div>
+          <div class="grid cards-4">
+            <div class="card"><h3>Recipes</h3><div class="metric">12</div><div class="sub">10 valid · 2 draft</div></div>
+            <div class="card"><h3>Calibrations</h3><div class="metric">3</div><div class="sub">All valid</div></div>
+            <div class="card"><h3>Devices</h3><div class="metric">3</div><div class="sub">Camera · Robot · PLC</div></div>
+            <div class="card"><h3>Last Saved</h3><div class="metric" style="font-size:18px">23:34</div><div class="sub">Engineer</div></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="recipes" class="page">
+      <div class="recipe-top"><div><h2 style="margin:0 0 6px;font-size:22px">Recipes</h2><div class="sub">One editor. Three application templates. Choose the task when you create a recipe.</div></div><button class="primary" id="newRecipe">＋ New Recipe</button></div>
+      <div class="toolbar"><input class="search" id="recipeSearch" aria-label="Search recipes" placeholder="Search recipes…"><select id="typeFilter" aria-label="Filter application type" class="ghost"><option value="">All applications</option><option value="robot_guidance">Robot Guidance</option><option value="defect_inspection">Defect Inspection</option><option value="measurement">Measurement</option></select><button class="ghost" id="importRecipe">Import JSON</button><input id="importFile" type="file" accept=".json,.recipe" hidden></div>
+      <div class="card"><table class="table"><thead><tr><th>Recipe</th><th>Application type</th><th>Camera</th><th>Version</th><th>Status</th><th>Actions</th></tr></thead><tbody id="recipeRows"></tbody></table><div class="sub" id="recipeCount"></div></div>
+      <div class="card" style="margin-top:14px"><div class="panel-title"><b>How recipes work</b><span class="tag">Shared workspace</span></div><div class="sub" style="line-height:1.8">Create recipe → Choose application type → Open Recipe Editor → Configure tools and references → Test → Save → Runtime.<br>Robot Guidance, Defect Inspection and Measurement use the same Toolbox / Image Viewer / Properties / Flow layout.</div></div>
+    </section>
+    <section id="editor" class="page">
+      <div class="editor-heading"><div><div class="row"><button class="ghost" id="backRecipes">← Recipes</button><b id="editorRecipeName"></b><span class="tag" id="editorType"></span><span class="tag" id="editorVersion"></span><span class="tag warn" id="editorDirty" hidden>Unsaved</span></div><div class="sub" id="editorDescription"></div></div><div class="row"><button class="ghost" id="exportRecipe">Export JSON</button><button class="primary" id="runDemo">▶ Run Demo</button><button class="ghost" id="openRuntime">Runtime →</button></div></div>
+      <div id="editorBody"></div>
+    </section>
+
+
+
+
+
+
+
+    <section id="robotcal" class="page">
+      <div class="calib-grid">
+        <div class="card">
+          <div class="panel-title"><b>Eye-to-Hand Robot Calibration</b><span class="tag ok">12 samples</span></div>
+          <div class="chart">
+            <div class="line"></div>
+            <i class="sample-dot" style="left:12%;top:66%"></i><i class="sample-dot" style="left:20%;top:61%"></i><i class="sample-dot" style="left:29%;top:58%"></i><i class="sample-dot" style="left:38%;top:53%"></i><i class="sample-dot" style="left:48%;top:49%"></i><i class="sample-dot" style="left:58%;top:45%"></i><i class="sample-dot" style="left:68%;top:39%"></i><i class="sample-dot" style="left:78%;top:36%"></i>
+          </div>
+          <div class="section-title">Calibration Samples</div>
+          <table class="table"><tr><th>#</th><th>Vision X</th><th>Vision Y</th><th>Robot X</th><th>Robot Y</th><th>Error</th></tr>
+          <tr><td>1</td><td>812.5</td><td>446.2</td><td>324.81</td><td>−122.34</td><td class="status-ok">0.12 mm</td></tr>
+          <tr><td>2</td><td>936.8</td><td>512.4</td><td>371.05</td><td>−96.44</td><td class="status-ok">0.16 mm</td></tr>
+          <tr><td>3</td><td>1054.2</td><td>604.7</td><td>418.60</td><td>−58.12</td><td class="status-ok">0.14 mm</td></tr></table>
+        </div>
+        <div class="grid">
+          <div class="card"><div class="panel-title"><b>Setup</b></div>
+            <div class="field"><label>Camera</label><select><option>Camera_1</option></select></div>
+            <div class="field"><label>Robot</label><select><option>FANUC_1</option></select></div>
+            <div class="field"><label>Calibration Type</label><select><option>Eye-to-Hand</option><option>Eye-in-Hand</option></select></div>
+            <div class="row"><button class="ghost">Capture Sample</button><button class="primary">Calculate</button></div>
+          </div>
+          <div class="card"><div class="panel-title"><b>Result</b><span class="tag ok">VALID</span></div>
+            <div class="kv"><span>RMS Error</span><strong class="status-ok">0.18 mm</strong></div>
+            <div class="kv"><span>Max Error</span><strong>0.31 mm</strong></div>
+            <div class="kv"><span>Samples</span><strong>12</strong></div>
+            <div class="kv"><span>Plane</span><strong>Conveyor_A</strong></div>
+            <button class="primary" style="width:100%;margin-top:12px">Accept Calibration</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="calibration" class="page">
+      <div class="calib-grid">
+        <div class="card">
+          <div class="panel-title"><b>Camera Calibration</b><div class="toolbar" style="margin:0"><button>Acquire</button><button>Detect Grid</button><button>Calculate</button></div></div>
+          <div class="viewer" style="min-height:470px;background:
+            radial-gradient(circle,#dfe6ed 2px,transparent 3px) 20px 20px/48px 48px,
+            #202a35"></div>
+        </div>
+        <div class="grid">
+          <div class="card"><div class="panel-title"><b>Calibration Target</b></div>
+            <div class="field"><label>Target Type</label><select><option>Dot Grid</option><option>Checkerboard</option></select></div>
+            <div class="split"><div class="field"><label>Pitch X</label><input value="10.000 mm"></div><div class="field"><label>Pitch Y</label><input value="10.000 mm"></div></div>
+            <div class="field"><label>Camera</label><select><option>Basler acA1920-40gm</option></select></div>
+          </div>
+          <div class="card"><div class="panel-title"><b>Result</b><span class="tag ok">VALID</span></div>
+            <div class="kv"><span>Pixel Scale X</span><strong>0.0253 mm/px</strong></div>
+            <div class="kv"><span>Pixel Scale Y</span><strong>0.0255 mm/px</strong></div>
+            <div class="kv"><span>Reprojection Error</span><strong>0.11 px</strong></div>
+            <div class="kv"><span>Distortion</span><strong>0.12%</strong></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="communication" class="page">
+      <div class="comm-layout">
+        <div class="grid">
+          <div class="card">
+            <div class="panel-title"><b>Robot Connection</b><span class="tag ok">CONNECTED</span></div>
+            <div class="field"><label>Protocol</label><select><option>TCP Socket</option><option>Modbus TCP</option><option>OPC UA</option></select></div>
+            <div class="field"><label>IP Address</label><input value="192.168.10.20"></div>
+            <div class="field"><label>Port</label><input value="5000"></div>
+            <div class="row"><button class="ghost">Disconnect</button><button class="primary">Test Connection</button></div>
+          </div>
+          <div class="card">
+            <div class="panel-title"><b>Data Mapping</b></div>
+            <div class="kv"><span>Trigger</span><strong>RX.TRIGGER</strong></div><div class="kv"><span>Recipe ID</span><strong>RX.RECIPE</strong></div>
+            <div class="kv"><span>Vision X</span><strong>TX.X</strong></div><div class="kv"><span>Vision Y</span><strong>TX.Y</strong></div>
+            <div class="kv"><span>Angle</span><strong>TX.RZ</strong></div><div class="kv"><span>Result</span><strong>TX.RESULT</strong></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="panel-title"><b>Live Communication Monitor</b><div class="row"><span class="tag ok">Heartbeat 48 ms</span><button class="ghost">Clear</button></div></div>
+          <table class="table"><tr><th>Timestamp</th><th>Direction</th><th>Payload</th><th>Status</th></tr>
+          <tr><td>23:38:22.110</td><td class="status-ok">RX</td><td>TRIGGER=1; RECIPE=12</td><td><span class="tag ok">OK</span></td></tr>
+          <tr><td>23:38:22.114</td><td style="color:var(--accent)">TX</td><td>BUSY=1</td><td><span class="tag ok">OK</span></td></tr>
+          <tr><td>23:38:22.188</td><td style="color:var(--accent)">TX</td><td>X=124.52; Y=235.14; RZ=-7.2</td><td><span class="tag ok">OK</span></td></tr>
+          <tr><td>23:38:22.192</td><td style="color:var(--accent)">TX</td><td>RESULT=1; DONE=1</td><td><span class="tag ok">OK</span></td></tr>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section id="runtime" class="page">
+      <div class="runtime">
+        <div class="card" style="display:flex;flex-direction:column">
+          <div class="panel-title"><b>Runtime — Part_A</b><div class="row"><span class="tag ok">AUTO</span><span class="tag ok">READY</span></div></div>
+          <div class="viewer" style="flex:1">
+            <div class="part"></div><div class="match-box"></div><div class="cross"></div>
+            <div class="overlay-label">PICK TARGET<br>X 324.81 mm<br>Y −122.34 mm<br>RZ −7.20°<br><span class="status-ok">READY TO PICK</span></div>
+          </div>
+        </div>
+        <div class="grid">
+          <div class="card"><h3>Final Result</h3><div class="big-result">PASS</div><div class="sub">Cycle 18,442 · 82 ms</div></div>
+          <div class="card"><div class="panel-title"><b>Robot Output</b></div>
+            <div class="kv"><span>X</span><strong>324.81 mm</strong></div><div class="kv"><span>Y</span><strong>−122.34 mm</strong></div><div class="kv"><span>Z</span><strong>48.20 mm</strong></div><div class="kv"><span>RZ</span><strong>−7.20°</strong></div><div class="kv"><span>Score</span><strong class="status-ok">96.4%</strong></div>
+          </div>
+          <div class="card"><div class="panel-title"><b>Manual Controls</b></div><div class="grid" style="grid-template-columns:1fr 1fr"><button class="ghost">Trigger</button><button class="ghost">Run Vision</button><button class="ghost">Send Result</button><button class="danger">Reset</button></div></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="diagnostics" class="page">
+      <div class="grid" style="grid-template-columns:1.2fr .8fr">
+        <div class="card">
+          <div class="panel-title"><b>Alarm & Event Log</b><div class="row"><span class="tag">All</span><span class="tag warn">Warning</span><span class="tag bad">Error</span></div></div>
+          <div class="alarm"><div class="severity"></div><div><b style="font-size:12px">V-102 · MATCH FAILED</b><div class="sub">Score 42% — minimum required 70% · 23:31:42</div></div></div>
+          <div class="alarm warn"><div class="severity"></div><div><b style="font-size:12px">C-014 · CAMERA EXPOSURE HIGH</b><div class="sub">Exposure 18.2 ms may reduce cycle performance · 23:18:03</div></div></div>
+          <div class="alarm"><div class="severity"></div><div><b style="font-size:12px">R-031 · ROBOT RESPONSE TIMEOUT</b><div class="sub">No ACK received within 1000 ms · 22:56:11</div></div></div>
+        </div>
+        <div class="grid">
+          <div class="card"><div class="panel-title"><b>Performance</b></div>
+            <div class="kv"><span>Vision Engine</span><strong>44 ms</strong></div><div class="kv"><span>Image Acquisition</span><strong>11 ms</strong></div><div class="kv"><span>Communication</span><strong>7 ms</strong></div><div class="kv"><span>Total Cycle</span><strong>82 ms</strong></div>
+          </div>
+          <div class="card"><div class="panel-title"><b>Device Health</b></div>
+            <div class="kv"><span>Camera</span><strong class="status-ok">Healthy</strong></div><div class="kv"><span>Robot</span><strong class="status-ok">Healthy</strong></div><div class="kv"><span>PLC</span><strong class="status-ok">Healthy</strong></div><div class="kv"><span>Disk Usage</span><strong>42%</strong></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="settings" class="page">
+      <div class="settings-grid">
+        <div class="card"><div class="panel-title"><b>General</b></div>
+          <div class="field"><label>Language</label><select><option>English</option><option>Türkçe</option></select></div>
+          <div class="field"><label>Units</label><select><option>Metric (mm, °)</option></select></div>
+          <div class="kv"><span>Dark Theme</span><div class="toggle on"></div></div><div class="kv"><span>Auto Save</span><div class="toggle on"></div></div>
+        </div>
+        <div class="card"><div class="panel-title"><b>Vision Defaults</b></div>
+          <div class="field"><label>Default Match Score</label><input value="70 %"></div>
+          <div class="field"><label>Default Tool Timeout</label><input value="500 ms"></div>
+          <div class="field"><label>Processing Mode</label><select><option>Auto / GPU Preferred</option></select></div>
+        </div>
+        <div class="card"><div class="panel-title"><b>Image Storage</b></div>
+          <div class="kv"><span>Save FAIL Images</span><div class="toggle on"></div></div><div class="kv"><span>Save PASS Images</span><div class="toggle"></div></div>
+          <div class="field"><label>Retention</label><select><option>30 days</option></select></div>
+        </div>
+        <div class="card"><div class="panel-title"><b>User Access</b></div>
+          <div class="kv"><span>Current User</span><strong>Engineer</strong></div><div class="kv"><span>Role</span><strong>Engineer</strong></div><div class="kv"><span>Recipe Edit</span><strong class="status-ok">Allowed</strong></div><div class="kv"><span>System Settings</span><strong class="status-warn">Administrator required</strong></div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+
+<dialog id="createDialog" aria-labelledby="createTitle">
+  <form id="createForm"><div class="panel-title"><div><h2 id="createTitle" style="margin:0">Create new recipe</h2><div class="sub">Choose an application template. All templates open in Recipe Editor.</div></div><button type="button" class="ghost" id="closeCreate" aria-label="Close">×</button></div>
+    <div class="type-cards">
+      <label class="type-card"><input type="radio" name="applicationType" value="robot_guidance" checked><span class="type-icon">⌖</span><b>Robot Guidance</b><p>Locate a part and calculate its position and orientation for a robot.</p><small>Match → Pick Reference → Transform → Output</small></label>
+      <label class="type-card"><input type="radio" name="applicationType" value="defect_inspection"><span class="type-icon">◎</span><b>Defect Inspection</b><p>Inspect regions for missing or extra features and return PASS / FAIL.</p><small>Reference → Inspection ROI → Defect → Result</small></label>
+      <label class="type-card"><input type="radio" name="applicationType" value="measurement"><span class="type-icon">↔</span><b>Measurement</b><p>Measure distances, diameters and angles with calibrated units.</p><small>Edge / Circle → Calculate → Limits → Result</small></label>
+    </div>
+    <div class="split"><div class="field"><label for="recipeName">Recipe name</label><input id="recipeName" required maxlength="64" placeholder="e.g. Part_003"></div><div class="field"><label for="recipeCamera">Camera</label><select id="recipeCamera"><option>Camera_1</option><option>Camera_2</option><option>Camera_3</option></select></div></div>
+    <div id="createError" class="status-bad" role="alert"></div><div class="row" style="justify-content:flex-end;margin-top:18px"><button type="button" class="ghost" id="cancelCreate">Cancel</button><button type="submit" class="primary">Create & open editor →</button></div>
+  </form>
+</dialog>
+<div id="toast" role="status" aria-live="polite"></div>
+<template id="template-robot_guidance">
+      <div class="editor">
+        <div class="pane toolbox">
+          <div class="panel-title"><b>Toolbox</b><span class="tag">Shared tools</span></div>
+          <div class="tool-cat"><h4>Acquisition</h4><div class="tool">📷 Camera</div><div class="tool">🖼 Image</div></div>
+          <div class="tool-cat"><h4>Image Processing</h4><div class="tool">◫ Threshold</div><div class="tool">≈ Gaussian</div><div class="tool">◇ Morphology</div></div>
+          <div class="tool-cat"><h4>Region</h4><div class="tool">▭ Rectangle ROI</div><div class="tool">◯ Circle ROI</div><div class="tool">⬡ Polygon ROI</div></div>
+          <div class="tool-cat"><h4>Vision</h4><div class="tool">◎ Pattern Match</div><div class="tool">● Blob</div><div class="tool">⌁ Edge</div><div class="tool">↔ Calculate</div></div>
+          <div class="tool-cat"><h4>Logic / Output</h4><div class="tool">◇ Compare</div><div class="tool">⌖ Pick Reference</div><div class="tool">✣ Robot Transform</div><div class="tool">⇄ Robot Output</div></div>
+        </div>
+        <div class="pane canvaspane">
+          <div class="toolbar"><button>▶ Live</button><button>◉ Capture</button><button>＋ Zoom</button><button>− Zoom</button><button>Fit</button><button>Grid</button><button>Undo</button><button>Redo</button></div>
+          <div class="viewer">
+            <div class="part"></div><div class="match-box"></div><div class="cross"></div>
+            <div class="overlay-label">MATCH_1<br>X 124.52<br>Y 235.14<br>θ −7.2°<br><span class="status-ok">96.4%</span></div>
+          </div>
+        </div>
+        <div class="pane properties">
+          <div class="panel-title"><b>Properties</b><span class="tag ok">Pattern Match</span></div>
+          <div class="field"><label>Name</label><input value="Match_1"></div>
+          <div class="field"><label>Model</label><select><option>Part_A_Model</option></select></div>
+          <div class="field"><label>Search ROI</label><select><option>ROI_1</option></select></div>
+          <div class="split"><div class="field"><label>Min Score</label><input value="70"></div><div class="field"><label>Max Results</label><input value="5"></div></div>
+          <div class="section-title">Angle</div>
+          <div class="split"><div class="field"><label>Min</label><input value="-180°"></div><div class="field"><label>Max</label><input value="180°"></div></div>
+          <div class="section-title">Scale</div>
+          <div class="split"><div class="field"><label>Min</label><input value="0.80"></div><div class="field"><label>Max</label><input value="1.20"></div></div>
+          <div class="section-title">Display</div>
+          <div class="kv"><span>Show Contour</span><div class="toggle on"></div></div>
+          <div class="kv"><span>Show Center</span><div class="toggle on"></div></div>
+          <div class="kv"><span>Show Coordinates</span><div class="toggle on"></div></div>
+          <div class="section-title">Output</div>
+          <div class="kv"><span>X</span><strong>124.52</strong></div>
+          <div class="kv"><span>Y</span><strong>235.14</strong></div>
+          <div class="kv"><span>Angle</span><strong>−7.20°</strong></div>
+          <div class="kv"><span>Score</span><strong class="status-ok">96.4%</strong></div>
+        </div>
+        <div class="pane bottompane">
+          <div class="tabs"><div class="tab active">Flow</div><div class="tab">Results</div><div class="tab">Log</div><div class="tab">Variables</div></div>
+          <div class="flow">
+            <div class="node"><b>📷 Camera_1</b><small>OK · 4.2 ms</small></div><span class="arrow">→</span>
+            <div class="node"><b>▭ ROI_1</b><small>1920 × 820</small></div><span class="arrow">→</span>
+            <div class="node" style="border-color:#2d89c8"><b>◎ Match_1</b><small class="status-ok">PASS · 96.4%</small></div><span class="arrow">→</span>
+            <div class="node"><b>⌖ Pick_Reference</b><small>Match_1.Pose2D</small></div><span class="arrow">→</span><div class="node"><b>✣ Robot_Transform</b><small>Calibration → Robot frame</small></div><span class="arrow">→</span><div class="node"><b>⇄ Robot_Output</b><small>Robot pose · mm, °</small></div>
+          </div>
+        </div>
+      </div>
+</template>
+<template id="template-defect_inspection">
+      <div class="editor">
+        <div class="pane toolbox">
+          <div class="panel-title"><b>Toolbox</b><span class="tag">Defect</span></div>
+          <div class="tool-cat"><h4>Acquisition</h4><div class="tool">📷 Camera</div><div class="tool">🖼 Image</div></div><div class="tool-cat"><h4>Reference</h4><div class="tool">◎ Pattern Match</div><div class="tool">▭ Tracking ROI</div></div>
+          <div class="tool-cat"><h4>Inspection</h4><div class="tool">● Blob</div><div class="tool">◐ Brightness</div><div class="tool">◒ Contrast</div><div class="tool">✳ Missing Feature</div><div class="tool">✦ Extra Feature</div></div>
+          <div class="tool-cat"><h4>Logic</h4><div class="tool">◇ Range Check</div><div class="tool">✓ Final Result</div></div>
+        </div>
+        <div class="pane canvaspane">
+          <div class="toolbar"><button>Capture</button><button>Teach Reference</button><button>Run Inspection</button><button>Brush Mask</button></div>
+          <div class="mini-viewer"><div class="roi"></div><div class="blob"></div></div>
+          <div class="card" style="margin-top:10px;padding:10px"><div class="row space"><b style="font-size:12px">Inspection Result</b><span class="tag bad">FAIL</span></div>
+            <div class="kv"><span>Blob Count</span><strong>1</strong></div><div class="kv"><span>Detected Area</span><strong class="status-bad">734 px²</strong></div>
+          </div>
+        </div>
+        <div class="pane properties">
+          <div class="panel-title"><b>Properties</b><span class="tag">Blob_1</span></div>
+          <div class="field"><label>Reference</label><select><option>Match_1.XYAngle</option></select></div>
+          <div class="field"><label>Inspection ROI</label><select><option>ROI_Defect_1</option></select></div>
+          <div class="field"><label>Detection Mode</label><select><option>Black Area</option><option>White Area</option></select></div>
+          <div class="split"><div class="field"><label>Threshold Min</label><input value="0"></div><div class="field"><label>Threshold Max</label><input value="62"></div></div>
+          <div class="split"><div class="field"><label>Min Area</label><input value="100"></div><div class="field"><label>Max Area</label><input value="100000"></div></div>
+          <div class="section-title">Result Logic</div>
+          <div class="field"><label>Pass Condition</label><select><option>Largest defect area ≤ 500 px²</option></select></div>
+          <div class="kv"><span>Result</span><strong class="status-bad">FAIL</strong></div>
+        </div>
+        <div class="pane bottompane">
+          <div class="tabs"><div class="tab active">Flow</div><div class="tab">Inspection Results</div><div class="tab">Mask</div></div>
+          <div class="flow"><div class="node"><b>Camera</b><small>OK</small></div><span class="arrow">→</span><div class="node"><b>Match_1</b><small>96.1%</small></div><span class="arrow">→</span><div class="node" style="border-color:#b94450"><b>Blob_1</b><small class="status-bad">FAIL · 734 px²</small></div><span class="arrow">→</span><div class="node"><b>Final_Result</b><small class="status-bad">FAIL</small></div></div>
+        </div>
+      </div>
+</template>
+<template id="template-measurement">
+      <div class="editor">
+        <div class="pane toolbox">
+          <div class="panel-title"><b>Toolbox</b><span class="tag">Metrology</span></div>
+          <div class="tool-cat"><h4>Acquisition</h4><div class="tool">📷 Camera</div><div class="tool">🖼 Image</div></div><div class="tool-cat"><h4>Reference</h4><div class="tool">◎ Pattern Match</div><div class="tool">▭ ROI</div></div>
+          <div class="tool-cat"><h4>Detection</h4><div class="tool">⌁ Edge</div><div class="tool">╱ Line</div><div class="tool">◯ Circle</div><div class="tool">⌜ Corner</div></div>
+          <div class="tool-cat"><h4>Calculate</h4><div class="tool">↔ Distance</div><div class="tool">∠ Angle</div><div class="tool">Ø Diameter</div></div>
+        </div>
+        <div class="pane canvaspane">
+          <div class="toolbar"><button>Capture</button><button>Run Edges</button><button>Calibrated View</button><button>Fit</button></div>
+          <div class="mini-viewer"><div class="edge1"></div><div class="edge2"></div></div>
+          <div class="card" style="margin-top:10px;padding:10px">
+            <div class="row space"><b style="font-size:12px">Distance_1</b><span class="tag ok">PASS</span></div>
+            <div class="kv"><span>Pixel Distance</span><strong>523.42 px</strong></div>
+            <div class="kv"><span>Scale</span><strong>0.025 mm/px</strong></div>
+            <div class="kv"><span>Result</span><strong class="status-ok">13.086 mm</strong></div>
+          </div>
+        </div>
+        <div class="pane properties">
+          <div class="panel-title"><b>Properties</b><span class="tag">Distance_1</span></div>
+          <div class="field"><label>P1</label><select><option>Edge_1.Point</option></select></div>
+          <div class="field"><label>P2</label><select><option>Edge_2.Point</option></select></div>
+          <div class="field"><label>Calculation</label><select><option>Euclidean Distance</option><option>X Distance</option><option>Y Distance</option></select></div>
+          <div class="field"><label>Calibration</label><select><option>Camera_1_Plane_A</option></select></div>
+          <div class="split"><div class="field"><label>Min Limit</label><input value="12.95"></div><div class="field"><label>Max Limit</label><input value="13.15"></div></div>
+          <div class="section-title">Output</div>
+          <div class="kv"><span>Value</span><strong>13.086 mm</strong></div><div class="kv"><span>Status</span><strong class="status-ok">PASS</strong></div>
+        </div>
+        <div class="pane bottompane">
+          <div class="tabs"><div class="tab active">Flow</div><div class="tab">Profile</div><div class="tab">Results</div></div>
+          <div class="flow"><div class="node"><b>Camera</b><small>Image</small></div><span class="arrow">→</span><div class="node"><b>Match_1</b><small>Reference</small></div><span class="arrow">→</span><div class="node"><b>Edge_1</b><small>P1 found</small></div><div class="node"><b>Edge_2</b><small>P2 found</small></div><span class="arrow">→</span><div class="node" style="border-color:#2c915f"><b>Distance_1</b><small class="status-ok">13.086 mm</small></div></div>
+        </div>
+      </div>
+</template>
+<script>
+const $=s=>document.querySelector(s);
+const types={
+ robot_guidance:{label:'Robot Guidance',description:'Locate a part → Pick reference → Robot transformation → Pose output',primary:'Match_1',result:'PASS',cycle:'82 ms'},
+ defect_inspection:{label:'Defect Inspection',description:'Reference match → Tracking ROI → Blob / defect inspection → PASS / FAIL',primary:'Blob_1',result:'FAIL',cycle:'64 ms'},
+ measurement:{label:'Measurement',description:'Feature detection → Calibrated calculation → Tolerance check → Measurement result',primary:'Distance_1',result:'PASS',cycle:'58 ms'}
+};
+const titles={dashboard:'Dashboard',projects:'Project Manager',recipes:'Recipe Manager',editor:'Recipe Editor',robotcal:'Robot Calibration',calibration:'Camera Calibration',communication:'Communication',runtime:'Runtime',diagnostics:'Diagnostics',settings:'Settings'};
+const storageKey='visionflow.recipes.v2';
+const seed=[
+ {id:'part-a',name:'Part_A',applicationType:'robot_guidance',camera:'Camera_1',version:'1.4',status:'VALID',lastResult:'PASS'},
+ {id:'part-b',name:'Part_B',applicationType:'defect_inspection',camera:'Camera_1',version:'2.0',status:'VALID',lastResult:'FAIL'},
+ {id:'shaft',name:'Shaft_Ø32',applicationType:'measurement',camera:'Camera_2',version:'1.1',status:'DRAFT',lastResult:'PASS'},
+ {id:'housing',name:'Housing_08',applicationType:'robot_guidance',camera:'Camera_1',version:'3.2',status:'VALID',lastResult:'PASS'},
+ {id:'seal',name:'Seal_Check',applicationType:'defect_inspection',camera:'Camera_3',version:'1.8',status:'INVALID',lastResult:null}
+];
+function validRecipe(r){return r&&typeof r.id==='string'&&typeof r.name==='string'&&r.name.length>0&&r.name.length<=64&&Object.hasOwn(types,r.applicationType)&&typeof r.camera==='string'&&/^\d+\.\d+$/.test(r.version)&&['VALID','DRAFT','INVALID'].includes(r.status)&&(!r.parameters||Array.isArray(r.parameters))}
+let recipes=structuredClone(seed);
+try{const stored=JSON.parse(localStorage.getItem(storageKey));if(Array.isArray(stored)&&stored.length&&stored.every(validRecipe))recipes=stored}catch{}
+let active=recipes[0],dirty=false,currentPage='dashboard',toastTimer;
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function toast(msg){$('#toast').textContent=msg;$('#toast').classList.add('visible');clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('#toast').classList.remove('visible'),3200)}
+function persist(){try{localStorage.setItem(storageKey,JSON.stringify(recipes));return true}catch{toast('Browser storage unavailable. Export JSON to keep your recipe.');return false}}
+function setDirty(value){dirty=value;$('#editorDirty').hidden=!value;$('#editorVersion').textContent='v'+active.version+(value?' · draft':'')}
+function captureParameters(){active.parameters=[...$('#editorBody').querySelectorAll('input,select')].map(el=>el.value);active.toggles=[...$('#editorBody').querySelectorAll('.toggle')].map(el=>el.classList.contains('on'))}
+function renderRecipes(){
+ const query=$('#recipeSearch').value.toLowerCase(),filter=$('#typeFilter').value;
+ const shown=recipes.filter(r=>(!filter||r.applicationType===filter)&&(r.name.toLowerCase().includes(query)||types[r.applicationType].label.toLowerCase().includes(query)));
+ $('#recipeRows').innerHTML=shown.map(r=>`<tr data-recipe="${esc(r.id)}"><td><b>${esc(r.name)}</b>${r.id===active.id?' <span class="tag">ACTIVE</span>':''}</td><td><span class="tag">${types[r.applicationType].label}</span></td><td>${esc(r.camera)}</td><td>${esc(r.version)}</td><td><span class="tag ${r.status==='VALID'?'ok':r.status==='INVALID'?'bad':'warn'}">${r.status}</span></td><td><div class="recipe-action"><button class="primary" data-open="${esc(r.id)}">Open Editor →</button><button class="ghost" data-copy="${esc(r.id)}">Copy</button></div></td></tr>`).join('')||'<tr><td colspan="6">No matching recipes.</td></tr>';
+ $('#recipeCount').textContent=shown.length+' of '+recipes.length+' recipes';
+}
+function navigate(id){
+ if(!Object.hasOwn(titles,id))return;
+ currentPage=id;
+ document.querySelectorAll('.page').forEach(p=>p.classList.toggle('active',p.id===id));
+ document.querySelectorAll('.nav button').forEach(b=>b.classList.toggle('active',b.dataset.page===id||(id==='editor'&&b.dataset.page==='recipes')));
+ $('#pageTitle').textContent=titles[id];
+ if(id==='recipes')renderRecipes();if(id==='runtime')renderRuntime();
+}
+function renderEditor(){
+ const fragment=$('#template-'+active.applicationType).content.cloneNode(true);
+ $('#editorBody').replaceChildren(fragment);
+ const nameInput=$('#editorBody .properties .field input');if(nameInput?.closest('.field').querySelector('label').textContent==='Name')nameInput.readOnly=true;
+ $('#editorBody').querySelectorAll('.node b').forEach(el=>{if(el.textContent.includes('Camera_1'))el.textContent=el.textContent.replace('Camera_1',active.camera)});
+ $('#editorRecipeName').textContent=active.name;
+ $('#editorType').textContent=types[active.applicationType].label;
+ $('#editorDescription').textContent=types[active.applicationType].description+' · '+active.camera;
+ $('#activeRecipeBadge').textContent='Recipe: '+active.name;
+ $('#editorBody .canvaspane .overlay-label')?.replaceChildren(...(()=>{const d=document.createElement('div');d.innerHTML='MATCH_1<br>X 124.52 px<br>Y 235.14 px<br>θ −7.2°<br><span class="status-ok">Score 96.4%</span>';return [...d.childNodes]})());
+ [...$('#editorBody').querySelectorAll('input,select')].forEach((el,i)=>{if(active.parameters?.[i]!==undefined)el.value=active.parameters[i];el.setAttribute('aria-label',el.closest('.field')?.querySelector('label')?.textContent||'Tool parameter')});
+ [...$('#editorBody').querySelectorAll('.toggle')].forEach((el,i)=>{if(active.toggles?.[i]!==undefined)el.classList.toggle('on',active.toggles[i])});
+ const nodes=$('#editorBody').querySelectorAll('.node');nodes.forEach(n=>{n.tabIndex=0;n.setAttribute('role','button');if(n.querySelector('b').textContent.includes(types[active.applicationType].primary))n.classList.add('selected-node')});
+ $('#editorBody .bottompane').insertAdjacentHTML('beforeend','<div class="sub">Demonstration values · no camera or robot connected.</div>');
+ setDirty(false);
+}
+function openRecipe(id){
+ const found=recipes.find(r=>r.id===id);if(!found)return;
+ if(dirty){captureParameters();persist()}
+ active=found;renderEditor();navigate('editor');
+}
+function saveRecipe(){
+ if(currentPage!=='editor'&&currentPage!=='runtime'){toast('Open a recipe in Recipe Editor to save its parameters.');return}
+ captureParameters();
+ if(dirty){const [major,minor]=active.version.split('.').map(Number);active.version=major+'.'+(minor+1);active.status='DRAFT';active.lastResult=null;active.modifiedAt=new Date().toISOString()}
+ if(persist()){setDirty(false);toast(active.name+' saved · v'+active.version+' · browser draft')}
+}
+function renderRuntime(){
+ const t=types[active.applicationType],result=active.lastResult||'NOT RUN',good=result==='PASS';
+ $('#runtime .panel-title b').textContent='Runtime — '+active.name+' / '+t.label;
+ const viewer=$('#runtime .viewer');viewer.replaceChildren(...$('#editorBody .canvaspane').querySelector('.viewer,.mini-viewer').cloneNode(true).childNodes);
+ viewer.classList.toggle('mini-viewer',active.applicationType!=='robot_guidance');viewer.classList.toggle('no-result',result==='NOT RUN');
+ const resultCard=$('#runtime .big-result');resultCard.textContent=result;resultCard.style.color=good?'var(--ok)':result==='FAIL'?'var(--bad)':'var(--warn)';
+ resultCard.nextElementSibling.textContent=result==='NOT RUN'?'Recipe draft · run a simulated cycle to preview':'Demo result · simulated '+t.cycle;
+ const output=$('#runtime .grid > .card:nth-child(2)');
+ const values=active.applicationType==='robot_guidance'?[['X','324.81 mm'],['Y','−122.34 mm'],['Z','48.20 mm'],['RZ','−7.20°'],['Score','96.4%']]:active.applicationType==='defect_inspection'?[['Blob count','1'],['Largest defect area','734 px²'],['Acceptance','≤ 500 px²'],['Result','FAIL']]:[['Pixel distance','523.42 px'],['Scale','0.025 mm/px'],['Distance','13.086 mm'],['Tolerance','12.95–13.15 mm']];
+ output.innerHTML='<div class="panel-title"><b>'+({'robot_guidance':'Robot Output','defect_inspection':'Inspection Result','measurement':'Measurement Result'}[active.applicationType])+'</b></div>'+values.map(([k,v])=>'<div class="kv"><span>'+k+'</span><strong>'+(result==='NOT RUN'?'—':v)+'</strong></div>').join('');
+ if(result==='NOT RUN')viewer.innerHTML='<div class="overlay-label" style="left:30%;top:40%">No result for this draft.<br>Use Run Demo in Recipe Editor.</div>';
+}
+document.querySelectorAll('.nav button').forEach(b=>b.onclick=()=>navigate(b.dataset.page));
+$('#backRecipes').onclick=()=>navigate('recipes');$('#openRuntime').onclick=()=>navigate('runtime');$('#saveRecipe').onclick=saveRecipe;
+$('#newRecipe').onclick=()=>{$('#createForm').reset();$('#createError').textContent='';$('#createDialog').showModal()};
+$('#cancelCreate').onclick=$('#closeCreate').onclick=()=>$('#createDialog').close();
+$('#createForm').onsubmit=e=>{
+ e.preventDefault();const name=$('#recipeName').value.trim();
+ if(!name||recipes.some(r=>r.name.toLocaleLowerCase()===name.toLocaleLowerCase())){$('#createError').textContent='Enter a unique recipe name.';return}
+ const applicationType=new FormData(e.target).get('applicationType');
+ const recipe={id:'recipe-'+Date.now()+'-'+Math.random().toString(36).slice(2,7),name,applicationType,camera:$('#recipeCamera').value,version:'1.0',status:'DRAFT',lastResult:null};
+ recipes.push(recipe);persist();$('#createDialog').close();openRecipe(recipe.id);toast('Created '+types[applicationType].label+' recipe.');
+};
+$('#recipeRows').onclick=e=>{
+ const open=e.target.closest('[data-open]'),copy=e.target.closest('[data-copy]');if(open)openRecipe(open.dataset.open);
+ if(copy){const r=structuredClone(recipes.find(r=>r.id===copy.dataset.copy));let index=1;while(recipes.some(x=>x.name===r.name+'_copy'+index))index++;r.name=r.name+'_copy'+index;r.id='copy-'+Date.now();r.version='1.0';r.status='DRAFT';r.lastResult=null;recipes.push(r);persist();renderRecipes();toast('Recipe copied.')}
+};
+$('#recipeSearch').oninput=renderRecipes;$('#typeFilter').onchange=renderRecipes;
+$('#editorBody').addEventListener('input',()=>{captureParameters();active.status='DRAFT';active.lastResult=null;setDirty(true)});
+$('#editorBody').addEventListener('change',()=>{captureParameters();active.status='DRAFT';active.lastResult=null;setDirty(true)});
+$('#editorBody').addEventListener('click',e=>{
+ const tab=e.target.closest('.tab'),node=e.target.closest('.node'),tool=e.target.closest('.tool');
+ if(tab){tab.parentElement.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active',x===tab));const pane=tab.closest('.bottompane');pane.querySelector('.flow').hidden=tab.textContent!=='Flow';let details=pane.querySelector('.tab-details');if(!details){details=document.createElement('div');details.className='tab-details';pane.append(details)}details.hidden=tab.textContent==='Flow';const result=active.lastResult||'NOT RUN';details.innerHTML=tab.textContent.includes('Result')?'<div class="kv"><span>'+types[active.applicationType].primary+'</span><strong>'+result+'</strong></div><div class="sub">Simulated outputs for '+esc(active.name)+'</div>':tab.textContent==='Variables'?'<div class="kv"><span>Recipe.ApplicationType</span><strong>'+types[active.applicationType].label+'</strong></div><div class="kv"><span>Recipe.Camera</span><strong>'+esc(active.camera)+'</strong></div>':'<div class="sub">Demo workspace · '+esc(tab.textContent)+' preview for '+esc(active.name)+'.</div>'}
+ if(node){$('#editorBody').querySelectorAll('.node').forEach(x=>x.classList.toggle('selected-node',x===node));toast(node.querySelector('b').textContent+' selected. Primary tool parameters are shown on the right.')}
+ if(tool)toast(tool.textContent.trim()+' · available in '+types[active.applicationType].label+' template');
+ const toggle=e.target.closest('.toggle');if(toggle){toggle.classList.toggle('on');captureParameters();setDirty(true)}
+ const button=e.target.closest('.canvaspane button');if(button)toast(button.textContent.trim()+' · visual demonstration');
+});
+$('#editorBody').addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e.target.matches('.node')){e.preventDefault();e.target.click()}});
+document.querySelectorAll('.toggle').forEach(t=>t.onclick=()=>t.classList.toggle('on'));
+$('#runDemo').onclick=()=>{captureParameters();active.lastResult=types[active.applicationType].result;persist();toast('Simulated '+active.lastResult+' · '+types[active.applicationType].cycle+' · no hardware operation')};
+$('#exportRecipe').onclick=()=>{captureParameters();const blob=new Blob([JSON.stringify({schemaVersion:2,recipe:active},null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=active.name.replace(/[^\p{L}\p{N}_-]/gu,'_')+'.recipe.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);toast('Recipe JSON exported.')};
+$('#importRecipe').onclick=()=>$('#importFile').click();$('#importFile').onchange=async e=>{const file=e.target.files[0];if(!file)return;try{const data=JSON.parse(await file.text());if(data.schemaVersion!==2||!validRecipe(data.recipe))throw Error('Invalid recipe schema');const r=data.recipe;r.id='import-'+Date.now();let name=r.name,i=1;while(recipes.some(x=>x.name===name))name=r.name+'_import'+i++;r.name=name;r.status='DRAFT';r.lastResult=null;recipes.push(r);persist();openRecipe(r.id);toast('Recipe imported as a draft.')}catch{toast('Import failed: choose a VisionFlow v2 recipe JSON.')}e.target.value=''};
+$('#runtime .grid > .card:nth-child(3)').onclick=e=>{if(e.target.matches('button')){if(e.target.textContent==='Run Vision'){active.lastResult=types[active.applicationType].result;renderRuntime();toast('Simulated result only.')}else toast(e.target.textContent+' · demo only; no hardware operation')}};
+window.addEventListener('beforeunload',e=>{if(dirty){e.preventDefault();e.returnValue=''}});
+renderEditor();renderRecipes();
+
+</script>
+</body>
+</html>

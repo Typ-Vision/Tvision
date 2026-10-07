@@ -1,0 +1,33 @@
+QWidget { background: #0b0f14; color: #edf4fb; font-family: 'Segoe UI'; font-size: 13px; }
+QMenuBar, QMenu, QStatusBar { background: #111720; }
+QMenuBar::item:selected, QMenu::item:selected { background: #263242; }
+QFrame#sidebar { background: #0e141c; border-right: 1px solid #263242; }
+QLabel#brand { color: #66e3c4; font-size: 23px; font-weight: bold; }
+QLabel#heading { font-size: 22px; font-weight: bold; }
+QLabel#muted { color: #8fa0b5; }
+QFrame#card { background: #111720; border: 1px solid #263242; border-radius: 10px; }
+QFrame#card QLabel { background: transparent; }
+QListWidget { background: transparent; border: none; outline: none; }
+QListWidget::item { padding: 9px; border-radius: 6px; margin: 2px; }
+QListWidget::item:selected { background: #17314a; color: #edf4fb; }
+QListWidget::item:hover { background: #151d27; }
+QPushButton { background: #151d27; border: 1px solid #2b394a; border-radius: 6px; padding: 8px 12px; }
+QPushButton:hover { background: #263242; }
+QPushButton:focus { border: 1px solid #49a8ff; }
+QPushButton#primary { background: #1670b6; border-color: #49a8ff; }
+QPushButton:disabled { color: #62768f; background: #111720; }
+QSplitter::handle { background: #263242; }
+QSplitter::handle:hover { background: #49a8ff; }
+QTabWidget::pane { border: 1px solid #263242; background: #111720; }
+QTabBar::tab { background: #151d27; padding: 9px 12px; }
+QTabBar::tab:selected { color: #66e3c4; background: #263242; }
+QLineEdit, QComboBox { background: #111720; border: 1px solid #2b394a; border-radius: 5px; padding: 7px; }
+QLineEdit:focus, QComboBox:focus { border-color: #49a8ff; }
+QTableWidget, QTreeWidget { background: #111720; border: 1px solid #263242; gridline-color: #263242; selection-background-color: #17314a; }
+QHeaderView::section { background: #151d27; color: #8fa0b5; padding: 8px; border: none; border-bottom: 1px solid #263242; }
+QGroupBox { border: 1px solid #263242; border-radius: 8px; padding: 14px; }
+QGroupBox[selected="true"] { border: 1px solid #49a8ff; background: #111e2b; }
+QGroupBox QLabel, QGroupBox QRadioButton { background: transparent; }
+QRadioButton::indicator { width: 13px; height: 13px; border-radius: 7px; border: 1px solid #8fa0b5; background: #111720; }
+QRadioButton::indicator:checked { border-color: #49a8ff; background: #49a8ff; }
+QLabel#error { color: #ff6978; }

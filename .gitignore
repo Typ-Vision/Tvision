@@ -1,0 +1,6 @@
+/build/
+/build-*/
+/data/logs/
+/data/images/
+/config/local.*
+*.user

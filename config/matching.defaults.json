@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "backend": "cpu",
+  "function": "cv::matchTemplate",
+  "method": "TM_CCOEFF_NORMED",
+  "imageType": "CV_8UC1",
+  "angleSearchSupported": false,
+  "scaleSearchSupported": false,
+  "latencyTargetMs": 10,
+  "strictLatencyTargetMs": 5,
+  "latencyGuaranteed": false,
+  "searchStrategy": "recipe_search_roi",
+  "fullFrameCpuTargetVerified": false,
+  "syntheticRoiP95Under10Ms": true,
+  "cudaCandidate": "cv::cuda::createTemplateMatching(CV_8UC1, cv::TM_CCORR_NORMED)",
+  "cudaEnabled": false
+}
