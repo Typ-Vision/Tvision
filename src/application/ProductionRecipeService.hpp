@@ -60,7 +60,8 @@ public:
     void activate(const QString& principal,const QString& validationId,const Recipe& currentDraft,const QString& projectDirectory);
     void rollback(const QString& principal,const QString& validationId);
     std::shared_ptr<const ProductionSnapshot> active() const;
-    ProductionCycle beginCycle(const QString& principal);
+    ProductionCycle beginCycle(const QString& principal,const QJsonObject& communication={});
+    void requireReady(const QString& principal) const;
     void finishCycle(quint64 ticket,const CycleResult& result);
     void abandonCycle(quint64 ticket,const QString& reason);
     QVector<QJsonObject> cycleRecords() const;
@@ -84,6 +85,7 @@ private:
     ProductionCycle cycle_;
     QString cyclePrincipal_;
     QString cycleBeginId_;
+    QJsonObject cycleCommunication_;
     QDateTime cycleStarted_;
     quint64 serial_=0;
     QVector<QJsonObject> records_;

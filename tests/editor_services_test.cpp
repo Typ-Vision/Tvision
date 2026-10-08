@@ -60,7 +60,7 @@ int main(int argc,char** argv) {
         service.removeTool(match); service.save(); service.openProject(service.path()); service.selectRecipe(recipe);
         check(service.tools().size()==1 && service.tools()[0].id==source,"removal persisted");
         const auto empty=editorTools(QJsonObject{}); check(empty.isEmpty(),"Step 2 definition compatible");
-        rejected([&]{editorTools(QJsonObject{{"editor",QJsonObject{{"schemaVersion",6},{"tools",QJsonArray{}}}}});},"future editor schema rejected");
+        rejected([&]{editorTools(QJsonObject{{"editor",QJsonObject{{"schemaVersion",7},{"tools",QJsonArray{}}}}});},"future editor schema rejected");
         const auto retained=withEditorTools(QJsonObject{{"vendor",42}},service.tools()); check(retained["vendor"].toInt()==42,"unrelated definition fields preserved");
         auto legacyTool=ToolDefinition{match,"template_match","Legacy","",true,QJsonObject{{"minScore",0.81}}};
         const QJsonObject legacy{{"editor",QJsonObject{{"schemaVersion",1},{"tools",QJsonArray{QJsonObject{{"id",legacyTool.id},{"kind",legacyTool.kind},{"name",legacyTool.name},{"description",""},{"enabled",true},{"parameters",legacyTool.parameters}}}}}}};

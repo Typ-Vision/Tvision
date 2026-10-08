@@ -1,0 +1,1 @@
+calibration_id,version,content_id,source_id,lens_setup_id,working_plane_id,target_id,reference_id,reference_instrument,reference_uncertainty_mm,region,orientation,repeat_index,known_mm,measured_mm,absolute_error_mm,frame_id,timestamp_utc,error_budget_mm,notes

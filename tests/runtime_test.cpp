@@ -1,4 +1,5 @@
 #include "application/RuntimeService.hpp"
+#include "application/RuntimeCoordinator.hpp"
 #include "application/EditorSession.hpp"
 #include <QCoreApplication>
 #include <QTemporaryDir>
@@ -28,6 +29,11 @@ int main(int argc,char** argv){QCoreApplication app(argc,argv);try{
     const auto archive=project.path()+".production";ProductionStore store(archive);RuntimeService runtime(archive,catalog,identity);
     RuntimeService denied(dir.path()+"/denied",catalog,{"guest",{}});rejects([&]{denied.validate(*project.activeRecipe(),dir.path(),frame);},ProductionError::Unauthorized,"default deny");
     const auto recipe=*project.activeRecipe();const auto v1=runtime.validate(recipe,dir.path(),frame);runtime.activate(recipe,dir.path());check(store.recent("snapshots").size()==1 && store.recent("events").size()==1,"snapshot and activation persisted");
+    RuntimeService prepared(dir.path()+"/prepared",catalog,identity);RuntimeCoordinator coordinator(prepared);
+    coordinator.load(recipe,dir.path());coordinator.start();
+    check(prepared.records().isEmpty(),"configuration-only Run creates no frame/cycle result");
+    const auto preparedCycle=coordinator.begin(RuntimeTrigger::Manual);const auto preparedResult=RuntimeService::execute(preparedCycle,catalog,coordinator.cancellation());
+    coordinator.finish(preparedCycle.ticket,preparedResult);check(preparedResult.state==ExecutionState::Done,"declared calibration preparation resolves actual frame at execution");coordinator.stop();
     const auto lease=runtime.begin();auto edited=recipe;edited.name="draft changed";edited.recipeVersion++;
     rejects([&]{runtime.validate(edited,dir.path(),frame);},ProductionError::Busy,"validation cannot replace live installation");
     rejects([&]{runtime.begin();},ProductionError::Busy,"single cycle");rejects([&]{runtime.rollback(v1.id);},ProductionError::Busy,"boundary rollback");
@@ -56,7 +62,10 @@ int main(int argc,char** argv){QCoreApplication app(argc,argv);try{
     auto changed=recipe;auto setup=changed.definition["planarSetup"].toObject();setup["lensId"]="new lens";changed.definition["planarSetup"]=setup;runtime.observeInstallation(changed);rejects([&]{runtime.begin();},ProductionError::DependencyChanged,"physical setup declaration invalidates active");runtime.observeInstallation(recipe);
     const auto stopped=runtime.begin();auto token=std::make_shared<std::atomic_bool>(true);const auto skipped=RuntimeService::execute(stopped,catalog,token);runtime.finish(stopped.ticket,skipped);check(find(skipped).decision==PartDecision::NotEvaluated && find(skipped).outputs.isEmpty(),"cancel persisted without decision");
     QImage smaller(500,300,QImage::Format_Grayscale8);smaller.fill(0);for(int y=40;y<240;++y)for(int x=100;x<300;++x)smaller.scanLine(y)[x]=255;check(smaller.save(imagePath),"resolution changed");const auto smallLease=runtime.begin();const auto small=RuntimeService::execute(smallLease,catalog,{});check(find(small).errorCode=="CALIBRATION_INVALID" && find(small).outputs.isEmpty(),"actual current frame resolution rechecked");runtime.finish(smallLease.ticket,small);
+    coordinator.start();const auto wrongSizeCycle=coordinator.begin(RuntimeTrigger::Manual);const auto wrongSize=RuntimeService::execute(wrongSizeCycle,catalog,coordinator.cancellation());
+    check(find(wrongSize).errorCode=="CALIBRATION_INVALID" && find(wrongSize).outputs.isEmpty(),"Run requirements never certify actual resolution");coordinator.finish(wrongSizeCycle.ticket,wrongSize);
     CalibrationService(catalog).save(MeasurementService{}.validate(CalibrationWorkflow::teach(recipe,frame,"scale",2,teaching),holdout,.001));rejects([&]{runtime.begin();},ProductionError::DependencyChanged,"latest calibration invalidates next cycle");rejects([&]{runtime.rollback(v2.id);},ProductionError::DependencyChanged,"latest invalidates rollback");
+    rejects([&]{coordinator.begin(RuntimeTrigger::Manual);},ProductionError::DependencyChanged,"declared Run still checks latest calibration on each cycle");
     const auto id=record["recordId"].toString();store.append("cycles",id,record);auto overwrite=record;overwrite["error"]="changed";bool refused=false;try{store.append("cycles",id,overwrite);}catch(...){refused=true;}check(refused,"append only archive");
     const auto filename=archive+"/cycles/"+id+".json";QFile file(filename);check(file.open(QIODevice::ReadOnly),"read archive");auto envelope=QJsonDocument::fromJson(file.readAll()).object();file.close();envelope["sha256"]="tampered";check(file.open(QIODevice::WriteOnly),"tamper fixture");file.write(QJsonDocument(envelope).toJson());file.close();bool corrupt=false;try{store.recent("cycles");}catch(...){corrupt=true;}check(corrupt,"corrupt archive rejected");
     QTextStream(stdout)<<"PASS: Runtime acquisition, immutable versions, permission, mm decisions, restart archives, lock/failure retry, rollback, cancellation and calibration invalidation\n";return 0;

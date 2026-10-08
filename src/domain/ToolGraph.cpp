@@ -37,7 +37,8 @@ QVector<ToolConnection> editorConnections(const QJsonObject& definition) {
 QJsonObject withEditorConnections(QJsonObject definition,const QVector<ToolConnection>& connections) {
     auto e=definition["editor"].toObject(); QJsonArray array;
     for (const auto& c:connections) array.append(QJsonObject{{"sourceTool",c.sourceTool},{"sourcePort",c.sourcePort},{"targetTool",c.targetTool},{"targetPort",c.targetPort}});
-    e["schemaVersion"]=5; e["connections"]=array; definition["editor"]=e; return definition;
+    QJsonArray normalized;for(const auto& t:editorTools(definition))normalized.append(QJsonObject{{"id",t.id},{"kind",t.kind},{"name",t.name},{"description",t.description},{"enabled",t.enabled},{"parameters",t.parameters}});
+    e["tools"]=normalized;e["schemaVersion"]=6; e["connections"]=array; definition["editor"]=e; return definition;
 }
 GraphValidation validateGraph(const QVector<ToolDefinition>& tools,const QVector<ToolConnection>& connections) {
     GraphValidation r; QMap<QString,ToolDefinition> nodes; QMap<QString,int> indegree; QMap<QString,QStringList> next; QSet<QString> bound;

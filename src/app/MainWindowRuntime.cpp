@@ -15,20 +15,21 @@
 #include <QJsonDocument>
 #include <QSignalBlocker>
 #include <QTextEdit>
+#include <QMenuBar>
+#include <QListWidget>
+#include <QStackedWidget>
 namespace visionflow {
 namespace {
 QLabel* plain(const QString& value){auto* label=new QLabel(value);label->setWordWrap(true);label->setTextFormat(Qt::PlainText);return label;}
 }
 QWidget* MainWindow::makeRuntime() {
     auto* page=new QWidget;auto* layout=new QVBoxLayout(page);
-    layout->addWidget(plain("Üç uygulama türü aynı Runtime'ı kullanır. Doğrulama yürütme yapılandırmasını kabul eder; fiziksel ölçüm kabulü değildir. Tek kare / host isteği; PLC gönderimi yok."));
+    layout->addWidget(plain("Load Recipe → Run. Run görüntü almaz; manuel test için Tek çevrim seçin. Üç uygulama türü aynı Runtime'ı kullanır. Fiziksel ölçüm kabulü ayrıdır."));
     runtimeStatus_=plain("Aktif sürüm yok; çevrim çalıştırılmadı.");runtimeStatus_->setObjectName("runtimeStatus");layout->addWidget(runtimeStatus_);
     auto* actions=new QHBoxLayout;
-    const QVector<QPair<QString,QString>> commands{{"validate","Taslağı doğrula"},{"activate","Etkinleştir"},{"run","Tek çevrim"},{"stop","Stop"},{"retry","Kaydı tekrar yaz"}};
+    const QVector<QPair<QString,QString>> commands{{"run","Run"},{"stop","Stop"},{"cycle","Tek çevrim"},{"retry","Kaydı tekrar yaz"}};
     for(const auto& command:commands){auto* b=new QPushButton(command.second);b->setObjectName("runtime_"+command.first);actions->addWidget(b);connect(b,&QPushButton::clicked,this,[this,action=command.first]{runtimeAction(action);});}
     layout->addLayout(actions);
-    auto* versions=new QHBoxLayout;runtimeHistory_=new QComboBox;runtimeHistory_->setObjectName("runtimeHistory");versions->addWidget(runtimeHistory_,1);
-    auto* rollback=new QPushButton("Önceki etkin sürüme dön");rollback->setObjectName("runtime_rollback");versions->addWidget(rollback);connect(rollback,&QPushButton::clicked,this,[this]{runtimeAction("rollback");});layout->addLayout(versions);
     auto* split=new QSplitter;runtimeViewer_=new ImageViewer;split->addWidget(runtimeViewer_);
     auto* panel=new QWidget;auto* results=new QVBoxLayout(panel);runtimeTools_=new QComboBox;runtimeTools_->setObjectName("runtimeTools");results->addWidget(runtimeTools_);
     runtimeSummary_=plain("READY — sonuç yok.");runtimeSummary_->setObjectName("runtimeSummary");runtimeSummary_->setSizePolicy(QSizePolicy::Ignored,QSizePolicy::Preferred);results->addWidget(runtimeSummary_);results->addStretch();
@@ -46,68 +47,85 @@ QWidget* MainWindow::makeLogs() {
 void MainWindow::ensureRuntime() {
     if(!service_.hasProject() || service_.path().isEmpty())throw std::runtime_error("Önce kaydedilmiş bir proje açın.");
     if(runtime_ && runtimePath_==service_.path())return;
+    if(plc_ && plc_->blocking())throw std::runtime_error("Önce PLC kaydı/ACK tamamlanmalı.");
     if(runtimeJobs_.busy() || (runtime_ && runtime_->busy()))throw std::runtime_error("Önce Runtime çevrimini/kaydını tamamlayın.");
-    runtimePath_=service_.path();runtime_=std::make_unique<RuntimeService>(runtimePath_+".production",runtimePath_+".calibrations.json",RuntimeIdentity::localEngineer());
-    runtimeCycle_={};runtimePending_.reset();runtimeResult_.reset();runtimeHistory_->clear();showRuntimeResult();
+    if(plc_)plc_->bind(nullptr,nullptr);runtimeCoordinator_.reset();runtimePath_=service_.path();runtime_=std::make_unique<RuntimeService>(runtimePath_+".production",runtimePath_+".calibrations.json",RuntimeIdentity::localEngineer());
+    runtimeCoordinator_=std::make_unique<RuntimeCoordinator>(*runtime_);
+    if(plc_)plc_->bind(runtime_.get(),runtimeCoordinator_.get(),runtimePath_+".production",runtimePath_+".calibrations.json");
+    runtimeCycle_={};runtimePending_.reset();runtimeResult_.reset();showRuntimeResult();
+}
+void MainWindow::updateOperatorMode(bool active) {
+    if(operatorMode_==active)return;
+    operatorMode_=active;
+    if(active) {
+        operatorGeometry_=saveGeometry();operatorWindowState_=windowState();
+        pages_->setCurrentIndex(pageIds_.indexOf("runtime"));pageTitle_->setText("Runtime");
+        navigation_->setEnabled(false);findChild<QWidget*>("sidebar")->hide();
+        menuBar()->setEnabled(false);menuBar()->hide();showFullScreen();
+    } else {
+        menuBar()->setEnabled(true);menuBar()->show();
+        navigation_->setEnabled(true);findChild<QWidget*>("sidebar")->show();
+        restoreGeometry(operatorGeometry_);setWindowState(operatorWindowState_);
+        selectPage("runtime");
+    }
 }
 void MainWindow::refreshRuntime() {
     if(!runtimeStatus_)return;
     if(runtime_ && runtimePath_==service_.path() && service_.activeRecipe())runtime_->observeInstallation(*service_.activeRecipe());
-    if(runtime_ && runtimePath_!=service_.path() && !runtimeJobs_.busy() && !runtime_->busy()) {runtime_.reset();runtimePath_.clear();runtimeResult_.reset();runtimeHistory_->clear();showRuntimeResult();}
-    const bool working=runtimeJobs_.busy(),pending=runtime_ && runtime_->busy();const auto active=runtime_ ? runtime_->active() : nullptr;
-    QString state=working ? "BUSY" : pending ? "KAYIT BEKLİYOR — yeni çevrim engelli" : active ? "READY" : "Aktif sürüm yok";
-    if(runtime_)state+=" | Yerel Engineer: "+runtime_->principal();
-    if(active)state+="\nAktif: "+active->recipe().name+QString(" • v%1 • %2").arg(active->recipe().recipeVersion).arg(typeLabel(active->recipe().applicationType))+"\nValidation: "+active->validation().id+" | Config: "+QString::fromLatin1(active->validation().contentId.left(12));
-    if(runtime_ && runtime_->validation())state+="\nSon taslak doğrulaması: "+runtime_->validation()->id;
-    runtimeStatus_->setText(state);
-    const bool ready=!working && !pending;
-    findChild<QPushButton*>("runtime_validate")->setEnabled(ready && service_.activeRecipe() && !editorSession_.busy() && !cameraSession_.busy());
-    findChild<QPushButton*>("runtime_activate")->setEnabled(ready && service_.activeRecipe() && runtime_ && runtime_->validation().has_value());
-    findChild<QPushButton*>("runtime_run")->setEnabled(ready && active && runtimePath_==service_.path() && !editorSession_.busy() && !cameraSession_.busy());
-    findChild<QPushButton*>("runtime_stop")->setEnabled(working);
-    findChild<QPushButton*>("runtime_retry")->setEnabled(!working && pending && runtimePending_.has_value());
-    findChild<QPushButton*>("runtime_rollback")->setEnabled(ready && runtimeHistory_->count()>0);
+    if(runtime_ && runtimePath_!=service_.path() && !runtimeJobs_.busy() && !runtime_->busy() && !(plc_ && plc_->blocking())) {
+        if(plc_)plc_->bind(nullptr,nullptr);runtimeCoordinator_.reset();runtime_.reset();runtimePath_.clear();runtimeResult_.reset();showRuntimeResult();
+    }
+    const auto state=runtimeCoordinator_ ? runtimeCoordinator_->state() : RuntimeState::Unloaded;
+    const bool network=plc_ && plc_->listening(),working=runtimeJobs_.busy() || (plc_ && plc_->working()),pending=runtime_ && runtime_->busy();
+    updateOperatorMode(state==RuntimeState::Starting || state==RuntimeState::Running || state==RuntimeState::Stopping || working);
+    QString status;
+    switch(state){
+    case RuntimeState::Unloaded:status="Yüklü reçete yok — Recipe Manager → Load Recipe";break;
+    case RuntimeState::LoadedStopped:status="Durduruldu — Run bekleniyor";break;
+    case RuntimeState::Starting:status="Hazırlanıyor";break;
+    case RuntimeState::Running:status=working ? "Çalışıyor — çevrim sürüyor" : (runtimeCoordinator_->mode()==RuntimeTrigger::Manual ? "Çalışıyor — manuel çevrim bekleniyor" : "Çalışıyor — yazılım tetiği bekleniyor");break;
+    case RuntimeState::Stopping:status="Durduruluyor — kayıt bekleniyor";break;
+    case RuntimeState::Fault:status="FAULT — "+runtimeCoordinator_->error();break;
+    }
+    if(runtimeCoordinator_ && runtimeCoordinator_->loaded()){
+        const auto& r=*runtimeCoordinator_->loaded();status+="\nYüklü: "+r.name+QString(" • v%1 • %2").arg(r.recipeVersion).arg(typeLabel(r.applicationType));
+    }
+    if(pending && !working)status+="\nKAYIT BEKLİYOR — yeni çevrim engelli";
+    if(network)status+="\nPLC: "+plc_->state();
+    runtimeStatus_->setText(status);
+    const bool available=!working && !pending && !(plc_ && plc_->blocking()) && !editorSession_.busy() && !cameraSession_.busy();
+    findChild<QPushButton*>("runtime_run")->setEnabled(available && (state==RuntimeState::LoadedStopped || state==RuntimeState::Fault));
+    findChild<QPushButton*>("runtime_cycle")->setEnabled(available && state==RuntimeState::Running && runtimeCoordinator_->mode()==RuntimeTrigger::Manual);
+    findChild<QPushButton*>("runtime_stop")->setEnabled(state==RuntimeState::Starting || state==RuntimeState::Running || working);
+    findChild<QPushButton*>("runtime_retry")->setVisible(runtimePending_.has_value() || (plc_ && plc_->recordingPending()));
+    findChild<QPushButton*>("runtime_retry")->setEnabled(!working && ((pending && runtimePending_.has_value()) || (plc_ && plc_->recordingPending())));
 }
 void MainWindow::runtimeAction(const QString& action) {
     try {
-        if(action=="stop"){runtimeJobs_.stop(SessionJob::Execution);runtimeJobs_.stop(SessionJob::Image);refreshRuntime();return;}
+        if(action=="stop"){
+            if(plc_ && plc_->working())plc_->cancel();
+            if(runtimeCoordinator_)runtimeCoordinator_->stop();
+            runtimeJobs_.stop(SessionJob::Execution);runtimeResult_.reset();showRuntimeResult();refreshRuntime();return;
+        }
+        if(action=="retry" && plc_ && plc_->recordingPending()){plc_->retryRecording();refreshRuntime();return;}
+        if(plc_ && plc_->blocking())throw std::runtime_error("PLC kayıt/teslimi bekleniyor.");
         if(runtimeJobs_.busy())return;
         ensureRuntime();
         if(action=="retry") {
             if(!runtimePending_)return;
-            runtime_->finish(runtimeCycle_.ticket,*runtimePending_);runtimeResult_=std::move(runtimePending_);runtimePending_.reset();runtimeCycle_={};showRuntimeResult();refreshRuntime();return;
-        }
-        if(runtime_->busy())throw std::runtime_error("Çevrim kaydı tamamlanmadan yeni işlem yapılamaz.");
-        if(action=="activate" || action=="rollback") {
-            if(action=="activate"){if(!service_.activeRecipe())return;runtime_->activate(*service_.activeRecipe(),QFileInfo(runtimePath_).absolutePath());}
-            else runtime_->rollback(runtimeHistory_->currentData().toString());
-            const auto s=runtime_->active();if(runtimeHistory_->findData(s->validation().id)<0)runtimeHistory_->addItem(s->recipe().name+QString(" v%1 • ").arg(s->recipe().recipeVersion)+s->validation().id.left(8),s->validation().id);
-            runtimeHistory_->setCurrentIndex(runtimeHistory_->findData(s->validation().id));runtimeResult_.reset();showRuntimeResult();refreshRuntime();return;
+            runtimeCoordinator_->finish(runtimeCycle_.ticket,*runtimePending_);runtimeResult_=std::move(runtimePending_);runtimePending_.reset();runtimeCycle_={};showRuntimeResult();refreshRuntime();return;
         }
         if(editorSession_.busy() || cameraSession_.busy())throw std::runtime_error("Önce diğer kamera/editor işini tamamlayın.");
         runtimeResult_.reset();showRuntimeResult();
-        if(action=="validate") {
-            if(!applyToolProperties() || !service_.activeRecipe())return;
-            const auto recipe=*service_.activeRecipe();const auto signature=flowSignature();const auto path=runtimePath_;const auto directory=QFileInfo(path).absolutePath();
-            auto* watcher=runtimeJobs_.watch<ImageLoad>(this,SessionJob::Image);const auto cancel=runtimeJobs_.token(SessionJob::Image);
-            connect(watcher,&QFutureWatcher<ImageLoad>::finished,this,[this,watcher,recipe,signature,path,directory,cancel]{
-                const auto result=watcher->result();watcher->deleteLater();
-                try {
-                    if(cancel->load())throw std::runtime_error("Doğrulama iptal edildi.");
-                    if(path!=service_.path() || signature!=flowSignature())throw std::runtime_error("Taslak değişti; doğrulamayı yeniden başlatın.");
-                    if(!result.frame)throw std::runtime_error(result.error.toUtf8().constData());
-                    runtime_->validate(recipe,directory,*result.frame);runtimeViewer_->setImage(result.frame->preview());runtimeViewer_->fitImage();runtimeSummary_->setText("Yapılandırma doğrulandı. Etkinleştirme bekleniyor; parça sonucu yok.");
-                }catch(const std::exception& e){runtimeSummary_->setText(QString::fromUtf8(e.what()));}
-                refreshRuntime();
-            });
-            runtimeJobs_.launch(watcher,[recipe,directory,cancel]{ImageLoad result;try{result.frame=RuntimeService::probe(recipe,directory,cancel);}catch(const std::exception& e){result.error=QString::fromUtf8(e.what());}return result;});
-        } else if(action=="run") {
-            runtimeCycle_=runtime_->begin();const auto cycle=runtimeCycle_;const auto catalog=runtimePath_+".calibrations.json";
-            auto* watcher=runtimeJobs_.watch<CycleResult>(this,SessionJob::Execution);const auto cancel=runtimeJobs_.token(SessionJob::Execution);
+        if(action=="run") {
+            runtimeCoordinator_->start();
+        } else if(action=="cycle") {
+            runtimeCycle_=runtimeCoordinator_->begin(RuntimeTrigger::Manual);const auto cycle=runtimeCycle_;const auto catalog=runtimePath_+".calibrations.json";
+            auto* watcher=runtimeJobs_.watch<CycleResult>(this,SessionJob::Execution);const auto cancel=runtimeCoordinator_->cancellation();
             connect(watcher,&QFutureWatcher<CycleResult>::finished,this,[this,watcher,cancel]{
                 auto result=watcher->result();watcher->deleteLater();if(cancel->load())EditorSession::suppressCancelled(result);
                 runtimePending_=result;
-                try {runtime_->finish(runtimeCycle_.ticket,result);runtimeResult_=std::move(runtimePending_);runtimePending_.reset();runtimeCycle_={};showRuntimeResult();}
+                try {runtimeCoordinator_->finish(runtimeCycle_.ticket,result);runtimeResult_=std::move(runtimePending_);runtimePending_.reset();runtimeCycle_={};showRuntimeResult();}
                 catch(const std::exception& e){runtimeSummary_->setText("Kayıt bekliyor: "+QString::fromUtf8(e.what()));runtimeViewer_->clearImage("Kayıt bekliyor; sonuç yayımlanmadı.");}
                 refreshRuntime();
             });
@@ -121,7 +139,7 @@ void MainWindow::showRuntimeResult() {
     runtimeViewer_->setToolOverlay({},{});
     if(!runtimeResult_){runtimeViewer_->clearImage("Yeni çevrim sonucu yok.");runtimeSummary_->setText("READY — sonuç yok.");QSignalBlocker blocker(runtimeTools_);runtimeTools_->clear();return;}
     const auto& c=*runtimeResult_;const auto snapshot=runtime_ ? runtime_->active() : nullptr;QStringList lines;
-    lines<<executionStateName(c.state)+QString(" • %1 ms").arg(c.milliseconds,0,'f',2)<<"Cycle: "+c.cycleId<<"Frame: "+c.frameId<<"Config: "+QString::fromLatin1(c.configId.left(12))<<"Kalıcı kayıt tamamlandı • İletişim: NOT_REQUESTED";
+    lines<<executionStateName(c.state)+QString(" • %1 ms").arg(c.milliseconds,0,'f',2)<<"Cycle: "+c.cycleId<<"Frame: "+c.frameId<<"Config: "+QString::fromLatin1(c.configId.left(12))<<(plc_ && plc_->listening() ? "Kalıcı kayıt tamamlandı • PLC durumu Communication ekranında" : "Kalıcı kayıt tamamlandı • İletişim: NOT_REQUESTED");
     if(!c.error.isEmpty())lines<<c.error;
     bool image=false;
     for(const auto& t:c.tools)for(const auto& v:t.outputs)if(v.valid && std::holds_alternative<ImageFrame>(v.data)){runtimeViewer_->setImage(std::get<ImageFrame>(v.data).preview());image=true;}
@@ -138,7 +156,7 @@ void MainWindow::showRuntimeResult() {
             lines<<"  "+it.key()+": "+value+" "+it->port.unit;
         }
         if(t.decision!=PartDecision::NotEvaluated)lines<<QString("  Ölçüm: %1 mm • %2").arg(std::get<double>(t.outputs.value("value").data),0,'f',6).arg(t.decision==PartDecision::Pass ? "PASS" : "FAIL");
-        if(t.toolId==runtimeTools_->currentData().toString()){QString annotation;if(t.decision!=PartDecision::NotEvaluated)annotation=QString("%1 mm • %2").arg(std::get<double>(t.outputs.value("value").data),0,'f',3).arg(t.decision==PartDecision::Pass ? "PASS" : "FAIL");runtimeViewer_->setToolOverlay(t.regions,t.points,t.lines,annotation);}
+        if(t.toolId==runtimeTools_->currentData().toString()){QString annotation;if(t.decision!=PartDecision::NotEvaluated)annotation=QString("%1 mm • %2").arg(std::get<double>(t.outputs.value("value").data),0,'f',3).arg(t.decision==PartDecision::Pass ? "PASS" : "FAIL");runtimeViewer_->setToolOverlay(t.regions,t.points,t.lines,annotation,t.mask.pixels,t.mask.size,t.mask.origin);}
     }runtimeSummary_->setText(lines.join("\n"));
 }
 void MainWindow::refreshLogs() {
@@ -146,10 +164,13 @@ void MainWindow::refreshLogs() {
     try {
         if(!service_.hasProject()){logStatus_->setText("Önce proje açın.");return;}
         const auto records=ProductionStore(service_.path()+".production").recent("cycles");
-        logStatus_->setText(QString("Son %1 kalıcı çevrim • restart sonrasında salt okunur • NOT_REQUESTED: PLC teslimi yapılmadı").arg(records.size()));
+        const auto events=ProductionStore(service_.path()+".production").recent("events",256);
+        QMap<QString,QString> delivery;
+        for(const auto& e:events){const auto action=e["action"].toString();if(action=="PLC_ACK")delivery[e["cycleId"].toString()]="ACKED";else if(action=="PLC_RESULT"){const auto id=e["response"].toObject()["cycleId"].toString();if(!delivery.contains(id))delivery[id]="RESULT_RECORDED / ACK kanıtı bu listede yok";}}
+        logStatus_->setText(QString("Son %1 kalıcı çevrim • restart sonrasında salt okunur • PLC: son 256 event ile ilişkilendirilir").arg(records.size()));
         for(const auto& record:records){const int row=logTable_->rowCount();logTable_->insertRow(row);QStringList decisions;
             for(const auto& v:record["tools"].toArray()){const auto t=v.toObject();if(t["decision"]!="NOT_EVALUATED")decisions<<t["name"].toString(t["toolId"].toString().left(8))+": "+t["decision"].toString();}
-            const QStringList values{record["completedAtUtc"].toString()+"\n"+record["cycleId"].toString(),record["recipeName"].toString(record["recipeId"].toString().left(8))+QString(" v%1").arg(record["recipeVersion"].toInt()),record["state"].toString(),decisions.isEmpty() ? "NOT_EVALUATED" : decisions.join("; "),record["communicationState"].toString()};
+            const QStringList values{record["completedAtUtc"].toString()+"\n"+record["cycleId"].toString(),record["recipeName"].toString(record["recipeId"].toString().left(8))+QString(" v%1").arg(record["recipeVersion"].toInt()),record["state"].toString(),decisions.isEmpty() ? "NOT_EVALUATED" : decisions.join("; "),delivery.value(record["cycleId"].toString(),record["communicationState"].toString())};
             for(int col=0;col<values.size();++col)logTable_->setItem(row,col,new QTableWidgetItem(values[col]));logTable_->item(row,0)->setData(Qt::UserRole,QString::fromUtf8(QJsonDocument(record).toJson(QJsonDocument::Indented)));}
     }catch(const std::exception& e){logStatus_->setText("Kayıt okunamadı: "+QString::fromUtf8(e.what()));}
 }

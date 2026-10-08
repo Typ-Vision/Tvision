@@ -1,4 +1,6 @@
-# 6C — Planar scale ve Measurement servis çekirdeği
+# 6C — Tipli planar kalibrasyon ve Measurement
+
+8 Ekim C1: `MeasurementService::manualScale` doğrudan pozitif/sonlu px/mm girdisinden teaching içermeyen `manual_planar_scale/1` candidate üretir. 20 px/mm = 0.05 mm/px; `trialDistance` 200 px için 10 mm döndürür, karar/üretim izni vermez. Aynı servis 2–256 bağımsız segmentle katsayıyı değiştirmeden doğrular. `distance` candidate/file_test için mm veya karar vermez. Manuel record/dependency schema 3 strict replay/hash ve acquired/file_test source/frame/resolution kökeni taşır; schema 1/2 hash/encode korunur. Tam alanlar [C1 kayıt sözleşmesinde](manual-scale-calibration-plan.md#c1-uygulanan-manuel-kayıt-sözleşmesi). Katalog/resolver/Runtime/CSV entegrasyonu C2, manuel ekran C3–C4'tür; şu an çalışan manuel UI özelliği yoktur.
 
 7 Ekim 2026. MeasurementService/CalibrationService/CalibrationWorkflow, versioned evidence/current resolver ve recipe binding ortak Measurement DAG/Properties ve planar Calibration ekranına bağlıdır. Calculate editor çıktısı hâlâ px'dir. Runtime/production activation configuration scope ile bağlıdır; fiziksel kalibrasyon doğruluğu kabul edilmemiştir.
 
@@ -8,7 +10,7 @@ MeasurementService::teach bilinen pozitif uzunluk ve iki farklı image pixel-cen
 
 Candidate tek başına ölçüm izni değildir. validate 2–256 ayrı kimlikli/geometrili holdout uzunluk örneği ister; teaching segmenti veya tekrar edilmiş segment kanıt olarak kullanılamaz. Her mutlak residual verilen mm sınırında olmalı; RMS mm kaydedilir. Bu matematiksel evidence kontrolüdür; numunelerin gerçek dünyadan/bağımsız ölçümden geldiğini servis kanıtlamaz. Hedef numune dağılımı ve gerçek parça doğruluğu ayrıca kabul edilmelidir.
 
-PlanarScaleCalibration alanları ve constructor private; dış kod validated bayrağı veya scale değiştiremez. Validate yeni bir değer döndürür, candidate değişmez. SHA-256 contentId model sürümü, setup, scale, teaching, holdout, residual/RMS ve kabul sınırına bağlıdır; kullanıcı contentId'si güvenilmez. Version ayrı explicit dependency alanıdır. Teaching/dependency veya kabul kanıtı değişince eski validation kullanılamaz.
+PlanarCalibration (legacy API alias PlanarScaleCalibration) alanları ve constructor private; dış kod validated bayrağı veya scale değiştiremez. Validate yeni bir değer döndürür, candidate değişmez. SHA-256 contentId model sürümü, setup, scale, teaching, holdout, residual/RMS ve kabul sınırına bağlıdır; kullanıcı contentId'si güvenilmez. Version ayrı explicit dependency alanıdır. Teaching/dependency veya kabul kanıtı değişince eski validation kullanılamaz.
 
 ## Çalışma sınırı
 
@@ -46,10 +48,20 @@ Calibration ekranı: lens ve çalışma düzlemi beyanını Kurulumu uygula ile 
 
 Tablo/ID/version/error bound değişimi candidate'ı temizler. Kaynak/kurulum değişimi binding'i kaldırır. Worker sürerken kalibrasyon komutları kapalıdır; session close guard geçerlidir. Katalog ve recipe iki ayrı commit'tir; başarısız binding/save katalog sürümünü silmez. Kalibrasyon taslak tablosu yalnız kabul edilip kaydedilince kalıcıdır; recipe değişiminde kaydedilmemiş kalibrasyon taslağı silinir.
 
-measurement_dag ve UI smoke acquisition → gerçek Edge → Measurement 399 px / 9.975 mm, raw tolerance DONE/FAIL, missing edge SKIPPED, changed resolution/setup/latest version ERROR, Stop boş çıktı/NotEvaluated, candidate/holdout/save/reopen ve eski değerin temizlenmesini doğrular. Geometri/kalibrasyon sentetiktir. Üç applicationType ortak tool/servis yolunu kullanır; ProductionRecipeService Measurement/Webcam yapılandırma kabulünü açar; Runtime aynı resolver/engine yolunu kullanır. Lens/perspective/robot modelleri henüz uygulanmadı; Runtime configuration scope ile çalışır.
+measurement_dag ve UI smoke acquisition → gerçek Edge → Measurement 399 px / 9.975 mm, raw tolerance DONE/FAIL, missing edge SKIPPED, changed resolution/setup/latest version ERROR, Stop boş çıktı/NotEvaluated, candidate/holdout/save/reopen ve eski değerin temizlenmesini doğrular. Geometri/kalibrasyon sentetiktir. Üç applicationType ortak tool/servis yolunu kullanır; ProductionRecipeService Measurement/Webcam yapılandırma kabulünü açar; Runtime aynı resolver/engine yolunu kullanır. Raw planar homography modeli de aynı yolu kullanır; lens/robot modeli yok; Runtime configuration scope ile çalışır.
 
 Runtime validation/snapshot/cycle kayıt bağlantısı tamamlandı; güncel scope/yetki/kalıcı kayıt sınırları [production-recipes.md](production-recipes.md) içindedir. Sonraki: [6C-K plaka tabanlı kamera/düzlem kalibrasyonu](calibration-plan.md), ardından 6D PLC handshake ve sonuç teslimi.
 
 ## Runtime bağlantısı
 
 6C RuntimeService fresh source probe → yetkili configuration validation → immutable active snapshot → actual acquired frame resolver → Measurement → atomik terminal cycle record yolunu kullanır. Tool kararı/birim/kalibrasyon/tolerans/lineage finishCycle içinde yeniden kontrol edilir; global recipe kararı veya PLC teslimi yoktur. Taslak tolerans değişimi aktif snapshot'ı etkilemez; beyan edilen lens/düzlem/source değişimi yeni cycle'ı engeller. Kayıt hatasında UI mm/kararı yayımlamaz; aynı kayıt retry edilir. Restart otomatik etkinleşmez. Fiziksel ölçüm/lens/webcam kabulü açık kalır.
+
+## 8 Ekim — K2/K3 raw planar homography
+
+PlaneMappingService immutable H/gözlem/convex hull/fit sınırı ve hata istatistikleri; typed PlanarCalibration bunu veya legacy scale'i taşır. `teachHomography` source/frame alanı/resolution ve kurulumu eşleştirir. Homography `millimetresPerPixel()` döndürmez; kullanım hatasıdır. `distance` iki raw Point'i ayrı map eder, world düzleminde Öklid mesafesini inclusive ham toleransla karşılaştırır. Hull dışı/invalid/current mismatch gerçek değer veya karar taşımaz. Intrinsics/undistort yolu yok; model açıkça raw_assumed_negligible lens politikasını kaydeder.
+
+Model record schema 2 `raw_planar_homography/1`; H/target/source/fit/evidence replay ve dependency schema 2 modelType/modelVersion içerir. Legacy uniform scale schema/hash değişmedi; PlanarScaleCalibration alias mevcut çağrıları korur. Source coordinate identity `image` veya sourceId/image olabilir; normalized/undistorted alanı kabul edilmez. Target-local axes columns/rows kayıtlıdır; robot frame'i değildir. InstallationProvider canonical target convention'ı desteklenen modelden kurar; bağımsız kurulum/source/axes eşleşmesi hâlâ kesin denetlenir.
+
+CalibrationService mevcut 4 MiB/128 kayıt append-only consecutive-version kataloğunda iki modeli okur; replay yapılmadan saved VALID kullanılmaz. Homography holdout 2–256 ayrı segment; fit corner endpoint reuse (0.5 px), duplicate geometri, domain dışı ve hata sınırı aşımı reddedilir. Measured/absolute residual/RMS/max gerçek hesap değerleri UI ve CSV'de gösterilir. Matematiksel kabul fiziksel referans kökenini kanıtlamaz.
+
+CalibrationStudyStore offline test candidate/accepted evidence manifesti; original image path + decoded pixel SHA256 doğrular. Kaynak eksik/değişmişse açmaz; test source bir fiziksel recipe kaynağına bağlanamaz. UI source acquired kayıtlarını existing catalog yoluna, offline testi ayrı study dosyasına gönderir. Atomik commit/cancel sonrası IO etkisi ayrı sınırlamadır. CalibrationReportService gerçek evidence CSV üretir; fiziksel kabul prosedürü [calibration-acceptance.md](calibration-acceptance.md) içindedir.

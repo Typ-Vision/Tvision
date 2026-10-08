@@ -53,6 +53,8 @@ struct CalibrationDependency {
     QSize resolution;
     QString workingPlaneId;
     CoordinateFrame source,target;
+    QString modelType="uniform_planar_scale";
+    int modelVersion=1;
     bool operator==(const CalibrationDependency&) const = default;
     void validate() const;
     void requireCurrent(const CalibrationDependency& current) const;

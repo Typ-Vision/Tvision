@@ -125,16 +125,20 @@ void ProductionRecipeService::rollback(const QString& principal,const QString& i
 std::shared_ptr<const ProductionSnapshot> ProductionRecipeService::active() const {owner();return active_;}
 bool ProductionRecipeService::busy() const {owner();return cycle_.ticket!=0;}
 QVector<QJsonObject> ProductionRecipeService::cycleRecords() const {owner();return records_;}
-ProductionCycle ProductionRecipeService::beginCycle(const QString& principal) {
+void ProductionRecipeService::requireReady(const QString& principal) const {
+    permission(principal,ProductionAction::Run);idle();if(!active_)fail(ProductionError::UnknownValidation,"Aktif snapshot yok.");requireCurrent(*active_);
+}
+ProductionCycle ProductionRecipeService::beginCycle(const QString& principal,const QJsonObject& communication) {
     permission(principal,ProductionAction::Run);idle();if(!active_)fail(ProductionError::UnknownValidation,"Aktif snapshot yok.");
     requireCurrent(*active_);const auto started=QDateTime::currentDateTimeUtc();const auto beginId=QUuid::createUuid().toString(QUuid::WithoutBraces);
     persist("events",beginId,{{"schemaVersion",1},{"eventId",beginId},{"action","CYCLE_BEGIN"},{"principal",principal},
         {"validationId",active_->validation().id},{"configId",QString::fromLatin1(active_->validation().contentId)},
-        {"ticket",QString::number(serial_+1)},{"atUtc",started.toString(Qt::ISODateWithMs)}});
-    cycle_={++serial_,active_};cyclePrincipal_=principal;cycleStarted_=started;cycleBeginId_=beginId;pendingRecord_={};return cycle_;
+        {"ticket",QString::number(serial_+1)},{"communication",communication},{"atUtc",started.toString(Qt::ISODateWithMs)}});
+    cycle_={++serial_,active_};cyclePrincipal_=principal;cycleStarted_=started;cycleBeginId_=beginId;cycleCommunication_=communication;pendingRecord_={};return cycle_;
 }
 void ProductionRecipeService::finishCycle(quint64 ticket,const CycleResult& r) {
-    owner();if(!ticket || ticket!=cycle_.ticket)fail(ProductionError::InvalidCompletion,"Eski veya yabancı çevrim ticket.");
+    owner();if(r.partial)fail(ProductionError::InvalidCompletion,"Editor partial evaluation cannot finish a production cycle.");
+    if(!ticket || ticket!=cycle_.ticket)fail(ProductionError::InvalidCompletion,"Eski veya yabancı çevrim ticket.");
     if(!terminal(r.state) || r.cycleId.isEmpty() || r.recipeId!=cycle_.snapshot->recipe().id || r.configId!=cycle_.snapshot->validation().contentId || !std::isfinite(r.milliseconds) || r.milliseconds<0)fail(ProductionError::InvalidCompletion,"Çevrim sonucu snapshot ile uyuşmuyor.");
     for(const auto& f:r.frames)if(f.cycleId!=r.cycleId || f.frameId.isEmpty() || f.sourceId.isEmpty())fail(ProductionError::InvalidCompletion,"Çevrim frame kökeni uyumsuz.");
     for(const auto& log:records_)if(log["cycleId"]==r.cycleId)fail(ProductionError::InvalidCompletion,"Çevrim kimliği daha önce tamamlandı.");
@@ -191,7 +195,7 @@ void ProductionRecipeService::record(const CycleResult* r,const QString& error) 
         {"dependencies",s.dependencies()},{"startedAtUtc",cycleStarted_.toString(Qt::ISODateWithMs)},
         {"completedAtUtc",QDateTime::currentDateTimeUtc().toString(Qt::ISODateWithMs)},
         {"cycleId",r ? r->cycleId : QString{}},{"milliseconds",r ? QJsonValue(r->milliseconds) : QJsonValue(QJsonValue::Null)},{"state",r ? executionStateName(r->state) : "ERROR"},
-        {"error",r ? r->error : error},{"frames",frames},{"tools",tools},{"communicationState","NOT_REQUESTED"}};
+        {"error",r ? r->error : error},{"frames",frames},{"tools",tools},{"communicationState",cycleCommunication_.isEmpty() ? "NOT_REQUESTED" : "RESULT_PENDING"},{"communication",cycleCommunication_}};
     persist("cycles",pendingRecord_["recordId"].toString(),pendingRecord_);
     records_.append(pendingRecord_);pendingRecord_={};
     if(records_.size()>128)records_.removeFirst();

@@ -64,6 +64,12 @@ public:
     QByteArray signature(const EditorContext& context) const;
     QByteArray referenceSignature(const EditorContext& context,const QString& tool) const;
     std::optional<QPointF> referencePoint(const EditorContext& context,const QString& tool) const;
+    QByteArray evaluationScope(const EditorContext&) const;
+    void adoptFrame(const EditorContext&);
+    TargetEvaluation evaluation(const EditorContext&) const;
+    void reconcile(const EditorContext&);
+    void invalidateTool(const EditorContext&,const QString& tool);
+    bool acceptTool(CycleResult result,const QByteArray& captured,const EditorContext& current);
     void invalidateResults();
     bool acceptCycle(CycleResult result,const QByteArray& captured,const EditorContext& current);
     bool accepts(const QByteArray& captured,const EditorContext& current) const {return captured==signature(current);}
@@ -71,6 +77,10 @@ public:
     static ModelTeaching teach(const ImageFrame& frame,const QRect& roi);
     QJsonObject taughtSearch(const EditorContext& context,const ToolDefinition& tool,const QRect& roi) const;
     static void suppressCancelled(CycleResult& cycle);
+private:
+    QMap<QString,CachedToolResult> cache_;
+    void cacheResult(const EditorContext&,const ToolResult&);
+
 };
 class CameraSession : public JobSession {};
 }

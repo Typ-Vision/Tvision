@@ -104,18 +104,21 @@ QRect translationTrackingRoi(const QRect& taught,const Point2D& origin,const Poi
 }
 void CalibrationDependency::validate() const {
     source.validate();target.validate();
+    require((modelType=="uniform_planar_scale" || modelType=="raw_planar_homography" || modelType=="manual_planar_scale") && modelVersion==1,"Desteklenmeyen kalibrasyon model türü/sürümü.");
     require(!calibrationId.trimmed().isEmpty() && version>0 && !contentId.trimmed().isEmpty() && !cameraId.trimmed().isEmpty() && !lensId.trimmed().isEmpty() && resolution.width()>0 && resolution.height()>0 && !workingPlaneId.trimmed().isEmpty(),"Kalibrasyon bağımlılığı eksik/geçersiz.");
 }
 void CalibrationDependency::requireCurrent(const CalibrationDependency& current) const {
     validate();current.validate();require(*this==current,"Kalibrasyon kimliği/sürümü/kurulum bağımlılığı değişti.");
 }
 QJsonObject CalibrationDependency::toJson() const {
-    validate();return {{"schemaVersion",1},{"calibrationId",calibrationId},{"version",version},{"contentId",contentId},{"cameraId",cameraId},{"lensId",lensId},{"width",resolution.width()},{"height",resolution.height()},{"workingPlaneId",workingPlaneId},{"source",frameJson(source)},{"target",frameJson(target)}};
+    validate();QJsonObject o{{"schemaVersion",1},{"calibrationId",calibrationId},{"version",version},{"contentId",contentId},{"cameraId",cameraId},{"lensId",lensId},{"width",resolution.width()},{"height",resolution.height()},{"workingPlaneId",workingPlaneId},{"source",frameJson(source)},{"target",frameJson(target)}};
+    if(modelType!="uniform_planar_scale"){o["schemaVersion"]=modelType=="manual_planar_scale" ? 3 : 2;o["modelType"]=modelType;o["modelVersion"]=modelVersion;}return o;
 }
 CalibrationDependency CalibrationDependency::fromJson(const QJsonObject& o) {
-    keys(o,{"schemaVersion","calibrationId","version","contentId","cameraId","lensId","width","height","workingPlaneId","source","target"});
-    require(integer(o,"schemaVersion")==1,"Desteklenmeyen kalibrasyon bağımlılık şeması.");
+    const auto schema=integer(o,"schemaVersion");require(schema==1 || schema==2 || schema==3,"Desteklenmeyen kalibrasyon bağımlılık şeması.");
+    if(schema==1)keys(o,{"schemaVersion","calibrationId","version","contentId","cameraId","lensId","width","height","workingPlaneId","source","target"});
+    else keys(o,{"schemaVersion","calibrationId","version","contentId","cameraId","lensId","width","height","workingPlaneId","source","target","modelType","modelVersion"});
     CalibrationDependency result{string(o,"calibrationId"),integer(o,"version"),string(o,"contentId"),string(o,"cameraId"),string(o,"lensId"),{integer(o,"width"),integer(o,"height")},string(o,"workingPlaneId"),readFrame(o["source"]),readFrame(o["target"])};
-    result.validate();return result;
+    if(schema!=1){result.modelType=string(o,"modelType");result.modelVersion=integer(o,"modelVersion");require(result.modelType==(schema==2 ? "raw_planar_homography" : "manual_planar_scale"),"Dependency schema/model mismatch");}result.validate();return result;
 }
 }

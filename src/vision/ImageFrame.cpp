@@ -1,9 +1,16 @@
 #include "ImageFrame.hpp"
 #include <opencv2/imgproc.hpp>
 #include <limits>
+#include <QCryptographicHash>
 #include <cstring>
 #include <stdexcept>
 namespace visionflow {
+QByteArray ImageFrame::contentId() const {
+    QCryptographicHash hash(QCryptographicHash::Sha256);
+    hash.addData(QByteArray::number(pixels_.cols)+":"+QByteArray::number(pixels_.rows)+":"+QByteArray::number(int(pixelFormat_)));
+    for(int y=0;y<pixels_.rows;++y)hash.addData(QByteArrayView(reinterpret_cast<const char*>(pixels_.ptr(y)),pixels_.cols*pixels_.elemSize()));
+    return hash.result();
+}
 ImageFrame ImageFrame::fromBuffer(const void* data,std::size_t bytes,int width,int height,std::size_t stride,PixelFormat format,const FrameMetadata& metadata,bool preview) {
     if(!data || width<=0 || height<=0 || std::uint64_t(width)*height>100000000)throw std::runtime_error("Frame boyutu/tamponu geçersiz.");
     int type=0,bpp=0;QString label;

@@ -18,14 +18,14 @@ public:
     explicit CalibrationService(QString catalogPath,InstallationProvider provider={});
     // Append only, consecutive versions per ID; latest saved version is current.
     // Saving mathematical evidence does not authorize production activation.
-    void save(const PlanarScaleCalibration&) const;
-    PlanarScaleCalibration load(const QString& id,int version) const;
+    void save(const PlanarCalibration&) const;
+    PlanarCalibration load(const QString& id,int version) const;
     CalibrationDependency current(const QString& id) const;
-    PlanarScaleCalibration resolve(const Recipe&) const;
+    PlanarCalibration resolve(const Recipe&) const;
     void bind(ProjectService&,const QString& id) const;
 private:
-    QVector<PlanarScaleCalibration> read() const;
-    CalibrationDependency currentFrom(const QVector<PlanarScaleCalibration>&,const QString& id) const;
+    QVector<PlanarCalibration> read() const;
+    CalibrationDependency currentFrom(const QVector<PlanarCalibration>&,const QString& id) const;
     QString path_;
     InstallationProvider provider_;
 };

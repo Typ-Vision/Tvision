@@ -32,3 +32,11 @@ TVision ve üst dizinler Git worktree değildi. Komşu TVis C++17 tvis projesidi
 Qt 6.12.0 Multimedia development/runtime mevcut; CMake artık Qt6::Multimedia ister (Widgets OFF dahil). OpenCV videoio mevcut olmadığından kullanılmaz; kurulum yapılmadı. Güncel Release build/webcam-release 13/13, bağımsız build/webcam-core 11/11 CTest. Gerçek webcam kabulü ve kapsam progress.md/architecture/acquisition.md içindedir; dağıtım Multimedia plugin/DLL paketleme kabulü değildir.
 
 7 Ekim 6C Runtime: `build/runtime-ui` standart Release CTest 16/16; `build/runtime-core` Widgets OFF Release 14/14. runtime_persistence ve Runtime UI gerçek dosya/Edge/Measurement, immutable draft, yetki, activation/start/terminal lock failure/retry, Stop, rollback, restart/archive/invalidation kabulü içerir. runtime-pass/fail/record-pending/invalid/logs/small PNG build/runtime-ui altında görsel incelendi. Fiziksel yeni cihaz veya power-loss/kurulum/dağıtım/CUDA kabulü değildir.
+
+## K2/K3 kalibrasyon kabulü
+
+OpenCV 5 yerel core/imgproc/imgcodecs/objdetect/calib/geometry modülleri; SB objdetect.hpp, perspective/homography geometry.hpp. build/k1-ui ve build/k1-core güncel Release K1–K3 binary/test konumudur; dizin adındaki k1 eski ilk configure adıdır. UI 19/19, Widgets OFF 17/17; homography_runtime ve plane_mapping_contract analytic independent points/persistence/Runtime kabulünü içerir. Kurulum/dağıtım/CUDA veya fiziksel ölçüm kabulü değildir.
+
+## 6D.1 TCP/IP socket kabulü
+
+Yerel Qt 6.12.0 Network development/runtime link edildi; CMake Qt6::Network ister (Widgets OFF dahil). Yeni kurulum yapılmadı. Aynı build/k1-ui ve build/k1-core standart Release binary'leri artık 6D.1'i içerir; tüm CTest UI 20/20 ve core 18/18. Son mapping seçicisi/mapping-yok değişimi sonrası UI plc_socket_runtime/ui_shell_smoke ve core plc_socket_runtime tekrar geçti. Actual localhost TCP, ayrı visionflow_plc_simulator process'i, ACK/timeout/duplicate/reconnect/record retry ve 850×600 görselleri doğrulandı. Sandbox localhost connect iznini engelledi; ağ testleri izinli sandbox dışında yalnız localhost ile çalıştırıldı. Fiziksel PLC/kamera, üretim doğruluğu, kurulum/dağıtım/CUDA kabulü değildir. [Sözleşme ve komutlar](architecture/plc-socket.md).

@@ -1,5 +1,11 @@
 # Proje ve reçete kayıt sözleşmesi — Adım 2
 
+8 Ekim C1: Manuel matematik/codec `manual_planar_scale/1` için ayrı record/dependency schema 3 kullanır. Schema 3 dependency mevcut frame ve kurulum alanlarına modelType/modelVersion ekler; schema 2 hâlâ yalnız homography kabul eder. Root/recipe/editor şemaları değişmedi. Tam alan listesi [manuel kayıt sözleşmesinde](manual-scale-calibration-plan.md#c1-uygulanan-manuel-kayıt-sözleşmesi). C1 yalnız servis matematik/replay kabulüdür; manuel katalog/recipe Save/reopen/Runtime zincirinin kabulü C2'de, ekran C3–C4'tedir.
+
+Blob P5 migration: editor schema 6 yazar; schema 1–5 read normalization polarity=bright, connectivity=8, minArea=1, maxArea=null ekler. Aç/no-op Save diskteki eski schema ve recipeVersion’ı korur. Gerçek tool/bağlantı değişikliği schema 6’ya geçer; schema 7+ reddedilir. Root schema 1 ve recipe schema 1–2 değişmez. maxArea null sınırsızdır; sonlu alanlar pozitif int32 ve Max ≥ Min olmalıdır. Maskeler production JSON’a yazılmaz.
+
+8 Ekim 2026 P5/P6: Blob min/max dahil alan filtresi (px²), açık/koyu nesne ve 4/8 komşuluk uygulanmıştır. Gerçek kabul edilen piksel maskesi delikleri koruyarak Editor ve Runtime’da kırmızı gösterilir; bu parça kararı değildir. Editor schema 6, Blob tool 2, execution/5; eski reçeteler temiz açılır ve ilk gerçek değişiklikte yükselir. Birleşik kabul: Release UI 23/23, Widgets OFF 21/21; normal/850×600 görseller incelendi. Sıradaki P7 (6D.2) kalıcı dedup/outbox/restart teslim kurtarma; K4 ertelenmiş, P8–P9 gelecektedir.
+
 ## A8 bellek içi üretim sözleşmesi ve sonraki persistence planı
 
 [A8 ProductionRecipeService](production-recipes.md) taslak, servis kaynaklı doğrulama kaydı ve değişmez aktif snapshot'ı bellekte ayırır. Recipe içerik kimliği, model/varlık, kalibrasyon ve engine/tool sürüm bağımlılığı, policy kontrollü activation/rollback, cycle sınırı ve bounded transient geçmiş/trace uygulanmıştır. Dosyadaki VALID değeri tek başına izin değildir. Bu kayıtlar `.vfproject` içine yazılmaz; Runtime/Users/kalıcı geçmiş/log entegrasyonu ve fiziksel üretim kabulü 6C/7 kapsamındadır. Restart kayıtları tekrar güvenilir doğrulamadan geçirmelidir.
@@ -88,3 +94,11 @@ QSaveFile direct-write fallback kapalıdır: atomik commit başarısızsa dirty/
 `project_persistence` testi üç tür/kalıcı ID, metadata roundtrip, sürüm artışı/no-op save, duplicate/boş alan doğrulaması, corrupt JSON, future schema, unknown fields/type, duplicate ID, definition roundtrip, lock/write failure, harici dosya değişimi ve discard senaryolarını kontrol eder.
 
 `ui_shell_smoke` gerçek New Project/New Recipe/Edit Recipe diyaloglarını ve Save/Open Editor düğmelerini tetikler; arama/tür filtresi, kaydet/reopen ve ortak editor bağlamını doğrular. Test verisi `build/ui-workspace.vfproject` içindedir; üretim projesi değildir. Görseller `build/step2-*.png` altında oluşur. Native dosya seçici, QMessageBox tıklamaları, yüksek DPI ve çoklu monitör manuel doğrulama kapsamındadır.
+
+## K3 tipli kalibrasyon bağımlılığı
+
+Recipe schema 2 calibrationBinding, legacy dependency schema 1 yanında raw homography dependency schema 2 modelType/modelVersion taşır. Root/recipe sürümü artırılmaz; explicit bind DRAFT/revision-on-save korunur. Legacy dependency JSON/hash aynıdır. New model record/catalog ve offline study dosyaları ayrı atomik assetlerdir; açılış otomatik production izni vermez.
+
+## P3 Runtime seçenekleri
+
+Recipe definition.runtime isteğe bağlı {"trigger":"Manual" veya "SoftwareTrigger", "measurementToolId":"tool UUID veya boş"} nesnesidir. Alan yoksa Manual/mapping yok; açma/no-op Save migration veya dirty üretmez. Explicit setRuntimeOptions değişikliği DRAFT ve normal Save sürüm artışını kullanır. Bilinmeyen trigger veya alan/tip reddedilir. Endpoint/autoStart/ACK machine ayarları burada tutulmaz. Loaded immutable kopya draft seçeneklerini kendiliğinden izlemez. Eski binary ile yeni trigger anlamının uygulanması garanti edilmez; vf.socket/2 peer gerekir.

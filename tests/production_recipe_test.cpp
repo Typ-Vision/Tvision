@@ -51,7 +51,9 @@ int main(int argc,char** argv) {
         rejects([&]{service.beginCycle("operator");},ProductionError::Busy,"one in-flight cycle");
         const auto result=ExecutionService{}.run(lease.snapshot->recipe().definition,lease.snapshot->projectDirectory(),draft.id,v1.contentId,{});
         check(result.state==ExecutionState::Done && result.frames.size()==1,"actual file execution");
-        auto wrong=result;wrong.configId="foreign";
+        auto wrong=result;wrong.partial=true;
+        rejects([&]{service.finishCycle(lease.ticket,wrong);},ProductionError::InvalidCompletion,"partial editor evaluation cannot finish production lease");
+        check(service.busy(),"partial rejection preserves production lease");wrong=result;wrong.configId="foreign";
         rejects([&]{service.finishCycle(lease.ticket,wrong);},ProductionError::InvalidCompletion,"foreign result rejected");
         wrong=result;wrong.frames[0].cycleId="foreign";
         rejects([&]{service.finishCycle(lease.ticket,wrong);},ProductionError::InvalidCompletion,"foreign frame rejected");

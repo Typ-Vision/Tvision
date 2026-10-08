@@ -67,13 +67,16 @@ QWidget* MainWindow::makeRecipeManager() {
     layout->addWidget(text("Robot Guidance, Defect Inspection ve Measurement aynı Recipe Editor'ü kullanır."));
     auto* actions=new QHBoxLayout;
     auto* create=new QPushButton("New Recipe"); create->setObjectName("newRecipe");
-    auto* open=new QPushButton("Open Editor"); open->setObjectName("openRecipe");
+    auto* open=new QPushButton("Edit Recipe"); open->setObjectName("openRecipe");
+    auto* load=new QPushButton("Load Recipe"); load->setObjectName("loadRecipe");
     auto* edit=new QPushButton("Bilgileri düzenle"); edit->setObjectName("editRecipe");
     auto* save=new QPushButton("Save Project / Recipes"); save->setObjectName("saveRecipes");
-    for (auto* button : {create,open,edit,save}) actions->addWidget(button);
-    actions->addStretch(); layout->addLayout(actions);
+    actions->addWidget(load);actions->addWidget(open);actions->addStretch();layout->addLayout(actions);
+    auto* utilities=new QHBoxLayout;for(auto* button:{create,edit,save})utilities->addWidget(button);
+    utilities->addStretch();layout->addLayout(utilities);
     connect(create,&QPushButton::clicked,this,[this]{showRecipeDialog();});
     connect(open,&QPushButton::clicked,this,&MainWindow::openSelectedRecipe);
+    connect(load,&QPushButton::clicked,this,&MainWindow::loadSelectedRecipe);
     connect(edit,&QPushButton::clicked,this,[this]{
         if (!service_.hasProject()) return;
         const auto id=selectedRecipeId(recipeTable_); if (id.isEmpty()) return;
@@ -94,10 +97,10 @@ QWidget* MainWindow::makeRecipeManager() {
     recipeTable_->horizontalHeader()->setSectionResizeMode(2,QHeaderView::Stretch);
     layout->addWidget(recipeTable_,1);
     recipeCount_=text(""); layout->addWidget(recipeCount_);
-    connect(recipeTable_,&QTableWidget::itemSelectionChanged,this,[open,edit,this]{
-        const bool selected=!selectedRecipeId(recipeTable_).isEmpty(); open->setEnabled(selected); edit->setEnabled(selected);
+    connect(recipeTable_,&QTableWidget::itemSelectionChanged,this,[open,edit,load,this]{
+        const bool selected=!selectedRecipeId(recipeTable_).isEmpty(); open->setEnabled(selected); edit->setEnabled(selected); load->setEnabled(selected);
     });
-    open->setEnabled(false); edit->setEnabled(false);
+    open->setEnabled(false); edit->setEnabled(false); load->setEnabled(false);
     connect(recipeSearch_,&QLineEdit::textChanged,this,[this]{refreshRecipes();});
     connect(typeFilter_,&QComboBox::currentIndexChanged,this,[this]{refreshRecipes();});
     connect(recipeTable_,&QTableWidget::cellDoubleClicked,this,[this]{openSelectedRecipe();});
@@ -203,6 +206,35 @@ void MainWindow::openSelectedRecipe() {
     try { service_.selectRecipe(id); refreshWorkspace(); selectPage("editor"); }
     catch (const std::exception& e) { displayError(QString::fromUtf8(e.what())); }
 }
+void MainWindow::loadSelectedRecipe() {
+    const auto id=selectedRecipeId(recipeTable_); if(id.isEmpty())return;
+    try {
+        if(!applyToolProperties())return;
+        ensureRuntime();
+        if((plc_ && plc_->blocking()) || runtimeJobs_.busy() || runtime_->busy() ||
+           runtimeCoordinator_->state()==RuntimeState::Running || runtimeCoordinator_->state()==RuntimeState::Starting || runtimeCoordinator_->state()==RuntimeState::Stopping)
+            throw std::runtime_error("Önce Stop ve bekleyen kayıt/teslimi tamamlayın; açık PLC oturumunu durdurun.");
+        if(service_.dirty()) {
+            QMessageBox choice(QMessageBox::Question,"Load Recipe","Kaydedilmemiş değişiklikler var. Runtime hangi sürümü yüklesin?",QMessageBox::NoButton,this);
+            choice.setObjectName("loadRecipeChoice");
+            auto* save=choice.addButton("Kaydet ve yükle",QMessageBox::AcceptRole);save->setObjectName("saveAndLoad");
+            auto* saved=choice.addButton("Kaydedilmiş sürümü yükle",QMessageBox::ActionRole);saved->setObjectName("loadSaved");
+            auto* cancel=choice.addButton("İptal",QMessageBox::RejectRole);cancel->setObjectName("cancelLoad");
+            choice.setDefaultButton(save);choice.setEscapeButton(cancel);choice.exec();
+            if(choice.clickedButton()==save){service_.save();refreshWorkspace();}
+            else if(choice.clickedButton()!=saved)return;
+        }
+        ProjectService saved;saved.openProject(service_.path());saved.selectRecipe(id);
+        const auto options=saved.activeRecipe()->definition["runtime"].toObject();
+        runtimeCoordinator_->load(*saved.activeRecipe(),QFileInfo(service_.path()).absolutePath(),options["trigger"]=="SoftwareTrigger" ? RuntimeTrigger::SoftwareTrigger : RuntimeTrigger::Manual);
+        if(plc_)plc_->setMapping(options["measurementToolId"].toString());
+        runtimeResult_.reset();showRuntimeResult();refreshRecipes();refreshRuntime();selectPage("runtime");
+    } catch(const std::exception& e) {
+        const auto previous=runtimeCoordinator_ && runtimeCoordinator_->loaded() ? runtimeCoordinator_->loaded()->name+QString(" v%1").arg(runtimeCoordinator_->loaded()->recipeVersion) : QString("yok");
+        const auto message="Load başarısız: "+QString::fromUtf8(e.what())+"\nKorunan yüklü reçete: "+previous;
+        displayError(message);runtimeSummary_->setText(message);refreshRuntime();
+    }
+}
 void MainWindow::refreshRecipes() {
     QString previous=selectedRecipeId(recipeTable_);
     if (previous.isEmpty() && service_.activeRecipe()) previous=service_.activeRecipe()->id;
@@ -226,6 +258,8 @@ void MainWindow::refreshRecipes() {
     }
     recipeCount_->setText(QString("%1 / %2 reçete%3").arg(recipeTable_->rowCount()).arg(service_.project().recipes.size())
         .arg(service_.project().recipes.isEmpty() ? " — New Recipe ile başlayın." : ""));
+    const auto loaded=runtimePath_==service_.path() && runtimeCoordinator_ && runtimeCoordinator_->loaded() ? runtimeCoordinator_->loaded()->name+QString(" v%1").arg(runtimeCoordinator_->loaded()->recipeVersion) : QString("yok");
+    recipeCount_->setText(recipeCount_->text()+"\nEditörde: "+(service_.activeRecipe() ? service_.activeRecipe()->name : QString("yok"))+" | Runtime yüklü: "+loaded);
 }
 void MainWindow::refreshWorkspace() {
     workspaceError_->hide(); saveAction_->setEnabled(service_.hasProject() && service_.dirty());
@@ -274,6 +308,8 @@ void MainWindow::displayError(const QString& message) {
     workspaceError_->setText(message); workspaceError_->show(); statusBar()->showMessage(message);
 }
 bool MainWindow::resolveUnsavedChanges() {
+    if(runtimeCoordinator_ && runtimeCoordinator_->state()==RuntimeState::Running){displayError("Proje değiştirmeden/kapatmadan önce Runtime Stop seçin.");return false;}
+    if(plc_ && plc_->blocking()){displayError("Önce PLC kayıt/ACK tamamlanmalı.");return false;}
     if (!applyToolProperties()) return false;
     if (!service_.dirty()) return true;
     if (smokeMode_) return false; // Test failures must not block on a modal prompt.
@@ -323,6 +359,7 @@ bool MainWindow::verifyWorkspace(const QString& artifacts) {
     if (recipeTable_->rowCount()!=1) return false;
     recipeSearch_->clear(); selectPage("recipes"); QApplication::processEvents();
     grab().save(QDir(artifacts).filePath("step2-recipes.png"));
+    resize(850,600);QApplication::processEvents();if(width()!=850 || height()!=600)return false;grab().save(QDir(artifacts).filePath("p2-recipes-small.png"));resize(1400,900);
     service_.openProject(path); refreshWorkspace(); if (service_.project().recipes.size()!=3) return false;
     recipeTable_->selectRow(1); findChild<QPushButton*>("openRecipe")->click();
     if (!service_.activeRecipe() || service_.activeRecipe()->id!=ids[1]) return false;

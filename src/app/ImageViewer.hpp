@@ -18,10 +18,12 @@ public:
     void setSourceSelected(bool selected);
     void drawRegion(bool enabled);
     void setRegions(const QRect& model,const QRect& search,const QRect& result={},bool accepted=true);
-    void setToolOverlay(const QVector<QRect>& regions,const QVector<QPointF>& points,const QVector<QLineF>& lines={},const QString& annotation={});
+    void setToolOverlay(const QVector<QRect>& regions,const QVector<QPointF>& points,const QVector<QLineF>& lines={},const QString& annotation={},const QByteArray& mask={},const QSize& maskSize={},const QPoint& maskOrigin={});
+    void setChessboardOverlay(const QVector<QPointF>& points,int columns);
     std::function<void(QRect)> onRegion;
     std::function<void(QPoint)> onPixel;
     std::function<void()> onImageClicked;
+    std::function<void(QPointF)> onPointClicked;
     std::function<void(double)> onZoom;
 protected:
     void wheelEvent(QWheelEvent* event) override;

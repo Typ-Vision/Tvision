@@ -13,9 +13,13 @@ class RuntimeService {
 public:
     RuntimeService(QString directory,QString catalogPath,RuntimeIdentity identity);
     RecipeValidation validate(const Recipe&,const QString& projectDirectory,const ImageFrame& acquired);
+    // Configuration-only preparation; never acquires or asserts actual frame readiness.
+    void checkConfiguration(const Recipe&,const QString& projectDirectory) const;
+    void prepare(const Recipe&,const QString& projectDirectory);
     void activate(const Recipe&,const QString& projectDirectory);
     void rollback(const QString& validationId);
-    ProductionCycle begin();
+    ProductionCycle begin(const QJsonObject& communication={});
+    void requireReady() const {production_.requireReady(identity_.principal);}
     void finish(quint64 ticket,const CycleResult&);
     void observeInstallation(const Recipe&);
     std::shared_ptr<const ProductionSnapshot> active() const {return production_.active();}
@@ -27,6 +31,8 @@ public:
     static CycleResult execute(const ProductionCycle&,const QString& catalogPath,const std::shared_ptr<std::atomic_bool>& cancel);
 private:
     ProductionDependencies dependencies(const Recipe&) const;
+    ProductionDependencies declaredDependencies(const Recipe&) const;
+    bool declaredPreparation_=false;
     ProductionStore store_;
     QString catalogPath_;
     RuntimeIdentity identity_;

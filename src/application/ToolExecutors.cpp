@@ -17,9 +17,9 @@
 #include <QMutexLocker>
 namespace visionflow {
 namespace {
-struct BlobParameters {int threshold;};
+struct BlobParameters {int threshold,connectivity,minArea,maxArea;bool dark;};
 struct EdgeParameters {bool horizontal,reverse; double contrast;};
-BlobParameters blobParameters(const ToolDefinition& t) {ToolRegistry::validate(t);return {t.parameters["threshold"].toInt()};}
+BlobParameters blobParameters(const ToolDefinition& t) {ToolRegistry::validate(t);return {t.parameters["threshold"].toInt(),t.parameters["connectivity"].toInt(),t.parameters["minArea"].toInt(),t.parameters["maxArea"].isNull() ? 2147483647 : t.parameters["maxArea"].toInt(),t.parameters["polarity"]=="dark"};}
 EdgeParameters edgeParameters(const ToolDefinition& t) {
     ToolRegistry::validate(t);const auto d=t.parameters["direction"].toString();
     return {d=="left_to_right" || d=="right_to_left",d=="right_to_left" || d=="bottom_to_top",t.parameters["minContrast"].toDouble()};
@@ -120,11 +120,30 @@ ToolResult ToolExecutors::blob(const ToolDefinition& t,const QMap<QString,PortVa
     if(frame.pixels_.channels()==1) {if(frame.pixels_.depth()==CV_16U)frame.pixels_.convertTo(gray,CV_8U,255.0/65535.0);else gray=frame.pixels_;}
     else cv::cvtColor(frame.pixels_,gray,frame.pixels_.channels()==3 ? cv::COLOR_BGR2GRAY : cv::COLOR_BGRA2GRAY);
     const cv::Mat crop=gray(cv::Rect(region.x(),region.y(),region.width(),region.height()));
-        cv::Mat binary,labels,stats,centers;cv::threshold(crop,binary,blobParameters(t).threshold,255,cv::THRESH_BINARY);
-        const int n=cv::connectedComponentsWithStats(binary,labels,stats,centers,8,CV_32S);int largest=0;
-        for(int i=1;i<n;++i) {if(!largest || stats.at<int>(i,cv::CC_STAT_AREA)>stats.at<int>(largest,cv::CC_STAT_AREA))largest=i;
-            if(r.regions.size()<2048)r.regions.append(QRect(region.x()+stats.at<int>(i,cv::CC_STAT_LEFT),region.y()+stats.at<int>(i,cv::CC_STAT_TOP),stats.at<int>(i,cv::CC_STAT_WIDTH),stats.at<int>(i,cv::CC_STAT_HEIGHT)));}
-        put("count",double(n-1));put("found",largest>0);put("area",largest ? double(stats.at<int>(largest,cv::CC_STAT_AREA)) : 0.0);
+        const auto settings=blobParameters(t);
+        // Bound label + mask workspace; never silently truncate the segmentation.
+        if(qint64(crop.rows)*crop.cols>16*1024*1024)throw std::runtime_error("Blob ROI sınırı 16 Mi piksel.");
+        auto stopped=[&]{return cancel && cancel->load();};
+        if(stopped()){r.state=ExecutionState::Skipped;return r;}
+        cv::Mat binary,labels,stats,centers;cv::threshold(crop,binary,settings.threshold,255,settings.dark ? cv::THRESH_BINARY_INV : cv::THRESH_BINARY);
+        const int n=cv::connectedComponentsWithStats(binary,labels,stats,centers,settings.connectivity,CV_32S);int largest=0,count=0;
+        QVector<uchar> accepted(n,0);QPoint firstLargest;
+        // First raster pixel makes equal-area selection independent of OpenCV label ordering.
+        QVector<QPoint> first(n,QPoint(-1,-1));
+        for(int y=0;y<labels.rows;++y){if(stopped()){r.state=ExecutionState::Skipped;return r;}for(int x=0;x<labels.cols;++x){const int label=labels.at<int>(y,x);if(label && first[label].x()<0)first[label]={x,y};}}
+        for(int i=1;i<n;++i) {
+            if((i%4096)==0 && stopped()){r.regions.clear();r.state=ExecutionState::Skipped;return r;}
+            const auto area=stats.at<int>(i,cv::CC_STAT_AREA);if(area<settings.minArea || area>settings.maxArea)continue;
+            accepted[i]=1;++count;
+            const auto p=first[i];
+            if(!largest || area>stats.at<int>(largest,cv::CC_STAT_AREA) || (area==stats.at<int>(largest,cv::CC_STAT_AREA) && (p.y()<firstLargest.y() || (p.y()==firstLargest.y() && p.x()<firstLargest.x())))){largest=i;firstLargest=p;}
+            if(r.regions.size()<2048)r.regions.append(QRect(region.x()+stats.at<int>(i,cv::CC_STAT_LEFT),region.y()+stats.at<int>(i,cv::CC_STAT_TOP),stats.at<int>(i,cv::CC_STAT_WIDTH),stats.at<int>(i,cv::CC_STAT_HEIGHT)));
+        }
+        r.mask.size=region.size();r.mask.origin=region.topLeft();r.mask.pixels=QByteArray(crop.rows*crop.cols,0);
+        for(int y=0;y<labels.rows;++y){if(stopped()){r.mask={};r.regions.clear();r.state=ExecutionState::Skipped;return r;}auto* row=r.mask.pixels.data()+y*crop.cols;for(int x=0;x<labels.cols;++x)row[x]=accepted[labels.at<int>(y,x)] ? char(255) : 0;}
+        r.message=QString("Aday: %1 • Kabul: %2 • Kırmızı: kabul edilen bölge (parça kararı değildir)").arg(n-1).arg(count);
+        if(count>2048)r.message+=" • Bbox gösterimi ilk 2048 ile sınırlı; maske ve sayım tam.";
+        put("candidateCount",double(n-1));put("count",double(count));put("found",largest>0);put("area",largest ? double(stats.at<int>(largest,cv::CC_STAT_AREA)) : 0.0);
         if(largest) {auto box=QRect(region.x()+stats.at<int>(largest,cv::CC_STAT_LEFT),region.y()+stats.at<int>(largest,cv::CC_STAT_TOP),stats.at<int>(largest,cv::CC_STAT_WIDTH),stats.at<int>(largest,cv::CC_STAT_HEIGHT));
             auto point=QPointF(region.x()+centers.at<double>(largest,0),region.y()+centers.at<double>(largest,1));put("region",box);put("point",point);r.points={point};}
         else {put("region",QRect{},false);put("point",QPointF{},false);}return r;

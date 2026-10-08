@@ -27,11 +27,13 @@ public:
     PixelFormat format() const {return pixelFormat_;}
     const QString& path() const {return path_;}
     const QString& pixelFormat() const {return format_;}
+    QByteArray contentId() const;
     QString pixelText(int x,int y) const;
 private:
     friend class ImageFileService;
     friend class MatchService;
     friend class ToolExecutors;
+    friend class ChessboardService;
     QImage preview_;
     cv::Mat pixels_;
     QString path_,format_;

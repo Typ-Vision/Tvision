@@ -200,6 +200,15 @@ void ProjectService::clearCalibrationBinding() {
         project_=candidate;changedRecipes_.insert(id);dirty_=true;return;
     }
 }
+void ProjectService::setRuntimeOptions(QString trigger,QString measurementToolId) {
+    if(!activeRecipe())fail("Open a recipe first.");const auto id=activeRecipe()->id;auto candidate=project();
+    QJsonObject options{{"trigger",trigger},{"measurementToolId",measurementToolId}};
+    for(auto& r:candidate.recipes)if(r.id==id) {
+        if(r.definition.value("runtime")==options)return;
+        r.definition["runtime"]=options;r.status=RecipeStatus::Draft;validateProject(candidate);
+        project_=candidate;changedRecipes_.insert(id);dirty_=true;return;
+    }
+}
 void ProjectService::setCalibrationSetup(QString lensId,QString workingPlaneId) {
     if(!activeRecipe())fail("Önce reçete açın.");const auto id=activeRecipe()->id;auto candidate=project();
     const QJsonObject setup{{"lensId",lensId.trimmed()},{"workingPlaneId",workingPlaneId.trimmed()}};

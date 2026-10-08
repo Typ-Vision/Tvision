@@ -49,7 +49,13 @@ int main(int argc, char* argv[]) {
         bool runtimeValid=false;
         if(measurementValid)try{runtimeValid=window.verifyRuntime(buildDir.absolutePath());}
         catch(const std::exception& error){QTextStream(stderr)<<error.what()<<'\n';}
-        const bool valid=shellValid && workspaceValid && editorValid && matchingValid && executionValid && cameraValid && webcamValid && measurementValid && runtimeValid && window.verifySession();
+        bool chessboardValid=false;
+        if(runtimeValid)try{chessboardValid=window.verifyChessboard(buildDir.absolutePath());}
+        catch(const std::exception& error){QTextStream(stderr)<<error.what()<<'\n';}
+        bool homographyValid=false;
+        if(chessboardValid)try{homographyValid=window.verifyHomography(buildDir.absolutePath());}
+        catch(const std::exception& error){QTextStream(stderr)<<error.what()<<'\n';}
+        const bool valid=homographyValid && chessboardValid && shellValid && workspaceValid && editorValid && matchingValid && executionValid && cameraValid && webcamValid && measurementValid && runtimeValid && window.verifySession();
         window.close();
         QTextStream(stdout) << (valid ? "PASS" : "FAIL") << ": workspace, session restore, image viewer, ROI teaching, matching and persistence\n";
         app.exit(valid ? 0 : 1);

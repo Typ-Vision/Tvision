@@ -68,10 +68,20 @@ void ImageViewer::setRegions(const QRect& model,const QRect& search,const QRect&
     set(modelRegion_,model); set(searchRegion_,search); set(resultRegion_,result);
     if (resultRegion_) {auto pen=resultRegion_->pen(); pen.setColor(accepted ? QColor("#66e3c4") : QColor("#ff8585")); resultRegion_->setPen(pen);}
 }
-void ImageViewer::setToolOverlay(const QVector<QRect>& regions,const QVector<QPointF>& points,const QVector<QLineF>& lines,const QString& annotation) {
+void ImageViewer::setToolOverlay(const QVector<QRect>& regions,const QVector<QPointF>& points,const QVector<QLineF>& lines,const QString& annotation,const QByteArray& mask,const QSize& maskSize,const QPoint& maskOrigin) {
     for(auto* item:toolOverlay_) {scene_->removeItem(item);delete item;}toolOverlay_.clear();
     if(!imageItem_)return;
     QPen pen(QColor("#66e3c4"));pen.setWidth(2);pen.setCosmetic(true);
+    if(!mask.isEmpty() && maskSize.width()>0 && maskSize.height()>0 && qint64(maskSize.width())*maskSize.height()==mask.size()) {
+        QImage colored(maskSize,QImage::Format_ARGB32_Premultiplied);colored.fill(Qt::transparent);
+        for(int y=0;y<maskSize.height();++y){auto* row=reinterpret_cast<QRgb*>(colored.scanLine(y));for(int x=0;x<maskSize.width();++x)if(mask[y*maskSize.width()+x]){
+            auto at=[&](int xx,int yy){return xx>=0 && yy>=0 && xx<maskSize.width() && yy<maskSize.height() && mask[yy*maskSize.width()+xx];};
+            const bool border=!at(x-1,y) || !at(x+1,y) || !at(x,y-1) || !at(x,y+1);
+            row[x]=qPremultiply(qRgba(255,40,40,border ? 210 : 100));
+        }}
+        auto* overlay=scene_->addPixmap(QPixmap::fromImage(colored));overlay->setPos(maskOrigin);toolOverlay_<<overlay;
+        auto* legend=scene_->addSimpleText("Kırmızı: kabul edilen\nbölge (karar değildir)");legend->setBrush(QColor("#ff6666"));legend->setPos(maskOrigin);legend->setFlag(QGraphicsItem::ItemIgnoresTransformations);toolOverlay_<<legend;
+    }
     for(const auto& rect:regions)toolOverlay_<<scene_->addRect(QRectF(rect),pen);
     for(const auto& line:lines)toolOverlay_<<scene_->addLine(line,pen);
     for(int i=0;i<points.size();++i) {
@@ -91,6 +101,13 @@ void ImageViewer::setToolOverlay(const QVector<QRect>& regions,const QVector<QPo
 void ImageViewer::wheelEvent(QWheelEvent* event) {
     if (event->angleDelta().y()!=0) zoomBy(std::pow(1.2,event->angleDelta().y()/120.0));
     if (onPixel) onPixel(imagePixelAt(event->position().toPoint())); event->accept();
+}
+void ImageViewer::setChessboardOverlay(const QVector<QPointF>& points,int columns) {
+    if(columns<2 || points.size()<columns*2)return;
+    setToolOverlay({},points,{QLineF(points[0],points[columns-1]),QLineF(points[0],points[points.size()-columns])});
+    for(const auto& entry:QVector<QPair<QPointF,QString>>{{points[0],"O (0,0)"},{points[columns-1],"+X"},{points[points.size()-columns],"+Y"}}){
+        auto* label=scene_->addSimpleText(entry.second);label->setBrush(QColor("#56b4ff"));label->setPos(entry.first);label->setFlag(QGraphicsItem::ItemIgnoresTransformations);toolOverlay_<<label;
+    }
 }
 void ImageViewer::mousePressEvent(QMouseEvent* event) {
     pressed_=event->position().toPoint(); QGraphicsView::mousePressEvent(event);
@@ -116,6 +133,7 @@ void ImageViewer::mouseReleaseEvent(QMouseEvent* event) {
         event->accept(); return;
     }
     QGraphicsView::mouseReleaseEvent(event);
+    if(event->button()==Qt::LeftButton && (event->position().toPoint()-pressed_).manhattanLength()<4 && imagePixelAt(event->position().toPoint()).x()>=0 && onPointClicked)onPointClicked(imagePixelAt(event->position().toPoint()));
     if (event->button()==Qt::LeftButton && (event->position().toPoint()-pressed_).manhattanLength()<4 &&
         imagePixelAt(event->position().toPoint()).x()>=0 && onImageClicked) onImageClicked();
 }

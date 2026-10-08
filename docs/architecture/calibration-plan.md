@@ -1,6 +1,6 @@
 # Kamera ve robot kalibrasyonu — revize ürün planı
 
-8 Ekim 2026. Kullanıcının iki kalibrasyon beklentisi üzerine kod/gereksinim incelemesi ve plan güncellemesidir; aşağıdaki yeni modeller henüz uygulanmadı. Güncel öncelik 6C-K kamera kalibrasyonunu PLC'den önce tamamlamaktır.
+8 Ekim 2026. Kullanıcının iki kalibrasyon beklentisi üzerine kod/gereksinim incelemesi ve plan güncellemesidir; K1–K3 target/gözlem/test import/köşe/H/mm/tipli kayıt/Measurement/Runtime uygulandı. Intrinsics/robot modelleri ve K4 fiziksel kabul henüz yok. Güncel öncelik 6C-K kamera kalibrasyonunu PLC'den önce tamamlamaktır.
 
 ## Ürün amacı ve mevcut durum
 
@@ -8,7 +8,7 @@ VisionFlow; Measurement, Defect Inspection ve Robot Guidance için tek Recipe Ed
 
 Mevcut MeasurementService::teach bir elle girilmiş segmentten `mmPerPx = knownMm / pixelLength` hesaplar; distance piksel mesafesini bu katsayıyla çarpar. En az iki ayrı holdout segmentiyle hata kontrolü vardır. CalibrationService sürümlü kanıt, bağımsız current resolver ve binding; RuntimeService immutable snapshot ve sonuç kaydı sağlar. Bu altyapı korunur.
 
-Eksik olan plaka bulma, kamera iç parametreleri/lens modeli, çalışma düzlemine nokta dönüşümü ve robot kalibrasyonudur. Mevcut scale dünya orijini veya robot koordinatı tanımlamaz. CalibrationService ve execution context somut PlanarScaleCalibration tipine bağlıdır; yeni modeller yalnız UI eklenerek desteklenemez. CMake şu anda core/imgproc/imgcodecs ister; yerel OpenCV 5 kalibrasyon modülü/API bağlantısı uygulama öncesi doğrulanmalıdır.
+Plaka bulma ve raw çalışma düzlemine nokta dönüşümü uygulandı; eksik olan kamera iç parametreleri/lens düzeltmesi, fiziksel doğruluk kabulü ve robot kalibrasyonudur. Mevcut scale dünya orijini veya robot koordinatı tanımlamaz. CalibrationService ve execution context tipli PlanarCalibration kullanır; legacy scale alias/hash korunur, yeni modeller yalnız UI eklenerek desteklenemez. CMake core/imgproc/imgcodecs/objdetect/calib/geometry ister. Yerel OpenCV 5 SB API objdetect.hpp, homography/perspective API geometry.hpp altındadır; Release link ve sentetik köşe tespiti doğrulandı.
 
 Genel mimari yönü doğru; ancak scalar prototipten PLC'ye geçiş ölçüm ürününün temel beklentisini erken tamamlanmış kabul ediyordu. Öncelik plaka → gerçek mm → bağımsız doğruluk kabulü olmalıdır. Robot guidance için açı/Pose çıktısı, pick reference ve robot dönüşümü de gerekir; mevcut sabit açıdaki Match bunu sağlamaz.
 
@@ -77,17 +77,40 @@ UI'da iki akış; içeride planar homography, gerektiğinde bağlı kamera intri
 
 | İş | Teslim ve kabul |
 | --- | --- |
-| 6C-K1 — Model, geçici import ve plaka tespiti | Yerel OpenCV API/modül doğrulaması; target tanımı, Calibration test import, tam çözünürlüklü frame, gerçek corner overlay ve stale-result/red kontrolleri; legacy regresyonu |
-| 6C-K2 — Tek görüntüden homography ve mm denemesi | H hesaplama, iki nokta px/mm inceleme, bilinen perspektif geometri testleri, fit/holdout ayrımı, dejenere/alan dışı dönüşüm reddi; raw/undistorted giriş sözleşmesi |
-| 6C-K3 — Kayıt, Measurement ve Runtime | Tipli dependency migration; Calibration akışı; save/reopen, eski binding/invalidation, immutable snapshot; aynı Edge → dönüştürülmüş noktalar → mm/tolerans; Release/core/UI CTest ve görsel kontrol |
+| 6C-K1 — Model, geçici import ve plaka tespiti (tamamlandı) | Yerel OpenCV API/modül doğrulaması; target tanımı, Calibration test import, tam çözünürlüklü frame, gerçek corner overlay ve stale-result/red kontrolleri; legacy regresyonu |
+| 6C-K2 — Tek görüntüden homography ve mm denemesi (tamamlandı) | H hesaplama, iki nokta px/mm inceleme, bilinen perspektif geometri testleri, fit/holdout ayrımı, dejenere/alan dışı dönüşüm reddi; raw/undistorted giriş sözleşmesi |
+| 6C-K3 — Kayıt, Measurement ve Runtime (tamamlandı) | Tipli dependency migration; Calibration akışı; save/reopen, eski binding/invalidation, immutable snapshot; aynı Edge → dönüştürülmüş noktalar → mm/tolerans; Release/core/UI CTest ve görsel kontrol |
 | 6C-KL — Gerektiğinde lens desteği | Ayrı intrinsic oluşturma/kabul edilmiş model kullanma ve undistort yolu; bozulmanın hata bütçesini aştığı kurulumların K4 kabulünden önce tamamlanır; her planar testin önkoşulu değildir |
 | 6C-K4 — Fiziksel ölçüm kabulü | Gerçek plaka/bağımsız referans, merkez/kenar/yön dağılımı, tekrarlanabilirlik ve tolerans hata bütçesi raporu; donanım yoksa açık kabul maddesi |
 | 6D — PLC | Mevcut handshake/simülatör planı; K4 fiziksel olarak bloke ise bağımsız simülatör işi ilerleyebilir, üretim kabulü iddia edilmez |
 | 6E — Robot | Kamera modeline bağlı Eye-to-Hand/Eye-in-Hand servisleri ve simüle bilinen dönüşüm testleri; açı/Pose/pick reference, bağımsız fiziksel robot kabulü ve sonuç teslimi |
 
-Bir sonraki uygulama adımı 6C-K1'dir. Bu incelemede kod/UI değiştirilmedi; build/test kabulü yenilenmedi. Mevcut tamamlanmış altyapı yeniden yazılmayacak, modeller aşamalı genişletilecektir.
+K1–K3 tamamlandı. K4 kullanıcı isteğiyle fiziksel kurulum hazır olana kadar ertelendi; gerektiğinde KL lens gerekir. Kalibrasyon teslimi UI 19/19/core 17/17, yeni PLC teslimi UI 20/20/core 18/18. Kullanıcı TCP/IP socket önceliğiyle 6D'yi yetkilendirdi; [6D.1 yazılım teslimi](plc-socket.md) tamamlandı, fiziksel doğruluk kabulü yerine geçmez. Robot 6E sonraki aşamadır. Mevcut tamamlanmış altyapı yeniden yazılmayacak, modeller aşamalı genişletilecektir.
 
 ## Teknik kaynaklar
 
 - [OpenCV kamera ve hand–eye referansı](https://docs.opencv.org/4.13.0/d9/d0c/group__calib3d.html): teknik model/solver referansı; yerel OpenCV 5 API/ABI doğrulamasının yerine geçmez.
 - [HALCON image_points_to_world_plane](https://www.mvtec.com/doc/halcon/2605/en/image_points_to_world_plane.html): kamera parametreleri ve dünya düzlemi pose'u ile pikselden fiziksel düzleme dönüşüm. HALCON bağımlılığı veya plaka format uyumluluğu bu planın kapsamında değildir.
+
+## K1 uygulanan servis sınırı
+
+`ChessboardService` ImageFileService owned decode'u kullanır; decoded piksel hash'i ve bağımsız calibration-test source/fresh frame kimliği üretir. `ChessboardTarget` ID/iç köşe grid/mm; `ChessboardObservation` raw pixel centres, resolution/provenance ve target-local mm grid taşır. O=P1, +X sütun, +Y satır; simetri nedeniyle fiziksel yön iddiası yoktur. Bu gözlem H veya validated calibration değildir, mevcut legacy kataloğu/schema/hash'i değiştirmez. Intrinsic/lens düzeltmesi uygulanmaz.
+
+MainWindow worker'a immutable frame/target gönderir; EditorSession cancellation, generation ve recipe signature geç sonucu engeller. UI OpenCV çağırmaz; ImageViewer numara/O/+X/+Y çizimini yapar. 16 MP detection / 512 corner sınırı vardır; Gray16 sabit 1/257 ile tespit için Gray8'e çevrilir, stored raw frame değişmez. Stop cooperative, OpenCV içinde hard interruption yoktur. Test görüntüsü disk kaydına veya fiziksel kamera binding'ine girmez; homography envelope/persistence migration K2/K3'te genişletilir.
+
+## K3 uygulanan kayıt/Runtime ve kalan fiziksel kabul
+
+Tipli PlanarCalibration/Dependency schema 2, raw homography evidence record schema 2; existing catalog/resolver/recipe schema 2 ve immutable Runtime aynı hash'li modeli kullanır. Execution version 4. Test kanıtı `.vfcalstudy` ayrı 4 MiB manifesttir; source image path/decoded hash korunmalı, resim gömülmez ve fiziksel camera binding'i oluşturulmaz. Kaydedilmiş acquired modelde H/fit noktaları/köken/holdout kanıtı tutulur; kamera görüntüsü embed edilmez. Atomic replay matematiksel tutarlılıktır, fiziksel kurulum/ölçüm kanıtı değildir.
+
+H fit inverse hata sınırı UI'da 1 px; ölçüm domain'i observed inner-corner convex hull. Holdout RMS/max ve her sample measured/absolute residual mm ile CSV raporu çalışır. Bağımsız fiziksel bölge/yön/tekrar kabulü [K4 prosedüründe](calibration-acceptance.md); gerçek veri yok, KL ihtiyacı belirlenemedi. Lens correction uygulanmış gibi gösterilmez. Legacy scale başarısız H için sessiz fallback değildir; UI model seçimi açıktır.
+
+## 8 Ekim — Planlanan manuel px/mm girişi (uygulanmadı)
+
+Kullanıcı doğrudan px/mm katsayısı girebilmelidir. Ayrı “Manuel ölçek” seçeneğinde pozitif/sonlu px/mm, açık birim ve karşılığı mm/px = 1 / (px/mm) gösterilir. Örneğin 20 px/mm → 0.05 mm/px. Uniform ölçek varsayımı açıklanır; perspektif/lens/robot dönüşümü sağlanmaz.
+
+Katsayı tek başına doğrulanmış kabul edilmez. En az iki bağımsız bilinen segment ile mevcut holdout hata sınırları uygulanır; gerçek kanıt olmadan RMS/PASS üretilmez. Manuel köken/katsayı, kaynak/çözünürlük/lens/düzlem ve sürüm kalıcı kayıtta tutulur; replay/hash, resolver, Measurement/Runtime ve eski kayıt migration/no-op testleri gerekir. Katsayı/kurulum değişimi eski binding ve sonuçları geçersiz kılar. Mevcut teaching örneğini sahte veriyle doldurmak yerine servis sözleşmesi genişletilir.
+
+Ekran sadeleştirme: model seç → görüntü/kurulum → ölçek veya plaka → bağımsız doğrulama → kaydet/bağla. Yalnız seçili modele ait kontroller gösterilir. Bu paket sonraki geliştirme önerisidir, mevcut özellik değildir.
+## 8 Ekim — Manuel ölçek uygulama planı hazır
+
+[Manuel px/mm ve sade Calibration planı](manual-scale-calibration-plan.md) önceki kısa kapsam notunun ayrıntılı devamıdır. C1 matematik/codec → C2 katalog/Measurement/Runtime → C3 sade ekran → C4 UI kabul → C5 birleşik test/belgeler. C1 matematik/codec tamamlandı; C2 katalog/Runtime/CSV ve C3–C5 ekran/kabul işleri açık. Yeni manual_planar_scale/1, record/dependency schema 3, eski hash/encode koruması, beş bölümlü üç yöntem UI ve doğrulamasız deneme/üretim ayrımı tanımlandı. Belgenin 7. bölümü GPT-6.1 Sol medium için kopyalanabilir başlangıç talimatıdır. P7 bu kapsamdan sonra; K4 ertelenmiş kalır.

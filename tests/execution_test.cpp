@@ -34,7 +34,7 @@ int main(int argc,char** argv) {
         auto extensionCycle=ExecutionService{}.run(withEditorTools({}, {extension}),{},"test","test",{});
         check(extensionCycle.state==ExecutionState::Done && number(extensionCycle,extension.id,"value")==42,"extension executes without engine kind branch");
         bool rejected=false;try{outputPorts("unknown");}catch(const std::exception&){rejected=true;}check(rejected,"unknown port kind rejected");
-        for(const auto& descriptor:ToolRegistry::entries())check(descriptor.version==1 && descriptor.label==toolLabel(descriptor.kind),"registry version/label");
+        for(const auto& descriptor:ToolRegistry::entries())check(descriptor.version==((descriptor.kind=="blob" || descriptor.kind=="measurement") ? 2 : 1) && descriptor.label==toolLabel(descriptor.kind),"registry version/label");
         QTemporaryDir dir(QDir(QCoreApplication::applicationDirPath()).filePath("execution-XXXXXX"));check(dir.isValid(),"test directory");const auto path=dir.filePath("fixture.png");image(path,true);
         ProjectService service;service.createProject("Graph","",dir.filePath("graph.vfproject"),"file");const auto recipe=service.createRecipe("Measure","",ApplicationType::Measurement,"file");
         const auto source=service.setImageFile(path),left=service.addTool("edge"),right=service.addTool("edge"),blob=service.addTool("blob"),distance=service.addTool("calculate");
@@ -157,3 +157,4 @@ int main(int argc,char** argv) {
         QTextStream(stdout)<<"PASS: DAG, adapters, identities, persistence, errors and cancellation\n";return 0;
     } catch(const std::exception& e) {QTextStream(stderr)<<"FAIL: "<<e.what()<<'\n';return 1;}
 }
+

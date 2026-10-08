@@ -8,7 +8,10 @@
 #include "application/CameraService.hpp"
 #include "application/EditorSession.hpp"
 #include "application/CalibrationWorkflow.hpp"
-#include "application/RuntimeService.hpp"
+#include "application/ChessboardService.hpp"
+#include "application/PlaneMappingService.hpp"
+#include "application/RuntimeCoordinator.hpp"
+#include "application/PlcRuntimeSocket.hpp"
 class QVBoxLayout;
 class QTableWidget;
 class QComboBox;
@@ -35,6 +38,9 @@ public:
     bool verifyWebcam(const QString& artifacts);
     bool verifyMeasurement(const QString& artifacts);
     bool verifyRuntime(const QString& artifacts);
+    bool verifyChessboard(const QString& artifacts);
+    bool verifyHomography(const QString& artifacts);
+    bool verifyCommunication(const QString& artifacts);
 protected:
     void closeEvent(QCloseEvent* event) override;
 private:
@@ -46,21 +52,39 @@ private:
     QWidget* makeEditor();
     QWidget* makeCalibration();
     QWidget* makeRuntime();
+    QWidget* makeCommunication();
+    void communicationAction(const QString&);
+    void refreshCommunication();
     QWidget* makeLogs();
     void refreshRuntime();
+    void updateOperatorMode(bool active);
+    bool operatorMode_ = false;
+    QByteArray operatorGeometry_;
+    Qt::WindowStates operatorWindowState_{};
     void runtimeAction(const QString&);
     void showRuntimeResult();
     void refreshLogs();
     void ensureRuntime();
+    void initializeCommunication();
     void refreshCalibration();
     void calibrationAction(const QString& action);
     void invalidateCalibrationDraft();
+    void importCalibrationTestImage(const QString& path);
+    void detectCalibrationChessboard();
+    void invalidateChessboard(bool clearImage=false);
+    void calculateCalibrationHomography();
+    void inspectCalibrationDistance();
+    void homographyCalibrationAction(const QString& action);
+    void calibrationStudyAction(const QString& action,const QString& path);
+    void exportCalibrationReport(const QString& path);
+    void showCalibrationEvidence(const PlanarCalibration&);
     QWidget* makeProjectManager();
     QWidget* makeRecipeManager();
     void showProjectDialog(bool edit = false);
     void openProjectDialog();
     void showRecipeDialog(bool edit = false);
     void openSelectedRecipe();
+    void loadSelectedRecipe();
     void refreshWorkspace();
     void refreshRecipes();
     void saveProject();
@@ -145,9 +169,25 @@ private:
     QTableWidget* calibrationSamples_{};
     QString calibrationRecipeId_,calibrationFrameId_;
     quint64 calibrationGeneration_=0;
-    std::optional<PlanarScaleCalibration> calibrationCandidate_;
+    std::optional<PlanarCalibration> calibrationCandidate_;
+    std::optional<CalibrationTestImage> calibrationTestImage_;
+    std::optional<ChessboardObservation> calibrationChessboard_;
+    quint64 chessboardGeneration_=0;
+    QByteArray chessboardContext_;
+    QLabel* chessboardStatus_{};
+    std::optional<PlaneMapping> calibrationMapping_;
+    QVector<QPointF> calibrationTrialPoints_;
+    QLabel* calibrationMappingStatus_{};
+    QLabel* calibrationTrialStatus_{};
+    std::optional<PlanarCalibration> calibrationReport_;
     JobSession runtimeJobs_;
     std::unique_ptr<RuntimeService> runtime_;
+    std::unique_ptr<RuntimeCoordinator> runtimeCoordinator_;
+    std::unique_ptr<PlcRuntimeSocket> plc_;
+    QLineEdit* plcAddress_{};
+    QComboBox* plcMapping_{};
+    QLabel* plcStatus_{};
+    QLabel* hardwareStatus_{};
     QString runtimePath_;
     ProductionCycle runtimeCycle_;
     std::optional<CycleResult> runtimeResult_,runtimePending_;
@@ -155,7 +195,6 @@ private:
     QLabel* runtimeStatus_{};
     QLabel* runtimeSummary_{};
     QComboBox* runtimeTools_{};
-    QComboBox* runtimeHistory_{};
     QTableWidget* logTable_{};
     QLabel* logStatus_{};
 };

@@ -14,6 +14,7 @@
 #include <QEventLoop>
 #include <QStatusBar>
 #include <algorithm>
+#include "domain/ToolRegistry.hpp"
 namespace visionflow {
 EditorContext MainWindow::editorContext() const {
     if(!service_.activeRecipe())return {};
@@ -21,7 +22,7 @@ EditorContext MainWindow::editorContext() const {
 }
 QByteArray MainWindow::flowSignature() const {return editorSession_.signature(editorContext());}
 void MainWindow::refreshFlow() {
-    if(editorSession_.cycle && editorSession_.cycle->configId!=flowSignature()) {editorSession_.cycle.reset();matchInfo_->setText("READY — ayar/görüntü değişti, çevrim sonucu yok.");}
+    editorSession_.reconcile(editorContext());
     QString text="Önce reçete açın.";
     if(service_.activeRecipe()) {
         const auto graph=validateGraph(service_.tools(),editorConnections(service_.activeRecipe()->definition));
@@ -34,6 +35,10 @@ void MainWindow::refreshFlow() {
     }
     graphInfo_->setText(text);
     findChild<QPushButton*>("runFlow")->setEnabled(service_.activeRecipe() && !editorSession_.busy(SessionJob::Execution) && !editorSession_.busy(SessionJob::Teaching) && !editorSession_.busy(SessionJob::Image));
+    if(auto* run=findChild<QPushButton*>("runTool")) {
+        bool source=false;if(service_.activeRecipe())for(const auto& t:service_.tools())if(t.id==selectedToolId_)source=ToolRegistry::get(t.kind).acquisitionSource;
+        run->setText(source ? "Görüntü al" : "Run Tool");run->setEnabled(!selectedToolId_.isEmpty() && !editorSession_.busy());
+    }
     findChild<QPushButton*>("stopFlow")->setEnabled(editorSession_.busy(SessionJob::Execution));
     for(int i=0;i<flowTools_->count();++i) {
         auto* item=flowTools_->item(i);QString state=editorSession_.busy(SessionJob::Execution) ? "BUSY" : "READY";
@@ -46,7 +51,7 @@ void MainWindow::refreshFlow() {
 void MainWindow::showExecutionResult() {
     imageViewer_->setToolOverlay({},{});
     if(!editorSession_.cycle)return;
-    QStringList lines;lines<<QString("%1 | Cycle %2 | Frame %3 | %4 ms").arg(executionStateName(editorSession_.cycle->state),editorSession_.cycle->cycleId,editorSession_.cycle->frameId).arg(editorSession_.cycle->milliseconds,0,'f',2);
+    QStringList lines;if(editorSession_.cycle->partial)lines<<"Seçili araç değerlendirmesi • "+editorSession_.cycle->evaluationId;lines<<QString("%1 | Cycle %2 | Frame %3 | %4 ms").arg(executionStateName(editorSession_.cycle->state),editorSession_.cycle->cycleId,editorSession_.cycle->frameId).arg(editorSession_.cycle->milliseconds,0,'f',2);
     if(!editorSession_.cycle->error.isEmpty())lines<<editorSession_.cycle->error;
     auto ordered=editorSession_.cycle->tools;
     std::stable_sort(ordered.begin(),ordered.end(),[this](const auto& a,const auto& b){return a.toolId==selectedToolId_ && b.toolId!=selectedToolId_;});
@@ -66,11 +71,11 @@ void MainWindow::showExecutionResult() {
         if(r.toolId==selectedToolId_) {
             QString annotation;
             if(r.calibration && r.state==ExecutionState::Done && r.outputs.value("value").valid)annotation=QString("%1 mm • %2").arg(std::get<double>(r.outputs.value("value").data),0,'f',3).arg(r.decision==PartDecision::Pass ? "PASS" : "FAIL");
-            imageViewer_->setToolOverlay(r.regions,r.points,r.lines,annotation);
+            imageViewer_->setToolOverlay(r.regions,r.points,r.lines,annotation,r.mask.pixels,r.mask.size,r.mask.origin);
         }
     }
     matchInfo_->setText(lines.join("\n"));
-    statusBar()->showMessage("Editor çevrimi: "+executionStateName(editorSession_.cycle->state)+" • "+editorSession_.cycle->cycleId);
+    statusBar()->showMessage((editorSession_.cycle->partial ? "Editor araç değerlendirmesi: " : "Editor çevrimi: ")+executionStateName(editorSession_.cycle->state)+" • "+editorSession_.cycle->cycleId);
 }
 void MainWindow::runFlow() {
     runExecution({});
@@ -78,6 +83,33 @@ void MainWindow::runFlow() {
 void MainWindow::runExecution(const QString& targetTool) {
     if(runtimeJobs_.busy() || (runtime_ && runtime_->busy()) || editorSession_.busy(SessionJob::Execution) || editorSession_.busy(SessionJob::Teaching) || editorSession_.busy(SessionJob::Image) || !applyToolProperties() || !service_.activeRecipe())return;
     const auto recipe=*service_.activeRecipe();const auto definition=recipe.definition;const auto catalogPath=service_.path()+".calibrations.json";
+    bool acquisition=false;for(const auto& t:editorTools(definition))if(t.id==targetTool)acquisition=ToolRegistry::get(t.kind).acquisitionSource;
+    if(!targetTool.isEmpty() && !acquisition) {
+        try {
+            const auto evaluation=editorSession_.evaluation(editorContext());
+            const auto signature=flowSignature();const auto directory=QFileInfo(service_.path()).absolutePath();
+            auto* watcher=editorSession_.watch<CycleResult>(this,SessionJob::Execution);const auto cancel=editorSession_.token(SessionJob::Execution);
+            editorSession_.invalidateTool(editorContext(),targetTool);editorSession_.matchOutcome.reset();editorSession_.resultSignature.clear();refreshFlow();matchInfo_->setText("BUSY — yalnız seçili araç, mevcut ham görüntü…");
+            connect(watcher,&QFutureWatcher<CycleResult>::finished,this,[this,watcher,signature,targetTool]{
+                auto result=watcher->result();watcher->deleteLater();
+                if(editorSession_.acceptTool(std::move(result),signature,editorContext())) {
+                    if(editorSession_.cycle->state!=ExecutionState::Skipped)for(const auto& r:editorSession_.cycle->tools)if(r.toolId==targetTool && r.state==ExecutionState::Done) {
+                        const auto region=r.outputs.value("region"),score=r.outputs.value("score"),found=r.outputs.value("found");
+                        if(std::holds_alternative<QRect>(region.data) && score.valid && found.valid) {
+                            editorSession_.matchOutcome=MatchOutcome{std::get<QRect>(region.data),std::get<double>(score.data),r.milliseconds,std::get<bool>(found.data)};
+                            editorSession_.resultSignature=matchSignature();
+                            const auto point=r.outputs.value("point");if(point.valid && std::holds_alternative<QPointF>(point.data))editorSession_.references[targetTool]={referenceSignature(targetTool),std::get<QPointF>(point.data)};
+                        }
+                    }
+                }else {editorSession_.matchOutcome.reset();matchInfo_->setText("Değişen girdi/ayar nedeniyle araç sonucu atıldı.");}
+                refreshMatchOverlay();refreshFlow();refreshCalibration();
+            });
+            editorSession_.launch(watcher,[definition,directory,recipe,signature,cancel,targetTool,evaluation,catalogPath]{return ExecutionService{}.runTool(definition,directory,recipe.id,signature,cancel,targetTool,evaluation,[recipe,catalogPath](const ImageFrame& frame){return CalibrationWorkflow::resolve(recipe,frame,catalogPath);});});
+        }catch(const std::exception& e){matchInfo_->setText(QString::fromUtf8(e.what()));}
+        return;
+    }
+    ++editorSession_.generation;
+
     editorSession_.references.clear();invalidateMatch();editorSession_.cycle.reset();editorSession_.frame.reset();imageViewer_->clearImage("BUSY — görüntü ediniliyor…");imageInfo_->setText("Yeni çevrim görüntüsü bekleniyor.");auto* watcher=editorSession_.watch<CycleResult>(this,SessionJob::Execution);
     refreshFlow();matchInfo_->setText("BUSY — acquisition ve DAG çalışıyor…");
     findChild<QTabWidget*>("editorTabs")->setCurrentWidget(findChild<QScrollArea*>("resultsScroll"));
@@ -109,7 +141,7 @@ void MainWindow::loadImageAsync(const QString& path,bool commit) {
         }
         if(result.frame)try {
             if(commit)selectedToolId_=service_.setImageFile(result.frame->path());
-            editorSession_.frame=result.frame;invalidateMatch();editorSession_.cycle.reset();
+            editorSession_.frame=result.frame;invalidateMatch();editorSession_.cycle.reset();editorSession_.adoptFrame(editorContext());
             imageBinding_=editorRecipeId_+"|"+service_.imageFilePath();imageViewer_->setImage(editorSession_.frame->preview());
             imageInfo_->setText(QString("%1 × %2 px | %3 | %4").arg(editorSession_.frame->size().width()).arg(editorSession_.frame->size().height()).arg(editorSession_.frame->pixelFormat(),QFileInfo(editorSession_.frame->path()).fileName()));refreshWorkspace();
         }catch(const std::exception& e){displayError(QString::fromUtf8(e.what()));}

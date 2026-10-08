@@ -3,6 +3,10 @@
 #include "domain/ToolRegistry.hpp"
 #include "AcquisitionService.hpp"
 #include <QDir>
+#include <QFile>
+#include <QJsonDocument>
+#include <QJsonArray>
+#include <QCryptographicHash>
 #include <QElapsedTimer>
 #include <QUuid>
 #include <QSet>
@@ -12,8 +16,28 @@
 #include <stdexcept>
 namespace visionflow {
 QString executionStateName(ExecutionState s) {switch(s){case ExecutionState::Ready:return "READY";case ExecutionState::Busy:return "BUSY";case ExecutionState::Done:return "DONE";case ExecutionState::Error:return "ERROR";case ExecutionState::Skipped:return "SKIPPED";}return {};}
-CycleResult ExecutionService::run(const QJsonObject& definition,const QString& directory,const QString& recipeId,const QByteArray& configId,const std::shared_ptr<std::atomic_bool>& cancel,const QString& targetTool,const std::optional<ImageFrame>& frameSnapshot,const CalibrationResolver& resolver) const {
+QByteArray ExecutionService::toolSignature(const QJsonObject& definition,const QString& directory,const QString& tool,const QByteArray& scope) {
+    const auto tools=editorTools(definition);const auto connections=editorConnections(definition);
+    QSet<QString> required{tool};QStringList pending{tool};
+    while(!pending.isEmpty()){const auto id=pending.takeFirst();for(const auto& c:connections)if(c.targetTool==id && !required.contains(c.sourceTool)){required.insert(c.sourceTool);pending.append(c.sourceTool);}}
+    QCryptographicHash hash(QCryptographicHash::Sha256);hash.addData(scope);hash.addData(version().toUtf8());
+    for(const auto& t:tools)if(required.contains(t.id)) {
+        hash.addData(QJsonDocument(QJsonObject{{"id",t.id},{"kind",t.kind},{"enabled",t.enabled},{"parameters",t.parameters},{"version",ToolRegistry::get(t.kind).version}}).toJson(QJsonDocument::Compact));
+        if(t.kind=="image_file") {QFile file(QDir(directory).absoluteFilePath(t.parameters["path"].toString()));if(!file.open(QIODevice::ReadOnly))hash.addData("MISSING_ASSET");else hash.addData(QCryptographicHash::hash(file.readAll(),QCryptographicHash::Sha256));}
+    }
+    for(const auto& c:connections)if(required.contains(c.targetTool))hash.addData(QJsonDocument(QJsonArray{c.sourceTool,c.sourcePort,c.targetTool,c.targetPort}).toJson(QJsonDocument::Compact));
+    return hash.result();
+}
+CycleResult ExecutionService::runTool(const QJsonObject& definition,const QString& directory,const QString& recipeId,const QByteArray& configId,
+    const std::shared_ptr<std::atomic_bool>& cancel,const QString& target,const TargetEvaluation& evaluation,const CalibrationResolver& resolver) const {
+    const auto captured=toolSignature(definition,directory,target,evaluation.scope);
+    auto result=run(definition,directory,recipeId,configId,cancel,target,{},resolver,&evaluation);
+    result.configId=captured;return result;
+}
+CycleResult ExecutionService::run(const QJsonObject& definition,const QString& directory,const QString& recipeId,const QByteArray& configId,const std::shared_ptr<std::atomic_bool>& cancel,const QString& targetTool,const std::optional<ImageFrame>& frameSnapshot,const CalibrationResolver& resolver,const TargetEvaluation* targetOnly) const {
     CycleResult cycle;cycle.cycleId=QUuid::createUuid().toString(QUuid::WithoutBraces);cycle.frameId=QUuid::createUuid().toString(QUuid::WithoutBraces);cycle.recipeId=recipeId;cycle.configId=configId;
+    cycle.targetToolId=targetTool;cycle.evaluationId=QUuid::createUuid().toString(QUuid::WithoutBraces);cycle.partial=targetOnly!=nullptr;
+    if(targetOnly){cycle.frameId=targetOnly->frame.metadata().frameId;cycle.cycleId=targetOnly->frame.metadata().cycleId;}
     QElapsedTimer total;total.start();
     try {
         validateEditorDefinition(definition);auto tools=editorTools(definition);auto connections=editorConnections(definition);
@@ -30,18 +54,28 @@ CycleResult ExecutionService::run(const QJsonObject& definition,const QString& d
         auto graph=validateGraph(tools,connections);
         if(!graph.valid())throw std::runtime_error(graph.errors.join("\n").toUtf8().constData());
         cycle.state=ExecutionState::Busy;QMap<QString,ToolResult> completed;bool error=false,stopped=false;MeasurementExecutionContext measurement;
+        if(targetOnly) {
+            if(cycle.frameId.isEmpty() || cycle.cycleId.isEmpty())throw std::runtime_error("Önce görüntü al.");
+            if(resolver)measurement=resolver(targetOnly->frame);
+            for(auto it=targetOnly->cache.cbegin();it!=targetOnly->cache.cend();++it)
+                if(it->signature==toolSignature(definition,directory,it.key(),targetOnly->scope))completed[it.key()]=it->result;
+        }
         for(const auto& id:graph.order) {
+            if(targetOnly && id!=targetTool)continue;
             const auto t=*std::find_if(tools.begin(),tools.end(),[&](const auto& t){return t.id==id;});ToolResult r;r.toolId=id;QElapsedTimer timer;timer.start();
             if(cancel && cancel->load())stopped=true;
+            if(targetOnly && ToolRegistry::get(t.kind).acquisitionSource)throw std::runtime_error("Kaynak için görüntü al / Run Flow kullanın.");
             if(!t.enabled || stopped) {r.state=ExecutionState::Skipped;r.message=stopped ? "İptal edildi" : "Disabled";}
             else {
-                QMap<QString,PortValue> inputs;bool unavailable=false;
+                QMap<QString,PortValue> inputs;bool unavailable=false;QStringList missing;
                 for(const auto& c:connections)if(c.targetTool==id) {
                     const auto source=completed.value(c.sourceTool);const auto value=source.outputs.value(c.sourcePort);
-                    if(source.state!=ExecutionState::Done || !value.valid || value.frameId!=cycle.frameId || value.cycleId!=cycle.cycleId)unavailable=true;
+                    if(source.state!=ExecutionState::Done || !value.valid || value.frameId!=cycle.frameId || value.cycleId!=cycle.cycleId) {
+                        unavailable=true;for(const auto& upstream:tools)if(upstream.id==c.sourceTool)missing.append(upstream.name);
+                    }
                     else inputs[c.targetPort]=value;
                 }
-                if(unavailable) {r.state=ExecutionState::Skipped;r.message="Upstream sonucu geçersiz/ERROR/SKIPPED";}
+                if(unavailable) {r.state=ExecutionState::Skipped;r.message=targetOnly ? ("Girdi güncel değil: "+missing.join(", ")+". Önce görüntü al veya bağlı üst aracı çalıştır.") : "Upstream sonucu geçersiz/ERROR/SKIPPED";}
                 else try {
                     const auto declaredInputs=inputPorts(t.kind);
                     for(auto it=inputs.cbegin();it!=inputs.cend();++it) {
@@ -53,6 +87,7 @@ CycleResult ExecutionService::run(const QJsonObject& definition,const QString& d
                     for(const auto& value:inputs) {
                         const auto& m=value.origin;
                         if(m.frameId.isEmpty() || m.frameId!=value.frameId || m.cycleId!=value.cycleId || m.coordinateSystemId.isEmpty())throw std::runtime_error("Giriş frame metadata eksik/uyumsuz.");
+                        if(targetOnly && (m.sourceId!=targetOnly->frame.metadata().sourceId || m.coordinateSystemId!=targetOnly->frame.metadata().coordinateSystemId))throw std::runtime_error("Cached input source/coordinate identity differs from raw frame.");
                         if(!coordinates.isEmpty() && (coordinates!=m.coordinateSystemId || sourceFrame!=m.frameId || sourceId!=m.sourceId))throw std::runtime_error("Giriş frame/koordinat sistemleri uyumsuz.");
                         coordinates=m.coordinateSystemId;sourceFrame=m.frameId;sourceId=m.sourceId;
                     }
@@ -68,7 +103,7 @@ CycleResult ExecutionService::run(const QJsonObject& definition,const QString& d
                         if(metadata.coordinateSystemId.isEmpty())metadata.coordinateSystemId=t.id+"/image";
                         if(!metadata.completedAtUtc.isValid())metadata.completedAtUtc=QDateTime::currentDateTimeUtc();
                         r.state=ExecutionState::Done;r.outputs["image"]={outputPorts(t.kind).first(),frameSnapshot->withMetadata(metadata),true,cycle.frameId,cycle.cycleId,metadata};
-                    } else r=ToolExecutors::get(t.kind,measurement)(t,inputs,directory,cycle.frameId,cycle.cycleId,cancel);
+                    } else {cycle.executedTools.append(t.id);if(ToolRegistry::get(t.kind).acquisitionSource)++cycle.acquisitions;r=ToolExecutors::get(t.kind,measurement)(t,inputs,directory,cycle.frameId,cycle.cycleId,cancel); }
                     if(r.state==ExecutionState::Error)error=true;
                     if(ToolRegistry::get(t.kind).acquisitionSource && r.state==ExecutionState::Done && resolver) {
                         try {measurement=resolver(std::get<ImageFrame>(r.outputs.value("image").data));}
@@ -81,7 +116,8 @@ CycleResult ExecutionService::run(const QJsonObject& definition,const QString& d
         }
         if(cancel && cancel->load())stopped=true;
         cycle.state=stopped ? ExecutionState::Skipped : error ? ExecutionState::Error : ExecutionState::Done;
-        if(stopped) {cycle.frames.clear();cycle.error="Çevrim iptal edildi; sonuç yayımlanmaz.";for(auto& r:cycle.tools) {r.outputs.clear();r.regions.clear();r.points.clear();r.lines.clear();r.searchRegion={};r.decision=PartDecision::NotEvaluated;r.calibration.reset();}}
+        if(targetOnly && !stopped && cycle.tools.size()==1)cycle.state=cycle.tools.first().state;
+        if(stopped) {cycle.frames.clear();cycle.error="Çevrim iptal edildi; sonuç yayımlanmaz.";for(auto& r:cycle.tools) {r.outputs.clear();r.regions.clear();r.mask={};r.points.clear();r.lines.clear();r.searchRegion={};r.decision=PartDecision::NotEvaluated;r.calibration.reset();}}
     } catch(const std::exception& e) {cycle.state=ExecutionState::Error;cycle.error=QString::fromUtf8(e.what());}
     cycle.milliseconds=total.nsecsElapsed()/1e6;return cycle;
 }

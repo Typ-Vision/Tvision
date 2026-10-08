@@ -22,7 +22,7 @@ void requireSource(const Recipe& r,const CalibrationDependency& d) {
 CalibrationService::CalibrationService(QString path,InstallationProvider provider):path_(std::move(path)),provider_(std::move(provider)) {
     require(QFileInfo(path_).isAbsolute(),"Calibration catalog requires an absolute path");
 }
-QVector<PlanarScaleCalibration> CalibrationService::read() const {
+QVector<PlanarCalibration> CalibrationService::read() const {
     if(!QFileInfo::exists(path_))return {};
     QFile file(path_);require(file.open(QIODevice::ReadOnly),"Cannot open calibration catalog");
     require(file.size()<=byteLimit,"Calibration catalog exceeds 4 MiB");
@@ -31,7 +31,7 @@ QVector<PlanarScaleCalibration> CalibrationService::read() const {
     require(error.error==QJsonParseError::NoError && doc.isObject(),"Invalid calibration catalog JSON");const auto o=doc.object();
     require(o.size()==3 && o["format"].toString()=="visionflow.calibrations" && o["schemaVersion"].isDouble() && o["schemaVersion"].toDouble()==1 && o["records"].isArray(),"Unsupported calibration catalog");
     const auto records=o["records"].toArray();require(records.size()<=128,"Calibration history full (128 records)");
-    QVector<PlanarScaleCalibration> result;QMap<QString,int> versions;MeasurementService codec;
+    QVector<PlanarCalibration> result;QMap<QString,int> versions;MeasurementService codec;
     for(const auto& value:records) {
         require(value.isObject(),"Invalid calibration catalog record");auto c=codec.decode(value.toObject());const auto& d=c.dependency();
         require(c.validated() && d.version==versions.value(d.calibrationId)+1,"Calibration history must contain validated consecutive versions");
@@ -39,7 +39,7 @@ QVector<PlanarScaleCalibration> CalibrationService::read() const {
     }
     return result;
 }
-void CalibrationService::save(const PlanarScaleCalibration& calibration) const {
+void CalibrationService::save(const PlanarCalibration& calibration) const {
     require(calibration.validated(),"Cannot persist unvalidated calibration");
     // Semantic verification before acquiring the commit lock.
     MeasurementService codec;const auto record=codec.encode(calibration);codec.decode(record);
@@ -53,23 +53,26 @@ void CalibrationService::save(const PlanarScaleCalibration& calibration) const {
     QSaveFile file(path_);file.setDirectWriteFallback(false);require(file.open(QIODevice::WriteOnly),"Cannot stage calibration catalog");
     require(file.write(bytes)==bytes.size(),"Cannot write calibration catalog");require(file.commit(),"Cannot commit calibration catalog");
 }
-PlanarScaleCalibration CalibrationService::load(const QString& id,int version) const {
+PlanarCalibration CalibrationService::load(const QString& id,int version) const {
     for(const auto& c:read())if(c.dependency().calibrationId==id && c.dependency().version==version)return c;
     throw std::runtime_error("Calibration version not found");
 }
 CalibrationDependency CalibrationService::current(const QString& id) const {
     return currentFrom(read(),id);
 }
-CalibrationDependency CalibrationService::currentFrom(const QVector<PlanarScaleCalibration>& records,const QString& id) const {
+CalibrationDependency CalibrationService::currentFrom(const QVector<PlanarCalibration>& records,const QString& id) const {
     require(bool(provider_),"Independent installation provider required");
     std::optional<CalibrationDependency> latest;
-    for(const auto& c:records)if(c.dependency().calibrationId==id)latest=c.dependency();
+    for(const auto& c:records)if(c.dependency().calibrationId==id) {
+        require(!c.manualProvenance() || c.manualProvenance()->origin=="acquired","File test evidence cannot resolve a production installation");
+        latest=c.dependency();
+    }
     require(latest.has_value(),"Current calibration not found");const auto setup=provider_(id);
     auto resolved=*latest;resolved.cameraId=setup.cameraId;resolved.lensId=setup.lensId;resolved.resolution=setup.resolution;
     resolved.workingPlaneId=setup.workingPlaneId;resolved.source=setup.source;resolved.target=setup.target;
     latest->requireCurrent(resolved);return resolved;
 }
-PlanarScaleCalibration CalibrationService::resolve(const Recipe& recipe) const {
+PlanarCalibration CalibrationService::resolve(const Recipe& recipe) const {
     require(recipe.calibrationBinding.has_value() && recipe.calibrationReference==recipe.calibrationBinding->calibrationId,"Recipe requires an exact calibration binding");
     const auto records=read();const auto& binding=*recipe.calibrationBinding;binding.requireCurrent(currentFrom(records,binding.calibrationId));
     requireSource(recipe,binding);

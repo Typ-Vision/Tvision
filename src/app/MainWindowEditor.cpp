@@ -35,6 +35,9 @@ QWidget* MainWindow::makeEditor() {
     connect(edit,&QPushButton::clicked,this,[this]{showRecipeDialog(true);});
     auto* save=new QPushButton("Save"); save->setObjectName("saveWorkspace"); commands->addWidget(save); connect(save,&QPushButton::clicked,this,&MainWindow::saveProject);
     auto* runFlowButton=new QPushButton("Run Flow"); runFlowButton->setObjectName("runFlow"); commands->addWidget(runFlowButton); connect(runFlowButton,&QPushButton::clicked,this,&MainWindow::runFlow);
+    runFlowButton->setToolTip("Yeni görüntü edin ve tam akışı çalıştır.");
+    auto* runTool=new QPushButton("Run Tool");runTool->setObjectName("runTool");commands->addWidget(runTool);
+    connect(runTool,&QPushButton::clicked,this,[this]{for(const auto& t:service_.tools())if(t.id==selectedToolId_){runExecution(t.id);return;}});
     auto* stop=new QPushButton("Stop");stop->setObjectName("stopFlow");commands->addWidget(stop);connect(stop,&QPushButton::clicked,this,[this]{editorSession_.stop(SessionJob::Execution);});
     commands->addStretch(); layout->addLayout(commands); editorContext_=note(""); layout->addWidget(editorContext_);
     horizontal_=new QSplitter(Qt::Horizontal); horizontal_->setObjectName("editorHorizontal"); horizontal_->setChildrenCollapsible(false);
@@ -62,14 +65,15 @@ QWidget* MainWindow::makeEditor() {
     auto* minus=new QPushButton("−"); minus->setObjectName("zoomOut"); toolbar->addWidget(minus); connect(minus,&QPushButton::clicked,this,[this]{imageViewer_->zoomBy(1.0/1.25);});
     auto* plus=new QPushButton("+"); plus->setObjectName("zoomIn"); toolbar->addWidget(plus); connect(plus,&QPushButton::clicked,this,[this]{imageViewer_->zoomBy(1.25);});
     auto* actual=new QPushButton("1:1"); toolbar->addWidget(actual); connect(actual,&QPushButton::clicked,this,[this]{imageViewer_->actualSize();});
-    toolbar->addStretch(); imageLayout->addLayout(toolbar);
+    toolbar->addStretch();auto* toolbarBody=new QWidget;toolbarBody->setLayout(toolbar);toolbar->setSizeConstraint(QLayout::SetMinimumSize);
+    auto* toolbarScroll=new QScrollArea;toolbarScroll->setWidgetResizable(true);toolbarScroll->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);toolbarScroll->setFixedHeight(60);toolbarScroll->setWidget(toolbarBody);imageLayout->addWidget(toolbarScroll);
     imageInfo_=note("Görüntü yok."); imageLayout->addWidget(imageInfo_); imageLayout->addWidget(imageViewer_,1);
     auto* footer=new QHBoxLayout; pixelInfo_=note("Piksel: —"); zoomInfo_=note("Zoom: —"); footer->addWidget(pixelInfo_,1); footer->addWidget(zoomInfo_); imageLayout->addLayout(footer);
     imageViewer_->onZoom=[this](double zoom){zoomInfo_->setText(QString("Zoom: %1%").arg(zoom*100,0,'f',1)); pixelInfo_->setText("Piksel: —");};
     imageViewer_->onPixel=[this](QPoint pixel){pixelInfo_->setText(editorSession_.frame && pixel.x()>=0 ? QString("X:%1 Y:%2 px  |  %3").arg(pixel.x()).arg(pixel.y()).arg(editorSession_.frame->pixelText(pixel.x(),pixel.y())) : "Piksel: —");};
     imageViewer_->onImageClicked=[this]{if (service_.activeRecipe()) for (const auto& tool : service_.tools()) if (tool.kind=="image_file") {selectTool(tool.id); break;}};
     horizontal_->addWidget(imagePanel);
-    auto* scroll=new QScrollArea; scroll->setWidgetResizable(true); scroll->setMinimumWidth(210);
+    auto* scroll=new QScrollArea; scroll->setObjectName("propertiesScroll"); scroll->setWidgetResizable(true); scroll->setMinimumWidth(210);
     propertiesBody_=new QWidget; new QVBoxLayout(propertiesBody_); scroll->setWidget(propertiesBody_); horizontal_->addWidget(scroll);
     horizontal_->setStretchFactor(1,1);
     auto* tabs=new QTabWidget; tabs->setObjectName("editorTabs"); tabs->setMinimumHeight(120);
@@ -152,6 +156,10 @@ void MainWindow::showToolProperties() {
     auto* description=new QLineEdit(tool.description); description->setObjectName("toolDescription"); description->setMaxLength(2048); form->addRow("Description",description);
     auto* enabled=new QCheckBox("Enabled"); enabled->setObjectName("toolEnabled"); enabled->setChecked(tool.enabled); form->addRow(enabled);
     form->addRow("Type",note(toolLabel(tool.kind))); auto* id=new QLineEdit(tool.id); id->setReadOnly(true); id->setCursorPosition(0); id->setToolTip(tool.id); form->addRow("ID",id);
+    if(tool.kind!="template_match") {
+        auto* run=new QPushButton(ToolRegistry::get(tool.kind).acquisitionSource ? "Görüntü al" : "Run Tool");run->setObjectName("runSelectedTool");form->addRow(run);
+        connect(run,&QPushButton::clicked,this,[this,tool]{runExecution(tool.id);});
+    }
     if (tool.kind=="image_file") {
         auto* path=new QLineEdit(tool.parameters["path"].toString()); path->setReadOnly(true); path->setCursorPosition(0); path->setPlaceholderText("Seçilmedi"); path->setToolTip(path->text()); form->addRow("File",path);
         auto* choose=new QPushButton("Open Image…"); form->addRow(choose); connect(choose,&QPushButton::clicked,this,&MainWindow::openImageDialog);
@@ -163,7 +171,7 @@ void MainWindow::showToolProperties() {
     } else if (tool.kind=="template_match") {
         auto* value=new QDoubleSpinBox; value->setObjectName("minScore"); value->setRange(0,100); value->setDecimals(1); value->setSuffix(" %"); value->setValue(tool.parameters["minScore"].toDouble()*100); form->addRow("Minimum Score",value);
         connect(value,&QDoubleSpinBox::valueChanged,this,[this]{applyToolProperties();});
-        auto* run=new QPushButton("Run Match"); run->setObjectName("runMatch"); form->addRow(run); connect(run,&QPushButton::clicked,this,&MainWindow::runMatch);
+        auto* run=new QPushButton("Run Tool"); run->setObjectName("runMatch"); form->addRow(run); connect(run,&QPushButton::clicked,this,&MainWindow::runMatch);
         auto* model=new QPushButton("Model ROI çiz / öğret"); model->setObjectName("modelRoi"); form->addRow(model);
         connect(model,&QPushButton::clicked,this,[this]{beginRoi(true);});
         auto* search=new QPushButton("Search ROI çiz"); search->setObjectName("searchRoi"); form->addRow(search);
@@ -182,6 +190,13 @@ void MainWindow::showToolProperties() {
     } else if (tool.kind=="blob") {
         auto* value=new QSpinBox; value->setObjectName("threshold"); value->setRange(0,255); value->setValue(tool.parameters["threshold"].toInt()); form->addRow("Threshold (8-bit)",value);
         connect(value,&QSpinBox::valueChanged,this,[this]{applyToolProperties();});
+        auto* polarity=new QComboBox;polarity->setObjectName("blobPolarity");polarity->addItem("Açık (> eşik)","bright");polarity->addItem("Koyu (≤ eşik)","dark");polarity->setCurrentIndex(polarity->findData(tool.parameters["polarity"].toString()));form->addRow("Nesne",polarity);
+        auto* connectivity=new QComboBox;connectivity->setObjectName("blobConnectivity");connectivity->addItem("4",4);connectivity->addItem("8",8);connectivity->setCurrentIndex(connectivity->findData(tool.parameters["connectivity"].toInt()));form->addRow("Komşuluk",connectivity);
+        for(const auto key:{"minArea","maxArea"}){auto* area=new QSpinBox;area->setObjectName(key);area->setRange(1,2147483647);area->setSuffix(" px²");area->setValue(tool.parameters[key].isNull() ? tool.parameters["minArea"].toInt() : tool.parameters[key].toInt());area->setEnabled(QString(key)!="maxArea" || !tool.parameters["maxArea"].isNull());form->addRow(QString(key)=="minArea" ? "Min Area (dahil)" : "Max Area (dahil)",area);connect(area,&QSpinBox::editingFinished,this,[this]{applyToolProperties();});}
+        auto* unlimited=new QCheckBox("Max Area: Sınırsız");unlimited->setObjectName("blobUnlimited");unlimited->setChecked(tool.parameters["maxArea"].isNull());form->addRow(unlimited);
+        connect(unlimited,&QCheckBox::toggled,this,[this]{applyToolProperties();});
+        connect(polarity,&QComboBox::currentIndexChanged,this,[this]{applyToolProperties();});connect(connectivity,&QComboBox::currentIndexChanged,this,[this]{applyToolProperties();});
+        form->addRow(note("Alan filtresi adayları seçer; PASS/FAIL üretmez. Kırmızı maske gerçek kabul edilen piksellerdir. Delikler korunur. Bbox: en çok 2048; ROI: en çok 16 Mi piksel."));
     } else if (tool.kind=="edge") {
         auto* value=new QComboBox; value->setObjectName("edgeDirection");
         value->setSizeAdjustPolicy(QComboBox::AdjustToMinimumContentsLengthWithIcon);value->setMinimumContentsLength(10);
@@ -270,6 +285,12 @@ bool MainWindow::applyToolProperties() {
             tool.enabled=propertiesBody_->findChild<QCheckBox*>("toolEnabled")->isChecked();
             if (auto* score=propertiesBody_->findChild<QDoubleSpinBox*>("minScore")) tool.parameters["minScore"]=score->value()/100;
             if (auto* threshold=propertiesBody_->findChild<QSpinBox*>("threshold")) tool.parameters["threshold"]=threshold->value();
+            if(tool.kind=="blob") {
+                tool.parameters["polarity"]=propertiesBody_->findChild<QComboBox*>("blobPolarity")->currentData().toString();
+                tool.parameters["connectivity"]=propertiesBody_->findChild<QComboBox*>("blobConnectivity")->currentData().toInt();
+                tool.parameters["minArea"]=propertiesBody_->findChild<QSpinBox*>("minArea")->value();
+                tool.parameters["maxArea"]=propertiesBody_->findChild<QCheckBox*>("blobUnlimited")->isChecked() ? QJsonValue(QJsonValue::Null) : QJsonValue(propertiesBody_->findChild<QSpinBox*>("maxArea")->value());
+            }
             if (auto* direction=propertiesBody_->findChild<QComboBox*>("edgeDirection")) tool.parameters["direction"]=direction->currentData().toString();
             if(auto* contrast=propertiesBody_->findChild<QDoubleSpinBox*>("minContrast"))tool.parameters["minContrast"]=contrast->value();
             if(auto* index=propertiesBody_->findChild<QSpinBox*>("webcamIndex"))tool.parameters["deviceIndex"]=index->value();

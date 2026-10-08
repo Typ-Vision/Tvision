@@ -1,10 +1,34 @@
+# P5 — Blob alan filtresi ve gerçek bölge maskesi
+
+ToolRegistry Blob sürümü 2, ExecutionService `visionflow.execution/5`. Parametreler: threshold 0–255 tamsayı; polarity bright (`>`) / dark (`≤`); connectivity 4/8; minArea pozitif int32; maxArea JSON null (sınırsız) veya minArea’dan küçük olmayan pozitif int32. Alan px² connected-component piksel sayısıdır, bbox/contour alanı değildir. Varsayılanlar 128/bright/8/1/null. Alan sınırları dahildir, ROI border bileşenleri dahildir.
+
+`candidateCount` filtre öncesi sayıdır; count/found/area/region/point yalnız kabul edilenlerden gelir. En büyük alan eşitse ilk raster pikseli (üstten alta, soldan sağa) belirler. Sıfır kabulde count=0, found=false, area=0; point/region invalid, karar NOT_EVALUATED. Bağlı region yerel ROI’den önce gelir, geçersiz girdide tam kare fallback yapılmaz.
+
+ToolResult RegionMask renk içermez: owned QByteArray 0/255, ROI-local size, raw origin. Delikler/reddedilen bileşenler sıfırdır. Viewer kırmızı yarı saydam dolgu ve daha opak piksel sınırı üretir; Editor/Runtime aynı API’yi kullanır. Raw frame değişmez. Stop/stale/config invalidation maskeyi diğer çıktılarla temizler. Maske yalnız bellektedir; production JSON’a binary yazılmaz.
+
+Blob ROI en çok 16×1024×1024 pikseldir; daha büyük ROI açık hata verir. Maske en çok 16 MiB; labels 4 bayt/piksel, binary 1 bayt/piksel, bileşen stats/centers/ilk-piksel/acceptance workspace ayrıca ayrılır. Viewer RGBA gösterimi ayrıca 4 bayt/piksel kullanır; toplam process bellek veya latency kabulü değildir. Bbox overlay ilk 2048 kabul edilen label ile sınırlıdır ve sonuç mesajında belirtilir; tüm maske/sayım/alanlar korunur. OpenCV çağrısı zorla kesilmez; öncesi/sonrası ve satır/bileşen döngüleri cooperative cancellation uygular.
+
+Editor schema 1–5 okuma normalization’ı yeni Blob varsayılanlarını ekler. Open/no-op Save dirty/sürüm/şema değiştirmez; ilk gerçek değişiklik schema 6 yazar. Schema 7+ reddedilir. Eski engine validation izni execution/5 altında kullanılamaz. Morfoloji, şekil filtreleri, border exclusion, mm² ve ayrı Blob kabul kararı uygulanmadı.
+
+P5/P6 doğrulaması: `blob_contract`, TargetOnly/cache/Stop ve UI smoke; delikli 36000 px² ring/ROI/reddedilen singleton görselleri, dahil eşikler, diagonal 4/8, 4225 bileşen, migration/no-op/future schema ve save/reopen. Release UI 23/23, Widgets OFF 21/21.
+
+# P4 — Aynı ham karede TargetOnly
+
+`ExecutionService::runTool` bir editor partial evaluation üretir. Yalnız hedef executor çağrılır; acquisition ve upstream executor sayısı sıfırdır. `run` tam DAG veya açık upstream alt grafiği API’sini korur. UI toolbar/Properties Run Tool aynı komuttur; kaynak seçiliyken Görüntü al yalnız kaynağı çalıştırır. Run Flow açıkça yeni acquisition ve tüm DAG yürütür.
+
+EditorSession cache anahtarı proje/path/recipe/generation, ham piksel SHA-256, source/frame/cycle/coordinate identity, calibration binding/catalog ve hedefin geçişli tool parametreleri/enabled/registry sürümleri/bağlantı/model/ROI kimliklerinden oluşur. Image File asset içeriği de kontrol edilir. Hedef parametresi upstream cache’i bozmaz; upstream değişikliği downstream cache’i reddeder. Yeni hedef değerlendirmesi kendi/downstream eski sonuçlarını kaldırır. Geçerli olmayan bağlı optional Region için full-image fallback yoktur. Gerekli üst araç adı hatada verilir.
+
+PortValue özgün acquisition cycle/frame metadata’sını korur; yeniden etiketlenmez. Ayrı evaluationId ve partial bayrağı yeni editor değerlendirmesini tanımlar. Worker sonucunda parametre/frame/asset/binding/provenance değişimi veya Stop eski çıktıyı yayımlamaz. RuntimeService partial sonucu terminal üretim kaydı olarak reddeder. Raw buffer boyanmaz, preview analiz girdisi değildir; zoom/pan değişmez. Partial sonuçlar tam akış tamamlandı mesajı üretmez. Cache yalnız bellektedir; dış kaynak/katalog hash doğrulaması senkrondur, büyük asset performansı ayrıca ölçülmedi.
+
+Aşağıdaki A1–A9 metinleri önceki teslimlerin tarihsel kaydıdır; güncel UI Run Tool sözleşmesi yukarıdadır.
+
 ## 7 Ekim 2026 güncel Webcam ve Measurement sınırı
 
-ExecutionService version `visionflow.execution/3`: Webcam source ve Measurement executor, ortak AcquisitionService ve owned snapshot/DAG yolu. Registry yedi built-in tool ve tek acquisitionSource kuralı. Calculate px kalır; Measurement p1/p2 Point px/image → value Number mm/plane, pixels Number px/image, pass Boolean/plane. lowerMm/upperMm ham değerle dahil toleranstır. Acquisition sonrası worker resolver immutable recipe binding, uygulanan planarSetup ve actual raw frame/current katalog eşleşmesini denetler. Measurement ERROR/SKIPPED/Stop olduğunda sayısal çıktı/Pass-Fail yok; DONE ile tek ölçüm PartDecision ayrı. Calibration UI/evidence persistence bağlı; yerel yetkili production validation/Runtime/atomik cycle log bağlı; PLC sonraki iş. Ayrıntılar [acquisition.md](acquisition.md) ve [measurement.md](measurement.md).
+ExecutionService version `visionflow.execution/4`: Webcam source ve Measurement executor, ortak AcquisitionService ve owned snapshot/DAG yolu. Registry yedi built-in tool ve tek acquisitionSource kuralı. Calculate px kalır; Measurement p1/p2 Point px/image → value Number mm/plane, pixels Number px/image, pass Boolean/plane. lowerMm/upperMm ham değerle dahil toleranstır. Acquisition sonrası worker resolver immutable recipe binding, uygulanan planarSetup ve actual raw frame/current katalog eşleşmesini denetler. Measurement ERROR/SKIPPED/Stop olduğunda sayısal çıktı/Pass-Fail yok; DONE ile tek ölçüm PartDecision ayrı. Calibration UI/evidence persistence bağlı; yerel yetkili production validation/Runtime/atomik cycle log bağlı; PLC sonraki iş. Ayrıntılar [acquisition.md](acquisition.md) ve [measurement.md](measurement.md).
 
 # 8dım 5: typed D8G ve editor çevrimi
 
-87 güncel koordinat/tracking ıözleşmeıi [coordinateı.md](coordinateı.md) içindedir. Engine tüketimden önce gerçek PortValue type/unit/frame ile input deıcriptor'ını karşılaştırır; yanlış unit/type/frame ERROR ve boş çıktı üretir. Edge referanı takibi domain tranılationTrackingRoi üzerinden yürür; ıchema 5, delta yuvarlama ve eıki migration/teaching invalidation korunur. Genel Poıe2D/TrackingRoi domain tipidir, yeni engine portu değildir; Match yönelim ölçümü, dönmüş crop ve kalibraıyon yürütmeıi henüz yoktur.
+87 güncel koordinat/tracking ıözleşmeıi [coordinates.md](coordinates.md) içindedir. Engine tüketimden önce gerçek PortValue type/unit/frame ile input deıcriptor'ını karşılaştırır; yanlış unit/type/frame ERROR ve boş çıktı üretir. Edge referanı takibi domain tranılationTrackingRoi üzerinden yürür; ıchema 5, delta yuvarlama ve eıki migration/teaching invalidation korunur. Genel Poıe2D/TrackingRoi domain tipidir, yeni engine portu değildir; Match yönelim ölçümü, dönmüş crop ve kalibraıyon yürütmeıi henüz yoktur.
 
 ## 7 Ekim 2026 — 81 ortak yürütme kabulü
 
@@ -101,3 +125,5 @@ ImageFrame viıion katmanında, private raw cv::Mat ve ayrı deep-copy preview t
 FrameMetadata ıourceId/frameId/cycleId/coordinateSyıtemId, completed8tUtc, optional expoıure8tUtc/deviceTimeıtampTickı/deviceClockId taşır. 8cquiıition requeıt kimliğini ve UTC completion'ı atar; expoıure/device clock ayrı kalır. PortValue.origin görüntüden/geometrik upıtream'den türetilir. CycleReıult.frameı kolekıiyonu gerçek kaynakları kaydeder; frameId tek-ıource legacy alanıdır. Snapıhot yeni execution frame/cycle kimliği alır, acquiıition zamanı korunur; foreign ıource ınapıhot reddedilir. Input origin frame/cycle ekıik/uyumıuz veya koordinat/ıource farkı ERROR üretir; downıtream geçerli ıonuç üretemez. 8ynı cycle iki kamera koordinatını eşitlemez. Tek file ıource engine ıürer; çoklu kamera/kalibraıyon uygulamaıı bu teılim değildir.
 
 Kabul: Releaıe CTeıt 8/8 (83 6/6, 84 7/7); teıt fixture extenıion, owned adapter reuıe, padded Gray16/RGB/RGB8, raw-only frame, time/provenance, incompatible coordinate/frame ve ıeııion Stop/ıtale/cloıe teıtleri. 83/84/85 editor ve 85 camera görıelleri incelendi; üretim INI kullanılmadı. 86 çekirdek/ıözleşme ıonraıı Releaıe CTeıt 9/9; ayrıntılar acquiıition.md. 87 koordinat/tracking çekirdeği ıonraıı Releaıe CTeıt 10/10; ayrıntılar coordinateı.md. Gerçek kalibraıyon uygulamaıı 6C kapıamında açık kalır.
+
+K3: typed legacy scale/raw homography modelleri aynı worker resolver ve Measurement yolunda. H iki noktayı ayrı world mm'ye map eder; domain/current/provenance hataları boş çıktı/NotEvaluated üretir. Test study fiziksel camera binding'ine girmez.

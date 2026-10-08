@@ -1,6 +1,13 @@
 # Endüstriyel Machine Vision Yazılımı — UI Sayfa ve Ekran Gereksinimleri
 
-8 Ekim 2026 revizyonu: İki kalibrasyon akışı Camera Calibration ve Robot Calibration olarak korunur. Mevcut uniform scale temelinden sonra **6C-K geçici test görüntüsü import/plaka tespiti → tek görüntüden planar homography → Measurement/Runtime → fiziksel kabul (gerektiğinde ayrı lens düzeltmesi)**, ardından 6D PLC ve 6E Eye-to-Hand/Eye-in-Hand gelir. Yeni modeller henüz uygulanmadı; sonraki uygulama adımı 6C-K1 model sözleşmesi, geçici Calibration görüntü import ve otomatik plaka tespitidir. [Güncel kalibrasyon gereksinimleri ve kabul planı](../architecture/calibration-plan.md). Bu revizyon önceki geliştirme sırası ifadelerine göre önceliklidir.
+8 Ekim 2026 P5/P6: Blob min/max dahil alan filtresi (px²), açık/koyu nesne ve 4/8 komşuluk uygulanmıştır. Gerçek kabul edilen piksel maskesi delikleri koruyarak Editor ve Runtime’da kırmızı gösterilir; bu parça kararı değildir. Editor schema 6, Blob tool 2, execution/5; eski reçeteler temiz açılır ve ilk gerçek değişiklikte yükselir. Birleşik kabul: Release UI 23/23, Widgets OFF 21/21; normal/850×600 görseller incelendi. Sıradaki P7 (6D.2) kalıcı dedup/outbox/restart teslim kurtarma; K4 ertelenmiş, P8–P9 gelecektedir.
+
+8 Ekim 2026 P3/P4: bağımsız socket, kalıcı enabled/autoStart/endpoint/ACK ayarları, reçetede Manual/SoftwareTrigger ve Measurement UUID mapping; vf.socket/2 INVALID ve coordinator teslim/cancel korumaları uygulanmıştır. Run Tool aynı ham karede yalnız seçili executor’ı çalıştırır; doğrulanmış upstream cache kullanır, eksik/stale girdide acquisition veya full-flow fallback yapmaz. Kaynak için Görüntü al, tüm akış için Run Flow kullanılır. P5/P6 tamamlandı; güncel Blob ve kabul bilgisi yukarıdadır. K4 ertelenmiş, P7 restart recovery açıktır.
+
+
+8 Ekim 2026 P2 tamamlandı: Recipe Manager tek tıkla yalnız satır seçer; **Load Recipe / Edit Recipe** ayrıdır. Load kaydedilmiş bağımsız kopyayı statik kontrol eder; dirty durumda Kaydet ve yükle / Kaydedilmiş sürümü yükle / İptal sunulur. Runtime **Run / Stop / Tek çevrim** kullanır; Run görüntü veya parça sonucu üretmeden coordinator ile otomatik hazırlanır. Manuel çevrim, cooperative Stop ve aynı terminal kayıt retry coordinator üzerinden geçer. Seçili, editörde açık ve Runtime yüklü reçete ayrıdır. Eski validate/activate/rollback düğmeleri kaldırıldı; rollback servis API’si korunur. Bu P2 geçmiş kaydı P3/P4 ile genişletildi; güncel davranış yukarıdadır. Fiziksel kabul/K4 ertelenmiş kalır.
+
+8 Ekim 2026 revizyonu: İki kalibrasyon akışı Camera Calibration ve Robot Calibration olarak korunur. Mevcut uniform scale temelinden sonra **6C-K geçici test görüntüsü import/plaka tespiti → tek görüntüden planar homography → Measurement/Runtime → fiziksel kabul (gerektiğinde ayrı lens düzeltmesi)**, ardından 6D PLC ve 6E Eye-to-Hand/Eye-in-Hand gelir. 6C-K1–K3 target/import/köşe tespiti, tek görüntü raw homography/mm denemesi ve tipli kayıt/Measurement/Runtime tamamlandı. K4 fiziksel kurulum hazır olana kadar kullanıcı isteğiyle ertelendi; lens ihtiyacı verilerle belirlenecek. Kullanıcı TCP/IP socket önceliğiyle 6D PLC geliştirmesini yetkilendirdi. 6D.1 gerçek localhost socket/Runtime/ACK ve simülatör yazılım kabulü tamamlandı; 6D.2 restart teslim kurtarma ve fiziksel PLC kabulü açık. [Güncel kalibrasyon gereksinimleri ve kabul planı](../architecture/calibration-plan.md). Bu revizyon önceki geliştirme sırası ifadelerine göre önceliklidir.
 
 ## 7 Ekim 2026 — Mevcut GUI'yi koruma kararı
 
@@ -282,6 +289,8 @@ Kalibrasyon kamera/lens/çözünürlük ve gerekiyorsa çalışma düzlemiyle il
 
 ## 26. Communication
 
+8 Ekim 6D.1 uygulaması: birincil TCP/IP Socket, VisionFlow sunucu/PLC istemci. Mevcut Communication ekranında yerel IP/port/ACK süresi ve enabled Measurement adı seçilir; oturum içi ayarlar, asenkron dinleme/stop/cancel/kayıt retry ve gerçek trace. Runtime doğrula/etkinleştir önkoşuldur. Bu ilk sürüm JSON-LF session/request/recipe/config kimliği, tek peer/outstanding ve 128 accepted request/session sınırına sahiptir; kalıcı dedup/restart teslim kurtarma, vendor/register mapping, Modbus TCP/OPC UA ve fiziksel PLC kabulü henüz yoktur. [Sözleşme](../architecture/plc-socket.md).
+
 Robot/PLC sekmeleri, Protocol (TCP Socket, Modbus TCP, OPC UA), IP Address, Port ve protokole özgü parametreler bulunur. Connect, Disconnect, Test Connection ve Save komutları servis katmanına gider.
 
 Data mapping:
@@ -495,3 +504,14 @@ HTML modern koyu temalı tek dosyalık görsel/etkileşimli prototiptir. Mevcut 
 Çalışan demo etkileşimleri: sayfa geçişi, reçete arama/tür filtresi, mevcut reçeteyi açma, yeni reçete oluşturma, kopyalama, örnek tool parametresi düzenleme, browser draft kaydı, JSON import/export, sekme değişimi ve Run Demo. Kalıcı draft saklama browser localStorage desteklediği ölçüde çalışır; JSON export bağımsız aktarım sağlar.
 
 Demo kendi önceden tanımlı örnek sonuçlarını kullanır; parametrelerden gerçek vision sonucu hesaplamaz. Image Viewer/Flow/Properties düzenleri uygulama türüne göre örneklenir. Tool/node seçimi görsel olarak vurgulanır; tam dinamik tool editor, gerçek drag & drop, ROI çizimi, node bağlantısı, panel resize, vision engine, donanım bağlantısı, gerçek kalibrasyon ve kullanıcı yetkilendirme sonraki uygulama aşamalarıdır.
+
+## 8 Ekim — Operatör görünümü ve Setup revizyonu
+
+Run başarılı olduğunda Runtime tam ekran olur; sol navigasyon ve File/View/Setup gizlenir ve devre dışı kalır. Sayfa geçişi merkezi guard ile reddedilir. Stop sonrası worker/kayıt durdurma tamamlanınca önceki pencere durumuna dönülür; Runtime Stop ve kayıt retry erişilebilir kalır. Bu bir OS kiosk veya rol/parola sistemi değildir. Communication ve Calibration sol menüden kaldırıldı; File/View yanındaki Setup içinden açılır.
+
+Communication: “TCP iletişimini etkinleştir” işaretlenmeden Dinlemeyi başlat pasiftir. Bu gerekçe ekranda ve tooltip içinde görünür. Ayarları kaydet etkinleştirme veya Run yapmaz; etkinleştir → kaydet → dinlemeyi başlat kullanılır. Otomatik dinleme yalnız uygulama açılışına aittir.
+
+Sonraki geliştirme önerisi (henüz uygulanmadı): önce manuel px/mm ve kalibrasyon ekranını akışa göre sadeleştirme, ardından P7/6D.2 kalıcı dedup/outbox/restart ve kapasite politikası. P8 hardware, P9 OPC UA/QR ve 6E robot daha sonra; K4 fiziksel kabul ertelenmiş kalır. Kullanıcıyla sıra yeniden değerlendirilecek.
+## 8 Ekim — Manuel ölçek uygulama planı hazır
+
+[Manuel px/mm ve sade Calibration planı](../architecture/manual-scale-calibration-plan.md) önceki kısa kapsam notunun ayrıntılı devamıdır. C1 matematik/codec → C2 katalog/Measurement/Runtime → C3 sade ekran → C4 UI kabul → C5 birleşik test/belgeler. C1 matematik/codec tamamlandı; C2 katalog/Runtime/CSV ve C3–C5 ekran/kabul işleri açık. Yeni manual_planar_scale/1, record/dependency schema 3, eski hash/encode koruması, beş bölümlü üç yöntem UI ve doğrulamasız deneme/üretim ayrımı tanımlandı. Belgenin 7. bölümü GPT-6.1 Sol medium için kopyalanabilir başlangıç talimatıdır. P7 bu kapsamdan sonra; K4 ertelenmiş kalır.

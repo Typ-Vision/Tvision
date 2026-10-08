@@ -1,5 +1,6 @@
 #include "RuntimeService.hpp"
 #include <QDir>
+#include <QFileInfo>
 #ifdef Q_OS_WIN
 #ifndef NOMINMAX
 #define NOMINMAX
@@ -31,6 +32,7 @@ ProductionDependencies RuntimeService::dependencies(const Recipe& r) const {
         const QJsonObject declared{{"kind",t.kind},{"parameters",t.parameters},{"enabled",t.enabled},{"planarSetup",r.definition.value("planarSetup")}};
         if(declaredInstallations_.value(t.id)!=declared)throw std::runtime_error("Kaynak veya beyan edilen fiziksel kurulum değişti; yeniden doğrulayın.");
     }
+    if(declaredPreparation_)return declaredDependencies(r);
     if(r.calibrationBinding || !r.calibrationReference.isEmpty()) {
         QString source;for(const auto& t:editorTools(r.definition))if(t.enabled && (t.kind=="image_file" || t.kind=="webcam"))source=t.id;
         const auto found=installations_.constFind(source);
@@ -39,6 +41,41 @@ ProductionDependencies RuntimeService::dependencies(const Recipe& r) const {
         result.calibration=CalibrationService(catalogPath_,[setup](const QString&){return setup;}).resolve(r).dependency();
     }return result;
 }
+ProductionDependencies RuntimeService::declaredDependencies(const Recipe& r) const {
+    ProductionDependencies result;
+    if(r.calibrationBinding || !r.calibrationReference.isEmpty()) {
+        if(!r.calibrationBinding)throw std::runtime_error("Exact calibration binding required.");
+        const auto& binding=*r.calibrationBinding;
+        const auto setup=r.definition.value("planarSetup").toObject();
+        if(setup.size()!=2 || !setup["lensId"].isString() || !setup["workingPlaneId"].isString() || setup["lensId"].toString().trimmed().isEmpty() || setup["workingPlaneId"].toString().trimmed().isEmpty())
+            throw std::runtime_error("Lens ve çalışma düzlemini Calibration ekranında uygulayın.");
+        QString source;for(const auto& t:editorTools(r.definition))if(t.enabled && (t.kind=="image_file" || t.kind=="webcam"))source=t.id;
+        // Resolution/coordinates here are requirements from the binding, not a
+        // fabricated observation. execute() independently checks each actual frame.
+        const CalibrationInstallation declared{source,setup["lensId"].toString(),setup["workingPlaneId"].toString(),binding.resolution,binding.source,binding.target};
+        result.calibration=CalibrationService(catalogPath_,[declared](const QString&){return declared;}).resolve(r).dependency();
+    }
+    return result;
+}
+void RuntimeService::checkConfiguration(const Recipe& r,const QString& directory) const {
+    ProductionRecipeService checker(identity_.authorize,[this](const Recipe& recipe){return declaredDependencies(recipe);});
+    checker.validate(identity_.principal,r,directory);
+    for(const auto& tool:editorTools(r.definition))if(tool.enabled && tool.kind=="image_file") {
+        const QFileInfo file(QDir(directory).absoluteFilePath(tool.parameters["path"].toString()));
+        if(!file.isFile() || !file.isReadable())throw ProductionException(ProductionError::InvalidConfiguration,tool.name+": Kaynak görüntü dosyası bulunamadı veya okunamıyor.");
+    }
+}
+void RuntimeService::prepare(const Recipe& r,const QString& directory) {
+    if(production_.busy())throw ProductionException(ProductionError::Busy,"Runtime cycle/recording pending.");
+    if(identity_.principal.isEmpty() || !identity_.authorize || !identity_.authorize(identity_.principal,ProductionAction::Run))throw ProductionException(ProductionError::Unauthorized,"Runtime Run denied.");
+    checkConfiguration(r,directory);
+    const auto previousDeclarations=declaredInstallations_;const auto previousValidation=validation_;const bool previousMode=declaredPreparation_;
+    try {
+        observeInstallation(r);declaredPreparation_=true;
+        const auto validation=production_.validate(identity_.principal,r,directory);
+        production_.activate(identity_.principal,validation.id,r,directory);validation_=validation;
+    }catch(...){declaredInstallations_=previousDeclarations;validation_=previousValidation;declaredPreparation_=previousMode;throw;}
+}
 RecipeValidation RuntimeService::validate(const Recipe& r,const QString& directory,const ImageFrame& frame) {
     if(production_.busy())throw ProductionException(ProductionError::Busy,"Runtime cycle/recording pending.");
     // Permission is checked before accepting installation data or catalog work.
@@ -46,7 +83,7 @@ RecipeValidation RuntimeService::validate(const Recipe& r,const QString& directo
     const auto& m=frame.metadata();int sources=0;bool matches=false;
     for(const auto& t:editorTools(r.definition))if(t.enabled && (t.kind=="image_file" || t.kind=="webcam")){++sources;matches=t.id==m.sourceId;}
     if(sources!=1 || !matches || m.frameId.isEmpty() || m.cycleId.isEmpty() || !m.completedAtUtc.isValid())throw ProductionException(ProductionError::InvalidConfiguration,"Fresh acquisition provenance required.");
-    observeInstallation(r);installations_.insert(m.sourceId,frame);
+    observeInstallation(r);installations_.insert(m.sourceId,frame);declaredPreparation_=false;
     validation_.reset();const auto v=production_.validate(identity_.principal,r,directory);validation_=v;return v;
 }
 void RuntimeService::observeInstallation(const Recipe& r) {
@@ -57,8 +94,9 @@ void RuntimeService::activate(const Recipe& r,const QString& directory) {
     production_.activate(identity_.principal,validation_->id,r,directory);
 }
 void RuntimeService::rollback(const QString& id){production_.rollback(identity_.principal,id);}
-ProductionCycle RuntimeService::begin(){return production_.beginCycle(identity_.principal);}
-void RuntimeService::finish(quint64 ticket,const CycleResult& r){production_.finishCycle(ticket,r);}
+ProductionCycle RuntimeService::begin(const QJsonObject& communication){return production_.beginCycle(identity_.principal,communication);}
+void RuntimeService::finish(quint64 ticket,const CycleResult& r){
+    if(r.partial)throw std::runtime_error("Editor partial evaluation cannot be recorded as a Runtime cycle.");production_.finishCycle(ticket,r);}
 ImageFrame RuntimeService::probe(const Recipe& recipe,const QString& directory,const std::shared_ptr<std::atomic_bool>& cancel) {
     QString source;int count=0;for(const auto& t:editorTools(recipe.definition))if(t.enabled && (t.kind=="image_file" || t.kind=="webcam")){source=t.id;++count;}
     if(count!=1)throw std::runtime_error("Tek enabled edinim kaynağı gerekir.");

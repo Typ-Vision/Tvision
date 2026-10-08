@@ -33,6 +33,7 @@ public:
     void setConnections(const QVector<ToolConnection>& connections);
     void bindCalibration(const CalibrationDependency&);
     void clearCalibrationBinding();
+    void setRuntimeOptions(QString trigger,QString measurementToolId);
     void setCalibrationSetup(QString lensId,QString workingPlaneId);
 private:
     void setTools(const QVector<ToolDefinition>& tools);

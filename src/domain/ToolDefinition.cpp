@@ -27,7 +27,7 @@ QVector<ToolDefinition> editorTools(const QJsonObject& definition) {
     if(!definition.contains("editor"))return {};
     require(definition["editor"].isObject(),"definition.editor nesne olmalı.");const auto editor=definition["editor"].toObject();
     keys(editor,{"schemaVersion","tools","connections"});const auto version=editor["schemaVersion"];
-    require(version.isDouble() && version.toDouble()==version.toInt() && version.toInt()>=1 && version.toInt()<=5,"Desteklenmeyen editor şeması.");
+    require(version.isDouble() && version.toDouble()==version.toInt() && version.toInt()>=1 && version.toInt()<=6,"Desteklenmeyen editor şeması.");
     require(editor["tools"].isArray(),"Editor tools dizi olmalı.");const auto array=editor["tools"].toArray();require(array.size()<=256,"En fazla 256 tool desteklenir.");
     QVector<ToolDefinition> tools;QSet<QString> ids,names;int sourceCount=0;
     for(const auto value:array) {
@@ -45,6 +45,7 @@ QVector<ToolDefinition> editorTools(const QJsonObject& definition) {
             for(auto it=defaults.begin();it!=defaults.end();++it)if(!t.parameters.contains(it.key()))t.parameters[it.key()]=it.value();
         if(version.toInt()<4 && t.kind=="edge" && !t.parameters.contains("referenceOrigin"))t.parameters["referenceOrigin"]=QJsonObject{};
         if(version.toInt()<5 && t.kind=="edge" && !t.parameters.contains("referenceGeometry"))t.parameters["referenceGeometry"]="";
+        if(version.toInt()<6 && t.kind=="blob")for(const auto key:{"polarity","connectivity","minArea","maxArea"})if(!t.parameters.contains(key))t.parameters[key]=defaults[key];
         ToolRegistry::validate(t);
         if(ToolRegistry::get(t.kind).acquisitionSource)require(++sourceCount<=1,"Bu aşamada reçetede tek edinim kaynağı desteklenir; mevcut Image File/Webcam kaynağını önce kaldırın.");
         ids.insert(id.toString());names.insert(t.name.toCaseFolded());tools.append(t);
@@ -79,8 +80,16 @@ bool referenceNeedsTeaching(const ToolDefinition& edge,const ToolDefinition& sou
 QJsonObject withEditorTools(QJsonObject definition,const QVector<ToolDefinition>& tools) {
     const auto connections=editorConnections(definition);QJsonArray array;
     for(const auto& t:tools)array.append(QJsonObject{{"id",t.id},{"kind",t.kind},{"name",t.name},{"description",t.description},{"enabled",t.enabled},{"parameters",t.parameters}});
-    definition["editor"]=QJsonObject{{"schemaVersion",5},{"tools",array},{"connections",QJsonArray{}}};definition=withEditorConnections(definition,connections);
+    definition["editor"]=QJsonObject{{"schemaVersion",6},{"tools",array},{"connections",QJsonArray{}}};definition=withEditorConnections(definition,connections);
     validateEditorDefinition(definition);return definition;
 }
-void validateEditorDefinition(const QJsonObject& definition) {editorTools(definition);editorConnections(definition);}
+void validateEditorDefinition(const QJsonObject& definition) {
+    editorTools(definition);editorConnections(definition);
+    if(definition.contains("runtime")) {
+        require(definition["runtime"].isObject(),"Runtime options must be an object.");const auto r=definition["runtime"].toObject();
+        keys(r,{"trigger","measurementToolId"});
+        require(r["measurementToolId"].toString().isEmpty() || !QUuid(r["measurementToolId"].toString()).isNull(),"Measurement mapping must be a tool UUID.");
+        require(r.size()==2 && r["measurementToolId"].isString() && (r["trigger"]=="Manual" || r["trigger"]=="SoftwareTrigger"),"Invalid Runtime mode/mapping.");
+    }
+}
 }

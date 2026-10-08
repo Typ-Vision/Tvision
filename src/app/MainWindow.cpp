@@ -47,13 +47,19 @@ MainWindow::MainWindow(const QString& settingsFile) : settingsFile_(settingsFile
     connect(editor,&QAction::triggered,this,[this]{selectPage("editor");});
     auto* reset = view->addAction("Panel düzenini sıfırla");
     connect(reset,&QAction::triggered,this,[this]{horizontal_->setSizes({200,700,260}); vertical_->setSizes({550,210});});
+    auto* setup = menuBar()->addMenu("Setup");
+    for (const auto& id : {QString("communication"), QString("calibration")}) {
+        auto* action = setup->addAction(id=="communication" ? "Communication" : "Calibration");
+        action->setObjectName("setup_"+id);
+        connect(action,&QAction::triggered,this,[this,id]{selectPage(id);});
+    }
     auto* root = new QWidget; auto* rootLayout = new QHBoxLayout(root);
     rootLayout->setContentsMargins(0,0,0,0); rootLayout->setSpacing(0);
     auto* sidebar = new QFrame; sidebar->setObjectName("sidebar"); sidebar->setFixedWidth(215);
     auto* side = new QVBoxLayout(sidebar);
     side->addWidget(label("VF  VisionFlow","brand")); side->addWidget(label("INDUSTRIAL VISION SUITE"));
     navigation_ = new QListWidget; navigation_->setAccessibleName("Ana navigasyon"); side->addWidget(navigation_,1);
-    side->addWidget(label("Camera: bağlı değil\nRobot / PLC: bağlı değil\nGeliştirme aşaması 6")); rootLayout->addWidget(sidebar);
+    hardwareStatus_=label("Camera: bağlı değil\nRobot / PLC: bağlı değil\nGeliştirme aşaması 6");side->addWidget(hardwareStatus_); rootLayout->addWidget(sidebar);
     auto* content = new QWidget; auto* contentLayout = new QVBoxLayout(content);
     contentLayout->setContentsMargins(20,16,20,16); pageTitle_ = label("Dashboard","heading");
     contentLayout->addWidget(pageTitle_);
@@ -83,18 +89,24 @@ MainWindow::MainWindow(const QString& settingsFile) : settingsFile_(settingsFile
         pageIds_.append(spec.id);
         const QString id(spec.id);
         pages_->addWidget(id=="dashboard" ? makeDashboard() : id=="projects" ? makeProjectManager() :
-                          id=="recipes" ? makeRecipeManager() : id=="camera" ? makeCameraManager() : id=="calibration" ? makeCalibration() : id=="runtime" ? makeRuntime() : id=="logs" ? makeLogs() : makePlaceholder(spec.title,spec.description));
-        auto* item = new QListWidgetItem(spec.title,navigation_); item->setData(Qt::UserRole,QString(spec.id));
+                          id=="recipes" ? makeRecipeManager() : id=="camera" ? makeCameraManager() : id=="calibration" ? makeCalibration() : id=="communication" ? makeCommunication() : id=="runtime" ? makeRuntime() : id=="logs" ? makeLogs() : makePlaceholder(spec.title,spec.description));
+        if(id!="calibration" && id!="communication") {
+            auto* item = new QListWidgetItem(spec.title,navigation_); item->setData(Qt::UserRole,id);
+        }
     }
     pageIds_.append("editor"); pages_->addWidget(makeEditor());
     connect(navigation_,&QListWidget::currentItemChanged,this,[this](QListWidgetItem* item){
         if (item && item->data(Qt::UserRole).isValid()) selectPage(item->data(Qt::UserRole).toString());
+    });
+    connect(navigation_,&QListWidget::itemClicked,this,[this](QListWidgetItem* item){
+        if(item && item->data(Qt::UserRole).isValid())selectPage(item->data(Qt::UserRole).toString());
     });
     statusBar()->showMessage("Hazır — UI çatısı. Vision çevrimi çalıştırılmadı.");
     QSettings settings(settingsFile_,QSettings::IniFormat);
     restoreGeometry(settings.value("window/geometry").toByteArray());
     restoreLayout(); refreshWorkspace(); selectPage("dashboard");
     if (!smokeMode_) restoreSession();
+    initializeCommunication();
 }
 QWidget* MainWindow::makePlaceholder(const QString& title, const QString& text) {
     auto* page = new QWidget; auto* layout = new QVBoxLayout(page);
@@ -111,6 +123,7 @@ QWidget* MainWindow::makeDashboard() {
     connect(projects,&QPushButton::clicked,this,[this]{selectPage("projects");}); layout->addStretch(); return page;
 }
 void MainWindow::selectPage(const QString& id) {
+    if(operatorMode_ && id!="runtime")return;
     const int index = pageIds_.indexOf(id); if (index<0) return;
     if (id!="editor" && pages_->currentIndex()==pageIds_.indexOf("editor") && !applyToolProperties()) {
         const QSignalBlocker blocker(navigation_);
@@ -118,6 +131,10 @@ void MainWindow::selectPage(const QString& id) {
         return;
     }
     const QString navId = id=="editor" ? "recipes" : id;
+    if(id=="calibration" || id=="communication") {
+        const QSignalBlocker blocker(navigation_);navigation_->clearSelection();
+        pageTitle_->setText(id=="calibration" ? "Calibration" : "Communication");
+    }
     for (int i=0;i<navigation_->count();++i) {
         auto* item = navigation_->item(i);
         if (item->data(Qt::UserRole).toString()==navId) {
@@ -128,6 +145,7 @@ void MainWindow::selectPage(const QString& id) {
     pages_->setCurrentIndex(index);
     if(id=="calibration")refreshCalibration();
     if(id=="runtime")refreshRuntime();
+    if(id=="communication")refreshCommunication();
     if(id=="logs")refreshLogs();
 }
 void MainWindow::saveLayout() {
@@ -178,6 +196,7 @@ void MainWindow::restoreLayout() {
     horizontal_->restoreState(settings.value("editor/horizontal").toByteArray()); vertical_->restoreState(settings.value("editor/vertical").toByteArray());
 }
 void MainWindow::closeEvent(QCloseEvent* event) {
+    if(plc_ && plc_->blocking()){displayError("PLC çevrim kaydı ve ACK tamamlanmadan pencere kapatılamaz.");event->ignore();return;}
     if (editorSession_.busy(SessionJob::Teaching) || editorSession_.busy(SessionJob::Execution) || editorSession_.busy(SessionJob::Image) || cameraSession_.busy() || runtimeJobs_.busy() || (runtime_ && runtime_->busy())) {displayError("Arka plan işi tamamlandıktan sonra pencereyi kapatın."); event->ignore(); return;}
     if (!resolveUnsavedChanges()) { event->ignore(); return; }
     saveLayout(); QMainWindow::closeEvent(event);
