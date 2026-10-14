@@ -60,6 +60,15 @@ QPointF PlaneMappingService::map(const PlaneMapping& m,QPointF p) {
     std::vector<cv::Point2f> hull;for(auto q:m.hull_)hull.emplace_back(q.x(),q.y());require(cv::pointPolygonTest(hull,cv::Point2f(p.x(),p.y()),true)>=-1e-4,"Point outside calibrated inner-corner region; extrapolation disabled");
     cv::Mat h(3,3,CV_64F,const_cast<double*>(m.h_.data()));return project(h,p);
 }
+QPointF PlaneMappingService::inverseMap(const PlaneMapping& m,QPointF p) {
+    require(finite(p),"Nonfinite world point");
+    cv::Mat h(3,3,CV_64F,const_cast<double*>(m.h_.data())),inverse;
+    require(cv::invert(h,inverse,cv::DECOMP_LU)!=0 && cv::checkRange(inverse),"Singular inverse homography");
+    const auto raw=project(inverse,p);
+    const auto replay=map(m,raw); // resolution and calibrated hull gates
+    require(norm(replay-p)<=1e-7*std::max(1.0,norm(p)),"Unstable inverse homography roundtrip");
+    return raw;
+}
 PlaneDistance PlaneMappingService::distance(const PlaneMapping& m,QPointF a,QPointF b){auto x=map(m,a),y=map(m,b);return {x,y,norm(a-b),norm(x-y)};}
 QJsonObject PlaneMappingService::encode(const PlaneMapping& m) {
     const auto& o=m.observation_;const auto& t=o.target;const auto& s=o.source;QJsonArray h;for(double v:m.h_)h.append(v);

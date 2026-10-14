@@ -1,4 +1,5 @@
 #pragma once
+#include "domain/ToolRoi.hpp"
 #include <QMainWindow>
 #include <QStringList>
 #include "application/ProjectService.hpp"
@@ -23,8 +24,10 @@ class QStackedWidget;
 class QSplitter;
 class QLabel;
 class QCloseEvent;
+class QFormLayout;
 namespace visionflow {
 class ImageViewer;
+class EdgeProfileView;
 class MainWindow : public QMainWindow {
 public:
     explicit MainWindow(const QString& settingsFile);
@@ -34,12 +37,21 @@ public:
     bool verifySession();
     bool verifyMatching(const QString& artifacts);
     bool verifyExecution(const QString& artifacts);
+    bool verifyPreprocessing(const QString& artifacts);
+    bool verifyEdgePoint(const QString& artifacts);
+    bool verifyMetrology(const QString& artifacts);
+    bool verifyGeometry(const QString& artifacts);
+    bool verifyPoseTracking(const QString& artifacts);
+    bool verifyEditorUsability(const QString& artifacts);
+    bool verifyCircle(const QString& artifacts);
+    bool verifyCodeReading(const QString& artifacts);
     bool verifyCamera(const QString& artifacts);
     bool verifyWebcam(const QString& artifacts);
     bool verifyMeasurement(const QString& artifacts);
     bool verifyRuntime(const QString& artifacts);
     bool verifyChessboard(const QString& artifacts);
     bool verifyHomography(const QString& artifacts);
+    bool verifyManualCalibration(const QString& artifacts);
     bool verifyCommunication(const QString& artifacts);
 protected:
     void closeEvent(QCloseEvent* event) override;
@@ -68,6 +80,7 @@ private:
     void initializeCommunication();
     void refreshCalibration();
     void calibrationAction(const QString& action);
+    void manualCalibrationAction(const QString& action);
     void invalidateCalibrationDraft();
     void importCalibrationTestImage(const QString& path);
     void detectCalibrationChessboard();
@@ -99,12 +112,21 @@ private:
     bool loadEditorImage(const QString& path);
     void beginRoi(bool model);
     void commitRoi(const QRect& roi);
+    void addTrackingProperties(QFormLayout*,const ToolDefinition&);
+    void teachPoseReference(const QString& producer,double mmPerSample,std::optional<ToolRoi> nominal={});
+    void editWorldTrackingRoi(const QString& producer);
     std::optional<QPointF> referencePoint(const QString& source) const;
     void runMatch();
     QByteArray referenceSignature(const QString& toolId) const;
     void runFlow();
     void runExecution(const QString& targetTool);
     void refreshFlow();
+    void showFlowMenu(const QPoint& position);
+    void prepareNewToolDrawing();
+    bool setDrawingImage();
+    QString pendingDrawTool_,pendingDrawRecipe_;
+    bool drawPreparationQueued_=false;
+    std::optional<ImageFrame> drawingImage_;
     void showExecutionResult();
     QByteArray flowSignature() const;
     void loadImageAsync(const QString& path,bool commit);
@@ -144,6 +166,7 @@ private:
     QString editorRecipeId_;
     QString selectedToolId_;
     ImageViewer* imageViewer_{};
+    EdgeProfileView *edgeProfile_{},*runtimeEdgeProfile_{};
     QListWidget* toolbox_{};
     QListWidget* flowTools_{};
     QWidget* propertiesBody_{};

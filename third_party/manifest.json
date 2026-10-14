@@ -1,0 +1,66 @@
+{
+  "schemaVersion": 1,
+  "testedToolchain": {
+    "platform": "Windows x86_64",
+    "compiler": "MinGW GCC 13.1.0 (Qt mingw1310_64)",
+    "cxxStandard": 20,
+    "buildType": "Release",
+    "runtimeLinkage": "dynamic libgcc_s_seh-1, libstdc++-6, libwinpthread-1",
+    "precompiledHeaders": "disabled: GCC MapViewOfFileEx PCH allocation failure on this machine"
+  },
+  "dependencies": [
+    {
+      "id": "zxing",
+      "upstream": "https://github.com/zxing-cpp/zxing-cpp",
+      "version": "2.3.0",
+      "commit": "d6068bcebeb8fd9f0d35a99b00d202be86a14dbe",
+      "archiveUrl": "https://codeload.github.com/zxing-cpp/zxing-cpp/zip/d6068bcebeb8fd9f0d35a99b00d202be86a14dbe",
+      "sha256": "41ee4d0338a9bfc3729238cc5e09a69f56fc376d105d5d124793eaf857c0b3c5",
+      "sourceDirectory": "zxing-cpp-d6068bcebeb8fd9f0d35a99b00d202be86a14dbe",
+      "license": "Apache-2.0; embedded libzueci BSD-3-Clause and UTF-8 DFA permissive notice",
+      "licenseFile": "licenses/ZXing-2.3.0-LICENSE",
+      "embeddedNoticesFile": "licenses/ZXing-2.3.0-EMBEDDED-NOTICES.txt",
+      "embeddedDependencies": [
+        { "id": "libzueci", "version": "1.0.1", "source": "core/src/libzueci", "identity": "included in pinned ZXing archive SHA-256" }
+      ],
+      "notice": "No upstream NOTICE file in this archive; retain source copyright/SPDX headers and LICENSE.",
+      "scope": "optional product static reader (VISIONFLOW_WITH_ZXING); default OFF; pinned local prefix only",
+      "buildOptions": {
+        "BUILD_SHARED_LIBS": "OFF",
+        "ZXING_READERS": "ON",
+        "ZXING_WRITERS": "OFF",
+        "ZXING_EXAMPLES": "OFF",
+        "ZXING_UNIT_TESTS": "OFF",
+        "ZXING_BLACKBOX_TESTS": "OFF",
+        "ZXING_C_API": "OFF",
+        "ZXING_EXPERIMENTAL_API": "OFF",
+        "ZXING_PYTHON_MODULE": "OFF",
+        "ZXING_USE_BUNDLED_ZINT": "OFF",
+        "ZXING_DEPENDENCIES": "LOCAL"
+      }
+    },
+    {
+      "id": "zint",
+      "upstream": "https://github.com/zint/zint",
+      "version": "2.15.0",
+      "commit": "4896136bdbebb1a0908a5cc419513efa5bf4bf70",
+      "archiveUrl": "https://codeload.github.com/zint/zint/zip/4896136bdbebb1a0908a5cc419513efa5bf4bf70",
+      "sha256": "3e450b6c463e82d2983699b2db0593f5139af5659d5407181be301c7f83a013c",
+      "sourceDirectory": "zint-4896136bdbebb1a0908a5cc419513efa5bf4bf70",
+      "license": "BSD-3-Clause (backend); GPL-3.0-or-later (excluded frontends)",
+      "licenseFile": "licenses/Zint-2.15.0-LICENSE",
+      "backendLicenseFile": "licenses/Zint-2.15.0-BSD-HEADER",
+      "notice": "No upstream NOTICE file; full upstream LICENSE retained, backend source headers carry copyright/BSD terms.",
+      "scope": "independent test fixture encoder only; never linked to ZXing probe or product",
+      "buildOptions": {
+        "ZINT_SHARED": "OFF",
+        "ZINT_STATIC": "ON",
+        "ZINT_USE_PNG": "OFF",
+        "ZINT_USE_QT": "OFF",
+        "ZINT_FRONTEND": "OFF",
+        "ZINT_TEST": "OFF",
+        "ZINT_UNINSTALL": "OFF"
+      }
+    }
+  ]
+}

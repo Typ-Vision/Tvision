@@ -72,7 +72,7 @@ int main(int argc,char** argv) {
             b.parameters["coordinates"]=mode;
             const auto invalidPort=withEditorConnections(withEditorTools({}, {a,b,distance}),editorConnections(mismatched));
             const auto invalid=ExecutionService{}.run(invalidPort,{},"recipe","config",{});
-            check(invalid.state==ExecutionState::Error && invalid.tools.last().outputs.isEmpty() && invalid.tools.last().message.contains("sözleşmesi"),"runtime port contract mismatch blocks measurement");
+            check(invalid.state==ExecutionState::Error && invalid.tools[1].state==ExecutionState::Error && invalid.tools[1].outputs.isEmpty() && invalid.tools.last().state==ExecutionState::Skipped && invalid.tools.last().outputs.isEmpty(),"invalid producer port is rejected before downstream measurement");
         }
         QTextStream(stdout)<<"Owned frame contract passed\n";return 0;
     }catch(const std::exception& e){QTextStream(stderr)<<e.what()<<"\n";return 1;}

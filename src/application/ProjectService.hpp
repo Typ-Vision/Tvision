@@ -4,6 +4,7 @@
 #include "domain/ToolGraph.hpp"
 #include <QSet>
 #include <optional>
+#include "domain/ReferenceConfig.hpp"
 
 namespace visionflow {
 class ProjectService {
@@ -27,7 +28,12 @@ public:
     QVector<ToolDefinition> tools() const;
     QString addTool(const QString& kind);
     void updateTool(const ToolDefinition& tool);
+    // Commit teaching and its reference connection as one validated edit.
+    void updateToolConnections(const ToolDefinition&,const QVector<ToolConnection>&);
+    void bindReference(const QString& target,const ReferenceBinding&);
+    void clearReference(const QString& target);
     void removeTool(const QString& id);
+    bool moveTool(const QString& id,int direction);
     QString setImageFile(const QString& absolutePath);
     QString imageFilePath() const;
     void setConnections(const QVector<ToolConnection>& connections);
@@ -36,7 +42,7 @@ public:
     void setRuntimeOptions(QString trigger,QString measurementToolId);
     void setCalibrationSetup(QString lensId,QString workingPlaneId);
 private:
-    void setTools(const QVector<ToolDefinition>& tools);
+    void setTools(const QVector<ToolDefinition>& tools,const QVector<ToolConnection>* bindings=nullptr);
     ProjectRepository repository_;
     std::optional<Project> project_;
     std::optional<Project> savedProject_;

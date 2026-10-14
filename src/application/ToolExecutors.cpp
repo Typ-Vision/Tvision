@@ -1,4 +1,16 @@
+#include "PoseMatchService.hpp"
+#include "ShapeMatchService.hpp"
+#include "CircleToolService.hpp"
+#include "CircleToolService.hpp"
 #include "ToolExecutors.hpp"
+#include "GeometryMeasurementService.hpp"
+#include "CodeReadService.hpp"
+#include "EdgePointService.hpp"
+#include "MetrologyService.hpp"
+#include "vision/Preprocessing.hpp"
+#include "vision/RectangleMask.hpp"
+#include "vision/metrology/ProfileSampler.hpp"
+#include <numbers>
 #include "domain/ToolRegistry.hpp"
 #include "domain/Coordinates.hpp"
 #include "MatchService.hpp"
@@ -104,7 +116,9 @@ ToolResult ToolExecutors::match(const ToolDefinition& t,const QMap<QString,PortV
         put("score",m.score);put("found",m.accepted);put("region",m.rectangle,m.accepted);put("point",QPointF(m.rectangle.x()+(m.rectangle.width()-1)/2.0,m.rectangle.y()+(m.rectangle.height()-1)/2.0),m.accepted);
         if(m.accepted)r.regions={m.rectangle};r.message=m.accepted ? "Eşleşme bulundu" : "Eşik altında";return r;
 }
-ToolResult ToolExecutors::blob(const ToolDefinition& t,const QMap<QString,PortValue>& inputs,const QString& directory,const QString& frameId,const QString& cycleId,const std::shared_ptr<std::atomic_bool>& cancel) {
+ToolResult ToolExecutors::blob(const ToolDefinition& t,const QMap<QString,PortValue>& inputs,const QString& directory,const QString& frameId,const QString& cycleId,const std::shared_ptr<std::atomic_bool>& cancel,const std::optional<ToolRoi>& resolvedRoi) {
+    if(t.parameters.contains("poseTracking"))throw std::runtime_error("Pose tracking must be resolved by execution engine");
+    if(resolvedRoi && (inputs.contains("region") || inputs.contains("reference")))throw std::runtime_error("Conflicting tracking search modes");
     ToolResult r; r.toolId=t.id;r.state=ExecutionState::Done;
     auto put=[&](const QString& id,PortData data,bool valid=true) {for (const auto& p:outputPorts(t.kind)) if(p.id==id) {
         FrameMetadata origin;
@@ -114,7 +128,10 @@ ToolResult ToolExecutors::blob(const ToolDefinition& t,const QMap<QString,PortVa
         r.outputs[id]={p,std::move(data),valid,frameId,cycleId,origin};
     }};
     const auto frame=std::get<ImageFrame>(inputs["image"].data);
-    const auto region=searchRegion(t,inputs,frame);
+    std::optional<RectangleMask> trackingMask;
+    if(resolvedRoi && resolvedRoi->frame.id!=frame.metadata().coordinateSystemId)throw std::runtime_error("Blob tracking frame mismatch");
+    if(resolvedRoi)trackingMask.emplace(*resolvedRoi,frame.size(),cancel);
+    const auto region=trackingMask ? trackingMask->bounds:searchRegion(t,inputs,frame);
     r.searchRegion=region;
     cv::Mat gray;
     if(frame.pixels_.channels()==1) {if(frame.pixels_.depth()==CV_16U)frame.pixels_.convertTo(gray,CV_8U,255.0/65535.0);else gray=frame.pixels_;}
@@ -126,6 +143,7 @@ ToolResult ToolExecutors::blob(const ToolDefinition& t,const QMap<QString,PortVa
         auto stopped=[&]{return cancel && cancel->load();};
         if(stopped()){r.state=ExecutionState::Skipped;return r;}
         cv::Mat binary,labels,stats,centers;cv::threshold(crop,binary,settings.threshold,255,settings.dark ? cv::THRESH_BINARY_INV : cv::THRESH_BINARY);
+        if(trackingMask)cv::bitwise_and(binary,trackingMask->pixels,binary);
         const int n=cv::connectedComponentsWithStats(binary,labels,stats,centers,settings.connectivity,CV_32S);int largest=0,count=0;
         QVector<uchar> accepted(n,0);QPoint firstLargest;
         // First raster pixel makes equal-area selection independent of OpenCV label ordering.
@@ -173,14 +191,48 @@ ToolResult ToolExecutors::edge(const ToolDefinition& t,const QMap<QString,PortVa
     if(found>=0) {const QPointF point(horizontal ? region.x()+found : region.x()+(region.width()-1)/2.0,horizontal ? region.y()+(region.height()-1)/2.0 : region.y()+found);put("point",point);r.points={point};r.lines={horizontal ? QLineF(point.x(),region.top(),point.x(),region.bottom()) : QLineF(region.left(),point.y(),region.right(),point.y())};}
     else put("point",QPointF{},false);return r;
 }
-namespace { QMutex executorMutex; QMap<QString,ToolExecutor> extensions; }
+namespace {
+ToolResult referenceEdge(const ToolDefinition& t,const QMap<QString,PortValue>& inputs,const ToolRoi& roi,const QString& frame,const QString& cycle,const std::shared_ptr<std::atomic_bool>& cancel) {
+    ToolRegistry::validate(t);
+    if(inputs.contains("region") || inputs.contains("reference") || inputs.contains("poseReference"))throw std::runtime_error("Conflicting reference search modes");
+    const auto image=std::get<ImageFrame>(inputs.value("image").data);
+    if(roi.frame.id!=image.metadata().coordinateSystemId || !roi.inside(image.size()) || !std::holds_alternative<RotatedRectangle>(roi.geometry))throw std::runtime_error("Reference Edge requires bounded raw rotated rectangle");
+    const auto box=std::get<RotatedRectangle>(roi.geometry);const auto settings=edgeParameters(t);
+    const double angle=box.angleDegrees*std::numbers::pi/180.;
+    const QPointF axis=settings.horizontal ? QPointF(std::cos(angle),std::sin(angle)):QPointF(-std::sin(angle),std::cos(angle));
+    const double length=settings.horizontal ? box.size.width():box.size.height(),width=settings.horizontal ? box.size.height():box.size.width();
+    const auto delta=axis*(length/2)*(settings.reverse ? -1:1);
+    const ToolRoi scan{roi.frame,ScanSegment{box.centre-delta,box.centre+delta,width}};
+    const auto profile=ProfileSampler::sample(image,scan,{},cancel);
+    ToolResult r;r.toolId=t.id;r.state=ExecutionState::Done;
+    auto put=[&](const QString& id,PortData data,bool valid=true){for(const auto& p:outputPorts(t.kind))if(p.id==id){PortValue v{p,std::move(data),valid,frame,cycle,image.metadata()};v.method="reference-local-difference";v.methodVersion=1;r.outputs[id]=v;}};
+    double strength=0;std::optional<QPointF> point;
+    for(int i=1;i<profile.samples.size();++i){if(cancel && cancel->load()){r.state=ExecutionState::Skipped;return r;}const auto diff=std::abs(profile.samples[i].intensity-profile.samples[i-1].intensity);if(diff>=settings.contrast){strength=diff;point=profile.samples[i].point;break;}}
+    put("found",point.has_value());put("strength",strength);put("point",point.value_or(QPointF{}),point.has_value());if(point)r.points={*point};return r;
+}
+QMutex executorMutex; QMap<QString,ToolExecutor> extensions; }
 void ToolExecutors::registerExecutor(const QString& kind,ToolExecutor executor) {
     ToolRegistry::get(kind);
     QMutexLocker lock(&executorMutex);
-    if(!executor || extensions.contains(kind) || QStringList{"image_file","webcam","template_match","blob","edge","calculate","measurement"}.contains(kind))throw std::runtime_error("Geçersiz/tekrar yürütücü kaydı.");
+    if(!executor || extensions.contains(kind) || QStringList{"shape_pose","pattern_pose","image_file","webcam","template_match","blob","edge","calculate","measurement","preprocess","code_read","edge_point","edge_pair","line_fit","circle_fit","circle_fit","geometry_measurement"}.contains(kind))throw std::runtime_error("Geçersiz/tekrar yürütücü kaydı.");
     extensions.insert(kind,std::move(executor));
 }
-ToolExecutor ToolExecutors::get(const QString& kind,const MeasurementExecutionContext& context) {
+ToolExecutor ToolExecutors::get(const QString& kind,const MeasurementExecutionContext& context,const std::optional<ToolRoi>& resolvedRoi) {
+    auto select=[&]()->ToolExecutor {
+    if(kind=="edge" && resolvedRoi)return [resolvedRoi](const ToolDefinition& t,const QMap<QString,PortValue>& inputs,const QString&,const QString& frame,const QString& cycle,const std::shared_ptr<std::atomic_bool>& cancel){return referenceEdge(t,inputs,*resolvedRoi,frame,cycle,cancel);};
+    if(kind=="blob")return [resolvedRoi](const ToolDefinition& t,const QMap<QString,PortValue>& inputs,const QString& dir,const QString& frame,const QString& cycle,const std::shared_ptr<std::atomic_bool>& cancel){return blob(t,inputs,dir,frame,cycle,cancel,resolvedRoi);};
+    if(kind=="shape_pose")return [](const ToolDefinition& t,const QMap<QString,PortValue>& inputs,const QString&,const QString& frame,const QString& cycle,const std::shared_ptr<std::atomic_bool>& cancel){return ShapeMatchService::execute(t,inputs,frame,cycle,cancel);};
+    if(kind=="pattern_pose")return [](const ToolDefinition& t,const QMap<QString,PortValue>& inputs,const QString&,const QString& frame,const QString& cycle,const std::shared_ptr<std::atomic_bool>& cancel){return PoseMatchService::execute(t,inputs,frame,cycle,cancel);};
+    if(kind=="geometry_measurement")return [context](const ToolDefinition& t,const QMap<QString,PortValue>& inputs,const QString&,const QString& frame,const QString& cycle,const std::shared_ptr<std::atomic_bool>& cancel){return GeometryMeasurementService::execute(t,inputs,frame,cycle,cancel,context);};
+    if(kind=="circle_fit")return [context](const ToolDefinition& t,const QMap<QString,PortValue>& inputs,const QString&,const QString& frame,const QString& cycle,const std::shared_ptr<std::atomic_bool>& cancel){return CircleToolService::execute(t,inputs,frame,cycle,cancel,context);};
+    if(kind=="circle_fit")return [context](const ToolDefinition& t,const QMap<QString,PortValue>& inputs,const QString&,const QString& frame,const QString& cycle,const std::shared_ptr<std::atomic_bool>& cancel){return CircleToolService::execute(t,inputs,frame,cycle,cancel,context);};
+    if(kind=="edge_pair" || kind=="line_fit")return [context](const ToolDefinition& t,const QMap<QString,PortValue>& inputs,const QString& dir,const QString& frame,const QString& cycle,const std::shared_ptr<std::atomic_bool>& cancel){return MetrologyService::execute(t,inputs,dir,frame,cycle,cancel,context);};
+    if(kind=="edge_point")return EdgePointService::execute;
+    if(kind=="code_read")return [resolvedRoi](const ToolDefinition& t,const QMap<QString,PortValue>& inputs,const QString& dir,const QString& frame,const QString& cycle,const std::shared_ptr<std::atomic_bool>& cancel){return CodeReadService::execute(t,inputs,dir,frame,cycle,cancel,resolvedRoi);};
+    if(kind=="preprocess")return [](const ToolDefinition& t,const QMap<QString,PortValue>& inputs,const QString&,const QString& frameId,const QString& cycleId,const std::shared_ptr<std::atomic_bool>& cancel){
+        ToolRegistry::validate(t);const auto output=Preprocessing::run(std::get<ImageFrame>(inputs.value("image").data),t.parameters,cancel);
+        ToolResult r;r.toolId=t.id;r.state=ExecutionState::Done;r.outputs["image"]={outputPorts(t.kind).first(),output,true,frameId,cycleId,output.metadata()};return r;
+    };
     if(kind=="measurement")return [context](const ToolDefinition& t,const QMap<QString,PortValue>& inputs,const QString&,const QString& frameId,const QString& cycleId,const std::shared_ptr<std::atomic_bool>&) {
         ToolResult r;r.toolId=t.id;r.state=ExecutionState::Error;r.errorCode="CALIBRATION_INVALID";
         if(!context.calibration || !context.current) {r.message=context.error.isEmpty() ? "Kalibrasyon bağlantısı/güncel kurulum çözümlenmedi." : context.error;return r;}
@@ -197,12 +249,18 @@ ToolExecutor ToolExecutors::get(const QString& kind,const MeasurementExecutionCo
         r.message=QString("%1 • [%2, %3] mm • Calibration %4 v%5").arg(value.decision==PartDecision::Pass ? "PASS" : "FAIL").arg(t.parameters["lowerMm"].toDouble()).arg(t.parameters["upperMm"].toDouble()).arg(value.calibration.calibrationId).arg(value.calibration.version);
         return r;
     };
-    static const QMap<QString,ToolExecutor> executors={{"image_file",imageFile},{"webcam",webcam},{"calculate",calculate},{"template_match",match},{"blob",blob},{"edge",edge}};
+    static const QMap<QString,ToolExecutor> executors={{"image_file",imageFile},{"webcam",webcam},{"calculate",calculate},{"template_match",match},{"edge",edge}};
     ToolRegistry::get(kind);
     QMutexLocker lock(&executorMutex);
     if(extensions.contains(kind))return extensions.value(kind);
     const auto it=executors.constFind(kind);
     if(it==executors.cend())throw std::runtime_error("Tool yürütücüsü kayıtlı değil.");
     return *it;
+    };
+    auto executor=select();
+    return [executor](const ToolDefinition& t,const QMap<QString,PortValue>& inputs,const QString& directory,const QString& frame,const QString& cycle,const std::shared_ptr<std::atomic_bool>& cancel){
+        if(t.parameters.contains("referenceBinding"))throw std::runtime_error("Reference binding must be resolved by execution engine");
+        return executor(t,inputs,directory,frame,cycle,cancel);
+    };
 }
 }

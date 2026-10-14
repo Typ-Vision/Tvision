@@ -1,6 +1,7 @@
 #pragma once
 #include <QJsonObject>
 #include <QVector>
+#include "ToolDependency.hpp"
 namespace visionflow {
 struct ToolDefinition {
     QString id;
@@ -9,7 +10,10 @@ struct ToolDefinition {
     QString description;
     bool enabled = true;
     QJsonObject parameters;
+    QVector<ToolDependency> dependencies;
 };
+QJsonObject encodeEditorTool(const ToolDefinition&,int editorSchema);
+int requiredEditorSchema(const QVector<ToolDefinition>&,int previousSchema=6);
 QString toolLabel(const QString& kind);
 QJsonObject defaultParameters(const QString& kind);
 QString referenceGeometry(const ToolDefinition& tool);

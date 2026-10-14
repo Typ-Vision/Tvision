@@ -53,7 +53,7 @@ public:
     using Authorize=std::function<bool(const QString&,ProductionAction)>;
     using Dependencies=std::function<ProductionDependencies(const Recipe&)>;
     using Persist=std::function<void(const QString& kind,const QString& id,const QJsonObject&)>;
-    explicit ProductionRecipeService(Authorize authorize={},Dependencies dependencies={},int historyLimit=16,Persist persist={});
+    explicit ProductionRecipeService(Authorize authorize={},Dependencies dependencies={},int historyLimit=16,Persist persist={},CalibrationResolver completionResolver={});
     ProductionRecipeService(const ProductionRecipeService&)=delete;
     ProductionRecipeService& operator=(const ProductionRecipeService&)=delete;
     RecipeValidation validate(const QString& principal,const Recipe& draft,const QString& projectDirectory);
@@ -67,15 +67,18 @@ public:
     QVector<QJsonObject> cycleRecords() const;
     bool busy() const;
 private:
+    friend class RuntimeService;
+    static QByteArray completionDigest(const CycleResult&);
     void owner() const;
     void permission(const QString&,ProductionAction) const;
-    QJsonObject dependencies(const Recipe&) const;
+    QJsonObject dependencies(const Recipe&,const QString& directory) const;
     void requireCurrent(const ProductionSnapshot&) const;
     void idle() const;
     QThread* ownerThread_=QThread::currentThread();
     Authorize authorize_;
     Dependencies dependencies_;
     Persist persist_;
+    CalibrationResolver completionResolver_;
     void persist(const QString&,const QString&,const QJsonObject&) const;
     void transition(const QString&,const QString&,const ProductionSnapshot&) const;
     int historyLimit_;

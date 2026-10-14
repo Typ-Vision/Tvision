@@ -28,6 +28,8 @@ public:
     const std::optional<RecipeValidation>& validation() const {return validation_;}
     QVector<QJsonObject> records() const {return store_.recent("cycles");}
     static ImageFrame probe(const Recipe&,const QString& directory,const std::shared_ptr<std::atomic_bool>& cancel);
+    // Late Stop may only suppress an unchanged, trusted completion for this lease.
+    static void suppressCancelled(const ProductionCycle&,CycleResult&);
     static CycleResult execute(const ProductionCycle&,const QString& catalogPath,const std::shared_ptr<std::atomic_bool>& cancel);
 private:
     ProductionDependencies dependencies(const Recipe&) const;

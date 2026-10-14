@@ -16,9 +16,9 @@ int main(int argc,char** argv){QCoreApplication app(argc,argv);try{
     QImage image(1000,800,QImage::Format_Grayscale8);image.fill(0);for(int y=200;y<600;++y)for(int x=250;x<451;++x)image.scanLine(y)[x]=255;
     check(image.save(dir.filePath("part.png")),"save actual part image");
     ProjectService project;project.createProject("Manual","",dir.filePath("test.vfproject"),"file");const auto recipeId=project.createRecipe("Part","",ApplicationType::Measurement,"file");
-    const auto source=project.addTool("image_file"),left=project.addTool("edge"),right=project.addTool("edge"),measurement=project.addTool("measurement");
+    const auto source=project.addTool("image_file"),pre=project.addTool("preprocess"),left=project.addTool("edge"),right=project.addTool("edge"),measurement=project.addTool("measurement");
     for(auto t:project.tools()){if(t.id==source)t.parameters["path"]="part.png";if(t.id==right)t.parameters["direction"]="right_to_left";if(t.id==measurement){t.parameters["lowerMm"]=10.;t.parameters["upperMm"]=10.;}project.updateTool(t);}
-    project.setConnections({{source,"image",left,"image"},{source,"image",right,"image"},{left,"point",measurement,"p1"},{right,"point",measurement,"p2"}});project.setCalibrationSetup("lens","plane");project.save();
+    project.setConnections({{source,"image",pre,"image"},{pre,"image",left,"image"},{pre,"image",right,"image"},{left,"point",measurement,"p1"},{right,"point",measurement,"p2"}});project.setCalibrationSetup("lens","plane");project.save();
     const auto frame=RuntimeService::probe(*project.activeRecipe(),dir.path(),{});const auto install=CalibrationWorkflow::installation(*project.activeRecipe(),frame,"manual_planar_scale");
     rejects([&]{CalibrationWorkflow::installation(*project.activeRecipe(),frame,"future");});rejects([&]{CalibrationWorkflow::manualScale(*project.activeRecipe(),frame," bad ",1,20);});
     MeasurementService math;const auto candidate=CalibrationWorkflow::manualScale(*project.activeRecipe(),frame,"manual",1,20);

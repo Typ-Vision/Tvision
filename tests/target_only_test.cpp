@@ -6,6 +6,7 @@
 #include <QDir>
 #include <QFile>
 #include <QTextStream>
+#include <algorithm>
 using namespace visionflow;
 namespace {
 void check(bool ok,const char* text){if(!ok)throw std::runtime_error(text);}
@@ -49,7 +50,7 @@ int main(int argc,char** argv){QCoreApplication app(argc,argv);try {
     r=partial(source);check(r.state==ExecutionState::Error && r.executedTools.isEmpty(),"TargetOnly never acquires source");
     const auto match=project.addTool("template_match");
     for(auto t:project.tools())if(t.id==match){t.parameters["modelRoi"]=MatchService::rectangle(QRect(10,5,25,25));t.parameters["modelPng"]=MatchService{}.teach(*session.frame,QRect(10,5,25,25));project.updateTool(t);}
-    auto links=editorConnections(project.activeRecipe()->definition);links.append({source,"image",match,"image"});links.append({match,"region",blob,"region"});project.setConnections(links);full();
+    auto links=editorConnections(project.activeRecipe()->definition);check(std::count(links.begin(),links.end(),ToolConnection{source,"image",match,"image"})==1,"new match already has one default image binding");links.append({match,"region",blob,"region"});project.setConnections(links);full();
     for(auto t:project.tools())if(t.id==match){t.parameters["minScore"]=.99;project.updateTool(t);}
     r=partial(blob);check(r.executedTools.isEmpty(),"transitive Match dependency invalidates region without full-image fallback");
     r=partial(match);accept(r);r=partial(blob);check(r.executedTools==QStringList{blob},"explicit Match refresh permits Blob on cached region");accept(r);

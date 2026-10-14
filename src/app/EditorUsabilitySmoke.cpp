@@ -1,0 +1,100 @@
+#include "MainWindow.hpp"
+#include "ImageViewer.hpp"
+#include <QApplication>
+#include <QComboBox>
+#include <QDir>
+#include <QDoubleSpinBox>
+#include <QElapsedTimer>
+#include <QFile>
+#include <QGraphicsPixmapItem>
+#include <QGraphicsScene>
+#include <QKeyEvent>
+#include <QJsonArray>
+#include <QListWidget>
+#include <QLabel>
+#include <QMouseEvent>
+#include <QMenu>
+#include <QPushButton>
+#include <QScrollArea>
+#include <QScrollBar>
+#include <QSettings>
+#include <QSplitter>
+#include <QThread>
+#include <QTabWidget>
+#include <QUuid>
+#include <stdexcept>
+
+namespace visionflow {
+bool MainWindow::verifyEditorUsability(const QString& artifacts) {
+    auto check=[](bool ok,const char* message){if(!ok)throw std::runtime_error(message);};
+    auto wait=[&]{QElapsedTimer timer;timer.start();do{QApplication::processEvents();QThread::msleep(1);}while(editorSession_.busy() && timer.elapsed()<20000);QApplication::processEvents();check(!editorSession_.busy(),"usability worker deadline");};
+    {QSettings preferences(settingsFile_,QSettings::IniFormat);preferences.remove("properties");}
+    QImage image(256,256,QImage::Format_Grayscale8);image.fill(20);for(int y=80;y<160;++y)for(int x=0;x<256;++x)image.scanLine(y)[x]=220;
+    const auto path=QDir(artifacts).filePath("usability-source.png");check(image.save(path),"usability PNG");
+    service_.createProject("Usability","",QDir(artifacts).filePath("usability-"+QUuid::createUuid().toString(QUuid::WithoutBraces)+".vfproject"),"file");service_.createRecipe("Usability","",ApplicationType::Measurement,"file");
+    const auto source=service_.setImageFile(path);refreshWorkspace();selectPage("editor");wait();
+    auto add=[&](const QString& kind){for(int i=0;i<toolbox_->count();++i)if(toolbox_->item(i)->data(Qt::UserRole)==kind)toolbox_->setCurrentRow(i);addSelectedTool();QApplication::processEvents();return selectedToolId_;};
+    auto mouse=[&](QEvent::Type type,QPointF point,Qt::MouseButton button,Qt::MouseButtons buttons){const auto p=imageViewer_->mapFromScene(point);QMouseEvent event(type,QPointF(p),QPointF(p),button,buttons,Qt::NoModifier);QApplication::sendEvent(imageViewer_->viewport(),&event);};
+    auto click=[&](QPointF point){mouse(QEvent::MouseButtonPress,point,Qt::LeftButton,Qt::LeftButton);mouse(QEvent::MouseButtonRelease,point,Qt::LeftButton,Qt::NoButton);QApplication::processEvents();};
+    auto drag=[&](QPointF a,QPointF b){mouse(QEvent::MouseButtonPress,a,Qt::LeftButton,Qt::LeftButton);mouse(QEvent::MouseMove,b,Qt::NoButton,Qt::LeftButton);mouse(QEvent::MouseButtonRelease,b,Qt::LeftButton,Qt::NoButton);QApplication::processEvents();};
+    QString edge;
+    for(const QString kind:{"edge_point","edge_pair","line_fit","circle_fit"}) {
+        const auto id=add(kind);if(kind=="edge_point")edge=id;
+        check(imageViewer_->roiGestureActive() && pendingDrawTool_.isEmpty(),"new tool immediately armed on current source");
+        check(propertiesBody_->findChild<QComboBox*>("input_image")->currentData()==source+"/image","visible persisted default");
+        findChild<QPushButton*>("stopFlow")->click();check(!imageViewer_->roiGestureActive() && selectedToolId_==id,"Stop preserves selection and cancels drawing");
+        auto* mode=propertiesBody_->findChild<QComboBox*>("propertyDetailMode");auto* manual=propertiesBody_->findChild<QWidget*>(kind+"/manual");auto* outputs=propertiesBody_->findChild<QWidget*>(kind+"/outputs");
+        check(mode && mode->currentIndex()==0 && manual->isHidden() && outputs->isHidden(),"Basic and collapsed sections default");
+        service_.save();const auto definition=service_.activeRecipe()->definition;const auto signature=flowSignature();const auto generation=editorSession_.generation;
+        auto* scroll=findChild<QScrollArea*>("propertiesScroll");
+        for(const int detail:{0,1}) {
+            mode->setCurrentIndex(detail);
+            for(const auto size:{QSize(1400,900),QSize(850,600)}) {resize(size);horizontal_->setSizes({155,750,300});QApplication::processEvents();scroll->ensureWidgetVisible(mode);imageViewer_->fitImage();QApplication::processEvents();check(scroll->horizontalScrollBar()->maximum()==0,"properties fit without horizontal scroll");grab().save(QDir(artifacts).filePath(QString("u1-%1-%2-%3.png").arg(kind).arg(detail ? "detailed":"basic").arg(size.width())));}
+        }
+        propertiesBody_->findChild<QPushButton*>(kind+"/manualToggle")->click();propertiesBody_->findChild<QPushButton*>(kind+"/outputsToggle")->click();
+        check(!manual->isHidden() && !outputs->isHidden(),"manual and outputs accessible in Detailed");
+        for(const auto size:{QSize(1400,900),QSize(850,600)}){
+            resize(size);QApplication::processEvents();scroll->ensureWidgetVisible(manual->findChild<QDoubleSpinBox*>());QApplication::processEvents();grab().save(QDir(artifacts).filePath(QString("u1-%1-manual-%2.png").arg(kind).arg(size.width())));
+            scroll->ensureWidgetVisible(outputs->findChild<QLabel*>());QApplication::processEvents();grab().save(QDir(artifacts).filePath(QString("u1-%1-outputs-%2.png").arg(kind).arg(size.width())));
+        }
+        check(service_.activeRecipe()->definition==definition && !service_.dirty() && flowSignature()==signature && editorSession_.generation==generation,"presentation does not edit recipe or invalidate cache");
+        selectTool(source);selectTool(id);check(propertiesBody_->findChild<QComboBox*>("propertyDetailMode")->currentIndex()==1 && !propertiesBody_->findChild<QWidget*>(kind+"/manual")->isHidden(),"type preference survives refresh and selection");
+        check(!imageViewer_->roiGestureActive(),"existing selection does not arm again");
+        click({20,20});check(selectedToolId_==id,"image click preserves tool");
+    }
+    selectTool(edge);resize(1400,900);QApplication::processEvents();imageViewer_->fitImage();propertiesBody_->findChild<QPushButton*>("edgeDraw")->click();drag({40,40},{180,40});wait();
+    check(selectedToolId_==edge && imageViewer_->roi().has_value(),"real ROI drag commits while preserving selection");const auto roi=imageViewer_->roi();
+    click({230,230});click({100,40});check(selectedToolId_==edge,"ROI inside/outside clicks preserve selection");
+    propertiesBody_->findChild<QPushButton*>("edgeDraw")->click();QKeyEvent escape(QEvent::KeyPress,Qt::Key_Escape,Qt::NoModifier);QApplication::sendEvent(imageViewer_,&escape);check(!imageViewer_->roiGestureActive() && selectedToolId_==edge && imageViewer_->roi()==roi,"Escape preserves prior ROI and selected tool");
+    // Pending creation uses a real processed raster and never falls back to raw.
+    const auto pre=add("preprocess");for(auto t:service_.tools())if(t.id==pre){t.parameters["steps"]=QJsonArray{QJsonObject{{"op","threshold"},{"size",3},{"value",100}}};service_.updateTool(t);}refreshWorkspace();const auto circle=add("circle_fit");check(pendingDrawTool_==circle && !imageViewer_->roiGestureActive(),"missing preprocess cache leaves pending intent");
+    runExecution(pre);wait();check(pendingDrawTool_.isEmpty() && imageViewer_->roiGestureActive(),"upstream completion prepares only still-selected new tool");
+    bool processed=false;for(auto* item:imageViewer_->scene()->items())if(auto* pixels=dynamic_cast<QGraphicsPixmapItem*>(item))processed=pixels->pixmap().toImage().pixelColor(0,0).red()==0;check(processed,"drawing displays actual bound processed pixels");refreshFlow();check(imageViewer_->drawingActive() && drawingImage_ && drawingImage_->preview().pixelColor(0,0).red()==0,"Flow refresh preserves current drawing raster");
+    for(const auto size:{QSize(1400,900),QSize(850,600)}){resize(size);QApplication::processEvents();findChild<QScrollArea*>("propertiesScroll")->ensureWidgetVisible(propertiesBody_->findChild<QComboBox*>("input_image"));QApplication::processEvents();grab().save(QDir(artifacts).filePath(QString("u4-source-drawing-%1.png").arg(size.width())));}
+    findChild<QPushButton*>("stopFlow")->click();runFlow();wait();check(pendingDrawTool_.isEmpty() && !imageViewer_->roiGestureActive(),"Stop prevents late rearming");
+    service_.save();service_.createRecipe("Late file","",ApplicationType::Measurement,"file");service_.addTool("image_file");refreshWorkspace();const auto lateTool=add("edge_point");check(pendingDrawTool_==lateTool,"new tool pending before file raster");
+    service_.setImageFile(path);refreshWorkspace();wait();check(selectedToolId_==lateTool && pendingDrawTool_.isEmpty() && imageViewer_->roiGestureActive(),"late file completion arms after all viewer refreshes");findChild<QPushButton*>("stopFlow")->click();
+    service_.save();service_.createRecipe("No source","",ApplicationType::DefectInspection,"file");refreshWorkspace();const auto pending=add("edge_point");check(pendingDrawTool_==pending && !imageViewer_->roiGestureActive(),"no image pending");
+    selectTool("");const auto late=service_.setImageFile(path);refreshWorkspace();wait();check(pendingDrawTool_.isEmpty() && !imageViewer_->roiGestureActive(),"selection cancels pending before late frame");
+    Q_UNUSED(late);
+    // Context-menu actions use the clicked ID and retain the selected tool.
+    wait();selectTool(late);findChild<QTabWidget*>("editorTabs")->setCurrentIndex(0);const auto beforeOrder=service_.activeRecipe()->definition;
+    showFlowMenu(flowTools_->visualItemRect(flowTools_->item(0)).center());
+    auto* menu=flowTools_->findChild<QMenu*>("flowMoveMenu");
+    check(menu && !menu->actions()[0]->isEnabled() && menu->actions()[1]->isEnabled(),"top menu boundary");
+    menu->actions()[1]->trigger();menu->close();QApplication::sendPostedEvents(nullptr,QEvent::DeferredDelete);QApplication::processEvents();
+    check(service_.tools().last().id==pending && selectedToolId_==late && service_.activeRecipe()->definition!=beforeOrder,"context action moves clicked tool and preserves selection");
+    for(const auto size:{QSize(1400,900),QSize(850,600)}){
+        resize(size);QApplication::processEvents();showFlowMenu(flowTools_->visualItemRect(flowTools_->item(1)).center());
+        menu=flowTools_->findChild<QMenu*>("flowMoveMenu");check(menu && menu->actions()[0]->isEnabled() && !menu->actions()[1]->isEnabled(),"bottom menu boundary");
+        grab().save(QDir(artifacts).filePath(QString("u3-flow-%1.png").arg(size.width())));menu->grab().save(QDir(artifacts).filePath(QString("u3-menu-%1.png").arg(size.width())));menu->close();QApplication::sendPostedEvents(nullptr,QEvent::DeferredDelete);QApplication::processEvents();
+    }
+    const auto ticket=editorSession_.begin(SessionJob::Execution);
+    showFlowMenu(flowTools_->visualItemRect(flowTools_->item(0)).center());menu=flowTools_->findChild<QMenu*>("flowMoveMenu");
+    check(menu && !menu->actions()[0]->isEnabled() && !menu->actions()[1]->isEnabled(),"busy menu disabled");menu->close();QApplication::sendPostedEvents(nullptr,QEvent::DeferredDelete);QApplication::processEvents();editorSession_.finish(ticket);
+    showFlowMenu(flowTools_->visualItemRect(flowTools_->item(1)).center());menu=flowTools_->findChild<QMenu*>("flowMoveMenu");
+    const auto raceDefinition=service_.activeRecipe()->definition;const auto race=editorSession_.begin(SessionJob::Teaching);menu->actions()[0]->trigger();
+    check(service_.activeRecipe()->definition==raceDefinition,"job started after menu opened rejects move");menu->close();QApplication::processEvents();editorSession_.finish(race);
+    service_.save();return true;
+}
+}

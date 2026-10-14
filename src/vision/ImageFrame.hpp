@@ -5,7 +5,13 @@
 #include <opencv2/core.hpp>
 #include <optional>
 #include <cstddef>
+#include <QVector>
 namespace visionflow {
+struct ProcessingStep {
+    QByteArray inputContentId,parametersId;
+    QString method;
+    int version=0;
+};
 enum class PixelFormat { Gray8, Gray16, Bgr8, Bgra8, Rgb8, Rgba8 };
 struct FrameMetadata {
     QString sourceId,frameId,cycleId,coordinateSystemId;
@@ -29,7 +35,10 @@ public:
     const QString& pixelFormat() const {return format_;}
     QByteArray contentId() const;
     QString pixelText(int x,int y) const;
+    const QVector<ProcessingStep>& processing() const {return processing_;}
+    QByteArray processingId() const;
 private:
+    friend class ImageAccess;
     friend class ImageFileService;
     friend class MatchService;
     friend class ToolExecutors;
@@ -39,5 +48,6 @@ private:
     QString path_,format_;
     PixelFormat pixelFormat_=PixelFormat::Gray8;
     FrameMetadata metadata_;
+    QVector<ProcessingStep> processing_;
 };
 }

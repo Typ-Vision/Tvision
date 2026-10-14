@@ -8,6 +8,9 @@ struct ToolDescriptor {
     QVector<PortDefinition> inputs,outputs;
     std::function<void(const ToolDefinition&)> validate;
     bool acquisitionSource=false;
+    bool usesCalibration=false;
+    QString requiredBackend;
+    int minimumEditorSchema=6;
 };
 class ToolRegistry {
 public:

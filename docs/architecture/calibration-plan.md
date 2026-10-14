@@ -1,5 +1,10 @@
 # Kamera ve robot kalibrasyonu — revize ürün planı
 
+9 Ekim son kullanıcı kararı: lens bozulması düzeltmesi [reçete tool planının T15 aşamasına](recipe-tools-plan.md#t15--lens-bozulması-düzeltmesi-en-son), bütün tool paketlerinden sonraya ertelendi. T4–T9 ölçümleri mevcut manuel/uniform/raw-H modelleriyle geliştirilir; lens düzeltmesi zorunlu başlangıç işi değildir. Perspective circle/line fit world noktalarda, geçerli kalibrasyon alanında yapılacak; mm² için ayrı alan hesabı gerekir. Yeni metrologi ve lens modeli henüz uygulanmadı. K4 fiziksel doğruluk kabulü açık; sentetik kabul lens doğruluğu kanıtı değildir. Eski “gerektiğinde lens” sırası bu kararla daraltıldı.
+
+9 Ekim güncel durum: **C1–C5 tamamlandı**. Setup → Calibration üç yöntem ve beş bölüm sunar: Manuel ölçek (px/mm), Bilinen uzunluktan ölçek ve Kalibrasyon plakası (perspektif). Manuel girdi boş başlar; px/mm ve salt okunur tersi, üretim sonucundan ayrı deneme, en az iki bağımsız doğrulama, katalog/recipe Save/reopen, gerçek Edge → Measurement → Runtime ve CSV bağlıdır. Güncel Release binary `build/manual-calibration-ui/visionflow.exe`; Measurement tool 2, execution/6. Sonraki P7/6D.2; K4 fiziksel kabul ertelenmiştir.
+
+
 8 Ekim 2026. Kullanıcının iki kalibrasyon beklentisi üzerine kod/gereksinim incelemesi ve plan güncellemesidir; K1–K3 target/gözlem/test import/köşe/H/mm/tipli kayıt/Measurement/Runtime uygulandı. Intrinsics/robot modelleri ve K4 fiziksel kabul henüz yok. Güncel öncelik 6C-K kamera kalibrasyonunu PLC'den önce tamamlamaktır.
 
 ## Ürün amacı ve mevcut durum
@@ -104,13 +109,13 @@ Tipli PlanarCalibration/Dependency schema 2, raw homography evidence record sche
 
 H fit inverse hata sınırı UI'da 1 px; ölçüm domain'i observed inner-corner convex hull. Holdout RMS/max ve her sample measured/absolute residual mm ile CSV raporu çalışır. Bağımsız fiziksel bölge/yön/tekrar kabulü [K4 prosedüründe](calibration-acceptance.md); gerçek veri yok, KL ihtiyacı belirlenemedi. Lens correction uygulanmış gibi gösterilmez. Legacy scale başarısız H için sessiz fallback değildir; UI model seçimi açıktır.
 
-## 8 Ekim — Planlanan manuel px/mm girişi (uygulanmadı)
+## 9 Ekim — Manuel px/mm girişi uygulandı (C1–C5)
 
 Kullanıcı doğrudan px/mm katsayısı girebilmelidir. Ayrı “Manuel ölçek” seçeneğinde pozitif/sonlu px/mm, açık birim ve karşılığı mm/px = 1 / (px/mm) gösterilir. Örneğin 20 px/mm → 0.05 mm/px. Uniform ölçek varsayımı açıklanır; perspektif/lens/robot dönüşümü sağlanmaz.
 
 Katsayı tek başına doğrulanmış kabul edilmez. En az iki bağımsız bilinen segment ile mevcut holdout hata sınırları uygulanır; gerçek kanıt olmadan RMS/PASS üretilmez. Manuel köken/katsayı, kaynak/çözünürlük/lens/düzlem ve sürüm kalıcı kayıtta tutulur; replay/hash, resolver, Measurement/Runtime ve eski kayıt migration/no-op testleri gerekir. Katsayı/kurulum değişimi eski binding ve sonuçları geçersiz kılar. Mevcut teaching örneğini sahte veriyle doldurmak yerine servis sözleşmesi genişletilir.
 
-Ekran sadeleştirme: model seç → görüntü/kurulum → ölçek veya plaka → bağımsız doğrulama → kaydet/bağla. Yalnız seçili modele ait kontroller gösterilir. Bu paket sonraki geliştirme önerisidir, mevcut özellik değildir.
+Ekran sadeleştirme: model seç → görüntü/kurulum → ölçek veya plaka → bağımsız doğrulama → kaydet/bağla. Yalnız seçili modele ait kontroller gösterilir. C1–C5 ile bu akış uygulandı; yazılım kabulü progress dosyasındadır. Fiziksel K4 açıktır.
 ## 8 Ekim — Manuel ölçek uygulama planı hazır
 
-[Manuel px/mm ve sade Calibration planı](manual-scale-calibration-plan.md) önceki kısa kapsam notunun ayrıntılı devamıdır. C1 matematik/codec → C2 katalog/Measurement/Runtime → C3 sade ekran → C4 UI kabul → C5 birleşik test/belgeler. C1 matematik/codec tamamlandı; C2 katalog/Runtime/CSV ve C3–C5 ekran/kabul işleri açık. Yeni manual_planar_scale/1, record/dependency schema 3, eski hash/encode koruması, beş bölümlü üç yöntem UI ve doğrulamasız deneme/üretim ayrımı tanımlandı. Belgenin 7. bölümü GPT-6.1 Sol medium için kopyalanabilir başlangıç talimatıdır. P7 bu kapsamdan sonra; K4 ertelenmiş kalır.
+[Manuel px/mm ve sade Calibration planı](manual-scale-calibration-plan.md) önceki kısa kapsam notunun ayrıntılı devamıdır. C1 matematik/codec → C2 katalog/Measurement/Runtime → C3 sade ekran → C4 UI kabul → C5 birleşik test/belgeler. C1–C5 tamamlandı: matematik/codec, katalog/reçete/Runtime/CSV, sade üç yöntem ekranı ve birleşik yazılım kabulü mevcut. Yeni manual_planar_scale/1, record/dependency schema 3, eski hash/encode koruması, beş bölümlü üç yöntem UI ve doğrulamasız deneme/üretim ayrımı tanımlandı. Belgenin 7. bölümü GPT-6.1 Sol medium için kopyalanabilir başlangıç talimatıdır. P7 bu kapsamdan sonra; K4 ertelenmiş kalır.

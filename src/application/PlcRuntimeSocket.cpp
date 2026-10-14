@@ -154,7 +154,7 @@ void PlcRuntimeSocket::trigger(const QJsonObject& o) {
     watcher_=new QFutureWatcher<CycleResult>(this);
     connect(watcher_,&QFutureWatcher<CycleResult>::finished,this,[this]{
         auto* done=watcher_;watcher_=nullptr;
-        pending_=done->result();done->deleteLater();if(cancel_->load())EditorSession::suppressCancelled(*pending_);
+        pending_=done->result();done->deleteLater();if(cancel_->load())RuntimeService::suppressCancelled(cycle_,*pending_);
         retryRecording();
     });
     if(started)started();

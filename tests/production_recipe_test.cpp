@@ -51,6 +51,14 @@ int main(int argc,char** argv) {
         rejects([&]{service.beginCycle("operator");},ProductionError::Busy,"one in-flight cycle");
         const auto result=ExecutionService{}.run(lease.snapshot->recipe().definition,lease.snapshot->projectDirectory(),draft.id,v1.contentId,{});
         check(result.state==ExecutionState::Done && result.frames.size()==1,"actual file execution");
+        auto forged=result;forged.tools[1].outputs["area"].data=QString("forged text");
+        rejects([&]{service.finishCycle(lease.ticket,forged);},ProductionError::InvalidCompletion,"forged variant cannot enter production log");
+        forged=result;forged.tools[1].outputs["area"].port.unit="mm2";
+        rejects([&]{service.finishCycle(lease.ticket,forged);},ProductionError::InvalidCompletion,"forged unit cannot enter production log");
+        forged=result;forged.tools[1].outputs["area"].origin.sourceId="foreign-source";
+        rejects([&]{service.finishCycle(lease.ticket,forged);},ProductionError::InvalidCompletion,"forged source cannot enter production log");
+        forged=result;forged.tools[1].outputs["unknown"]=forged.tools[1].outputs["area"];
+        rejects([&]{service.finishCycle(lease.ticket,forged);},ProductionError::InvalidCompletion,"unknown output cannot be silently serialized");
         auto wrong=result;wrong.partial=true;
         rejects([&]{service.finishCycle(lease.ticket,wrong);},ProductionError::InvalidCompletion,"partial editor evaluation cannot finish production lease");
         check(service.busy(),"partial rejection preserves production lease");wrong=result;wrong.configId="foreign";

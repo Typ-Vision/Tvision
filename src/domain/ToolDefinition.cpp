@@ -27,14 +27,17 @@ QVector<ToolDefinition> editorTools(const QJsonObject& definition) {
     if(!definition.contains("editor"))return {};
     require(definition["editor"].isObject(),"definition.editor nesne olmalı.");const auto editor=definition["editor"].toObject();
     keys(editor,{"schemaVersion","tools","connections"});const auto version=editor["schemaVersion"];
-    require(version.isDouble() && version.toDouble()==version.toInt() && version.toInt()>=1 && version.toInt()<=6,"Desteklenmeyen editor şeması.");
+    require(version.isDouble() && version.toDouble()==version.toInt() && version.toInt()>=1 && version.toInt()<=8,"Desteklenmeyen editor şeması.");
     require(editor["tools"].isArray(),"Editor tools dizi olmalı.");const auto array=editor["tools"].toArray();require(array.size()<=256,"En fazla 256 tool desteklenir.");
     QVector<ToolDefinition> tools;QSet<QString> ids,names;int sourceCount=0;
     for(const auto value:array) {
-        require(value.isObject(),"Tool nesne olmalı.");const auto o=value.toObject();keys(o,{"id","kind","name","description","enabled","parameters"});
+        require(value.isObject(),"Tool nesne olmalı.");const auto o=value.toObject();
+        if(version.toInt()>=7)keys(o,{"id","kind","name","description","enabled","parameters","dependencies"});else keys(o,{"id","kind","name","description","enabled","parameters"});
         for(const auto key:{"id","kind","name","description"})require(o[key].isString(),QString("Tool metin alanı eksik: %1").arg(key));
         require(o["enabled"].isBool() && o["parameters"].isObject(),"Tool enabled/parameters tipi hatalı.");
         ToolDefinition t{o["id"].toString(),o["kind"].toString(),o["name"].toString(),o["description"].toString(),o["enabled"].toBool(),o["parameters"].toObject()};
+        if(version.toInt()>=7){require(o["dependencies"].isArray(),"Schema 7 dependencies array required");t.dependencies=decodeToolDependencies(o["dependencies"].toArray());}
+        require(version.toInt()>=ToolRegistry::get(t.kind).minimumEditorSchema || ToolRegistry::get(t.kind).minimumEditorSchema==6,"Tool requires editor schema 7");
         const auto id=QUuid(t.id);require(!id.isNull() && !ids.contains(id.toString()),"Tool ID geçersiz veya tekrar ediyor.");
         require(!t.name.isEmpty() && t.name.size()<=64 && t.name==t.name.trimmed(),"Tool adı 1–64 karakter olmalı.");
         for(auto c:t.name)require(c.isPrint(),"Tool adı yazdırılabilir karakterlerden oluşmalı.");
@@ -46,6 +49,7 @@ QVector<ToolDefinition> editorTools(const QJsonObject& definition) {
         if(version.toInt()<4 && t.kind=="edge" && !t.parameters.contains("referenceOrigin"))t.parameters["referenceOrigin"]=QJsonObject{};
         if(version.toInt()<5 && t.kind=="edge" && !t.parameters.contains("referenceGeometry"))t.parameters["referenceGeometry"]="";
         if(version.toInt()<6 && t.kind=="blob")for(const auto key:{"polarity","connectivity","minArea","maxArea"})if(!t.parameters.contains(key))t.parameters[key]=defaults[key];
+        require(!t.parameters.contains("referenceBinding") || version.toInt()>=8,"Reference binding requires editor schema 8");
         ToolRegistry::validate(t);
         if(ToolRegistry::get(t.kind).acquisitionSource)require(++sourceCount<=1,"Bu aşamada reçetede tek edinim kaynağı desteklenir; mevcut Image File/Webcam kaynağını önce kaldırın.");
         ids.insert(id.toString());names.insert(t.name.toCaseFolded());tools.append(t);
@@ -79,9 +83,21 @@ bool referenceNeedsTeaching(const ToolDefinition& edge,const ToolDefinition& sou
 }
 QJsonObject withEditorTools(QJsonObject definition,const QVector<ToolDefinition>& tools) {
     const auto connections=editorConnections(definition);QJsonArray array;
-    for(const auto& t:tools)array.append(QJsonObject{{"id",t.id},{"kind",t.kind},{"name",t.name},{"description",t.description},{"enabled",t.enabled},{"parameters",t.parameters}});
-    definition["editor"]=QJsonObject{{"schemaVersion",6},{"tools",array},{"connections",QJsonArray{}}};definition=withEditorConnections(definition,connections);
+    const auto schema=requiredEditorSchema(tools,definition["editor"].toObject()["schemaVersion"].toInt(6));
+    for(const auto& t:tools)array.append(encodeEditorTool(t,schema));
+    definition["editor"]=QJsonObject{{"schemaVersion",schema},{"tools",array},{"connections",QJsonArray{}}};definition=withEditorConnections(definition,connections);
     validateEditorDefinition(definition);return definition;
+}
+int requiredEditorSchema(const QVector<ToolDefinition>& tools,int previousSchema) {
+    require(previousSchema>=1 && previousSchema<=8,"Unsupported previous schema");int schema=std::max(6,previousSchema);
+    for(const auto& t:tools)if(!t.dependencies.isEmpty() || ToolRegistry::get(t.kind).minimumEditorSchema==7)schema=std::max(schema,7);
+    for(const auto& t:tools)if(t.parameters.contains("referenceBinding"))schema=8;
+    return schema;
+}
+QJsonObject encodeEditorTool(const ToolDefinition& t,int schema) {
+    QJsonObject o{{"id",t.id},{"kind",t.kind},{"name",t.name},{"description",t.description},{"enabled",t.enabled},{"parameters",t.parameters}};
+    require(schema==6 || schema==7 || schema==8,"Unsupported editor write schema");
+    if(schema>=7)o["dependencies"]=encodeToolDependencies(t.dependencies);else require(t.dependencies.isEmpty(),"Cannot downgrade dependencies");return o;
 }
 void validateEditorDefinition(const QJsonObject& definition) {
     editorTools(definition);editorConnections(definition);

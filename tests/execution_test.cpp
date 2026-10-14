@@ -28,13 +28,13 @@ int main(int argc,char** argv) {
     try {
         ToolRegistry::registerType({"test_constant","Test constant",1,{}, {}, {{"value",PortType::Number,"px","image"}},[](const ToolDefinition&){}});
         ToolExecutors::registerExecutor("test_constant",[](const ToolDefinition& t,const QMap<QString,PortValue>&,const QString&,const QString& frame,const QString& cycle,const std::shared_ptr<std::atomic_bool>&) {
-            ToolResult r;r.toolId=t.id;r.state=ExecutionState::Done;r.outputs["value"]={outputPorts(t.kind).first(),42.0,true,frame,cycle};return r;
+            ToolResult r;r.toolId=t.id;r.state=ExecutionState::Done;r.outputs["value"]={outputPorts(t.kind).first(),42.0,true,frame,cycle,{t.id,frame,cycle,t.id+"/image"}};return r;
         });
         ToolDefinition extension{QUuid::createUuid().toString(),"test_constant","Constant","",true,{}};
         auto extensionCycle=ExecutionService{}.run(withEditorTools({}, {extension}),{},"test","test",{});
         check(extensionCycle.state==ExecutionState::Done && number(extensionCycle,extension.id,"value")==42,"extension executes without engine kind branch");
         bool rejected=false;try{outputPorts("unknown");}catch(const std::exception&){rejected=true;}check(rejected,"unknown port kind rejected");
-        for(const auto& descriptor:ToolRegistry::entries())check(descriptor.version==((descriptor.kind=="blob" || descriptor.kind=="measurement") ? 2 : 1) && descriptor.label==toolLabel(descriptor.kind),"registry version/label");
+        for(const auto& descriptor:ToolRegistry::entries())check(descriptor.version==((descriptor.kind=="line_fit" || descriptor.kind=="blob") ? 3 : (descriptor.kind=="code_read" || descriptor.kind=="measurement" || descriptor.kind=="geometry_measurement" || descriptor.kind=="edge_point" || descriptor.kind=="edge_pair" || descriptor.kind=="circle_fit") ? 2 : 1) && descriptor.label==toolLabel(descriptor.kind),"registry version/label");
         QTemporaryDir dir(QDir(QCoreApplication::applicationDirPath()).filePath("execution-XXXXXX"));check(dir.isValid(),"test directory");const auto path=dir.filePath("fixture.png");image(path,true);
         ProjectService service;service.createProject("Graph","",dir.filePath("graph.vfproject"),"file");const auto recipe=service.createRecipe("Measure","",ApplicationType::Measurement,"file");
         const auto source=service.setImageFile(path),left=service.addTool("edge"),right=service.addTool("edge"),blob=service.addTool("blob"),distance=service.addTool("calculate");
@@ -157,4 +157,3 @@ int main(int argc,char** argv) {
         QTextStream(stdout)<<"PASS: DAG, adapters, identities, persistence, errors and cancellation\n";return 0;
     } catch(const std::exception& e) {QTextStream(stderr)<<"FAIL: "<<e.what()<<'\n';return 1;}
 }
-

@@ -1,6 +1,6 @@
 # Manuel px/mm ve sade Calibration — uygulama planı
 
-8 Ekim 2026. Durum: kullanıcı isteğiyle **C1 matematik ve codec tamamlandı**; C2–C5 açık. Hedef yürütücü: GPT-6.1 Sol, medium. Bu belgenin ekran/katalog/Runtime/CSV kapsamı henüz teslim edilmedi. Önceki kısa manuel ölçek notunu ayrıntılandırır. K1–K3, Runtime operatör görünümü ve Setup yeniden yazılmayacak.
+8 Ekim 2026. Durum: kullanıcı isteğiyle **C1–C5 tamamlandı**. Hedef yürütücü: GPT-6.1 Sol, medium. Katalog/reçete/Runtime/CSV ve sade ekran teslim edildi; yazılım kabulü progress dosyasındadır. Önceki kısa manuel ölçek notunu ayrıntılandırır. K1–K3, Runtime operatör görünümü ve Setup yeniden yazılmayacak.
 
 ## 1. Ürün davranışı ve kapsam
 
@@ -53,7 +53,7 @@ Eski uniform/homography fixture'larının contentId ve encode eşitliği korunur
 
 ### C1 uygulanan manuel kayıt sözleşmesi
 
-`MeasurementService::manualScale(setup, pixelsPerMillimetre, provenance)` teaching üretmeden immutable candidate kurar. `trialDistance` ham noktaları denetleyip yalnız double mm döndürür; karar veya doğrulama üretmez. `distance` accepted/acquired kanıt gerektirir; file_test üretim sonucu vermez. `validate` katsayıyı değiştirmez. UI giriş aralığı/locale ve ondalık sunumu C3'te tanımlanıp sınanacaktır; C1 servis girişi UI aralığına dayanmaz.
+`MeasurementService::manualScale(setup, pixelsPerMillimetre, provenance)` teaching üretmeden immutable candidate kurar. `trialDistance` ham noktaları denetleyip yalnız double mm döndürür; karar veya doğrulama üretmez. `distance` accepted/acquired kanıt gerektirir; file_test üretim sonucu vermez. `validate` katsayıyı değiştirmez. UI giriş aralığı 0,000001–1000000 px/mm, en çok 6 ondalık; Türkçe QLocale, binlik ayırıcı/üs yok, sessiz clamp yok. C3–C4 bunu sınar; C1 servis girişi UI aralığına dayanmaz.
 
 Record schema 3'ün **tam alan listesi**:
 
@@ -72,7 +72,7 @@ Dependency schema 3 tam alanları: `schemaVersion,calibrationId,version,contentI
 
 SHA-256 kimlik: schema 3 record'un compact QJsonDocument çıktısı; yalnız `dependency.contentId` hash öncesinde çıkarılır. Gerçek katsayı, ters değer, model, kurulum, provenance, holdout ve kabul politikası/istatistik hash'e dahildir. Decode candidate'ı gerçek girdiden kurar, accepted kanıtı yeniden hesaplar, dependency/content/türetilmiş değerler ve tam encode eşitliğini denetler. Bilinmeyen/eksik alan, yanlış tip/model/sürüm ve future schema reddedilir. Uniform/homography encode/hash yolları korunur; odaklı test sabit contentId ve tüm compact record SHA-256 değerlerini denetler.
 
-C1, katalogda manuel kaydı save/bind etme veya Runtime kabulü olarak sunulmaz; bu zincirin installation/resolver/CSV/engine identity kabulü C2'de tamamlanacaktır. UI yoktur; candidate raporu/locale/deneme gösterimi C3–C4'tür.
+C1 matematik/codec kabulüne C2 kalıcı katalog/recipe/Runtime/CSV zinciri, C3 sade UI, C4 UI ve C5 birleşik yazılım kabulü eklendi. Execution/6 ve Measurement tool 2 validation kimliğine dahildir. Fiziksel K4 açıktır.
 
 ## 4. Yaşam döngüsü ve invalidation
 
@@ -89,10 +89,10 @@ Her paketi tamamlayıp doğrulayarak progress'e kaydet; C1–C5 dışında özel
 | Paket | Değişiklik odağı | Bitiş kanıtı |
 | --- | --- | --- |
 | C1 — tamamlandı | MeasurementService.*, Coordinates.*, manuel model alan/şema sözleşmesi; tests/manual_scale_test.cpp | 20 px/mm → 0.05 mm/px → 200 px/10 mm; candidate deneme/üretim ayrımı; gerçek holdout kabul/ret; encode/decode/tamper; eski model hash/encode sabitleri |
-| C2 — Kalıcı bağlama ve yürütme | CalibrationWorkflow.*, CalibrationService.*, CalibrationReportService.*, ilgili Runtime/Production/ToolExecutors/EditorSession model kontrolleri | Kaydet/bağla/Save/reopen; yeni sürüm/current reddi; gerçek Edge→Measurement→Runtime mm ve dahil tolerans; source/resolution değişimi; CSV; candidate/test üretime bağlanamaz |
-| C3 — Sade ekran ve manuel giriş | MainWindowCalibration.cpp/.hpp; gerekirse ayrı calibration sunum helper'ı; ImageViewer yalnız ortak nokta etkileşimi gerekiyorsa | Beş bölüm, üç yönteme özel alanlar, boş manuel başlangıç, px/mm/tersi, öğretim/holdout ayrımı, tık/sayısal nokta seçimi, görünür pasif nedenler, worker/stale guard |
-| C4 — UI regresyon ve kullanım kabulü | EditorSmoke.cpp, mevcut calibration/chessboard/homography testleri | Üç yöntem, model değişimi/yeniden açılış, gerçek akış, hata/Stop/locale, 1400×900 ve 850×600 görseller; Setup ve Run kilidi korunur |
-| C5 — Birleşik kabul ve belgeler | README, measurement/project-format/calibration planları, gereksinimler, backlog/progress | Release UI tam CTest + Widgets OFF tam CTest; son görsel kontrol; uygulanmış durum ve kalan fiziksel sınırlar; sonraki P7 için devir |
+| C2 — tamamlandı: Kalıcı bağlama ve yürütme | CalibrationWorkflow.*, CalibrationService.*, CalibrationReportService.*, ilgili Runtime/Production/ToolExecutors/EditorSession model kontrolleri | Kaydet/bağla/Save/reopen; yeni sürüm/current reddi; gerçek Edge→Measurement→Runtime mm ve dahil tolerans; source/resolution değişimi; CSV; candidate/test üretime bağlanamaz |
+| C3 — tamamlandı: Sade ekran ve manuel giriş | MainWindowCalibration.cpp/.hpp; gerekirse ayrı calibration sunum helper'ı; ImageViewer yalnız ortak nokta etkileşimi gerekiyorsa | Beş bölüm, üç yönteme özel alanlar, boş manuel başlangıç, px/mm/tersi, öğretim/holdout ayrımı, tık/sayısal nokta seçimi, görünür pasif nedenler, worker/stale guard |
+| C4 — tamamlandı: UI regresyon ve kullanım kabulü | EditorSmoke.cpp, mevcut calibration/chessboard/homography testleri | Üç yöntem, model değişimi/yeniden açılış, gerçek akış, hata/Stop/locale, 1400×900 ve 850×600 görseller; Setup ve Run kilidi korunur |
+| C5 — tamamlandı: Birleşik kabul ve belgeler | README, measurement/project-format/calibration planları, gereksinimler, backlog/progress | Release UI tam CTest + Widgets OFF tam CTest; son görsel kontrol; uygulanmış durum ve kalan fiziksel sınırlar; sonraki P7 için devir |
 
 Başlıca mevcut riskli noktalar: MeasurementService identify/validate/encode/decode içindeki iki model varsayımı; Coordinates::fromJson schema 2 whitelist; CalibrationWorkflow model/eksen seçimi; CalibrationReportService `else legacy` etiketi; CalibrationStudyStore `mapping()` zorunluluğu; MainWindowCalibration model index 0/1 ve tablonun ilk satırını teaching sayması. Bunları yalnız UI kontrolü ekleyerek geçiştirme. Mevcut çalışmış servisleri yeniden kurma.
 

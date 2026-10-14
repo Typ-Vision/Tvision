@@ -1,5 +1,10 @@
+#include "CircleToolService.hpp"
+#include "GeometryMeasurementService.hpp"
 #include "ProductionRecipeService.hpp"
 #include "MatchService.hpp"
+#include "ToolResultCodec.hpp"
+#include "ProductionResultCodec.hpp"
+#include "ToolDependencyResolver.hpp"
 #include "persistence/ProjectRepository.hpp"
 #include "domain/ToolRegistry.hpp"
 #include <QCryptographicHash>
@@ -8,6 +13,8 @@
 #include <QDir>
 #include <QUuid>
 #include <QSet>
+#include <QDataStream>
+#include "domain/ReferenceConfig.hpp"
 #include <cmath>
 #include <algorithm>
 
@@ -23,11 +30,43 @@ QByteArray content(const Recipe& r,const QString& directory) {
         {"definition",r.definition},{"projectDirectory",QDir(directory).absolutePath()}});
 }
 bool sha256(const QString& s) {return s.size()==64 && std::all_of(s.begin(),s.end(),[](QChar c){return (c>='0' && c<='9') || (c>='a' && c<='f');});}
+bool trustedCompletionRequired(const QVector<ToolDefinition>& tools) {
+    return std::any_of(tools.cbegin(),tools.cend(),[](const auto& t){return t.enabled &&
+        (t.parameters.contains("referenceBinding") || t.kind=="pattern_pose" || t.kind=="shape_pose");});
+}
 bool terminal(ExecutionState s) {return s==ExecutionState::Done || s==ExecutionState::Error || s==ExecutionState::Skipped;}
 }
+QByteArray ProductionRecipeService::completionDigest(const CycleResult& r) {
+    QByteArray bytes;QDataStream out(&bytes,QIODevice::WriteOnly);
+    out<<r.cycleId<<r.frameId<<r.recipeId<<r.evaluationId<<r.targetToolId<<r.partial<<r.executedTools
+       <<r.acquisitions<<r.configId<<int(r.state)<<r.milliseconds<<r.error;
+    auto metadata=[&](const FrameMetadata& m){out<<m.sourceId<<m.frameId<<m.cycleId<<m.coordinateSystemId<<m.completedAtUtc
+        <<bool(m.exposureAtUtc)<<m.exposureAtUtc.value_or(QDateTime{})<<bool(m.deviceTimestampTicks)
+        <<quint64(m.deviceTimestampTicks.value_or(0))<<m.deviceClockId;};
+    out<<r.frames.size();for(const auto& f:r.frames)metadata(f);
+    out<<r.tools.size();for(const auto& t:r.tools) {
+        out<<t.toolId<<int(t.state)<<t.message<<t.milliseconds<<int(t.decision)<<t.errorCode
+           <<QJsonDocument(t.calibration ? t.calibration->toJson():QJsonObject{}).toJson(QJsonDocument::Compact)
+           <<t.regions<<t.points<<t.rejectedPoints<<t.lines<<t.searchRegion<<t.mask.pixels<<t.mask.size<<t.mask.origin;
+        out<<t.outputs.size();for(auto it=t.outputs.cbegin();it!=t.outputs.cend();++it) {
+            out<<it.key()<<QJsonDocument(ProductionResultCodec::output(*it)).toJson(QJsonDocument::Compact);
+            metadata(it->origin);
+            if(it->valid && std::holds_alternative<ImageFrame>(it->data)) {
+                const auto& image=std::get<ImageFrame>(it->data);metadata(image.metadata());
+                out<<image.contentId()<<image.processingId()<<image.size()<<int(image.format());
+            }
+        }
+        out<<bool(t.edgeDiagnostics);if(t.edgeDiagnostics) {
+            const auto& d=*t.edgeDiagnostics;out<<d.scan<<d.width<<d.length<<d.sampleCount<<d.derivativeCount<<d.candidateCount<<d.derivative;
+            out<<d.profile.size();for(const auto& v:d.profile)out<<v.distance<<v.raw<<bool(v.smooth)<<v.smooth.value_or(0);
+            out<<d.candidates.size();for(const auto& v:d.candidates)out<<v.point<<v.distance<<v.strength<<v.accepted<<v.selected<<v.reason<<v.refinement;
+        }
+    }
+    return QCryptographicHash::hash(bytes,QCryptographicHash::Sha256);
+}
 ProductionException::ProductionException(ProductionError code,const QString& message):std::runtime_error(message.toUtf8().constData()),code_(code) {}
-ProductionRecipeService::ProductionRecipeService(Authorize authorize,Dependencies dependencies,int limit,Persist persist)
-    :authorize_(std::move(authorize)),dependencies_(std::move(dependencies)),persist_(std::move(persist)),historyLimit_(limit) {
+ProductionRecipeService::ProductionRecipeService(Authorize authorize,Dependencies dependencies,int limit,Persist persist,CalibrationResolver completionResolver)
+    :authorize_(std::move(authorize)),dependencies_(std::move(dependencies)),persist_(std::move(persist)),completionResolver_(std::move(completionResolver)),historyLimit_(limit) {
     if(limit<1 || limit>256)fail(ProductionError::InvalidConfiguration,"Snapshot sınırı 1–256 olmalı.");
 }
 void ProductionRecipeService::persist(const QString& kind,const QString& id,const QJsonObject& object) const {
@@ -45,15 +84,21 @@ void ProductionRecipeService::permission(const QString& principal,ProductionActi
     owner();if(principal.isEmpty() || !authorize_ || !authorize_(principal,action))fail(ProductionError::Unauthorized,"Servis yetkisi reddedildi.");
 }
 void ProductionRecipeService::idle() const {if(cycle_.ticket)fail(ProductionError::Busy,"Aktif çevrim bitmeden sürüm değiştirilemez.");}
-QJsonObject ProductionRecipeService::dependencies(const Recipe& recipe) const {
+QJsonObject ProductionRecipeService::dependencies(const Recipe& recipe,const QString& directory) const {
     ProductionDependencies current;
     try {current=dependencies_ ? dependencies_(recipe) : ProductionDependencies{};}
     catch(const std::exception& e){fail(ProductionError::DependencyChanged,QString::fromUtf8(e.what()));}
     if(current.engineVersion!=ExecutionService::version())fail(ProductionError::DependencyChanged,"Engine sürümü uyumsuz.");
-    QJsonObject tools,models,assets;
+    QJsonObject tools,models,assets,references;
     for(const auto& tool:editorTools(recipe.definition)) {
         tools[tool.id]=QJsonObject{{"kind",tool.kind},{"version",ToolRegistry::get(tool.kind).version}};
+        if(!tool.dependencies.isEmpty() || !ToolRegistry::get(tool.kind).requiredBackend.isEmpty()) {
+            try {auto entry=tools[tool.id].toObject();entry["dependencies"]=ToolDependencyResolver::resolve(tool,directory);tools[tool.id]=entry;}
+            catch(const std::exception& e){fail(ProductionError::DependencyChanged,QString::fromUtf8(e.what()));}
+        }
         if(tool.kind=="template_match")models[tool.id]=referenceGeometry(tool);
+        if(tool.kind=="pattern_pose" || tool.kind=="shape_pose")models[tool.id]=referenceGeometryIdentity(tool,"pose");
+        if(tool.parameters.contains("referenceBinding"))references[tool.id]=toolReferenceBinding(tool).toJson();
     }
     if(current.assetHashes.size()>256)fail(ProductionError::InvalidConfiguration,"En fazla 256 varlık bağımlılığı.");
     for(auto it=current.assetHashes.cbegin();it!=current.assetHashes.cend();++it) {
@@ -67,10 +112,12 @@ QJsonObject ProductionRecipeService::dependencies(const Recipe& recipe) const {
         if(recipe.calibrationBinding && *recipe.calibrationBinding!=*current.calibration)fail(ProductionError::DependencyChanged,"Reçetenin kalibrasyon sürümü güncel değil.");
         calibration=current.calibration->toJson();
     } else if(!recipe.calibrationReference.isEmpty())fail(ProductionError::DependencyChanged,"Kalibrasyon bağımlılığı çözümlenmedi.");
-    return {{"engine",current.engineVersion},{"tools",tools},{"models",models},{"assets",assets},{"calibration",calibration}};
+    QJsonObject result{{"engine",current.engineVersion},{"tools",tools},{"models",models},{"assets",assets},{"calibration",calibration}};
+    if(!references.isEmpty())result["referenceBindings"]=references;
+    return result;
 }
 void ProductionRecipeService::requireCurrent(const ProductionSnapshot& s) const {
-    if(hash(dependencies(s.recipe()))!=s.validation().dependencyId)fail(ProductionError::DependencyChanged,"Doğrulama bağımlılığı değişti; yeniden doğrulama gerekir.");
+    if(hash(dependencies(s.recipe(),s.projectDirectory()))!=s.validation().dependencyId)fail(ProductionError::DependencyChanged,"Doğrulama bağımlılığı değişti; yeniden doğrulama gerekir.");
 }
 RecipeValidation ProductionRecipeService::validate(const QString& principal,const Recipe& draft,const QString& directory) {
     permission(principal,ProductionAction::Validate);
@@ -86,19 +133,32 @@ RecipeValidation ProductionRecipeService::validate(const QString& principal,cons
         if(!graph.valid())throw std::runtime_error(graph.errors.join("\n").toUtf8().constData());
         int sources=0;
         for(const auto& tool:tools)if(tool.enabled) {
-            if(!QStringList{"image_file","template_match","blob","edge","calculate","webcam","measurement"}.contains(tool.kind))throw std::runtime_error("Üretim sözleşmesinde desteklenmeyen tool.");
+            if((tool.kind=="pattern_pose" || tool.kind=="shape_pose") && std::none_of(tools.cbegin(),tools.cend(),[&](const auto& t){
+                return t.enabled && t.parameters.contains("referenceBinding") && toolReferenceBinding(t).sourceTool==tool.id;
+            }))throw std::runtime_error("Üretim sözleşmesinde desteklenmeyen tool: standalone pose corpus acceptance pending T8.4.2b.3c");
+            if(tool.parameters.contains("poseTracking"))throw std::runtime_error("Legacy pose production corpus acceptance pending T8.4.2b.3c");
+            if(tool.parameters.contains("referenceBinding")) {
+                const auto b=toolReferenceBinding(tool);
+                const auto producer=std::find_if(tools.cbegin(),tools.cend(),[&](const auto& t){return t.id==b.sourceTool;});
+                if(producer==tools.cend() || b.geometryId!=referenceGeometryIdentity(*producer,b.sourcePort))throw std::runtime_error("Reference geometry changed; reteach");
+                const auto acquisition=std::find_if(tools.cbegin(),tools.cend(),[&](const auto& t){return t.enabled && t.id==b.imageSource && ToolRegistry::get(t.kind).acquisitionSource;});
+                if(acquisition==tools.cend())throw std::runtime_error("Reference acquisition identity differs from recipe");
+                if(b.world && (!draft.calibrationBinding || b.calibration!=draft.calibrationBinding))throw std::runtime_error("Reference calibration differs from recipe");
+            }
+            if(!QStringList{"image_file","template_match","blob","edge","calculate","webcam","measurement","preprocess","code_read","edge_point","edge_pair","line_fit","circle_fit","geometry_measurement","pattern_pose","shape_pose"}.contains(tool.kind))throw std::runtime_error("Üretim sözleşmesinde desteklenmeyen tool.");
             if(tool.kind=="webcam")++sources;
-            if(tool.kind=="measurement" && !draft.calibrationBinding)throw std::runtime_error("Measurement için kesin kalibrasyon bağlantısı gerekir.");
+            if((ToolRegistry::get(tool.kind).usesCalibration || ((tool.kind=="edge_pair" || tool.kind=="line_fit" || tool.kind=="circle_fit" || tool.kind=="geometry_measurement") && tool.parameters["mode"]=="calibrated")) && !draft.calibrationBinding)throw std::runtime_error("Metric tool requires an exact calibration binding.");
             if(tool.kind=="image_file") {++sources;if(tool.parameters["path"].toString().isEmpty())throw std::runtime_error("Kaynak yolu boş.");}
-            if(tool.kind=="template_match")MatchService::validateModel(MatchService::parameters(tool.parameters));
+            if(tool.kind=="template_match" || tool.kind=="pattern_pose" || tool.kind=="shape_pose")MatchService::validateModel(MatchService::parameters(tool.parameters));
+            if((tool.kind=="edge_point" || tool.kind=="edge_pair" || tool.kind=="line_fit" || tool.kind=="circle_fit") && tool.parameters["scanRoi"].toObject().isEmpty())throw std::runtime_error("Edge Point scan ROI is not taught.");
             for(const auto& c:connections)if(c.targetTool==tool.id) {
                 const auto source=std::find_if(tools.begin(),tools.end(),[&](const auto& t){return t.id==c.sourceTool;});
                 if(!source->enabled)throw std::runtime_error("Enabled tool disabled kaynağa bağlı.");
-                if(c.targetPort=="reference" && (referenceNeedsTeaching(tool,*source) || tool.parameters["searchRoi"].toObject().isEmpty() || tool.parameters["referenceOrigin"].toObject().isEmpty()))throw std::runtime_error("Tracking ROI yeniden öğretim gerektirir.");
+                if(c.targetPort=="reference" && !tool.parameters.contains("referenceBinding") && (referenceNeedsTeaching(tool,*source) || tool.parameters["searchRoi"].toObject().isEmpty() || tool.parameters["referenceOrigin"].toObject().isEmpty()))throw std::runtime_error("Tracking ROI yeniden öğretim gerektirir.");
             }
         }
         if(sources!=1)throw std::runtime_error("Tek enabled edinim kaynağı gerekir.");
-        auto s=std::make_shared<ProductionSnapshot>();s->recipe_=draft;s->directory_=QDir(directory).absolutePath();s->dependencies_=dependencies(draft);
+        auto s=std::make_shared<ProductionSnapshot>();s->recipe_=draft;s->directory_=QDir(directory).absolutePath();s->dependencies_=dependencies(draft,directory);
         s->validation_={QUuid::createUuid().toString(QUuid::WithoutBraces),principal,content(draft,directory),hash(s->dependencies_),QDateTime::currentDateTimeUtc()};
         Project archived;archived.id=QUuid::createUuid().toString();archived.name="Production archive";
         archived.cameraReference=draft.cameraReference;archived.createdAt=archived.modifiedAt=s->validation_.checkedAtUtc;archived.recipes={draft};
@@ -143,19 +203,67 @@ void ProductionRecipeService::finishCycle(quint64 ticket,const CycleResult& r) {
     for(const auto& f:r.frames)if(f.cycleId!=r.cycleId || f.frameId.isEmpty() || f.sourceId.isEmpty())fail(ProductionError::InvalidCompletion,"Çevrim frame kökeni uyumsuz.");
     for(const auto& log:records_)if(log["cycleId"]==r.cycleId)fail(ProductionError::InvalidCompletion,"Çevrim kimliği daha önce tamamlandı.");
     const auto configured=editorTools(cycle_.snapshot->recipe().definition);QSet<QString> seen;
+    const bool trusted=trustedCompletionRequired(configured);
+    if(trusted)try {
+        if(r.completionSnapshot_!=cycle_.snapshot || r.completionTicket_!=ticket || r.completionDigest_.isEmpty() ||
+           r.completionDigest_!=completionDigest(r))fail(ProductionError::InvalidCompletion,"Runtime completion evidence missing, changed or foreign to lease");
+    }catch(const ProductionException&){throw;}catch(const std::exception& e){fail(ProductionError::InvalidCompletion,QString::fromUtf8(e.what()));}
     for(const auto& t:r.tools) {
         const auto tool=std::find_if(configured.cbegin(),configured.cend(),[&](const auto& v){return v.id==t.toolId;});
         if(tool==configured.cend() || seen.contains(t.toolId) || !std::isfinite(t.milliseconds) || t.milliseconds<0)fail(ProductionError::InvalidCompletion,"Yabancı/tekrarlı tool sonucu veya süre.");
         seen.insert(t.toolId);
+        if(tool->kind=="geometry_measurement" && t.state==ExecutionState::Done && r.state!=ExecutionState::Skipped) {
+            try {
+                QMap<QString,PortValue> inputs;
+                for(const auto& c:editorConnections(cycle_.snapshot->recipe().definition))if(c.targetTool==tool->id){
+                    const auto source=std::find_if(r.tools.cbegin(),r.tools.cend(),[&](const auto& v){return v.toolId==c.sourceTool;});
+                    if(source==r.tools.cend() || source->state!=ExecutionState::Done || !source->outputs.contains(c.sourcePort))throw std::runtime_error("Geometry replay upstream missing");
+                    inputs[c.targetPort]=source->outputs[c.sourcePort];
+                }
+                const auto image=std::get<ImageFrame>(inputs.value("image").data);
+                const bool world=tool->parameters["mode"]=="calibrated";
+                if(world && !completionResolver_)throw std::runtime_error("Geometry completion requires trusted calibration resolver");
+                const auto replay=GeometryMeasurementService::execute(*tool,inputs,r.frameId,r.cycleId,{},world ? completionResolver_(image):MeasurementExecutionContext{});
+                if(t.decision!=PartDecision::NotEvaluated || replay.calibration!=t.calibration || t.outputs.size()!=replay.outputs.size())throw std::runtime_error("Geometry completion mode/ports/calibration mismatch");
+                for(auto it=replay.outputs.cbegin();it!=replay.outputs.cend();++it){
+                    auto expected=it.value();const auto actual=t.outputs.value(it.key());
+                    if(expected.valid && int(expected.port.type)>int(PortType::Boolean))expected.evaluationId=r.evaluationId;
+                    if(ToolResultCodec::encode(expected)!=ToolResultCodec::encode(actual))throw std::runtime_error("Geometry completion differs from exact replay");
+                }
+                if(t.points!=replay.points || t.lines!=replay.lines || !t.regions.isEmpty() || !t.rejectedPoints.isEmpty())throw std::runtime_error("Geometry helper overlay differs from replay");
+            }catch(const std::exception& e){fail(ProductionError::InvalidCompletion,QString::fromUtf8(e.what()));}
+        }
+        if(tool->kind=="circle_fit" && !tool->parameters.contains("referenceBinding") && t.state==ExecutionState::Done && r.state!=ExecutionState::Skipped)CircleToolService::validateCompletion(*tool,t,cycle_.snapshot->recipe().calibrationBinding);
+        if((tool->kind=="edge_pair" || tool->kind=="line_fit") && t.state==ExecutionState::Done && r.state!=ExecutionState::Skipped) {
+            const auto found=t.outputs.value("found"),accepted=t.outputs.value("accepted");
+            if(!found.valid || !std::holds_alternative<bool>(found.data))fail(ProductionError::InvalidCompletion,"Metrology requires found Boolean");
+            if(std::get<bool>(found.data)) {
+                const bool world=tool->parameters["mode"]=="calibrated";
+                const auto metric=t.outputs.value(tool->kind=="edge_pair" ? (world ? "widthMm":"widthPx"):(world ? "spanMm":"spanPx"));
+                if(!metric.valid || !std::holds_alternative<double>(metric.data) || !accepted.valid || !std::holds_alternative<bool>(accepted.data) || metric.diagnostic!=!world || accepted.diagnostic!=!world)fail(ProductionError::InvalidCompletion,"Metrology metric/Boolean/mode mismatch");
+                if(world && (!t.calibration || !cycle_.snapshot->recipe().calibrationBinding || *t.calibration!=*cycle_.snapshot->recipe().calibrationBinding))fail(ProductionError::InvalidCompletion,"Metrology calibration differs from snapshot");
+                const double value=std::get<double>(metric.data);bool within=value>=tool->parameters["lower"].toDouble() && value<=tool->parameters["upper"].toDouble();
+                if(tool->kind=="line_fit"){const auto angle=t.outputs.value(world ? "angleMm":"anglePx");if(!angle.valid || !std::holds_alternative<double>(angle.data))fail(ProductionError::InvalidCompletion,"Metrology angle missing");const double a=std::get<double>(angle.data);within=within && a>=tool->parameters["angleLower"].toDouble() && a<=tool->parameters["angleUpper"].toDouble();}
+                if(std::get<bool>(accepted.data)!=within)fail(ProductionError::InvalidCompletion,"Metrology tolerance differs from snapshot");
+            }else if(accepted.valid || t.calibration)fail(ProductionError::InvalidCompletion,"No-found metrology cannot carry tolerance/calibration result");
+        }
         if(tool->kind=="measurement" && t.state==ExecutionState::Done && r.state!=ExecutionState::Skipped && t.decision==PartDecision::NotEvaluated)fail(ProductionError::InvalidCompletion,"DONE Measurement gerçek karar gerektirir.");
         if(t.decision!=PartDecision::NotEvaluated) {
             const auto value=t.outputs.value("value"),pass=t.outputs.value("pass");
+            if(value.diagnostic || pass.diagnostic)fail(ProductionError::InvalidCompletion,"Diagnostic outputs cannot establish a production decision.");
             if(t.state!=ExecutionState::Done || !t.calibration || !cycle_.snapshot->recipe().calibrationBinding || *t.calibration!=*cycle_.snapshot->recipe().calibrationBinding || !value.valid || !pass.valid || value.port.unit!="mm" || !std::holds_alternative<double>(value.data) || !std::isfinite(std::get<double>(value.data)) || !std::holds_alternative<bool>(pass.data) || std::get<bool>(pass.data)!=(t.decision==PartDecision::Pass))fail(ProductionError::InvalidCompletion,"Measurement kararı/kalibrasyonu/çıktısı uyumsuz.");
             const auto mm=std::get<double>(value.data);const bool accepted=mm>=tool->parameters["lowerMm"].toDouble() && mm<=tool->parameters["upperMm"].toDouble();
             if(tool->kind!="measurement" || accepted!=(t.decision==PartDecision::Pass))fail(ProductionError::InvalidCompletion,"Karar aktif toleransla uyuşmuyor.");
         }
         if((r.state==ExecutionState::Skipped || t.state!=ExecutionState::Done) && (!t.outputs.isEmpty() || t.decision!=PartDecision::NotEvaluated || t.calibration))fail(ProductionError::InvalidCompletion,"Terminal hata/iptal ölçüm çıktısı taşıyamaz.");
         if(!terminal(t.state))fail(ProductionError::InvalidCompletion,"Tool sonucu terminal değil.");
+        for(auto it=t.outputs.cbegin();it!=t.outputs.cend();++it) {
+            const auto ports=outputPorts(tool->kind);const auto expected=std::find_if(ports.begin(),ports.end(),[&](const auto& p){return p.id==it.key();});
+            if(expected==ports.end())fail(ProductionError::InvalidCompletion,"Undeclared completion port");
+            if(it->valid && std::none_of(r.frames.cbegin(),r.frames.cend(),[&](const auto& f){return f.frameId==it->frameId && f.cycleId==it->cycleId && f.sourceId==it->origin.sourceId && f.coordinateSystemId==it->origin.coordinateSystemId;}))fail(ProductionError::InvalidCompletion,"Output origin does not match an acquired frame.");
+            if(it->valid && int(it->port.type)>int(PortType::Boolean) && (r.evaluationId.isEmpty() || it->evaluationId!=r.evaluationId))fail(ProductionError::InvalidCompletion,"Output evaluation identity differs from cycle");
+            try {ToolResultCodec::validate(*it,*expected,r.frameId,r.cycleId);}catch(const std::exception& e){fail(ProductionError::InvalidCompletion,QString::fromUtf8(e.what()));}
+        }
         for(const auto& value:t.outputs)if(value.valid && (value.cycleId!=r.cycleId || value.frameId!=r.frameId || value.origin.cycleId!=r.cycleId || value.origin.frameId!=r.frameId))fail(ProductionError::InvalidCompletion,"Çıktı kökeni çevrimle uyuşmuyor.");
     }
     if(r.state==ExecutionState::Done && seen.size()!=configured.size())fail(ProductionError::InvalidCompletion,"Tam çevrim tool sonuçları eksik.");
@@ -173,29 +281,23 @@ void ProductionRecipeService::record(const CycleResult* r,const QString& error) 
         for(const auto& f:r->frames)frames.append(QJsonObject{{"frameId",f.frameId},{"cycleId",f.cycleId},{"sourceId",f.sourceId},{"coordinateSystemId",f.coordinateSystemId},{"completedAtUtc",f.completedAtUtc.toString(Qt::ISODateWithMs)}});
         for(const auto& t:r->tools) {
             QJsonObject outputs;
-            for(auto it=t.outputs.cbegin();it!=t.outputs.cend();++it)if(it->valid) {
-                QJsonObject output{{"type",portTypeName(it->port.type)},{"unit",it->port.unit},{"coordinateFrame",it->port.frame},{"frameId",it->frameId},{"cycleId",it->cycleId},{"sourceId",it->origin.sourceId}};
-                if(const auto p=std::get_if<double>(&it->data))output["value"]=*p;
-                else if(const auto p=std::get_if<bool>(&it->data))output["value"]=*p;
-                else if(const auto p=std::get_if<QPointF>(&it->data))output["value"]=QJsonObject{{"x",p->x()},{"y",p->y()}};
-                else if(const auto p=std::get_if<QRect>(&it->data))output["value"]=MatchService::rectangle(*p);
-                else if(const auto p=std::get_if<ImageFrame>(&it->data))output["imageInfo"]=QJsonObject{{"width",p->size().width()},{"height",p->size().height()},{"pixelFormat",p->pixelFormat()}};
-                // Image bytes belong to the frame store, never the cycle trace.
-                outputs[it.key()]=output;
-            }
+            for(auto it=t.outputs.cbegin();it!=t.outputs.cend();++it)
+                outputs[it.key()]=ProductionResultCodec::output(*it);
             QString name,kind;for(const auto& configured:editorTools(s.recipe().definition))if(configured.id==t.toolId){name=configured.name;kind=configured.kind;}
             tools.append(QJsonObject{{"toolId",t.toolId},{"name",name},{"kind",kind},{"state",executionStateName(t.state)},{"message",t.message},{"milliseconds",t.milliseconds},{"outputs",outputs},{"errorCode",t.errorCode},
                 {"decision",t.decision==PartDecision::Pass ? "PASS" : t.decision==PartDecision::Fail ? "FAIL" : "NOT_EVALUATED"},
                 {"calibration",t.calibration ? QJsonValue(t.calibration->toJson()) : QJsonValue(QJsonValue::Null)}});
         }
     }
-    if(pendingRecord_.isEmpty())pendingRecord_=QJsonObject{{"schemaVersion",2},{"recordId",QUuid::createUuid().toString(QUuid::WithoutBraces)},{"beginEventId",cycleBeginId_},{"ticket",QString::number(cycle_.ticket)},{"principal",cyclePrincipal_},
+    if(pendingRecord_.isEmpty())pendingRecord_=QJsonObject{{"schemaVersion",s.dependencies().contains("referenceBindings") ? 4:3},{"evaluationId",r ? r->evaluationId : QString{}},{"recordId",QUuid::createUuid().toString(QUuid::WithoutBraces)},{"beginEventId",cycleBeginId_},{"ticket",QString::number(cycle_.ticket)},{"principal",cyclePrincipal_},
         {"recipeId",s.recipe().id},{"recipeName",s.recipe().name},{"applicationType",typeKey(s.recipe().applicationType)},{"recipeVersion",s.recipe().recipeVersion},{"validationId",s.validation().id},
         {"configId",QString::fromLatin1(s.validation().contentId)},{"dependencyId",QString::fromLatin1(s.validation().dependencyId)},
         {"dependencies",s.dependencies()},{"startedAtUtc",cycleStarted_.toString(Qt::ISODateWithMs)},
         {"completedAtUtc",QDateTime::currentDateTimeUtc().toString(Qt::ISODateWithMs)},
         {"cycleId",r ? r->cycleId : QString{}},{"milliseconds",r ? QJsonValue(r->milliseconds) : QJsonValue(QJsonValue::Null)},{"state",r ? executionStateName(r->state) : "ERROR"},
         {"error",r ? r->error : error},{"frames",frames},{"tools",tools},{"communicationState",cycleCommunication_.isEmpty() ? "NOT_REQUESTED" : "RESULT_PENDING"},{"communication",cycleCommunication_}};
+    if(s.dependencies().contains("referenceBindings"))pendingRecord_["referenceBindings"]=s.dependencies()["referenceBindings"];
+    ProductionResultCodec::validate(pendingRecord_);
     persist("cycles",pendingRecord_["recordId"].toString(),pendingRecord_);
     records_.append(pendingRecord_);pendingRecord_={};
     if(records_.size()>128)records_.removeFirst();

@@ -1,12 +1,16 @@
 #include "ToolGraph.hpp"
 #include "ToolRegistry.hpp"
+#include "ReferenceConfig.hpp"
+#include "PoseTrackingConfig.hpp"
+#include "GeometryMeasurementConfig.hpp"
 #include <QJsonArray>
 #include <QSet>
 #include <QMap>
 #include <stdexcept>
 namespace visionflow {
 QString portTypeName(PortType type) {
-    switch(type) {case PortType::Image:return "Image";case PortType::Region:return "Region";case PortType::Point:return "Point";case PortType::Number:return "Number";case PortType::Boolean:return "Boolean";} return {};
+    switch(type) {case PortType::Image:return "Image";case PortType::Region:return "Region";case PortType::Point:return "Point";case PortType::Number:return "Number";case PortType::Boolean:return "Boolean";
+    case PortType::Text:return "Text";case PortType::CodeResults:return "CodeResults";case PortType::PointSet:return "PointSet";case PortType::Profile:return "Profile";case PortType::Line2D:return "Line2D";case PortType::Circle2D:return "Circle2D";case PortType::Arc2D:return "Arc2D";case PortType::Pose2D:return "Pose2D";case PortType::InspectionResults:return "InspectionResults";} return {};
 }
 QVector<PortDefinition> inputPorts(const QString& kind) {return ToolRegistry::get(kind).inputs;}
 QVector<PortDefinition> outputPorts(const QString& kind) {return ToolRegistry::get(kind).outputs;}
@@ -37,8 +41,9 @@ QVector<ToolConnection> editorConnections(const QJsonObject& definition) {
 QJsonObject withEditorConnections(QJsonObject definition,const QVector<ToolConnection>& connections) {
     auto e=definition["editor"].toObject(); QJsonArray array;
     for (const auto& c:connections) array.append(QJsonObject{{"sourceTool",c.sourceTool},{"sourcePort",c.sourcePort},{"targetTool",c.targetTool},{"targetPort",c.targetPort}});
-    QJsonArray normalized;for(const auto& t:editorTools(definition))normalized.append(QJsonObject{{"id",t.id},{"kind",t.kind},{"name",t.name},{"description",t.description},{"enabled",t.enabled},{"parameters",t.parameters}});
-    e["tools"]=normalized;e["schemaVersion"]=6; e["connections"]=array; definition["editor"]=e; return definition;
+    const auto tools=editorTools(definition);const auto schema=requiredEditorSchema(tools,e["schemaVersion"].toInt(6));
+    QJsonArray normalized;for(const auto& t:tools)normalized.append(encodeEditorTool(t,schema));
+    e["tools"]=normalized;e["schemaVersion"]=schema; e["connections"]=array; definition["editor"]=e; return definition;
 }
 GraphValidation validateGraph(const QVector<ToolDefinition>& tools,const QVector<ToolConnection>& connections) {
     GraphValidation r; QMap<QString,ToolDefinition> nodes; QMap<QString,int> indegree; QMap<QString,QStringList> next; QSet<QString> bound;
@@ -55,7 +60,49 @@ GraphValidation validateGraph(const QVector<ToolDefinition>& tools,const QVector
         bound.insert(key); ++indegree[c.targetTool]; next[c.sourceTool]<<c.targetTool;
     }
     for (const auto& t:tools) if (t.enabled) for (const auto& p:inputPorts(t.kind)) if (p.required && !bound.contains(t.id+"/"+p.id)) r.errors<<t.name+": eksik giriş "+p.id;
+    for(const auto& t:tools)if(supportsPoseTracking(t.kind) && !t.parameters.contains("referenceBinding")) {
+        const bool tracking=t.parameters.contains("poseTracking");
+        if(tracking!=bound.contains(t.id+"/poseReference"))r.errors<<t.name+": pose reference and teaching binding must be configured together";
+        if(tracking)try {
+            if(bound.contains(t.id+"/region") || bound.contains(t.id+"/reference"))r.errors<<t.name+": pose tracking cannot be combined with region/point reference";
+            const auto sourceId=trackingSourceTool(t);
+            for(const auto& c:connections)if(c.targetTool==t.id && c.targetPort=="poseReference") {
+                const auto source=nodes.value(c.sourceTool);
+                if(c.sourceTool!=sourceId || c.sourcePort!="pose" || (source.kind!="pattern_pose" && source.kind!="shape_pose"))
+                    r.errors<<t.name+": pose reference producer differs from teaching";
+            }
+        }catch(const std::exception& e){r.errors<<t.name+": "+QString::fromUtf8(e.what());}
+    }
+    for(const auto& t:tools)if(t.parameters.contains("referenceBinding"))try {
+        const auto b=toolReferenceBinding(t);const auto input=referenceInput(b);
+        if(!bound.contains(t.id+"/"+input) || bound.contains(t.id+"/region") || bound.contains(t.id+"/"+(input=="reference" ? "poseReference":"reference")))
+            r.errors<<t.name+": reference binding/connection conflict";
+        for(const auto& c:connections)if(c.targetTool==t.id && c.targetPort==input) {
+            const auto source=nodes.value(c.sourceTool);
+            if(c.sourceTool!=b.sourceTool || c.sourcePort!=b.sourcePort || !source.enabled || !referenceSourcePort(source.kind,c.sourcePort) ||
+               ((b.mode==ReferenceMode::Rigid)!=(c.sourcePort=="pose")))r.errors<<t.name+": reference source/port/mode invalid";
+        }
+    }catch(const std::exception& e){r.errors<<t.name+": "+QString::fromUtf8(e.what());}
+    for(const auto& t:tools)if(supportsReference(t.kind) && !t.parameters.contains("referenceBinding")) {
+        if(t.kind!="edge" && bound.contains(t.id+"/reference"))r.errors<<t.name+": point reference requires binding";
+        if(t.kind=="edge" && bound.contains(t.id+"/poseReference"))r.errors<<t.name+": pose reference requires binding";
+    }
     for(const auto& t:tools)if(t.kind=="edge" && bound.contains(t.id+"/reference") && bound.contains(t.id+"/region"))r.errors<<t.name+": region ve referans aynı anda bağlanamaz (uyumsuz arama modu).";
+    for(const auto& t:tools)if(t.enabled && t.kind=="geometry_measurement") {
+        try {
+            const auto required=geometryMeasurementRequiredInputs(t.parameters);
+            QMap<QString,ToolConnection> bindings;
+            for(const auto& c:connections)if(c.targetTool==t.id){bindings[c.targetPort]=c;if(!required.contains(c.targetPort))r.errors<<t.name+": operation does not use input "+c.targetPort;}
+            for(const auto& port:required)if(!bindings.contains(port))r.errors<<t.name+": operation requires input "+port;
+            if(t.parameters["mode"]=="calibrated")for(const auto index:{QString("1"),QString("2")}) {
+                const auto feature=required.contains("line"+index) ? "line"+index:"circle"+index;
+                if(!required.contains(feature))continue;
+                const auto sample="samples"+index;
+                if(bindings.contains(feature) && bindings.contains(sample) && bindings[feature].sourceTool!=bindings[sample].sourceTool)
+                    r.errors<<t.name+": feature and observations must come from the same tool";
+            }
+        }catch(const std::exception& e){r.errors<<t.name+": "+QString::fromUtf8(e.what());}
+    }
     QStringList ready; for (const auto& t:tools) if (indegree[t.id]==0) ready<<t.id;
     while (!ready.isEmpty()) {const auto id=ready.takeFirst(); r.order<<id; for (const auto& target:next[id]) if (--indegree[target]==0) ready<<target;}
     if (r.order.size()!=tools.size()) r.errors<<"Döngüsel bağımlılık (DAG gerekli).";

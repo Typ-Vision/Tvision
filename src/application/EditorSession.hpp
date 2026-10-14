@@ -2,6 +2,7 @@
 #include "Deadline.hpp"
 #include "ExecutionService.hpp"
 #include "MatchService.hpp"
+#include "ReferenceService.hpp"
 #include <QFutureWatcher>
 #include <QtConcurrent/QtConcurrentRun>
 #include <QSet>
@@ -53,6 +54,15 @@ struct EditorContext {
 };
 struct ImageLoad {std::optional<ImageFrame> frame;QString error;};
 struct ModelTeaching {QString model,error;};
+struct PoseTeaching {QJsonObject parameters;QString error;};
+struct TrackingTeachingInput {
+    ToolDefinition consumer,source;
+    ToolResult reference;
+    ImageFrame image;
+    double mmPerSample;
+    MeasurementExecutionContext calibration;
+};
+struct TrackingTeaching {std::optional<ToolDefinition> tool;QString error;};
 class EditorSession : public JobSession {
 public:
     std::optional<ImageFrame> frame;
@@ -75,6 +85,16 @@ public:
     bool accepts(const QByteArray& captured,const EditorContext& current) const {return captured==signature(current);}
     static ImageLoad load(const QString& path);
     static ModelTeaching teach(const ImageFrame& frame,const QRect& roi);
+    static PoseTeaching teachPose(const ToolDefinition&,const ImageFrame&,const QRect&,QPointF anchor);
+    ImageFrame toolImage(const EditorContext&,const QString& tool) const;
+    ToolDefinition taughtReference(const EditorContext&,const ToolDefinition& consumer,const QString& producer,const QString& port,
+        QPointF offset={},double angleOffsetRadians=0) const;
+    ToolDefinition taughtTracking(const EditorContext&,const ToolDefinition& consumer,const QString& producer,
+        double mmPerSample,const MeasurementExecutionContext& = {}) const;
+    TrackingTeachingInput trackingTeachingInput(const EditorContext&,const ToolDefinition&,const QString& producer,double mmPerSample,const MeasurementExecutionContext& = {}) const;
+    static TrackingTeaching teachTracking(const TrackingTeachingInput&,const std::shared_ptr<std::atomic_bool>& cancel={});
+    static TrackingTeaching teachReference(const TrackingTeachingInput&,const QString& port,QPointF offset,double angle,
+        const std::shared_ptr<std::atomic_bool>& cancel={});
     QJsonObject taughtSearch(const EditorContext& context,const ToolDefinition& tool,const QRect& roi) const;
     static void suppressCancelled(CycleResult& cycle);
 private:

@@ -26,6 +26,8 @@ class PlaneMappingService {
 public:
     static PlaneMapping fit(const ChessboardObservation&,double maxInverseErrorPixels=1.0);
     static QPointF map(const PlaneMapping&,QPointF rawPixel);
+    // Controlled target-local mm -> raw; rejects horizon, bounds and hull extrapolation.
+    static QPointF inverseMap(const PlaneMapping&,QPointF worldMillimetres);
     static PlaneDistance distance(const PlaneMapping&,QPointF,QPointF);
     static QJsonObject encode(const PlaneMapping&);
     // Bounded evidence replay; saved fit flags/matrix are never trusted.

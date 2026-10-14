@@ -31,7 +31,7 @@ QFrame* card(const QString& title, const QString& text) {
 }
 }
 MainWindow::MainWindow(const QString& settingsFile) : settingsFile_(settingsFile) {
-    smokeMode_=QCoreApplication::arguments().contains("--smoke-test");
+    smokeMode_=QCoreApplication::arguments().contains("--usability-smoke") || QCoreApplication::arguments().contains("--smoke-test") || QCoreApplication::arguments().contains("--circle-smoke") || QCoreApplication::arguments().contains("--geometry-smoke");
     setWindowTitle("VisionFlow Industrial Vision Suite"); resize(1400,900); setMinimumSize(850,600);
     auto* file = menuBar()->addMenu("File");
     auto* create=file->addAction("New Project"); create->setShortcut(QKeySequence::New);

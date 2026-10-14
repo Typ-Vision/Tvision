@@ -1,4 +1,7 @@
 #include "ProjectService.hpp"
+#include "BackendCapabilities.hpp"
+#include "domain/ToolRegistry.hpp"
+#include "domain/PoseTrackingConfig.hpp"
 #include <QFile>
 #include <QFileInfo>
 #include <QDir>
@@ -101,12 +104,12 @@ void ProjectService::discardChanges() {
 QVector<ToolDefinition> ProjectService::tools() const {
     const auto* recipe=activeRecipe(); if (!recipe) fail("Önce bir reçete açın."); return editorTools(recipe->definition);
 }
-void ProjectService::setTools(const QVector<ToolDefinition>& tools) {
+void ProjectService::setTools(const QVector<ToolDefinition>& tools,const QVector<ToolConnection>* bindings) {
     const auto* active=activeRecipe(); if (!active) fail("Önce bir reçete açın."); const QString id=active->id;
     auto candidate=project();
     for (auto& r : candidate.recipes) if (r.id==id) {
         auto definition=withEditorTools(r.definition,tools);
-        auto connections=editorConnections(definition);
+        auto connections=bindings ? *bindings:editorConnections(definition);
         const auto previous=editorTools(r.definition);
         auto removed=[&](const QString& id){
             return std::any_of(previous.begin(),previous.end(),[&](const auto& t){return t.id==id;}) &&
@@ -130,7 +133,41 @@ QString ProjectService::addTool(const QString& kind) {
     do {
         name=toolLabel(kind).replace(' ','_')+"_"+QString::number(suffix++);
     } while (std::any_of(list.begin(),list.end(),[&](const auto& t){return t.name.toCaseFolded()==name.toCaseFolded();}));
-    ToolDefinition tool{newId(),kind,name,"",true,params}; list.append(tool); setTools(list); return tool.id;
+    ToolDefinition tool{newId(),kind,name,"",true,params};
+    const auto backend=ToolRegistry::get(kind).requiredBackend;
+    if(!backend.isEmpty()){const auto capability=BackendCapabilities::get(backend);if(!capability.available)fail(capability.reason);tool.dependencies.append({ToolDependencyKind::Backend,backend,capability.version,capability.contentId,{}});}
+    auto connections=editorConnections(activeRecipe()->definition);
+    const auto inputs=inputPorts(kind);
+    const auto image=std::find_if(inputs.begin(),inputs.end(),[](const auto& port){return port.id=="image" && port.type==PortType::Image;});
+    if(image!=inputs.end()) {
+        QVector<QString> sources;
+        for(const auto& t:list)if(ToolRegistry::get(t.kind).acquisitionSource)sources.append(t.id);
+        // Only an unambiguous acquisition chain can supply a creation default.
+        QString producer;
+        if(sources.size()==1) {
+            QSet<QString> reachable;
+            for(const auto& t:list)if(t.id==sources.first() && t.enabled)reachable.insert(t.id);
+            bool changed=true;
+            while(changed) {
+                changed=false;
+                for(const auto& t:list)if(t.enabled && t.kind=="preprocess" && !reachable.contains(t.id)) {
+                    const auto input=[&](const ToolConnection& c){return c.targetTool==t.id && c.targetPort=="image";};
+                    if(std::count_if(connections.begin(),connections.end(),input)!=1)continue;
+                    for(const auto& c:connections)if(input(c) && reachable.contains(c.sourceTool) && c.sourcePort=="image") {reachable.insert(t.id);changed=true;break;}
+                }
+            }
+            for(const auto& t:list)if(reachable.contains(t.id)) {
+                for(const auto& output:outputPorts(t.kind))if(output.id=="image" && output.type==image->type && output.unit==image->unit && output.frame==image->frame)
+                    if(t.kind=="preprocess" || producer.isEmpty())producer=t.id;
+            }
+        }
+        if(!producer.isEmpty())connections.append({producer,"image",tool.id,"image"});
+    }
+    list.append(tool);
+    const auto baseline=validateGraph(list,editorConnections(activeRecipe()->definition));
+    const auto graph=validateGraph(list,connections);
+    for(const auto& error:graph.errors)if(!baseline.errors.contains(error))fail(error);
+    setTools(list,&connections);return tool.id;
 }
 void ProjectService::updateTool(const ToolDefinition& tool) {
     auto list=tools();
@@ -139,6 +176,64 @@ void ProjectService::updateTool(const ToolDefinition& tool) {
         t=tool; setTools(list); return;
     }
     fail("Tool bulunamadı.");
+}
+void ProjectService::updateToolConnections(const ToolDefinition& tool,const QVector<ToolConnection>& connections) {
+    if(!activeRecipe())fail("Önce reçete açın.");
+    auto updated=tools();bool found=false;
+    for(auto& t:updated)if(t.id==tool.id){if(t.kind!=tool.kind)fail("Tool türü değiştirilemez.");t=tool;found=true;}
+    if(!found)fail("Tool bulunamadı.");
+    const auto definition=withEditorConnections(withEditorTools(activeRecipe()->definition,updated),connections);
+    validateEditorDefinition(definition);
+    const auto graph=validateGraph(updated,connections);
+    // An unfinished editor may have other unconnected tools. This edit must not
+    // introduce any new graph failure, including tracking/region conflicts.
+    const auto previous=editorConnections(activeRecipe()->definition);
+    const auto before=validateGraph(tools(),previous);
+    const auto imageInput=[&](const ToolConnection& c){return c.targetTool==tool.id && c.targetPort=="image";};
+    const bool imageDisconnected=std::any_of(previous.begin(),previous.end(),imageInput) &&
+        std::none_of(connections.begin(),connections.end(),imageInput);
+    for(const auto& error:graph.errors) {
+        // Explicitly clearing this image selector leaves an unfinished draft.
+        // Execution still rejects the missing input; structural/teaching gates remain.
+        if(imageDisconnected && error==tool.name+": eksik giriş image")continue;
+        if(error.contains("DAG") || error.contains("uyumsuz") || !before.errors.contains(error))fail(error);
+    }
+    if(definition==activeRecipe()->definition)return;
+    auto candidate=project();const auto id=activeRecipe()->id;
+    for(auto& r:candidate.recipes)if(r.id==id){r.definition=definition;r.status=RecipeStatus::Draft;}
+    validateProject(candidate);project_=candidate;changedRecipes_.insert(id);dirty_=true;
+}
+bool ProjectService::moveTool(const QString& id,int direction) {
+    if(direction!=-1 && direction!=1)fail("Taşıma yönü -1 veya 1 olmalı.");
+    auto list=tools();
+    const auto it=std::find_if(list.begin(),list.end(),[&](const auto& t){return t.id==id;});
+    if(it==list.end())fail("Tool bulunamadı.");
+    const auto index=std::distance(list.begin(),it),target=index+direction;
+    if(target<0 || target>=list.size())return false;
+    std::swap(list[index],list[target]);
+    setTools(list);return true;
+}
+void ProjectService::bindReference(const QString& target,const ReferenceBinding& binding) {
+    auto list=tools();auto it=std::find_if(list.begin(),list.end(),[&](const auto& t){return t.id==target;});
+    if(it==list.end())fail("Reference target missing");
+    const auto source=std::find_if(list.begin(),list.end(),[&](const auto& t){return t.id==binding.sourceTool;});
+    if(source==list.end() || binding.geometryId!=referenceGeometryIdentity(*source,binding.sourcePort))fail("Reference teaching geometry/source differs");
+    auto t=*it;t.parameters.remove("poseTracking");t.parameters["referenceBinding"]=binding.toJson();
+    auto links=editorConnections(activeRecipe()->definition);
+    links.erase(std::remove_if(links.begin(),links.end(),[&](const auto& c){return c.targetTool==target && (c.targetPort=="reference" || c.targetPort=="poseReference");}),links.end());
+    links.append({binding.sourceTool,binding.sourcePort,target,referenceInput(binding)});
+    updateToolConnections(t,links);
+}
+void ProjectService::clearReference(const QString& target) {
+    auto list=tools();auto it=std::find_if(list.begin(),list.end(),[&](const auto& t){return t.id==target;});
+    if(it==list.end())fail("Reference target missing");
+    auto t=*it;
+    const bool world=t.parameters.contains("referenceBinding") ? toolReferenceBinding(t).world:isWorldPoseTracking(t);
+    if(world && t.kind!="circle_fit"){t.parameters["scanRoi"]=QJsonObject{};if(t.kind!="edge_point")t.parameters["mode"]="pixel";}
+    t.parameters.remove("referenceBinding");t.parameters.remove("poseTracking");
+    auto links=editorConnections(activeRecipe()->definition);
+    links.erase(std::remove_if(links.begin(),links.end(),[&](const auto& c){return c.targetTool==target && (c.targetPort=="reference" || c.targetPort=="poseReference");}),links.end());
+    updateToolConnections(t,links);
 }
 void ProjectService::removeTool(const QString& id) {
     auto list=tools();

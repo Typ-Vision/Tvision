@@ -1,4 +1,5 @@
 #include "RuntimeService.hpp"
+#include "EditorSession.hpp"
 #include <QDir>
 #include <QFileInfo>
 #ifdef Q_OS_WIN
@@ -25,7 +26,7 @@ RuntimeIdentity RuntimeIdentity::localEngineer() {
 RuntimeService::RuntimeService(QString directory,QString catalogPath,RuntimeIdentity identity)
     :store_(std::move(directory)),catalogPath_(std::move(catalogPath)),identity_(std::move(identity)),
      production_(identity_.authorize,[this](const Recipe& r){return dependencies(r);},16,
-        [this](const QString& kind,const QString& id,const QJsonObject& o){store_.append(kind,id,o);}) {}
+        [this](const QString& kind,const QString& id,const QJsonObject& o){store_.append(kind,id,o);},[this](const ImageFrame& frame){return CalibrationWorkflow::resolve(production_.active()->recipe(),frame,catalogPath_);}) {}
 ProductionDependencies RuntimeService::dependencies(const Recipe& r) const {
     ProductionDependencies result;
     for(const auto& t:editorTools(r.definition))if(t.enabled && (t.kind=="image_file" || t.kind=="webcam")) {
@@ -105,9 +106,20 @@ ImageFrame RuntimeService::probe(const Recipe& recipe,const QString& directory,c
     for(const auto& t:result.tools)if(t.toolId==source && t.state==ExecutionState::Done && t.outputs.value("image").valid)return std::get<ImageFrame>(t.outputs.value("image").data);
     throw std::runtime_error("Doğrulama karesi yok.");
 }
+void RuntimeService::suppressCancelled(const ProductionCycle& cycle,CycleResult& result) {
+    if(result.completionSnapshot_!=cycle.snapshot || result.completionTicket_!=cycle.ticket ||
+       result.completionDigest_.isEmpty() || result.completionDigest_!=ProductionRecipeService::completionDigest(result))
+        throw std::runtime_error("Cannot suppress changed or foreign Runtime completion");
+    EditorSession::suppressCancelled(result);
+    result.completionDigest_=ProductionRecipeService::completionDigest(result);
+}
 CycleResult RuntimeService::execute(const ProductionCycle& cycle,const QString& catalogPath,const std::shared_ptr<std::atomic_bool>& cancel) {
+    if(!cycle.snapshot || !cycle.ticket)throw std::runtime_error("Runtime execution requires a production lease");
     const auto s=cycle.snapshot;const auto recipe=s->recipe();
-    return ExecutionService{}.run(recipe.definition,s->projectDirectory(),recipe.id,s->validation().contentId,cancel,{}, {},
+    auto result=ExecutionService{}.run(recipe.definition,s->projectDirectory(),recipe.id,s->validation().contentId,cancel,{}, {},
         [recipe,catalogPath](const ImageFrame& frame){return CalibrationWorkflow::resolve(recipe,frame,catalogPath);});
+    result.completionDigest_=ProductionRecipeService::completionDigest(result);
+    result.completionTicket_=cycle.ticket;result.completionSnapshot_=s;
+    return result;
 }
 }

@@ -5,6 +5,10 @@
 #include <QFileInfo>
 #include <QUuid>
 #include "domain/ToolRegistry.hpp"
+#include "PoseMatchService.hpp"
+#include "ShapeMatchService.hpp"
+#include "PoseRoiService.hpp"
+#include "ToolResultCodec.hpp"
 #include <QCryptographicHash>
 #include <algorithm>
 #include <stdexcept>
@@ -57,7 +61,7 @@ QByteArray EditorSession::evaluationScope(const EditorContext& c) const {
     const auto& m=frame->metadata();
     QCryptographicHash hash(QCryptographicHash::Sha256);
     hash.addData(QJsonDocument(QJsonArray{c.projectId,c.path,c.recipeId,QString::number(generation),m.sourceId,m.frameId,m.cycleId,m.coordinateSystemId}).toJson(QJsonDocument::Compact));
-    hash.addData(frame->contentId());hash.addData(QJsonDocument(c.calibrationBinding).toJson(QJsonDocument::Compact));
+    hash.addData(frame->contentId());hash.addData(frame->processingId());hash.addData(QJsonDocument(c.calibrationBinding).toJson(QJsonDocument::Compact));
     QFile catalog(c.path+".calibrations.json");if(catalog.open(QIODevice::ReadOnly))hash.addData(QCryptographicHash::hash(catalog.readAll(),QCryptographicHash::Sha256));
     return hash.result();
 }
@@ -71,6 +75,7 @@ void EditorSession::adoptFrame(const EditorContext& c) {
         m.sourceId=t.id;if(m.frameId.isEmpty())m.frameId=QUuid::createUuid().toString(QUuid::WithoutBraces);
         if(m.cycleId.isEmpty())m.cycleId=QUuid::createUuid().toString(QUuid::WithoutBraces);
         if(m.coordinateSystemId.isEmpty())m.coordinateSystemId=t.id+"/image";
+        if(!m.completedAtUtc.isValid())m.completedAtUtc=QDateTime::currentDateTimeUtc();
         frame=frame->withMetadata(m);ToolResult r;r.toolId=t.id;r.state=ExecutionState::Done;
         r.outputs["image"]={outputPorts(t.kind).first(),*frame,true,m.frameId,m.cycleId,m};cacheResult(c,r);return;
     }
@@ -110,7 +115,7 @@ bool EditorSession::acceptCycle(CycleResult result,const QByteArray& captured,co
     if(token(SessionJob::Execution) && token(SessionJob::Execution)->load())suppressCancelled(result);
     if(!accepts(captured,current)){invalidateResults();return false;}
     cycle=std::move(result);frame.reset();references.clear();
-    if(cycle->state!=ExecutionState::Skipped)for(const auto& r:cycle->tools)for(const auto& v:r.outputs)if(v.valid)if(auto* image=std::get_if<ImageFrame>(&v.data))frame=*image;
+    if(cycle->state!=ExecutionState::Skipped)for(const auto& r:cycle->tools)for(const auto& t:editorTools(current.definition))if(t.id==r.toolId && ToolRegistry::get(t.kind).acquisitionSource)for(const auto& v:r.outputs)if(v.valid)if(auto* image=std::get_if<ImageFrame>(&v.data))frame=*image;
     cache_.clear();if(frame)for(const auto& r:cycle->tools)cacheResult(current,r);
     if(frame)for(const auto& r:cycle->tools) {
         auto point=r.outputs.value("point");if(!point.valid || !std::holds_alternative<QPointF>(point.data))continue;
@@ -119,6 +124,63 @@ bool EditorSession::acceptCycle(CycleResult result,const QByteArray& captured,co
 }
 ImageLoad EditorSession::load(const QString& path) {try{return {ImageFileService{}.load(path),{}};}catch(const std::exception& e){return {{},QString::fromUtf8(e.what())};}}
 ModelTeaching EditorSession::teach(const ImageFrame& frame,const QRect& roi) {try{return {MatchService{}.teach(frame,roi),{}};}catch(const std::exception& e){return {{},QString::fromUtf8(e.what())};}}
+PoseTeaching EditorSession::teachPose(const ToolDefinition& tool,const ImageFrame& image,const QRect& roi,QPointF anchor) {
+    try {
+        if(tool.kind!="pattern_pose" && tool.kind!="shape_pose")throw std::runtime_error("Pose teaching requires a pose tool");
+        return {(tool.kind=="shape_pose" ? ShapeMatchService::teach:PoseMatchService::teach)(image,roi,anchor,tool.parameters),{}};
+    }catch(const std::exception& e){return {{},QString::fromUtf8(e.what())};}
+}
+ImageFrame EditorSession::toolImage(const EditorContext& c,const QString& tool) const {
+    const auto e=evaluation(c);
+    for(const auto& link:editorConnections(c.definition))if(link.targetTool==tool && link.targetPort=="image") {
+        const auto cached=e.cache.constFind(link.sourceTool);
+        if(cached==e.cache.cend() || cached->result.state!=ExecutionState::Done)break;
+        const auto port=cached->result.outputs.value(link.sourcePort);
+        ToolResultCodec::validate(port,{"image",PortType::Image,"px","image"},e.frame.metadata().frameId,e.frame.metadata().cycleId);
+        if(port.valid && std::holds_alternative<ImageFrame>(port.data))return std::get<ImageFrame>(port.data);
+    }
+    throw std::runtime_error("Güncel image girişi yok. Görüntü kaynağını bağlayıp önce kaynak/Preprocess çalıştırın.");
+}
+ToolDefinition EditorSession::taughtReference(const EditorContext& c,const ToolDefinition& consumer,const QString& producer,const QString& port,QPointF offset,double angle) const {
+    if(token(SessionJob::Execution) && token(SessionJob::Execution)->load())throw std::runtime_error("Reference teaching cancelled");
+    const auto e=evaluation(c);const auto cached=e.cache.constFind(producer);
+    if(cached==e.cache.cend())throw std::runtime_error("Run current reference source first");
+    for(const auto& source:editorTools(c.definition))if(source.id==producer)
+        return ReferenceService::teach(consumer,source,port,cached->result,toolImage(c,consumer.id),offset,angle);
+    throw std::runtime_error("Reference producer missing");
+}
+TrackingTeachingInput EditorSession::trackingTeachingInput(const EditorContext& c,const ToolDefinition& consumer,const QString& producer,double mmPerSample,const MeasurementExecutionContext& calibration) const {
+    const auto e=evaluation(c);const auto image=toolImage(c,consumer.id);
+    for(const auto& source:editorTools(c.definition))if(source.id==producer) {
+        const auto cached=e.cache.constFind(producer);
+        if(cached==e.cache.cend())throw std::runtime_error("Güncel pose sonucu yok. Önce referans aracını Run Tool ile çalıştırın.");
+        return {consumer,source,cached->result,image,mmPerSample,calibration};
+    }
+    throw std::runtime_error("Pose referansı bulunamadı.");
+}
+TrackingTeaching EditorSession::teachTracking(const TrackingTeachingInput& input,const std::shared_ptr<std::atomic_bool>& cancel) {
+    try {
+        if(cancel && cancel->load())throw std::runtime_error("Teaching cancelled");
+        auto unbound=input.consumer;unbound.parameters.remove("poseTracking");
+        const auto roi=input.consumer.parameters["scanRoi"].toObject();
+        if(isWorldPoseTracking(input.consumer) || input.consumer.parameters["mode"]=="calibrated" || (!roi.isEmpty() && ToolRoi::fromJson(roi).frame.unit==LengthUnit::Millimetre))return {PoseRoiService::teachWorldTool(unbound,ToolRoi::fromJson(roi),input.mmPerSample,input.source,input.reference,input.image,input.calibration,cancel),{}};
+        return {PoseRoiService::teachTool(unbound,{input.source.id+"/model-local",LengthUnit::Pixel,AxisConvention::XRightYDown},input.source,input.reference,input.image),{}};
+    }catch(const std::exception& e){return {{},QString::fromUtf8(e.what())};}
+}
+TrackingTeaching EditorSession::teachReference(const TrackingTeachingInput& input,const QString& port,QPointF offset,double angle,const std::shared_ptr<std::atomic_bool>& cancel){
+    try{
+        if(cancel && cancel->load())throw std::runtime_error("Teaching cancelled");
+        const auto json=input.consumer.parameters["scanRoi"].toObject();
+        const bool world=!json.isEmpty() && ToolRoi::fromJson(json).frame.unit==LengthUnit::Millimetre;
+        auto taught=world ? ReferenceService::teachWorld(input.consumer,ToolRoi::fromJson(json),input.mmPerSample,input.source,port,input.reference,input.image,input.calibration,offset,angle,cancel)
+            :ReferenceService::teach(input.consumer,input.source,port,input.reference,input.image,offset,angle);
+        if(cancel && cancel->load())throw std::runtime_error("Teaching cancelled");return {taught,{}};
+    }catch(const std::exception& e){return {{},QString::fromUtf8(e.what())};}
+}
+ToolDefinition EditorSession::taughtTracking(const EditorContext& c,const ToolDefinition& consumer,const QString& producer,double mmPerSample,const MeasurementExecutionContext& calibration) const {
+    const auto taught=teachTracking(trackingTeachingInput(c,consumer,producer,mmPerSample,calibration));
+    if(!taught.tool)throw std::runtime_error(taught.error.toUtf8().constData());return *taught.tool;
+}
 QJsonObject EditorSession::taughtSearch(const EditorContext& c,const ToolDefinition& tool,const QRect& roi) const {
     auto p=tool.parameters;
     if(tool.kind=="edge")for(const auto& b:editorConnections(c.definition))if(b.targetTool==tool.id && b.targetPort=="reference") {
@@ -127,5 +189,5 @@ QJsonObject EditorSession::taughtSearch(const EditorContext& c,const ToolDefinit
         for(const auto& source:editorTools(c.definition))if(source.id==b.sourceTool)p["referenceGeometry"]=referenceGeometry(source);
     }p["searchRoi"]=MatchService::rectangle(roi);return p;
 }
-void EditorSession::suppressCancelled(CycleResult& c) {c.frames.clear();c.state=ExecutionState::Skipped;c.error="Çevrim iptal edildi.";for(auto& r:c.tools){r.outputs.clear();r.regions.clear();r.mask={};r.points.clear();r.lines.clear();r.searchRegion={};r.decision=PartDecision::NotEvaluated;r.calibration.reset();}}
+void EditorSession::suppressCancelled(CycleResult& c) {c.frames.clear();c.state=ExecutionState::Skipped;c.error="Çevrim iptal edildi.";for(auto& r:c.tools){r.edgeDiagnostics.reset();r.outputs.clear();r.regions.clear();r.mask={};r.points.clear();r.rejectedPoints.clear();r.lines.clear();r.searchRegion={};r.decision=PartDecision::NotEvaluated;r.calibration.reset();}}
 }

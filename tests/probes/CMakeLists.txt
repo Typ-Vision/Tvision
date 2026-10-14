@@ -1,0 +1,13 @@
+cmake_minimum_required(VERSION 3.24)
+project(VisionFlowOpenCVProbe LANGUAGES CXX)
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+find_package(OpenCV REQUIRED COMPONENTS core imgproc imgcodecs objdetect calib geometry)
+add_executable(opencv_api_probe opencv_api_probe.cpp)
+target_include_directories(opencv_api_probe PRIVATE ${OpenCV_INCLUDE_DIRS})
+target_link_libraries(opencv_api_probe PRIVATE ${OpenCV_LIBS})
+file(GENERATE OUTPUT "${CMAKE_BINARY_DIR}/opencv-link-inventory.txt" CONTENT
+"compiler=${CMAKE_CXX_COMPILER}\ncompilerVersion=${CMAKE_CXX_COMPILER_VERSION}\nbuildType=${CMAKE_BUILD_TYPE}\nstandard=${CMAKE_CXX_STANDARD}\npointerSize=${CMAKE_SIZEOF_VOID_P}\nOpenCV_VERSION=${OpenCV_VERSION}\nOpenCV_SHARED=${OpenCV_SHARED}\nOpenCV_DIR=${OpenCV_DIR}\nincludes=${OpenCV_INCLUDE_DIRS}\navailable=${OpenCV_LIB_COMPONENTS}\nlinked=${OpenCV_LIBS}\ncoreImport=$<TARGET_LINKER_FILE:opencv_core>\ncoreRuntime=$<TARGET_FILE:opencv_core>\n")
+enable_testing()
+add_test(NAME opencv_api_probe COMMAND opencv_api_probe "${CMAKE_BINARY_DIR}")
