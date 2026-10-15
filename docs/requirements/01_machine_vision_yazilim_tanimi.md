@@ -1,5 +1,14 @@
 # Endüstriyel Machine Vision Yazılımı — Genel Tanım
 
+15 Ekim — **KUI-5 tamamlandı**: üç applicationType aynı tek etkin model/Editor/Runtime yolunu kullanır. Gerçek matematiksel hazır model, bağımsız kontrol, etkin seçim ve parça kararı ayrı kalır. Eksik/uyumsuz model mm/PASS üretmez; raw-only tanı çalışabilir. Legacy proof/no-op ve historique model kimliği korunur. [Uygulanan sözleşme](../architecture/system-calibration.md). KUI-6 tam kabul sıradadır; fiziksel/lens/robot açık. Alttaki kayıtlar tarihseldir.
+
+
+15 Ekim — **KUI-4 arayüzü tamamlandı**; [yeni kalibrasyon akışı ve sınırları](../architecture/calibration-ui-acceptance.md). Hesap, isteğe bağlı kontrol, aday kaydı ve ana sayfada etkinlik ayrıdır. Dosya kurulum beyanı fiziksel cihaz kabulü değildir. Bütün metrik araç/Runtime entegrasyonu sıradaki KUI-5; birleşik kabul KUI-6. Alttaki kayıtlar tarihseldir.
+
+
+15 Ekim — **KUI-1–KUI-3 servis katmanı tamamlandı**. [Ortak kalibrasyon session/plaka sözleşmesi](../architecture/calibration-wizard-services.md): gerçek Edge/Caliper tek çifti veya chessboard/simetrik circle grid raw H üretir; hesap, bağımsız kontrol ve etkinlik ayrı kalır. Yeni ekran akışı KUI-4, bütün metrik araçlar/Editor/immutable Runtime bağlantısı KUI-5'tir; mevcut üründe tamamlanmış gibi sunulmaz. Fiziksel doğruluk ve robot hesaplama açık kalır.
+
+
 12 Ekim güncel durum — **R1–R8 tamamlandı.** Yeni ortak Referans binding’leri immutable snapshot ve Runtime’ın süreç içi trusted completion kanıtıyla production yoluna bağlandı; tam kaynak/port/ofset/calibration kimliği terminal schema4, restart, Logs ve CSV’de korunur. Runtime Viewer aynı current resolver’ı kullanır; Stop/missing nominal fallback üretmez. Engine **execution/22**, editor8/raw1/world2/vf.socket2 korunur. Standalone Pattern/Shape ve eski poseTracking production kapısı T8.4.2b.3c corpus kabulüne kadar kapalıdır. **R8 tam Release kabulü: OFF/core 57/57, ON/UI 64/64. Sonraki T8.4.2b.3c** eksik corpus ve bütün production yollarının kapanışıdır. Güncel binary build/reference-ui/visionflow.exe. Alttaki teslim ve sıra kayıtları tarihseldir. [R7 sözleşmesi ve kabul eşlemesi](../architecture/reference-production-acceptance.md). [R8 paket ve devir kanıtı](../architecture/reference-release-acceptance.md).
 
 

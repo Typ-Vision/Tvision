@@ -1,4 +1,5 @@
 #include "MainWindow.hpp"
+#include "CalibrationHome.hpp"
 #include "ImageViewer.hpp"
 #include "application/CalibrationStudyStore.hpp"
 #include "application/CalibrationReportService.hpp"
@@ -19,6 +20,8 @@
 #include <QVBoxLayout>
 #include <QScrollArea>
 #include <QSignalBlocker>
+#include <QStackedWidget>
+#include <QDir>
 #include <QFutureWatcher>
 #include <QJsonArray>
 #include <QLocale>
@@ -100,10 +103,15 @@ QWidget* MainWindow::makeCalibration() {
     connect(button(rc,"Kayıtlı kanıtı aç","calibration_load"),&QPushButton::clicked,this,[this]{calibrationAction("load");});connect(button(rc,"Test kanıtını kaydet","calibrationSaveStudy"),&QPushButton::clicked,this,[this]{const auto path=QFileDialog::getSaveFileName(this,"Test kanıtı kaydet",{},"Calibration study (*.vfcalstudy)");if(!path.isEmpty())calibrationStudyAction("save",path);});connect(button(rc,"Test kanıtını aç","calibrationOpenStudy"),&QPushButton::clicked,this,[this]{const auto path=QFileDialog::getOpenFileName(this,"Test kanıtı aç",{},"Calibration study (*.vfcalstudy)");if(!path.isEmpty())calibrationStudyAction("load",path);});connect(button(rc,"Kanıt raporunu dışa aktar (CSV)","calibrationExportReport"),&QPushButton::clicked,this,[this]{const auto path=QFileDialog::getSaveFileName(this,"Kanıt raporu",{},"CSV (*.csv)");if(!path.isEmpty())exportCalibrationReport(path);});controls->addWidget(records);
     auto* stop=new QPushButton("Stop");stop->setObjectName("calibrationStop");layout->addWidget(stop);connect(stop,&QPushButton::clicked,this,[this]{editorSession_.stop(SessionJob::Teaching);editorSession_.stop(SessionJob::Image);editorSession_.stop(SessionJob::Execution);invalidateChessboard();refreshCalibration();});
     for(auto* edit:{calibrationId_,calibrationLens_,calibrationPlane_})connect(edit,&QLineEdit::textEdited,this,[this,edit]{if(edit!=calibrationId_)invalidateChessboard();invalidateCalibrationDraft();});connect(version,&QSpinBox::valueChanged,this,[this]{invalidateCalibrationDraft();});connect(error,&QDoubleSpinBox::valueChanged,this,[this]{invalidateCalibrationDraft();});connect(calibrationSamples_,&QTableWidget::cellChanged,this,[this]{invalidateCalibrationDraft();});connect(calibrationSamples_,&QTableWidget::currentCellChanged,this,[this]{refreshCalibration();});
-    for(auto* f:calibrationControls_->findChildren<QFormLayout*>())f->setRowWrapPolicy(QFormLayout::WrapAllRows);calibrationSamples_->setSizePolicy(QSizePolicy::Ignored,QSizePolicy::Preferred);teach->setSizePolicy(QSizePolicy::Ignored,QSizePolicy::Fixed);scroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);controls->addStretch();scroll->setWidget(calibrationControls_);body->addWidget(scroll,1);layout->addLayout(body,1);return page;
+    for(auto* f:calibrationControls_->findChildren<QFormLayout*>())f->setRowWrapPolicy(QFormLayout::WrapAllRows);calibrationSamples_->setSizePolicy(QSizePolicy::Ignored,QSizePolicy::Preferred);teach->setSizePolicy(QSizePolicy::Ignored,QSizePolicy::Fixed);scroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);controls->addStretch();scroll->setWidget(calibrationControls_);body->addWidget(scroll,1);layout->addLayout(body,1);
+    auto* wrapper=new QWidget;auto* outer=new QVBoxLayout(wrapper);auto* stack=new QStackedWidget;
+    calibrationHome_=new CalibrationHome([this]{CalibrationHomeContext c;if(service_.hasProject()){c.path=service_.path();c.projectId=service_.project().id;c.recipes=service_.project().recipes;if(service_.activeRecipe())c.currentRecipe=*service_.activeRecipe();c.directory=QFileInfo(c.path).absolutePath();if(service_.activeRecipe())for(const auto& t:service_.tools())if(t.enabled && (t.kind=="image_file" || t.kind=="webcam")){if(c.source){c.source.reset();break;}c.source=t;}}return c;},[this]{return !editorSession_.busy() && !cameraSession_.busy() && !runtimeJobs_.busy() && !(runtime_ && runtime_->busy()) && !(runtimeCoordinator_ && (runtimeCoordinator_->state()==RuntimeState::Running || runtimeCoordinator_->state()==RuntimeState::Starting || runtimeCoordinator_->state()==RuntimeState::Stopping)) && !(plc_ && plc_->blocking());});
+    calibrationHome_->onSelectionChanged=[this]{editorSession_.calibrationChanged(editorContext());runtimeResult_.reset();refreshMatchOverlay();refreshFlow();showRuntimeResult();refreshRuntime();};
+    stack->addWidget(calibrationHome_);stack->addWidget(page);outer->addWidget(stack,1);auto* legacy=new QPushButton("Eski kayıt / kanıt ekranı");legacy->setObjectName("calibrationLegacyView");outer->addWidget(legacy);connect(legacy,&QPushButton::clicked,this,[stack,legacy]{stack->setCurrentIndex(1-stack->currentIndex());legacy->setText(stack->currentIndex() ? "Kalibrasyon ana sayfasına dön":"Eski kayıt / kanıt ekranı");});return wrapper;
 }
 void MainWindow::invalidateCalibrationDraft(){++calibrationGeneration_;calibrationCandidate_.reset();calibrationReport_.reset();calibrationTrialPoints_.clear();if(calibrationTrialStatus_)calibrationTrialStatus_->setText("Doğrulanmadı — deneme sonucu yok.");if(calibrationSamples_){QSignalBlocker blocker(calibrationSamples_);for(int r=0;r<calibrationSamples_->rowCount();++r)for(int c=6;c<8;++c)if(auto* item=calibrationSamples_->item(r,c))item->setText("");}if(calibrationStatus_)calibrationStatus_->setText("Örnek/ayar değişti — yeniden hesaplama ve doğrulama gerekli.");refreshCalibration();}
 void MainWindow::refreshCalibration() {
+    if(calibrationHome_)calibrationHome_->refresh();
     if(!calibrationControls_)return;const auto* r=service_.activeRecipe();const auto identity=r ? service_.project().id+"/"+r->id : QString{};
     const auto context=flowSignature();if(context!=chessboardContext_){chessboardContext_=context;invalidateChessboard(true);}
     if(identity!=calibrationRecipeId_) {

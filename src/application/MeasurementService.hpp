@@ -26,9 +26,14 @@ public:
     const QVector<double>& measuredHoldoutMillimetres() const {return measured_;}
     const QVector<double>& residualHoldoutMillimetres() const {return residuals_;}
     bool validated() const {return validated_;}
+    // A sealed transient execution binding may use the newer mathematical
+    // readiness policy. It never changes independent holdout validation.
+    bool measurementReady() const {return validated_ || !readyRecordContentId_.isEmpty();}
+    bool systemBound() const {return !readyRecordContentId_.isEmpty();}
     double validationRmsMillimetres() const {return rms_;}
 private:
     friend class MeasurementService;
+    friend class SystemCalibration;
     PlanarCalibration()=default;
     CalibrationDependency dependency_;
     double scale_=0,rms_=0,maxResidual_=0;
@@ -37,6 +42,7 @@ private:
     std::optional<PlaneMapping> mapping_;
     QVector<double> measured_,residuals_;
     bool validated_=false;
+    QString readyRecordContentId_;
     CalibrationSample teaching_;
     QVector<CalibrationSample> holdout_;
     double maxError_=0;

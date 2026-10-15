@@ -34,12 +34,14 @@ QVector<PlanarCalibration> CalibrationService::read() const {
     QVector<PlanarCalibration> result;QMap<QString,int> versions;MeasurementService codec;
     for(const auto& value:records) {
         require(value.isObject(),"Invalid calibration catalog record");auto c=codec.decode(value.toObject());const auto& d=c.dependency();
+        require(!c.mapping() || c.mapping()->observation().target.pattern==CalibrationGridPattern::Chessboard,"Circle grid requires shared wizard catalog; legacy recipe binding unsupported");
         require(c.validated() && d.version==versions.value(d.calibrationId)+1,"Calibration history must contain validated consecutive versions");
         versions[d.calibrationId]=d.version;result.append(c);
     }
     return result;
 }
 void CalibrationService::save(const PlanarCalibration& calibration) const {
+    require(!calibration.mapping() || calibration.mapping()->observation().target.pattern==CalibrationGridPattern::Chessboard,"Circle grid requires shared wizard catalog; legacy recipe binding unsupported");
     require(calibration.validated(),"Cannot persist unvalidated calibration");
     // Semantic verification before acquiring the commit lock.
     MeasurementService codec;const auto record=codec.encode(calibration);codec.decode(record);

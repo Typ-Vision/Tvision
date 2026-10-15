@@ -51,6 +51,7 @@ struct EditorContext {
     QString projectId,path,recipeId;
     QJsonObject definition;
     QJsonObject calibrationBinding;
+    QJsonObject systemCalibration;
 };
 struct ImageLoad {std::optional<ImageFrame> frame;QString error;};
 struct ModelTeaching {QString model,error;};
@@ -81,6 +82,7 @@ public:
     void invalidateTool(const EditorContext&,const QString& tool);
     bool acceptTool(CycleResult result,const QByteArray& captured,const EditorContext& current);
     void invalidateResults();
+    void calibrationChanged(const EditorContext&);
     bool acceptCycle(CycleResult result,const QByteArray& captured,const EditorContext& current);
     bool accepts(const QByteArray& captured,const EditorContext& current) const {return captured==signature(current);}
     static ImageLoad load(const QString& path);
@@ -99,6 +101,7 @@ public:
     static void suppressCancelled(CycleResult& cycle);
 private:
     QMap<QString,CachedToolResult> cache_;
+    EditorContext cacheContext_;
     void cacheResult(const EditorContext&,const ToolResult&);
 
 };

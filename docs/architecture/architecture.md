@@ -1,5 +1,19 @@
 # Mimari ve klasör sorumlulukları
 
+15 Ekim — **KUI-5 tamamlandı**: [SystemCalibration](system-calibration.md) owner-thread snapshotını gerçek source/config/raw geometry ile bağlar; private transient readiness bağı original model/holdout/image kanıtını değiştirmez. Editor raw cache korunur, mm cache/revision değişir; immutable Runtime/terminal5/Logs/CSV full record/selection/binding taşır. Legacy wrapper3 açık complete-history aktarımı sunar; eksik raster hash/frame üretilmez. Execution23, Edge Point3, Circle3; editor8 worldCalibration opt-in. Sıradaki KUI-6 tam Release kabulü. Alttaki kayıtlar tarihseldir.
+
+
+15 Ekim — **KUI-4 Qt Widgets sunumu tamamlandı**: CalibrationHome/CalibrationWizard application-owned session ve worker snapshotlarını kullanır; CalibrationCapture acquisition/setup, CalibrationTargetLibrary strict atomik tanım kaydı sağlar. Named wrapper schema2; iç legacy codec/engine değişmedi. [UI kabulü](calibration-ui-acceptance.md). Yeni ana sayfa etkinliği henüz tüm metrik tüketicilere bağlı değildir; sıradaki KUI-5, sonra KUI-6. Alttaki kayıtlar tarihseldir.
+
+
+15 Ekim — **KUI-2/KUI-3 application teslimleri tamamlandı**: [wizard session ve plaka servisleri](calibration-wizard-services.md) gerçek Edge/Caliper, chessboard ve symmetric circle grid için immutable worker ticket/raw raster/iptal koruması sağlar. CalibrationGridTarget tipli descriptor; circle nested PlaneMapping schema2, legacy chessboard schema1 korunur. Yeni katalog kaydı ve aktiflik KUI-1'dedir; UI/Editor/Runtime henüz bağlanmadı. Sıradaki KUI-4 sunum ve dosya/kurulum akışı, sonra KUI-5 ortak metrik resolver.
+
+
+15 Ekim — **KUI-2 application session tamamlandı**: [CalibrationWizardSession](calibration-wizard-services.md) immutable worker ticket ve owned rasterla gerçek Edge/Caliper noktalarını yönetir; tek çift matematiği KUI-1 model-ready record üretir. UI/recipe/DAG/aktiflik değişmez. Sıradaki KUI-3, sunum KUI-4, ortak metrik resolver KUI-5.
+
+
+15 Ekim — [KUI-1 ortak kalibrasyon sözleşmesi](active-calibration-contract.md) uygulandı: MeasurementSetup, CalibrationModelRecord ve ActiveCalibrationService application katmanında ayrı sürümlü kayıt/etkinlik sağlar. İç legacy model replay edilir; model-ready, bağımsız kontrol ve seçim ayrıdır. Yeni servis henüz UI/Editor/Runtime'a bağlanmadı; mevcut recipe-scoped resolver ve codec korunur. [Sihirbaz planında](calibration-wizard-plan.md) sıradaki KUI-2 session/gerçek nokta algılamadır; ana sayfa KUI-4, metrik/immutable Runtime entegrasyonu KUI-5'tir.
+
 12 Ekim güncel durum — **R1–R8 tamamlandı.** Yeni ortak Referans binding’leri immutable snapshot ve Runtime’ın süreç içi trusted completion kanıtıyla production yoluna bağlandı; tam kaynak/port/ofset/calibration kimliği terminal schema4, restart, Logs ve CSV’de korunur. Runtime Viewer aynı current resolver’ı kullanır; Stop/missing nominal fallback üretmez. Engine **execution/22**, editor8/raw1/world2/vf.socket2 korunur. Standalone Pattern/Shape ve eski poseTracking production kapısı T8.4.2b.3c corpus kabulüne kadar kapalıdır. **R8 tam Release kabulü: OFF/core 57/57, ON/UI 64/64. Sonraki T8.4.2b.3c** eksik corpus ve bütün production yollarının kapanışıdır. Güncel binary build/reference-ui/visionflow.exe. Alttaki teslim ve sıra kayıtları tarihseldir. [R7 sözleşmesi ve kabul eşlemesi](reference-production-acceptance.md). [R8 paket ve devir kanıtı](reference-release-acceptance.md).
 
 

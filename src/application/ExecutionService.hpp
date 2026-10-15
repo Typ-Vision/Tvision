@@ -50,7 +50,7 @@ struct TargetEvaluation {ImageFrame frame;QByteArray scope;QMap<QString,CachedTo
 class ExecutionService {
 public:
     // Bump when execution semantics change; validation records bind this identity.
-    static QString version() { return QStringLiteral("visionflow.execution/22"); }
+    static QString version() { return QStringLiteral("visionflow.execution/23"); }
     static QByteArray toolSignature(const QJsonObject&,const QString& directory,const QString& tool,const QByteArray& scope);
     CycleResult runTool(const QJsonObject& definition,const QString& directory,const QString& recipeId,const QByteArray& configId,
         const std::shared_ptr<std::atomic_bool>& cancel,const QString& target,const TargetEvaluation& evaluation,const CalibrationResolver& resolver={}) const;

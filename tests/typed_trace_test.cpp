@@ -46,7 +46,7 @@ int main(int argc,char** argv) {
         const auto read=ProductionStore(dir.path()).recent("cycles").first();check(read==record,"all typed results survive restart exact");
         check(ProductionResultCodec::summary(read).contains("diagnostic") && ProductionResultCodec::summary(read).contains("no geometry"),"diagnostic and invalid reason visible");
         const auto csv=ProductionResultCodec::csv({read});check(csv.contains("evaluation") && csv.contains("no geometry") && csv.contains("methodVersion"),"CSV includes typed provenance and invalid reason");
-        auto wrong=record;wrong["schemaVersion"]=5;reject([&]{ProductionResultCodec::validate(wrong);},"future cycle schema rejected");
+        auto wrong=record;wrong["schemaVersion"]=6;reject([&]{ProductionResultCodec::validate(wrong);},"future cycle schema rejected");
         auto bad=outputs["v5"].toObject();bad["value"]=QJsonObject{};auto broken=outputs;broken["v5"]=bad;auto tool=record["tools"].toArray().first().toObject();tool["outputs"]=broken;wrong=record;wrong["tools"]=QJsonArray{tool};reject([&]{ProductionResultCodec::validate(wrong);},"outer/typed payload tampering rejected");
         wrong=record;wrong["cycleId"]="foreign";reject([&]{ProductionResultCodec::validate(wrong);},"foreign cycle replay rejected");
         wrong=record;wrong["evaluationId"]="foreign";reject([&]{ProductionResultCodec::validate(wrong);},"foreign evaluation rejected");

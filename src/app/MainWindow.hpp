@@ -28,6 +28,7 @@ class QFormLayout;
 namespace visionflow {
 class ImageViewer;
 class EdgeProfileView;
+class CalibrationHome;
 class MainWindow : public QMainWindow {
 public:
     explicit MainWindow(const QString& settingsFile);
@@ -53,6 +54,7 @@ public:
     bool verifyHomography(const QString& artifacts);
     bool verifyManualCalibration(const QString& artifacts);
     bool verifyCommunication(const QString& artifacts);
+    bool verifySystemCalibration(const QString& artifacts);
 protected:
     void closeEvent(QCloseEvent* event) override;
 private:
@@ -162,6 +164,10 @@ private:
     EditorSession editorSession_;
     CameraSession cameraSession_;
     EditorContext editorContext() const;
+    std::optional<ActiveCalibrationSnapshot> systemCalibrationSnapshot() const;
+    CalibrationResolver calibrationResolver(const Recipe&) const;
+    QJsonObject systemCalibrationIdentity() const;
+    QString calibrationSummary() const;
     QString imageBinding_;
     QString editorRecipeId_;
     QString selectedToolId_;
@@ -182,6 +188,7 @@ private:
     QTableWidget* cameraTable_{};
     QVector<CameraDevice> cameraDevices_;
     ImageViewer* calibrationViewer_{};
+    CalibrationHome* calibrationHome_{};
     QLabel* calibrationFrameInfo_{};
     QLabel* calibrationPixelInfo_{};
     QWidget* calibrationControls_{};

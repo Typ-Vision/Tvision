@@ -26,7 +26,7 @@ ToolResult CircleToolService::execute(const ToolDefinition& t,const QMap<QString
     auto stop=[&]{require(!cancel || !cancel->load(),"Circle cancelled");};stop();
     const auto image=std::get<ImageFrame>(inputs.value("image").data);const auto m=image.metadata();
     require(!p["scanRoi"].toObject().isEmpty(),"Circle requires taught ring/arc");const auto roi=ToolRoi::fromJson(p["scanRoi"].toObject());
-    if(world){require(ctx.calibration && ctx.current,"Circle requires current calibration");require(roi.frame==ctx.calibration->dependency().target,"Circle ROI target frame differs from calibration");}
+    if(world){require(ctx.calibration && ctx.current,"Circle requires current calibration");require(roi.frame==ctx.calibration->dependency().target,"Circle ROI target frame differs from calibration");if(ctx.calibration->systemBound()){require(p.contains("worldCalibration"),"Eski nominal mm ROI yeni etkin modelde yeniden öğretilmeli.");CalibrationDependency::fromJson(p["worldCalibration"].toObject()).requireCurrent(*ctx.current);}}
     else require(roi.frame.id==m.coordinateSystemId,"Circle ROI raw frame differs from image");
     ArcRoi arc=std::holds_alternative<Annulus>(roi.geometry) ? ArcRoi{std::get<Annulus>(roi.geometry),0,360}:std::get<ArcRoi>(roi.geometry);
     RadialScanOptions o;o.scanCount=p["scanCount"].toInt();o.scanWidth=p["scanWidth"].toDouble();o.unitsPerSample=p["unitsPerSample"].toDouble();o.direction=p["direction"]=="inward" ? RadialDirection::Inward:RadialDirection::Outward;

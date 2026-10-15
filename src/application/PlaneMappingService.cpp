@@ -31,7 +31,9 @@ QVector<QPointF> readPoints(const QJsonValue& v){require(v.isArray(),"Invalid po
 }
 PlaneMapping PlaneMappingService::fit(const ChessboardObservation& o,double limit) {
     const auto& t=o.target;const auto n=o.pixels.size();
-    require(!t.id.trimmed().isEmpty() && t.id.size()<=128 && t.columns>=3 && t.rows>=3 && t.columns<=32 && t.rows<=32 && n==t.columns*t.rows && n<=512 && o.worldMillimetres.size()==n,"Invalid chessboard geometry/count");
+    t.validate();
+    if(t.pattern==CalibrationGridPattern::SymmetricCircles){require(o.pixelHash.size()==64,"Circle observation requires decoded raster hash");for(auto c:o.pixelHash)require((c>='0' && c<='9') || (c>='a' && c<='f'),"Invalid circle raster hash");}
+    require(n==t.columns*t.rows && n<=512 && o.worldMillimetres.size()==n,"Invalid calibration grid geometry/count");
     require(std::isfinite(t.squareMillimetres) && t.squareMillimetres>0 && t.squareMillimetres<=1000000,"Invalid target spacing");
     require(std::isfinite(limit) && limit>0 && limit<=100,"Fit pixel bound must be in (0,100]");
     require(o.resolution.width()>0 && o.resolution.height()>0 && qint64(o.resolution.width())*o.resolution.height()<=16000000 &&
@@ -72,19 +74,24 @@ QPointF PlaneMappingService::inverseMap(const PlaneMapping& m,QPointF p) {
 PlaneDistance PlaneMappingService::distance(const PlaneMapping& m,QPointF a,QPointF b){auto x=map(m,a),y=map(m,b);return {x,y,norm(a-b),norm(x-y)};}
 QJsonObject PlaneMappingService::encode(const PlaneMapping& m) {
     const auto& o=m.observation_;const auto& t=o.target;const auto& s=o.source;QJsonArray h;for(double v:m.h_)h.append(v);
-    return {{"schemaVersion",1},{"model","raw_planar_homography/1"},{"solver","opencv5.direct_homography/1"},{"coordinateSpace","raw_pixel_centres"},
+    QJsonObject result{{"schemaVersion",1},{"model","raw_planar_homography/1"},{"solver","opencv5.direct_homography/1"},{"coordinateSpace","raw_pixel_centres"},
       {"target",QJsonObject{{"id",t.id},{"columns",t.columns},{"rows",t.rows},{"squareMm",t.squareMillimetres},{"origin","corner_1"},{"axes","columns_rows"}}},
       {"source",QJsonObject{{"sourceId",s.sourceId},{"frameId",s.frameId},{"cycleId",s.cycleId},{"coordinateSystemId",s.coordinateSystemId},{"completedAtUtc",s.completedAtUtc.toString(Qt::ISODateWithMs)}}},
       {"width",o.resolution.width()},{"height",o.resolution.height()},{"pixels",pointsJson(o.pixels)},{"worldMm",pointsJson(o.worldMillimetres)},{"regionPixels",pointsJson(m.hull_)},
       {"H",h},{"fitRmsMm",m.fitRms_},{"inverseRmsPx",m.inverseRms_},{"maxInversePx",m.inverseMax_},{"fitLimitPx",m.fitLimit_}};
+    if(t.pattern==CalibrationGridPattern::SymmetricCircles){result["schemaVersion"]=2;result["model"]="raw_planar_homography/2";result["target"]=t.toJson();result["pixelHash"]=o.pixelHash;}
+    return result;
 }
 PlaneMapping PlaneMappingService::decode(const QJsonObject& j) {
-    keys(j,{"schemaVersion","model","solver","coordinateSpace","target","source","width","height","pixels","worldMm","regionPixels","H","fitRmsMm","inverseRmsPx","maxInversePx","fitLimitPx"});
-    require(number(j,"schemaVersion")==1 && j["model"].toString()=="raw_planar_homography/1" && j["solver"].toString()=="opencv5.direct_homography/1" && j["coordinateSpace"].toString()=="raw_pixel_centres","Unsupported plane schema/solver/coordinate space");
-    const auto t=j["target"].toObject(),s=j["source"].toObject();keys(t,{"id","columns","rows","squareMm","origin","axes"});keys(s,{"sourceId","frameId","cycleId","coordinateSystemId","completedAtUtc"});
-    require(t["origin"].toString()=="corner_1" && t["axes"].toString()=="columns_rows","Unsupported target axes/origin");
+    const bool circles=number(j,"schemaVersion")==2;
+    QSet<QString> fields{"schemaVersion","model","solver","coordinateSpace","target","source","width","height","pixels","worldMm","regionPixels","H","fitRmsMm","inverseRmsPx","maxInversePx","fitLimitPx"};if(circles)fields.insert("pixelHash");keys(j,fields);
+    require(number(j,"schemaVersion")== (circles ? 2:1) && j["model"].toString()==(circles ? "raw_planar_homography/2":"raw_planar_homography/1") && j["solver"].toString()=="opencv5.direct_homography/1" && j["coordinateSpace"].toString()=="raw_pixel_centres","Unsupported plane schema/solver/coordinate space");
+    const auto t=j["target"].toObject(),s=j["source"].toObject();keys(s,{"sourceId","frameId","cycleId","coordinateSystemId","completedAtUtc"});
+    if(!circles){keys(t,{"id","columns","rows","squareMm","origin","axes"});require(t["origin"].toString()=="corner_1" && t["axes"].toString()=="columns_rows","Unsupported target axes/origin");}
     auto integer=[](const QJsonObject& o,const char* key){double v=number(o,key);require(v>=1 && v<=16000000 && std::floor(v)==v,"Invalid plane integer");return int(v);};
-    ChessboardObservation o{{t["id"].toString(),integer(t,"columns"),integer(t,"rows"),number(t,"squareMm")},{},{integer(j,"width"),integer(j,"height")},readPoints(j["pixels"]),readPoints(j["worldMm"])};
+    const auto target=circles ? CalibrationGridTarget::fromJson(t):CalibrationGridTarget{t["id"].toString(),integer(t,"columns"),integer(t,"rows"),number(t,"squareMm")};
+    require(!circles || target.pattern==CalibrationGridPattern::SymmetricCircles,"Circle mapping target kind mismatch");
+    ChessboardObservation o{target,{},{integer(j,"width"),integer(j,"height")},readPoints(j["pixels"]),readPoints(j["worldMm"]),circles ? j["pixelHash"].toString():QString{}};
     o.source.sourceId=s["sourceId"].toString();o.source.frameId=s["frameId"].toString();o.source.cycleId=s["cycleId"].toString();o.source.coordinateSystemId=s["coordinateSystemId"].toString();o.source.completedAtUtc=QDateTime::fromString(s["completedAtUtc"].toString(),Qt::ISODateWithMs);
     const auto replay=fit(o,number(j,"fitLimitPx"));require(encode(replay)==j,"Plane matrix/fit/evidence replay mismatch");return replay;
 }

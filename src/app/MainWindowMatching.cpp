@@ -40,7 +40,7 @@ void MainWindow::refreshMatchOverlay() {
                 const auto b=toolReferenceBinding(t);const auto e=editorSession_.evaluation(editorContext());const auto image=editorSession_.toolImage(editorContext(),id);
                 if(!e.cache.contains(b.sourceTool))throw std::runtime_error("Current reference unavailable");
                 for(const auto& source:service_.tools())if(source.id==b.sourceTool){
-                    if(b.world){const auto ctx=CalibrationWorkflow::resolve(*service_.activeRecipe(),image,service_.path()+".calibrations.json");const auto r=ReferenceService::resolveWorld(b,source,e.cache[b.sourceTool].result,image,ctx);
+                    if(b.world){const auto ctx=calibrationResolver(*service_.activeRecipe())(image);const auto r=ReferenceService::resolveWorld(b,source,e.cache[b.sourceTool].result,image,ctx);
                         if(!r.map)throw std::runtime_error(r.reason.toUtf8().constData());imageViewer_->setRoiMapping(r.map->world,r.map->nominalToRaw,{});imageViewer_->setRoi(b.nominal,false);
                     }else {const auto r=ReferenceService::resolve(b,source,e.cache[b.sourceTool].result,image);if(!r.roi)throw std::runtime_error(r.reason.toUtf8().constData());imageViewer_->setRoiMapping({image.metadata().coordinateSystemId});imageViewer_->setRoi(r.roi,false);}
                 }
@@ -54,7 +54,7 @@ void MainWindow::refreshMatchOverlay() {
                 if(!evaluation.cache.contains(sourceId))throw std::runtime_error("Current pose unavailable");
                 for(const auto& source:service_.tools())if(source.id==sourceId){
                     if(isWorldPoseTracking(t)) {
-                        const auto ctx=CalibrationWorkflow::resolve(*service_.activeRecipe(),image,service_.path()+".calibrations.json");
+                        const auto ctx=calibrationResolver(*service_.activeRecipe())(image);
                         const auto resolved=PoseRoiService::resolveWorld(worldPoseTracking(t),source,evaluation.cache[sourceId].result,image,ctx);
                         if(!resolved.map)throw std::runtime_error(resolved.reason.toUtf8().constData());
                         imageViewer_->setRoiMapping(resolved.map->world,resolved.map->nominalToRaw,{});imageViewer_->setRoi(ToolRoi::fromJson(t.parameters["scanRoi"].toObject()),false);
@@ -68,13 +68,13 @@ void MainWindow::refreshMatchOverlay() {
             imageViewer_->setRoiEditable(false);continue;
         }
         if(t.kind!="circle_fit" || t.parameters["mode"]!="calibrated")imageViewer_->setRoiMapping({editorSession_.frame->metadata().coordinateSystemId});
-        else try{const auto frame=*editorSession_.frame;const auto ctx=CalibrationWorkflow::resolve(*service_.activeRecipe(),frame,service_.path()+".calibrations.json");if(!ctx.calibration || !ctx.current)throw std::runtime_error("Current Circle calibration unavailable");imageViewer_->setRoiMapping(ctx.calibration->dependency().target,[frame,ctx](QPointF p){return CircleToolService::mapPoint(frame,ctx,p,true);},[frame,ctx](QPointF p){return CircleToolService::mapPoint(frame,ctx,p,false);});}catch(const std::exception&){imageViewer_->setRoiMapping({editorSession_.frame->metadata().coordinateSystemId});}
+        else try{const auto frame=*editorSession_.frame;const auto ctx=calibrationResolver(*service_.activeRecipe())(frame);if(!ctx.calibration || !ctx.current)throw std::runtime_error("Current Circle calibration unavailable");imageViewer_->setRoiMapping(ctx.calibration->dependency().target,[frame,ctx](QPointF p){return CircleToolService::mapPoint(frame,ctx,p,true);},[frame,ctx](QPointF p){return CircleToolService::mapPoint(frame,ctx,p,false);});}catch(const std::exception&){imageViewer_->setRoiMapping({editorSession_.frame->metadata().coordinateSystemId});}
         const auto json=t.parameters["scanRoi"].toObject();
         try{imageViewer_->setRoi(json.isEmpty() ? std::optional<ToolRoi>{}:std::optional<ToolRoi>{ToolRoi::fromJson(json)},false);}catch(const std::exception&){imageViewer_->setRoi({},false);}
         imageViewer_->onRoiEdited=[this,id,line=t.kind=="line_fit",circle=t.kind=="circle_fit"]{
             if(selectedToolId_!=id || editorSession_.busy())return;
             const auto roi=imageViewer_->roi();if(roi && (circle ? !(std::holds_alternative<Annulus>(roi->geometry) || std::holds_alternative<ArcRoi>(roi->geometry)):line ? !std::holds_alternative<RotatedRectangle>(roi->geometry):!std::holds_alternative<ScanSegment>(roi->geometry)))return;
-            QTimer::singleShot(0,this,[this,id,roi]{if(selectedToolId_!=id || editorSession_.busy() || !editorSession_.frame || (roi && roi->frame.unit==LengthUnit::Pixel && roi->frame.id!=editorSession_.frame->metadata().coordinateSystemId) || !applyToolProperties())return;try{for(auto tool:service_.tools())if(tool.id==id){tool.parameters["scanRoi"]=roi ? roi->toJson():QJsonObject{};service_.updateTool(tool);refreshWorkspace();break;}}catch(const std::exception& e){displayError(QString::fromUtf8(e.what()));}});
+            QTimer::singleShot(0,this,[this,id,roi]{if(selectedToolId_!=id || editorSession_.busy() || !editorSession_.frame || (roi && roi->frame.unit==LengthUnit::Pixel && roi->frame.id!=editorSession_.frame->metadata().coordinateSystemId) || !applyToolProperties())return;try{for(auto tool:service_.tools())if(tool.id==id){tool.parameters["scanRoi"]=roi ? roi->toJson():QJsonObject{};if(tool.kind=="circle_fit"){tool.parameters.remove("worldCalibration");if(roi && roi->frame.unit==LengthUnit::Millimetre){const auto ctx=calibrationResolver(*service_.activeRecipe())(*editorSession_.frame);if(ctx.calibration && ctx.current && ctx.calibration->systemBound())tool.parameters["worldCalibration"]=ctx.current->toJson();}}service_.updateTool(tool);refreshWorkspace();break;}}catch(const std::exception& e){displayError(QString::fromUtf8(e.what()));}});
         };
     }
     if(!bound && !geometryWorkspace){imageViewer_->setRoiMapping({editorSession_.frame ? editorSession_.frame->metadata().coordinateSystemId:QString("viewer/raw")});imageViewer_->setRoi({},false);}imageViewer_->setRoiRecipeBound(bound);

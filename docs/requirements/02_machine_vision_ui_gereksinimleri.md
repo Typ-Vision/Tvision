@@ -1,5 +1,16 @@
 # Endüstriyel Machine Vision Yazılımı — UI Sayfa ve Ekran Gereksinimleri
 
+15 Ekim — **KUI-5 tamamlandı**: ana sayfa Etki incelemesi ve açık legacy aktarımı, bütün metrik araçlarda ortak etkin model, yeni araçta mm varsayılanı, raw/pointMm ayrımı, cache/TargetOnly/Runtime/Logs/CSV bağlıdır. Eski px tolerans/world ROI sayıları sessizce dönüştürülmez. Çalışan Runtime/worker/pending record/ACK değiştirmeyi engeller; Stop sonrasında açık değişim mümkündür. [Akış ve sınırlar](../architecture/system-calibration.md). Sıradaki KUI-6 tam Release/görsel kabulü. Alttaki kayıtlar tarihseldir.
+
+
+15 Ekim — **KUI-4 tamamlandı**: üç kart, iki ayrı yeniden boyutlandırılan sihirbaz, görüntü üstünde gerçek Edge/Caliper noktaları, chessboard/circle grid, açık dosya/kurulum beyanı, adlandırılmış kayıt/tek etkin seçim ve yalnız robot şablonu. [1400×900/850×600 kabul ve sınırlar](../architecture/calibration-ui-acceptance.md). Bütün ölçüm tüketicileri henüz yeni etkin modele bağlı değildir; sıradaki KUI-5 ve KUI-6. Eski kayıt/kanıt ekranı uyumluluk için korunur. Alttaki kayıtlar tarihseldir.
+
+
+15 Ekim — **KUI-2/KUI-3 application servisleri tamamlandı**; [gerçek nokta/plaka, confirm ve kayıt sözleşmesi](../architecture/calibration-wizard-services.md). UI henüz yeni session'ı kullanmaz. Sıradaki **KUI-4** üç kart, iki ayrı wizard, açık dosya/kurulum beyanı ve yalnız robot şablonu; mevcut eski Calibration ekranı henüz bu akış değildir. Ortak metrik/Runtime KUI-5'te bağlanacaktır.
+
+
+15 Ekim — Kalibrasyon sihirbaz planında **KUI-1 application sözleşmesi tamamlandı**; [hazırlık/bağımsız kontrol/tek etkin seçim ve migration](../architecture/active-calibration-contract.md). Yeni servis mevcut UI/Editor/Runtime'a henüz bağlı değildir. Sıradaki KUI-2 gerçek Edge/Caliper session; ekranlar KUI-4, ortak metrik davranış KUI-5 kapsamındadır.
+
 12 Ekim güncel durum — **R1–R8 tamamlandı.** Yeni ortak Referans binding’leri immutable snapshot ve Runtime’ın süreç içi trusted completion kanıtıyla production yoluna bağlandı; tam kaynak/port/ofset/calibration kimliği terminal schema4, restart, Logs ve CSV’de korunur. Runtime Viewer aynı current resolver’ı kullanır; Stop/missing nominal fallback üretmez. Engine **execution/22**, editor8/raw1/world2/vf.socket2 korunur. Standalone Pattern/Shape ve eski poseTracking production kapısı T8.4.2b.3c corpus kabulüne kadar kapalıdır. **R8 tam Release kabulü: OFF/core 57/57, ON/UI 64/64. Sonraki T8.4.2b.3c** eksik corpus ve bütün production yollarının kapanışıdır. Güncel binary build/reference-ui/visionflow.exe. Alttaki teslim ve sıra kayıtları tarihseldir. [R7 sözleşmesi ve kabul eşlemesi](../architecture/reference-production-acceptance.md). [R8 paket ve devir kanıtı](../architecture/reference-release-acceptance.md).
 
 
@@ -340,6 +351,8 @@ Komutlar: Capture/Add Sample, Remove Sample, Calculate, Validate, Accept Calibra
 Error alanı birimi ve türüyle gösterilir: örneğin düzlemsel holdout RMS = 0.18 mm. Calibration INVALID mesajı, nedeni ve önerilen işlemle sunulur. Matris, sürüm ve numuneler korunur.
 
 ## 25. Camera / Pixel Calibration
+
+14 Ekim 2026 kullanıcı yönlendirmesi: [Kalibrasyon ana sayfası ve sihirbaz planı](../architecture/calibration-wizard-plan.md) bu ekranın yeni hedefidir. **15 Ekim KUI-1 altyapısı tamamlandı; ekran/consumer entegrasyonu henüz uygulanmadı.** Ana sayfada Bilinen ölçü, Kalibrasyon plakası ve yalnız şablon Robot kartları; ayrı adım adım görüntü/gerçek nokta tespiti/mesafe veya plaka/hesaplama/kayıt pencereleri bulunacak. Chessboard ve simetrik circle grid hedeflenir. Hesaplama, tek aktif model seçimi ve bağımsız kontrol ayrı tutulacak; etkinleştirme yalnız ana sayfadan yapılacak, uyumlu tüm metrik araçlar aynı modeli varsayılan kullanacak. Ham X/Y/ID girişi ve tool başına kalibrasyon seçimi varsayılan akıştan kaldırılacak. Sabit 0,05 mm hedefi yoktur; lens ve robot hesabı bu teslimde uygulanmış sayılmaz. Aşağıdaki geniş ürün hedefleri korunur.
 
 Calibration Target, Camera, Resolution, Lens, target ölçüleri, Acquire, Calculate ve Validate bulunur.
 

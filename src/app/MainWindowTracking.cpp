@@ -60,7 +60,7 @@ void MainWindow::addTrackingProperties(QFormLayout* host,const ToolDefinition& t
             auto b=toolReferenceBinding(t);b.offsetPx={x->value(),y->value()};b.angleOffsetRadians=a->value()*std::numbers::pi/180;
             const auto e=editorSession_.evaluation(editorContext());const auto image=editorSession_.toolImage(editorContext(),id);if(!e.cache.contains(b.sourceTool))throw std::runtime_error("Güncel kaynak sonucu yok. Önce kaynak aracını çalıştırın.");
             for(const auto& source:service_.tools())if(source.id==b.sourceTool){
-                if(b.world){const auto ctx=CalibrationWorkflow::resolve(*service_.activeRecipe(),image,service_.path()+".calibrations.json");const auto r=ReferenceService::resolveWorld(b,source,e.cache[b.sourceTool].result,image,ctx);if(!r.map)throw std::runtime_error(r.reason.toUtf8().constData());auto candidate=t;candidate.parameters["referenceBinding"]=b.toJson();WorldTrackingService::preflight(candidate,image,*r.map);}
+                if(b.world){const auto ctx=calibrationResolver(*service_.activeRecipe())(image);const auto r=ReferenceService::resolveWorld(b,source,e.cache[b.sourceTool].result,image,ctx);if(!r.map)throw std::runtime_error(r.reason.toUtf8().constData());auto candidate=t;candidate.parameters["referenceBinding"]=b.toJson();WorldTrackingService::preflight(candidate,image,*r.map);}
                 else {const auto r=ReferenceService::resolve(b,source,e.cache[b.sourceTool].result,image);if(!r.roi)throw std::runtime_error(r.reason.toUtf8().constData());}
             }
             service_.bindReference(id,b);QTimer::singleShot(0,this,[this]{refreshWorkspace();});return;
@@ -74,7 +74,7 @@ void MainWindow::editWorldTrackingRoi(const QString& producer){
         if(producer.isEmpty())throw std::runtime_error("Önce referans kaynağını seçin.");
         for(const auto& tool:service_.tools())if(tool.id==selectedToolId_){
             const auto image=editorSession_.toolImage(editorContext(),tool.id);
-            const auto ctx=CalibrationWorkflow::resolve(*service_.activeRecipe(),image,service_.path()+".calibrations.json");
+            const auto ctx=calibrationResolver(*service_.activeRecipe())(image);
             if(!ctx.calibration || !ctx.current)throw std::runtime_error("Nominal mm ROI requires current validated calibration");
             const auto target=ctx.calibration->dependency().target;
             const auto signature=flowSignature();const auto id=tool.id;const auto kind=tool.kind;
@@ -122,7 +122,7 @@ void MainWindow::teachPoseReference(const QString& key,double mmPerSample,std::o
             MeasurementExecutionContext calibration;
             if(nominal){tool.parameters.remove("poseTracking");tool.parameters.remove("referenceBinding");tool.parameters["scanRoi"]=nominal->toJson();if(tool.kind!="edge_point")tool.parameters["mode"]="calibrated";}
             const auto json=tool.parameters.value("scanRoi").toObject();
-            if(!json.isEmpty() && ToolRoi::fromJson(json).frame.unit==LengthUnit::Millimetre)calibration=CalibrationWorkflow::resolve(*service_.activeRecipe(),editorSession_.toolImage(editorContext(),tool.id),service_.path()+".calibrations.json");
+            if(!json.isEmpty() && ToolRoi::fromJson(json).frame.unit==LengthUnit::Millimetre)calibration=calibrationResolver(*service_.activeRecipe())(editorSession_.toolImage(editorContext(),tool.id));
             const auto input=editorSession_.trackingTeachingInput(editorContext(),tool,producer,mmPerSample,calibration);
             const auto sourceSignature=editorSession_.evaluation(editorContext()).cache.value(producer).signature;
             const auto signature=flowSignature();const auto generation=editorSession_.generation;

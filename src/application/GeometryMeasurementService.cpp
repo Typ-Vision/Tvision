@@ -34,7 +34,7 @@ ToolResult GeometryMeasurementService::execute(const ToolDefinition& t,const QMa
         v.origin.exposureAtUtc==m.exposureAtUtc && v.origin.deviceTimestampTicks==m.deviceTimestampTicks && v.origin.deviceClockId==m.deviceClockId,"Geometry inputs differ from actual acquisition");
     const CoordinateFrame rawFrame{m.coordinateSystemId,LengthUnit::Pixel,AxisConvention::XRightYDown};
     if(world){
-        require(ctx.calibration && ctx.current,"Geometry requires current validated calibration");
+        require(ctx.calibration && ctx.current,"Geometry requires current active or accepted legacy calibration");
         require(ctx.rawSize==image.size(),"Geometry resolver actual resolution differs from image");
         require(!ctx.calibration->dependency().cameraId.startsWith("calibration-test:"),"File-test calibration cannot measure production geometry");
     }
@@ -74,7 +74,7 @@ ToolResult GeometryMeasurementService::execute(const ToolDefinition& t,const QMa
     };
     // Enforce currentness even for operations whose output is unavailable.
     // Feature points below still get their own hull/bounds checks.
-    if(world){const auto& c=*ctx.calibration;require(c.validated(),"Geometry calibration is not independently validated");c.dependency().requireCurrent(*ctx.current);}
+    if(world){const auto& c=*ctx.calibration;require(c.measurementReady(),"Geometry calibration has no active readiness or accepted legacy evidence");c.dependency().requireCurrent(*ctx.current);}
     ToolResult r;r.toolId=t.id;r.state=ExecutionState::Done;
     const auto mode=p["offset"]=="signed" ? OffsetMode::Signed:OffsetMode::Absolute;
     const auto op=p["operation"].toString();std::optional<double> value,angle;std::optional<Point2D> intersection;QString status="MEASURED";

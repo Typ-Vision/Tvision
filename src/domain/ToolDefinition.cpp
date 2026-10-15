@@ -43,6 +43,7 @@ QVector<ToolDefinition> editorTools(const QJsonObject& definition) {
         for(auto c:t.name)require(c.isPrint(),"Tool adı yazdırılabilir karakterlerden oluşmalı.");
         require(!names.contains(t.name.toCaseFolded()),"Tool adı reçetede zaten var.");require(t.description.size()<=2048,"Tool açıklaması çok uzun.");
         const auto defaults=defaultParameters(t.kind);QSet<QString> allowed;for(auto it=defaults.begin();it!=defaults.end();++it)allowed.insert(it.key());
+        if(t.kind=="circle_fit" && version.toInt()>=8)allowed.insert("worldCalibration");
         if(version.toInt()==1 && t.kind=="template_match") {keys(t.parameters,{"minScore"});require(t.parameters.size()==1,"Tool parametreleri eksik.");}
         if((version.toInt()==1 && t.kind=="template_match") || (version.toInt()<3 && (t.kind=="blob" || t.kind=="edge")))
             for(auto it=defaults.begin();it!=defaults.end();++it)if(!t.parameters.contains(it.key()))t.parameters[it.key()]=it.value();
@@ -50,6 +51,7 @@ QVector<ToolDefinition> editorTools(const QJsonObject& definition) {
         if(version.toInt()<5 && t.kind=="edge" && !t.parameters.contains("referenceGeometry"))t.parameters["referenceGeometry"]="";
         if(version.toInt()<6 && t.kind=="blob")for(const auto key:{"polarity","connectivity","minArea","maxArea"})if(!t.parameters.contains(key))t.parameters[key]=defaults[key];
         require(!t.parameters.contains("referenceBinding") || version.toInt()>=8,"Reference binding requires editor schema 8");
+        require(!t.parameters.contains("worldCalibration") || (t.kind=="circle_fit" && version.toInt()>=8),"World calibration requires Circle/editor schema 8");
         ToolRegistry::validate(t);
         if(ToolRegistry::get(t.kind).acquisitionSource)require(++sourceCount<=1,"Bu aşamada reçetede tek edinim kaynağı desteklenir; mevcut Image File/Webcam kaynağını önce kaldırın.");
         ids.insert(id.toString());names.insert(t.name.toCaseFolded());tools.append(t);
@@ -91,7 +93,7 @@ QJsonObject withEditorTools(QJsonObject definition,const QVector<ToolDefinition>
 int requiredEditorSchema(const QVector<ToolDefinition>& tools,int previousSchema) {
     require(previousSchema>=1 && previousSchema<=8,"Unsupported previous schema");int schema=std::max(6,previousSchema);
     for(const auto& t:tools)if(!t.dependencies.isEmpty() || ToolRegistry::get(t.kind).minimumEditorSchema==7)schema=std::max(schema,7);
-    for(const auto& t:tools)if(t.parameters.contains("referenceBinding"))schema=8;
+    for(const auto& t:tools)if(t.parameters.contains("referenceBinding") || t.parameters.contains("worldCalibration"))schema=8;
     return schema;
 }
 QJsonObject encodeEditorTool(const ToolDefinition& t,int schema) {

@@ -20,6 +20,7 @@ public:
     // Saving mathematical evidence does not authorize production activation.
     void save(const PlanarCalibration&) const;
     PlanarCalibration load(const QString& id,int version) const;
+    QVector<PlanarCalibration> records() const {return read();}
     CalibrationDependency current(const QString& id) const;
     PlanarCalibration resolve(const Recipe&) const;
     void bind(ProjectService&,const QString& id) const;

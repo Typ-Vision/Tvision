@@ -1,5 +1,30 @@
 # VisionFlow Industrial Vision Suite
 
+15 Ekim — **KUI-5 tamamlandı**: tek etkin kalibrasyon Measurement/Caliper/Line/Circle/Geometry, ayrı Edge Point pointMm, Editor cache/TargetOnly ve immutable Runtime/Logs/CSV yoluna bağlandı. Calculate px kalır; eski px tolerans ve exact world ROI otomatik dönüştürülmez. Legacy kayıt aktarımı açık kurulum beyanı ister, eksik raster kanıtı üretmez. Execution23 / terminal5; [sözleşme ve kabul](docs/architecture/system-calibration.md). Sıradaki **KUI-6 tam Release kabulü**. Güncel binary build/reference-ui/visionflow.exe. Alttaki teslim kayıtları tarihseldir.
+## Yeni kalibrasyon akışı — KUI-4/KUI-5
+
+1. Projeyi kaydedin ve hedef reçetenin Image File/Webcam kaynağını açın. Setup → Calibration → Bilinen ölçü veya Kalibrasyon plakası → Başlat.
+2. Kaynaktan kare alın veya dosya açın. Ortak kurulum adı, lens/kamera ve düzlem beyanını verin. Dosya için açık aynı-kurulum beyanı yoksa kayıt yalnız denemedir.
+3. Bilinen ölçüde tarama oku → gerçek kenar/kaliper çifti → gerçek mm → Hesapla. Plakada chessboard iç köşe veya daire merkez sayısı/gerçek aralık → bul/onayla/hesapla. İsteğe bağlı bağımsız kontrol ayrı kalır; varsayılan fiziksel hata/kabul uydurulmaz.
+4. Kaydet ve bitir yalnız aday kaydeder. Ana sayfada Etki incelemesi → Etkinleştir. Uyumlu mm araçlar aynı modeli kullanır; Calculate px kalır. Eski px toleransları açık düzenleme, exact world ROI/referanslar yeniden öğretim ister.
+5. Runtime için normal Save → Load Recipe → Run → Tek çevrim. Run yalnız hazırlanır; gerçek sonuç çevrimden ve kalıcı kayıttan gelir. Değişiklik için Stop ve bekleyen kayıt/ACK tamamlanmalıdır. Logs/CSV geçmiş model kanıtını korur.
+
+Eski kayıtları incele / aktar, legacy ID'nin bütün sürümlerini açık kurulum beyanıyla yeni kataloğa kopyalar; eksik raster hash/frame üretmez ve etkinleştirme yapmaz. Eski kayıt / kanıt ekranı eski akışın uyumluluk yoludur. Robot kartı yalnız şablondur. Restart/proje değişimi etkinliği geri yüklemez. [Ayrıntılar ve sınırlar](docs/architecture/system-calibration.md).
+
+## Önceki teslim kayıtları
+
+
+15 Ekim — **KUI-4 arayüzü tamamlandı**: Setup → Calibration üç kart, ayrı bilinen ölçü/plaka sihirbazları, gerçek Edge/Caliper ve chessboard/circle rasterları, açık dosya/kurulum beyanı, adlandırılmış kayıt ve ana sayfadan tek seçim sunar. Robot yalnız şablondur; eski kanıt ekranı korunur. Release core ilgili 20/20, UI ilgili 23/23; [akış ve sınırlar](docs/architecture/calibration-ui-acceptance.md). **Ortak metrik/Editor/Runtime bağlantısı henüz KUI-5 kapsamında açıktır**, ardından KUI-6 tam kabul. Güncel binary build/reference-ui/visionflow.exe. Alttaki teslim kayıtları tarihseldir.
+
+
+15 Ekim — **KUI-2 ve KUI-3 servisleri tamamlandı**. Release core/UI ilgili CTest **23/23**; plate **473**, wizard **55 kontrol**. Kapsam: gerçek Edge/Caliper noktalarıyla tek seçilmiş çift; ortak session içinde chessboard/simetrik circle grid, noktaları onaylama, raw H, tipli target ve strict replay. Circle yeni katalogda açık desen kimliğiyle tutulur; eski chessboard kayıt/hash yolları korunur. [Servisler ve kabul sınırları](docs/architecture/calibration-wizard-services.md). UI henüz yeni session'ı kullanmaz; sıradaki **KUI-4** ana sayfa/iki sihirbaz/dosya-kurulum/robot şablonu, sonra KUI-5 ortak metrik Runtime. Güncel Release binary build/reference-ui/visionflow.exe; fiziksel doğruluk/lens/robot/CUDA/kurulum/dağıtım ve T8.4.2b.3c açık. Alttaki teslimler tarihseldir.
+
+
+15 Ekim — **KUI-2 tamamlandı**: ortak CalibrationWizardSession, gerçek Edge/Caliper noktaları ve tek seçilmiş çift hesabı; frame/hash/setup invalidation ve iptal/geç sonuç koruması. Release core/UI ilgili CTest **12/12**, yeni test **52 kontrol**. [Servis sözleşmesi](docs/architecture/calibration-wizard-services.md). Yeni ekran henüz yok; sıradaki **KUI-3** plaka servisleri, UI KUI-4 ve ortak metrik Runtime KUI-5. Aşağıdaki KUI-1 teslimi korunur.
+
+
+15 Ekim — **KUI-1 application sözleşmesi tamamlandı**: ortak kurulum, model-ready/bağımsız kontrol ayrımı, atomik yeni katalog ve explicit tek etkin seçim servisi. Release OFF/core ve ON/UI ilgili CTest **11/11** geçti; yeni sözleşme 77 kontrolle sınandı. Mevcut ekran/Editor/Runtime henüz yeni servisi kullanmaz; sihirbazlar ve circle grid uygulanmadı. [Sözleşme ve migration envanteri](docs/architecture/active-calibration-contract.md). [Kalibrasyon sihirbaz planında](docs/architecture/calibration-wizard-plan.md) sıradaki **KUI-2** gerçek Edge/Caliper session'dır; T8.4.2b.3c açık kalır. Güncel yeniden derlenen UI binary build/reference-ui/visionflow.exe.
+
 12 Ekim güncel durum — **R1–R8 tamamlandı.** Yeni ortak Referans binding’leri immutable snapshot ve Runtime’ın süreç içi trusted completion kanıtıyla production yoluna bağlandı; tam kaynak/port/ofset/calibration kimliği terminal schema4, restart, Logs ve CSV’de korunur. Runtime Viewer aynı current resolver’ı kullanır; Stop/missing nominal fallback üretmez. Engine **execution/22**, editor8/raw1/world2/vf.socket2 korunur. Standalone Pattern/Shape ve eski poseTracking production kapısı T8.4.2b.3c corpus kabulüne kadar kapalıdır. **R8 tam Release kabulü: OFF/core 57/57, ON/UI 64/64. Sonraki T8.4.2b.3c** eksik corpus ve bütün production yollarının kapanışıdır. Güncel binary build/reference-ui/visionflow.exe. Alttaki teslim ve sıra kayıtları tarihseldir. [R7 sözleşmesi ve kabul eşlemesi](docs/architecture/reference-production-acceptance.md). [R8 paket ve devir kanıtı](docs/architecture/reference-release-acceptance.md).
 
 

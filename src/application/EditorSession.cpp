@@ -1,4 +1,5 @@
 #include "EditorSession.hpp"
+#include "MeasurementService.hpp"
 #include <QJsonDocument>
 #include <QFile>
 #include <QJsonArray>
@@ -39,7 +40,8 @@ quint64 JobSession::begin(SessionJob job) {
 void JobSession::finish(quint64 ticket) {active_.remove(ticket);}
 QByteArray EditorSession::signature(const EditorContext& c) const {
     if(c.recipeId.isEmpty())return {};
-    return QCryptographicHash::hash(c.projectId.toUtf8()+c.path.toUtf8()+c.recipeId.toUtf8()+QByteArray::number(generation)+QJsonDocument(c.definition).toJson(QJsonDocument::Compact)+QJsonDocument(c.calibrationBinding).toJson(QJsonDocument::Compact),QCryptographicHash::Sha256);
+    auto bytes=c.projectId.toUtf8()+c.path.toUtf8()+c.recipeId.toUtf8()+QByteArray::number(generation)+QJsonDocument(c.definition).toJson(QJsonDocument::Compact)+QJsonDocument(c.calibrationBinding).toJson(QJsonDocument::Compact);
+    if(!c.systemCalibration.isEmpty())bytes+=QJsonDocument(c.systemCalibration).toJson(QJsonDocument::Compact);return QCryptographicHash::hash(bytes,QCryptographicHash::Sha256);
 }
 QByteArray EditorSession::referenceSignature(const EditorContext& c,const QString& tool) const {
     if(c.recipeId.isEmpty() || !frame)return {};
@@ -62,10 +64,12 @@ QByteArray EditorSession::evaluationScope(const EditorContext& c) const {
     QCryptographicHash hash(QCryptographicHash::Sha256);
     hash.addData(QJsonDocument(QJsonArray{c.projectId,c.path,c.recipeId,QString::number(generation),m.sourceId,m.frameId,m.cycleId,m.coordinateSystemId}).toJson(QJsonDocument::Compact));
     hash.addData(frame->contentId());hash.addData(frame->processingId());hash.addData(QJsonDocument(c.calibrationBinding).toJson(QJsonDocument::Compact));
+    if(!c.systemCalibration.isEmpty())hash.addData(QJsonDocument(c.systemCalibration).toJson(QJsonDocument::Compact));
     QFile catalog(c.path+".calibrations.json");if(catalog.open(QIODevice::ReadOnly))hash.addData(QCryptographicHash::hash(catalog.readAll(),QCryptographicHash::Sha256));
     return hash.result();
 }
 void EditorSession::cacheResult(const EditorContext& c,const ToolResult& r) {
+    cacheContext_=c;
     cache_[r.toolId]={ExecutionService::toolSignature(c.definition,QFileInfo(c.path).absolutePath(),r.toolId,evaluationScope(c)),r};
 }
 void EditorSession::adoptFrame(const EditorContext& c) {
@@ -111,6 +115,15 @@ bool EditorSession::acceptTool(CycleResult result,const QByteArray& captured,con
     presentation.configId=signature(current);cycle=std::move(presentation);return true;
 }
 void EditorSession::invalidateResults() {cycle.reset();matchOutcome.reset();resultSignature.clear();}
+void EditorSession::calibrationChanged(const EditorContext& c) {
+    if(busy())throw std::runtime_error("Calibration cache change while worker running");
+    if(!frame || cacheContext_.projectId!=c.projectId || cacheContext_.path!=c.path || cacheContext_.recipeId!=c.recipeId || cacheContext_.definition!=c.definition){cache_.clear();invalidateResults();return;}
+    cache_=evaluation(cacheContext_).cache;const auto tools=editorTools(c.definition);
+    for(const auto& t:tools)if(ToolRegistry::get(t.kind).usesCalibration || t.parameters["mode"]=="calibrated" || (t.parameters.contains("referenceBinding") && toolReferenceBinding(t).world) || isWorldPoseTracking(t))invalidateTool(cacheContext_,t.id);
+    for(const auto& t:tools)if(t.kind=="edge_point" && cache_.contains(t.id)){auto& r=cache_[t.id].result;r.outputs.remove("pointMm");r.calibration.reset();}
+    const auto scope=evaluationScope(c);for(auto i=cache_.begin();i!=cache_.end();++i)i->signature=ExecutionService::toolSignature(c.definition,QFileInfo(c.path).absolutePath(),i.key(),scope);
+    cacheContext_=c;references.clear();matchOutcome.reset();resultSignature.clear();if(cycle){cycle->configId=signature(c);cycle->tools.erase(std::remove_if(cycle->tools.begin(),cycle->tools.end(),[&](const auto& r){return !cache_.contains(r.toolId);}),cycle->tools.end());for(auto& r:cycle->tools)r=cache_.value(r.toolId).result;}
+}
 bool EditorSession::acceptCycle(CycleResult result,const QByteArray& captured,const EditorContext& current) {
     if(token(SessionJob::Execution) && token(SessionJob::Execution)->load())suppressCancelled(result);
     if(!accepts(captured,current)){invalidateResults();return false;}
@@ -174,6 +187,7 @@ TrackingTeaching EditorSession::teachReference(const TrackingTeachingInput& inpu
         const bool world=!json.isEmpty() && ToolRoi::fromJson(json).frame.unit==LengthUnit::Millimetre;
         auto taught=world ? ReferenceService::teachWorld(input.consumer,ToolRoi::fromJson(json),input.mmPerSample,input.source,port,input.reference,input.image,input.calibration,offset,angle,cancel)
             :ReferenceService::teach(input.consumer,input.source,port,input.reference,input.image,offset,angle);
+        if(taught.kind=="circle_fit" && input.calibration.calibration && input.calibration.calibration->systemBound() && input.calibration.current)taught.parameters["worldCalibration"]=input.calibration.current->toJson();
         if(cancel && cancel->load())throw std::runtime_error("Teaching cancelled");return {taught,{}};
     }catch(const std::exception& e){return {{},QString::fromUtf8(e.what())};}
 }

@@ -23,16 +23,34 @@ RuntimeIdentity RuntimeIdentity::localEngineer() {
     // It grants no Users/Administrator/system-management permissions.
     return {principal,[principal](const QString& actor,ProductionAction){return !principal.isEmpty() && actor==principal;}};
 }
-RuntimeService::RuntimeService(QString directory,QString catalogPath,RuntimeIdentity identity)
-    :store_(std::move(directory)),catalogPath_(std::move(catalogPath)),identity_(std::move(identity)),
+RuntimeService::RuntimeService(QString directory,QString catalogPath,RuntimeIdentity identity,SystemProvider system)
+    :store_(std::move(directory)),catalogPath_(std::move(catalogPath)),identity_(std::move(identity)),system_(std::move(system)),
      production_(identity_.authorize,[this](const Recipe& r){return dependencies(r);},16,
-        [this](const QString& kind,const QString& id,const QJsonObject& o){store_.append(kind,id,o);},[this](const ImageFrame& frame){return CalibrationWorkflow::resolve(production_.active()->recipe(),frame,catalogPath_);}) {}
+        [this](const QString& kind,const QString& id,const QJsonObject& o){store_.append(kind,id,o);},[this](const ImageFrame& frame){return completionCalibration(frame);}) {}
+Recipe RuntimeService::systemRecipe(const Recipe& r,const QString& directory) const {
+    if(!system_)return r;auto raw=[&]{auto copy=r;copy.calibrationBinding.reset();copy.calibrationReference.clear();return copy;};
+    try{const auto s=system_();if(!s)return r;if(!SystemCalibration::requestsCalibration(r))return raw();return SystemCalibration::prepareRecipe(*s,r,directory);}
+    catch(...){if(SystemCalibration::requestsCalibration(r,false))throw;return raw();}
+}
+std::optional<ProductionDependencies> RuntimeService::systemDependencies(const Recipe& r) const {
+    if(!system_)return {};std::optional<ActiveCalibrationSnapshot> s;
+    try{s=system_();if(!s)return {};if(!SystemCalibration::requestsCalibration(r))return ProductionDependencies{};SystemCalibration::prepareRecipe(*s,r,QFileInfo(catalogPath_).absolutePath());}
+    catch(...){if(SystemCalibration::requestsCalibration(r,false))throw;return ProductionDependencies{};}
+    const auto source=SystemCalibration::source(r);
+    const auto coordinates=r.calibrationBinding ? r.calibrationBinding->source.id:source.id+"/image";
+    ProductionDependencies result;result.calibration=SystemCalibration::binding(*s,source.id,coordinates);result.systemCalibration=SystemCalibration::evidence(*s,source.id,coordinates);return result;
+}
+MeasurementExecutionContext RuntimeService::completionCalibration(const ImageFrame& frame) const {
+    return calibration(*production_.active(),frame,catalogPath_);
+}
+MeasurementExecutionContext RuntimeService::calibration(const ProductionSnapshot& s,const ImageFrame& frame,const QString& path){if(s.dependencies().contains("systemCalibration"))return SystemCalibration::resolve(SystemCalibration::decodeEvidence(s.dependencies()["systemCalibration"].toObject()),s.recipe(),s.projectDirectory(),frame);return CalibrationWorkflow::resolve(s.recipe(),frame,path);}
 ProductionDependencies RuntimeService::dependencies(const Recipe& r) const {
     ProductionDependencies result;
     for(const auto& t:editorTools(r.definition))if(t.enabled && (t.kind=="image_file" || t.kind=="webcam")) {
         const QJsonObject declared{{"kind",t.kind},{"parameters",t.parameters},{"enabled",t.enabled},{"planarSetup",r.definition.value("planarSetup")}};
         if(declaredInstallations_.value(t.id)!=declared)throw std::runtime_error("Kaynak veya beyan edilen fiziksel kurulum değişti; yeniden doğrulayın.");
     }
+    if(const auto result=systemDependencies(r))return *result;
     if(declaredPreparation_)return declaredDependencies(r);
     if(r.calibrationBinding || !r.calibrationReference.isEmpty()) {
         QString source;for(const auto& t:editorTools(r.definition))if(t.enabled && (t.kind=="image_file" || t.kind=="webcam"))source=t.id;
@@ -43,6 +61,7 @@ ProductionDependencies RuntimeService::dependencies(const Recipe& r) const {
     }return result;
 }
 ProductionDependencies RuntimeService::declaredDependencies(const Recipe& r) const {
+    if(const auto result=systemDependencies(r))return *result;
     ProductionDependencies result;
     if(r.calibrationBinding || !r.calibrationReference.isEmpty()) {
         if(!r.calibrationBinding)throw std::runtime_error("Exact calibration binding required.");
@@ -60,7 +79,7 @@ ProductionDependencies RuntimeService::declaredDependencies(const Recipe& r) con
 }
 void RuntimeService::checkConfiguration(const Recipe& r,const QString& directory) const {
     ProductionRecipeService checker(identity_.authorize,[this](const Recipe& recipe){return declaredDependencies(recipe);});
-    checker.validate(identity_.principal,r,directory);
+    checker.validate(identity_.principal,systemRecipe(r,directory),directory);
     for(const auto& tool:editorTools(r.definition))if(tool.enabled && tool.kind=="image_file") {
         const QFileInfo file(QDir(directory).absoluteFilePath(tool.parameters["path"].toString()));
         if(!file.isFile() || !file.isReadable())throw ProductionException(ProductionError::InvalidConfiguration,tool.name+": Kaynak görüntü dosyası bulunamadı veya okunamıyor.");
@@ -73,8 +92,8 @@ void RuntimeService::prepare(const Recipe& r,const QString& directory) {
     const auto previousDeclarations=declaredInstallations_;const auto previousValidation=validation_;const bool previousMode=declaredPreparation_;
     try {
         observeInstallation(r);declaredPreparation_=true;
-        const auto validation=production_.validate(identity_.principal,r,directory);
-        production_.activate(identity_.principal,validation.id,r,directory);validation_=validation;
+        const auto effective=systemRecipe(r,directory);const auto validation=production_.validate(identity_.principal,effective,directory);
+        production_.activate(identity_.principal,validation.id,effective,directory);validation_=validation;
     }catch(...){declaredInstallations_=previousDeclarations;validation_=previousValidation;declaredPreparation_=previousMode;throw;}
 }
 RecipeValidation RuntimeService::validate(const Recipe& r,const QString& directory,const ImageFrame& frame) {
@@ -85,14 +104,14 @@ RecipeValidation RuntimeService::validate(const Recipe& r,const QString& directo
     for(const auto& t:editorTools(r.definition))if(t.enabled && (t.kind=="image_file" || t.kind=="webcam")){++sources;matches=t.id==m.sourceId;}
     if(sources!=1 || !matches || m.frameId.isEmpty() || m.cycleId.isEmpty() || !m.completedAtUtc.isValid())throw ProductionException(ProductionError::InvalidConfiguration,"Fresh acquisition provenance required.");
     observeInstallation(r);installations_.insert(m.sourceId,frame);declaredPreparation_=false;
-    validation_.reset();const auto v=production_.validate(identity_.principal,r,directory);validation_=v;return v;
+    validation_.reset();const auto effective=systemRecipe(r,directory);const auto v=production_.validate(identity_.principal,effective,directory);validation_=v;return v;
 }
 void RuntimeService::observeInstallation(const Recipe& r) {
     for(const auto& t:editorTools(r.definition))if(t.kind=="image_file" || t.kind=="webcam")declaredInstallations_[t.id]=QJsonObject{{"kind",t.kind},{"parameters",t.parameters},{"enabled",t.enabled},{"planarSetup",r.definition.value("planarSetup")}};
 }
 void RuntimeService::activate(const Recipe& r,const QString& directory) {
     if(!validation_)throw ProductionException(ProductionError::UnknownValidation,"Validate the current draft first.");
-    production_.activate(identity_.principal,validation_->id,r,directory);
+    production_.activate(identity_.principal,validation_->id,systemRecipe(r,directory),directory);
 }
 void RuntimeService::rollback(const QString& id){production_.rollback(identity_.principal,id);}
 ProductionCycle RuntimeService::begin(const QJsonObject& communication){return production_.beginCycle(identity_.principal,communication);}
@@ -117,7 +136,7 @@ CycleResult RuntimeService::execute(const ProductionCycle& cycle,const QString& 
     if(!cycle.snapshot || !cycle.ticket)throw std::runtime_error("Runtime execution requires a production lease");
     const auto s=cycle.snapshot;const auto recipe=s->recipe();
     auto result=ExecutionService{}.run(recipe.definition,s->projectDirectory(),recipe.id,s->validation().contentId,cancel,{}, {},
-        [recipe,catalogPath](const ImageFrame& frame){return CalibrationWorkflow::resolve(recipe,frame,catalogPath);});
+        [recipe,catalogPath,s](const ImageFrame& frame){if(s->dependencies().contains("systemCalibration"))return SystemCalibration::resolve(SystemCalibration::decodeEvidence(s->dependencies()["systemCalibration"].toObject()),recipe,s->projectDirectory(),frame);return CalibrationWorkflow::resolve(recipe,frame,catalogPath);});
     result.completionDigest_=ProductionRecipeService::completionDigest(result);
     result.completionTicket_=cycle.ticket;result.completionSnapshot_=s;
     return result;

@@ -1,5 +1,14 @@
 # C++ / Qt / OpenCV geliştirme gereksinimleri
 
+15 Ekim — **KUI-5 tamamlandı**: SystemCalibration immutable owner snapshot/typed execution binding ve sealed readiness; source tool ile shared setup ayrımı, gerçek pointwise H/geometri, selective raw cache/TargetOnly0 ve trusted Runtime completion. Execution23, Edge Point3, Circle3, terminal5; root/legacy codec/no-op korunur. Legacy wrapper3 accepted model-only kanıtını korur, raster hash/frame uydurmaz. [Sözleşme](../architecture/system-calibration.md). Sıradaki KUI-6 birleşik Release. Alttaki kayıtlar tarihseldir.
+
+
+15 Ekim — **KUI-4 tamamlandı**: Qt Widgets yalnız presentation/session komutları; acquisition/algoritma application servislerinde worker snapshotlarıyla yürür. Named record wrapper schema2 ve strict bounded target library schema1 eklendi; legacy codec/engine execution/22 korunur. [Release ve UI kabulü](../architecture/calibration-ui-acceptance.md). KUI-5 ortak resolver/immutable Runtime henüz açıktır; ardından KUI-6. Alttaki kayıtlar tarihseldir.
+
+
+15 Ekim — **KUI-2/KUI-3 tamamlandı**: [application-owned calibration session](../architecture/calibration-wizard-services.md), immutable worker girdileri ve opaque tek kullanımlık completion, gerçek Edge/Caliper ve OpenCV 5 features/objdetect circle adapter. Yeni target descriptor schema1 ve circle nested PlaneMapping schema2; legacy chessboard codec/hash korunur. UI algoritma/SDK çağırmaz; UI KUI-4, ortak metrik/immutable Runtime KUI-5 kapsamındadır. Engine execution/22 ve mevcut production izinleri değişmedi.
+
+
 12 Ekim güncel durum — **R1–R8 tamamlandı.** Yeni ortak Referans binding’leri immutable snapshot ve Runtime’ın süreç içi trusted completion kanıtıyla production yoluna bağlandı; tam kaynak/port/ofset/calibration kimliği terminal schema4, restart, Logs ve CSV’de korunur. Runtime Viewer aynı current resolver’ı kullanır; Stop/missing nominal fallback üretmez. Engine **execution/22**, editor8/raw1/world2/vf.socket2 korunur. Standalone Pattern/Shape ve eski poseTracking production kapısı T8.4.2b.3c corpus kabulüne kadar kapalıdır. **R8 tam Release kabulü: OFF/core 57/57, ON/UI 64/64. Sonraki T8.4.2b.3c** eksik corpus ve bütün production yollarının kapanışıdır. Güncel binary build/reference-ui/visionflow.exe. Alttaki teslim ve sıra kayıtları tarihseldir. [R7 sözleşmesi ve kabul eşlemesi](../architecture/reference-production-acceptance.md). [R8 paket ve devir kanıtı](../architecture/reference-release-acceptance.md).
 
 
