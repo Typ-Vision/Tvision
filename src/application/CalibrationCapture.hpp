@@ -1,5 +1,6 @@
 #pragma once
 #include "CalibrationWizardSession.hpp"
+#include "IndependentCalibrationCapture.hpp"
 #include "domain/ToolDefinition.hpp"
 namespace visionflow {
 // Acquisition and setup derivation shared by the wizard and future resolver.

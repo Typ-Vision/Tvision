@@ -1,5 +1,6 @@
 #pragma once
 #include "application/CalibrationCapture.hpp"
+#include "application/IndependentCalibrationCapture.hpp"
 #include "application/EditorSession.hpp"
 #include <QDialog>
 class QLabel; class QPushButton; class QStackedWidget; class QLineEdit; class QComboBox; class QListWidget; class QDoubleSpinBox; class QSpinBox; class QCheckBox;
@@ -9,10 +10,18 @@ class CalibrationWizard : public QDialog {
 public:
     CalibrationWizard(bool plate,std::optional<ToolDefinition> source,QString directory,
         std::function<void(const CalibrationModelRecord&)> save,QWidget* parent=nullptr);
+    CalibrationWizard(bool plate,IndependentCaptureRequest target,QString directory,
+        std::function<void(const CalibrationModelRecord&)> save,QWidget* parent=nullptr,IndependentCaptureBackend backend={});
     ~CalibrationWizard();
     // Same commands used by the file chooser and UI acceptance tests.
     void openFile(const QString&);
 private:
+    void captureIndependent(QString path={});
+    std::optional<IndependentCaptureRequest> independentTarget_;
+    IndependentCaptureBackend backend_;
+    IndependentCalibrationSession independent_;
+    std::optional<MeasurementSetup> independentSetup_;
+    QString independentOrigin_;
     void attempt(std::function<void()>);
     void refresh();
     void presentFrame(ImageFrame,bool imported);

@@ -23,8 +23,16 @@ public:
     ~QtCapture() override {if(camera_)camera_->stop();session_.setCamera(nullptr);session_.setVideoSink(nullptr);}
     bool open(const WebcamSettings& s) override {
         const auto devices=QMediaDevices::videoInputs();
-        if(s.deviceIndex>=devices.size())return false;
-        camera_=std::make_unique<QCamera>(devices[s.deviceIndex]);
+        int index=s.deviceIndex;
+        if(!s.providerId.isEmpty()){
+            index=-1;for(int i=0;i<devices.size();++i)if(QString::fromLatin1(devices[i].id().toHex())==s.providerId){if(index!=-1)throw std::runtime_error("Ambiguous Qt camera identity");index=i;}
+        }
+        if(index<0 || index>=devices.size())return false;
+        camera_=std::make_unique<QCamera>(devices[index]);
+        if(!s.resolution.isEmpty()){
+            bool found=false;for(const auto& format:devices[index].videoFormats())if(format.resolution()==s.resolution){camera_->setCameraFormat(format);found=true;break;}
+            if(!found)return false;
+        }
         session_.setCamera(camera_.get());session_.setVideoSink(&sink_);return camera_->isAvailable();
     }
     bool read(cv::Mat& pixels) override {
@@ -52,7 +60,15 @@ public:
 }
 void WebcamSettings::validate() const {
     if(deviceIndex<0 || deviceIndex>63 || backend!="qt")throw std::runtime_error("Webcam index 0–63 ve backend qt olmalı.");
+    if(!providerId.isEmpty()){
+        if(providerId.size()>512 || QByteArray::fromHex(providerId.toLatin1()).toHex()!=providerId.toLatin1())throw std::runtime_error("Invalid Qt camera provider identity");
+        if(resolution.isEmpty())throw std::runtime_error("Identity capture requires explicit resolution");
+    }
+    if(!resolution.isEmpty() && (resolution.width()<=0 || resolution.height()<=0))throw std::runtime_error("Invalid webcam resolution");
 }
+QVector<DeviceBinding> WebcamAdapter::discover(){QVector<DeviceBinding> result;for(const auto& d:QMediaDevices::videoInputs()){
+    auto id=QString::fromLatin1(d.id().toHex());result.append({"webcam",id,id.isEmpty() ? DeviceIdentityConfidence::Unavailable:DeviceIdentityConfidence::ProviderReported,1,{true,true,false,false}});
+}return result;}
 WebcamAdapter::WebcamAdapter(WebcamSettings settings,WebcamCaptureFactory factory):settings_(std::move(settings)),factory_(std::move(factory)) {settings_.validate();}
 AcquisitionCapabilities WebcamAdapter::capabilities() const {return {"webcam",true,false,false,false,false};}
 ImageFrame WebcamAdapter::acquire(const AcquisitionRequest& request) const {

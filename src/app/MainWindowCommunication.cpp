@@ -80,7 +80,7 @@ void MainWindow::initializeCommunication() {
     plc_->setUnavailable([this]{return editorSession_.busy() || cameraSession_.busy() || runtimeJobs_.busy() ? QString("NOT_READY") : QString{};});
     plc_->changed=[this]{refreshCommunication();refreshRuntime();};
     plc_->started=[this]{runtimeResult_.reset();showRuntimeResult();runtimeSummary_->setText("BUSY — PLC isteği çalışıyor; yeni sonuç yok.");};
-    plc_->completed=[this](const CycleResult& r){if(runtimeCoordinator_ && runtimeCoordinator_->state()==RuntimeState::Running)runtimeResult_=r;else runtimeResult_.reset();showRuntimeResult();};
+    plc_->completed=[this](const CycleResult& r){if(measurementWorkspace_ && runtime_ && runtime_->active())measurementWorkspace_->observeAcquisition(runtime_->active()->recipe(),r);if(runtimeCoordinator_ && runtimeCoordinator_->state()==RuntimeState::Running)runtimeResult_=r;else runtimeResult_.reset();showRuntimeResult();};
     if(findChild<QCheckBox*>("plc_enabled")->isChecked() && findChild<QCheckBox*>("plc_autoStart")->isChecked())communicationAction("listen");
     refreshCommunication();
 }

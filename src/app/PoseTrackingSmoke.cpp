@@ -64,7 +64,7 @@ bool MainWindow::verifyPoseTracking(const QString& artifacts) {
         for(const QString consumerKind:{"edge_point","edge_pair","line_fit","circle_fit","blob","code_read","edge"}) {
             if(consumerKind=="code_read"){bool available=false;for(int i=0;i<toolbox_->count();++i)if(toolbox_->item(i)->data(Qt::UserRole)==consumerKind && !(toolbox_->item(i)->flags()&Qt::ItemIsEnabled))available=false;else if(toolbox_->item(i)->data(Qt::UserRole)==consumerKind)available=true;if(!available)continue;}
             const auto id=add(consumerKind);consumers.append(id);bind(id);
-            auto t=configured(id);const CoordinateFrame raw{editorSession_.frame->metadata().coordinateSystemId};
+            auto t=configured(id);if(QStringList{"edge_pair","line_fit","circle_fit"}.contains(consumerKind)){check(t.parameters["mode"]=="calibrated","new metric consumer defaults to mm");propertiesBody_->findChild<QComboBox*>("mt_mode")->setCurrentText("pixel");t=configured(id);}const CoordinateFrame raw{editorSession_.frame->metadata().coordinateSystemId};
             ToolRoi roi{raw,ScanSegment{{95,50},{95,70},2}};
             if(consumerKind=="edge_pair")roi.geometry=ScanSegment{{95,85},{95,105},2};
             if(consumerKind=="line_fit")roi.geometry=RotatedRectangle{{115,60},{24,20},0};

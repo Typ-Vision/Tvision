@@ -23,18 +23,29 @@ RuntimeIdentity RuntimeIdentity::localEngineer() {
     // It grants no Users/Administrator/system-management permissions.
     return {principal,[principal](const QString& actor,ProductionAction){return !principal.isEmpty() && actor==principal;}};
 }
-RuntimeService::RuntimeService(QString directory,QString catalogPath,RuntimeIdentity identity,SystemProvider system)
-    :store_(std::move(directory)),catalogPath_(std::move(catalogPath)),identity_(std::move(identity)),system_(std::move(system)),
+RuntimeService::RuntimeService(QString directory,QString catalogPath,RuntimeIdentity identity,SystemProvider system,ScopedProvider scoped,AcquisitionProvider acquisition)
+    :store_(std::move(directory)),catalogPath_(std::move(catalogPath)),identity_(std::move(identity)),system_(std::move(system)),scoped_(std::move(scoped)),acquisition_(std::move(acquisition)),
      production_(identity_.authorize,[this](const Recipe& r){return dependencies(r);},16,
         [this](const QString& kind,const QString& id,const QJsonObject& o){store_.append(kind,id,o);},[this](const ImageFrame& frame){return completionCalibration(frame);}) {}
+std::optional<ActiveCalibrationSnapshot> RuntimeService::systemSnapshot(const Recipe& r) const {
+    if(r.definition.contains("sourceSetup") || r.definition.contains("calibrationPolicy")){if(!scoped_)throw std::runtime_error("Scoped Runtime provider required");auto s=scoped_(r);if(!s || s->scope.isEmpty())throw std::runtime_error("Required setup is not active");return s;}
+    return system_ ? system_():std::optional<ActiveCalibrationSnapshot>{};
+}
+QJsonObject RuntimeService::sourceDependencies(const Recipe& r) const {
+    if(!r.definition.contains("sourceSetup"))return {};if(!acquisition_)throw std::runtime_error("Scoped acquisition provider required");const auto acquisition=acquisition_(r);const auto ref=SystemCalibration::setupReference(r);
+    if(!ref || acquisition["target"]!=ref->toJson())throw std::runtime_error("Runtime acquisition snapshot target mismatch");
+    return {{"schemaVersion",1},{"binding",r.definition["sourceSetup"]},{"acquisition",acquisition},{"origin",SystemCalibration::source(r).kind=="image_file" ? "offline_replay":"camera_acquired"}};
+}
+ProductionDependencies RuntimeService::dependencies(const Recipe& r) const {auto result=calibrationDependencies(r);result.measurementSource=sourceDependencies(r);return result;}
+ProductionDependencies RuntimeService::declaredDependencies(const Recipe& r) const {auto result=declaredCalibrationDependencies(r);result.measurementSource=sourceDependencies(r);return result;}
 Recipe RuntimeService::systemRecipe(const Recipe& r,const QString& directory) const {
-    if(!system_)return r;auto raw=[&]{auto copy=r;copy.calibrationBinding.reset();copy.calibrationReference.clear();return copy;};
-    try{const auto s=system_();if(!s)return r;if(!SystemCalibration::requestsCalibration(r))return raw();return SystemCalibration::prepareRecipe(*s,r,directory);}
+    if(!system_ && !r.definition.contains("sourceSetup") && !r.definition.contains("calibrationPolicy"))return r;auto raw=[&]{auto copy=r;copy.calibrationBinding.reset();copy.calibrationReference.clear();return copy;};
+    try{if(!SystemCalibration::requestsCalibration(r))return raw();const auto s=systemSnapshot(r);if(!s)return r;return SystemCalibration::prepareRecipe(*s,r,directory);}
     catch(...){if(SystemCalibration::requestsCalibration(r,false))throw;return raw();}
 }
 std::optional<ProductionDependencies> RuntimeService::systemDependencies(const Recipe& r) const {
-    if(!system_)return {};std::optional<ActiveCalibrationSnapshot> s;
-    try{s=system_();if(!s)return {};if(!SystemCalibration::requestsCalibration(r))return ProductionDependencies{};SystemCalibration::prepareRecipe(*s,r,QFileInfo(catalogPath_).absolutePath());}
+    if(!system_ && !r.definition.contains("sourceSetup") && !r.definition.contains("calibrationPolicy"))return {};std::optional<ActiveCalibrationSnapshot> s;
+    try{if(!SystemCalibration::requestsCalibration(r))return ProductionDependencies{};s=systemSnapshot(r);if(!s)return {};SystemCalibration::prepareRecipe(*s,r,QFileInfo(catalogPath_).absolutePath());}
     catch(...){if(SystemCalibration::requestsCalibration(r,false))throw;return ProductionDependencies{};}
     const auto source=SystemCalibration::source(r);
     const auto coordinates=r.calibrationBinding ? r.calibrationBinding->source.id:source.id+"/image";
@@ -44,7 +55,7 @@ MeasurementExecutionContext RuntimeService::completionCalibration(const ImageFra
     return calibration(*production_.active(),frame,catalogPath_);
 }
 MeasurementExecutionContext RuntimeService::calibration(const ProductionSnapshot& s,const ImageFrame& frame,const QString& path){if(s.dependencies().contains("systemCalibration"))return SystemCalibration::resolve(SystemCalibration::decodeEvidence(s.dependencies()["systemCalibration"].toObject()),s.recipe(),s.projectDirectory(),frame);return CalibrationWorkflow::resolve(s.recipe(),frame,path);}
-ProductionDependencies RuntimeService::dependencies(const Recipe& r) const {
+ProductionDependencies RuntimeService::calibrationDependencies(const Recipe& r) const {
     ProductionDependencies result;
     for(const auto& t:editorTools(r.definition))if(t.enabled && (t.kind=="image_file" || t.kind=="webcam")) {
         const QJsonObject declared{{"kind",t.kind},{"parameters",t.parameters},{"enabled",t.enabled},{"planarSetup",r.definition.value("planarSetup")}};
@@ -60,7 +71,7 @@ ProductionDependencies RuntimeService::dependencies(const Recipe& r) const {
         result.calibration=CalibrationService(catalogPath_,[setup](const QString&){return setup;}).resolve(r).dependency();
     }return result;
 }
-ProductionDependencies RuntimeService::declaredDependencies(const Recipe& r) const {
+ProductionDependencies RuntimeService::declaredCalibrationDependencies(const Recipe& r) const {
     if(const auto result=systemDependencies(r))return *result;
     ProductionDependencies result;
     if(r.calibrationBinding || !r.calibrationReference.isEmpty()) {
@@ -136,7 +147,7 @@ CycleResult RuntimeService::execute(const ProductionCycle& cycle,const QString& 
     if(!cycle.snapshot || !cycle.ticket)throw std::runtime_error("Runtime execution requires a production lease");
     const auto s=cycle.snapshot;const auto recipe=s->recipe();
     auto result=ExecutionService{}.run(recipe.definition,s->projectDirectory(),recipe.id,s->validation().contentId,cancel,{}, {},
-        [recipe,catalogPath,s](const ImageFrame& frame){if(s->dependencies().contains("systemCalibration"))return SystemCalibration::resolve(SystemCalibration::decodeEvidence(s->dependencies()["systemCalibration"].toObject()),recipe,s->projectDirectory(),frame);return CalibrationWorkflow::resolve(recipe,frame,catalogPath);});
+        [recipe,catalogPath,s](const ImageFrame& frame){if(s->dependencies().contains("systemCalibration"))return SystemCalibration::resolve(SystemCalibration::decodeEvidence(s->dependencies()["systemCalibration"].toObject()),recipe,s->projectDirectory(),frame);return CalibrationWorkflow::resolve(recipe,frame,catalogPath);},nullptr,s->dependencies()["measurementSource"].toObject()["acquisition"].toObject());
     result.completionDigest_=ProductionRecipeService::completionDigest(result);
     result.completionTicket_=cycle.ticket;result.completionSnapshot_=s;
     return result;

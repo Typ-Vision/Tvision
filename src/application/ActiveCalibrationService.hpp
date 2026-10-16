@@ -29,6 +29,9 @@ class CalibrationModelRecord {
 public:
     static CalibrationModelRecord create(const PlanarCalibration&,const MeasurementSetup&,
         const CalibrationImageEvidence&,const CalibrationControl& = {});
+    static CalibrationModelRecord mapLegacy(const CalibrationModelRecord&,const MeasurementSetup&,const QString& name,QDateTime at);
+    static CalibrationModelRecord associate(const CalibrationModelRecord&,const MeasurementSetup&,const QString& name,QDateTime at=QDateTime::currentDateTimeUtc());
+    QString originalContentId() const {return original_.value("contentId").toString();}
     static CalibrationModelRecord decode(const QJsonObject&);
     // Explicit legacy adoption: preserves accepted legacy evidence and records
     // that a decoded raster hash was not available. Never invents image proof.
@@ -56,6 +59,8 @@ private:
     QString name_;
     QDateTime recordedAt_;
     bool legacy_=false;
+    QJsonObject original_,derived_;
+    bool migration_=false;
 };
 struct ActiveCalibrationSelection {
     QString id,contentId;
@@ -65,6 +70,7 @@ struct ActiveCalibrationSelection {
 struct ActiveCalibrationSnapshot {
     CalibrationModelRecord record;
     ActiveCalibrationSelection selection;
+    QJsonObject scope; // schema1 exact physical setup; empty for legacy compatibility
 };
 // One application-owned instance per open project. Owner-thread commands only.
 // The required gate checks Runtime/worker/pending record/ACK before any change.

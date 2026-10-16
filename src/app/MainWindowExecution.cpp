@@ -26,13 +26,13 @@
 #include "domain/ToolRegistry.hpp"
 #include "domain/PoseTrackingConfig.hpp"
 namespace visionflow {
-std::optional<ActiveCalibrationSnapshot> MainWindow::systemCalibrationSnapshot() const {if(!calibrationHome_ || !calibrationHome_->catalog() || !calibrationHome_->catalog()->systemPolicy())return {};return calibrationHome_->catalog()->snapshot();}
+std::optional<ActiveCalibrationSnapshot> MainWindow::systemCalibrationSnapshot(const Recipe* recipe) const {const auto* r=recipe ? recipe:service_.activeRecipe();if(r && (r->definition.contains("sourceSetup") || r->definition.contains("calibrationPolicy"))){if(!measurementWorkspace_ || measurementWorkspaceKey_!=service_.path()+"\n"+service_.project().id)throw std::runtime_error("Measurement workspace unavailable");return measurementWorkspace_->forRecipe(*r);}if(!calibrationHome_ || !calibrationHome_->catalog() || !calibrationHome_->catalog()->systemPolicy())return {};return calibrationHome_->catalog()->snapshot();}
 QJsonObject MainWindow::systemCalibrationIdentity() const {
-    try {if(!calibrationHome_ || !calibrationHome_->catalog() || !calibrationHome_->catalog()->systemPolicy())return {};const auto s=systemCalibrationSnapshot();return {{"policy","system-model-ready/1"},{"contentId",s->selection.contentId},{"revision",s->selection.revision}};}catch(const std::exception& e){return {{"policy","system-model-ready/1"},{"unavailable",QString::fromUtf8(e.what())}};}
+    try {const auto s=systemCalibrationSnapshot();if(!s)return {};return {{"policy","system-model-ready/1"},{"contentId",s->selection.contentId},{"revision",s->selection.revision}};}catch(const std::exception& e){return {{"policy","system-model-ready/1"},{"unavailable",QString::fromUtf8(e.what())}};}
 }
 CalibrationResolver MainWindow::calibrationResolver(const Recipe& recipe) const {
     const auto directory=QFileInfo(service_.path()).absolutePath(),path=service_.path()+".calibrations.json";
-    try{if(const auto s=systemCalibrationSnapshot())return [s,recipe,directory](const ImageFrame& f){return SystemCalibration::resolve(*s,recipe,directory,f);};}
+    try{if(const auto s=systemCalibrationSnapshot(&recipe))return [s,recipe,directory](const ImageFrame& f){return SystemCalibration::resolve(*s,recipe,directory,f);};}
     catch(const std::exception& e){const auto error=QString::fromUtf8(e.what());return [error](const ImageFrame& f){MeasurementExecutionContext c;c.rawSize=f.size();c.error=error;return c;};}
     return [recipe,path](const ImageFrame& f){return CalibrationWorkflow::resolve(recipe,f,path);};
 }
@@ -43,6 +43,7 @@ EditorContext MainWindow::editorContext() const {
 }
 QByteArray MainWindow::flowSignature() const {return editorSession_.signature(editorContext());}
 void MainWindow::refreshFlow() {
+    const auto identity=systemCalibrationIdentity();if(identity!=editorCalibrationIdentity_ && !editorSession_.busy()){editorSession_.calibrationChanged(editorContext());editorCalibrationIdentity_=identity;}
     editorSession_.reconcile(editorContext());
     QString text="Önce reçete açın.";
     if(service_.activeRecipe()) {
@@ -129,7 +130,7 @@ void MainWindow::runFlow() {
 }
 void MainWindow::runExecution(const QString& targetTool) {
     if(runtimeJobs_.busy() || (runtime_ && runtime_->busy()) || editorSession_.busy(SessionJob::Execution) || editorSession_.busy(SessionJob::Teaching) || editorSession_.busy(SessionJob::Image) || !applyToolProperties() || !service_.activeRecipe())return;
-    const auto recipe=*service_.activeRecipe();const auto definition=recipe.definition;const auto catalogPath=service_.path()+".calibrations.json";const auto resolver=calibrationResolver(recipe);
+    const auto recipe=*service_.activeRecipe();const auto definition=recipe.definition;const auto catalogPath=service_.path()+".calibrations.json";const auto resolver=calibrationResolver(recipe);QJsonObject acquisitionPlan;try{if(recipe.definition.contains("sourceSetup")){if(!measurementWorkspace_)throw std::runtime_error("Measurement workspace unavailable");acquisitionPlan=measurementWorkspace_->acquisition(recipe);}}catch(const std::exception& e){matchInfo_->setText(QString::fromUtf8(e.what()));return;}
     bool acquisition=false;for(const auto& t:editorTools(definition))if(t.id==targetTool)acquisition=ToolRegistry::get(t.kind).acquisitionSource;
     if(!targetTool.isEmpty() && !acquisition) {
         try {
@@ -164,6 +165,7 @@ void MainWindow::runExecution(const QString& targetTool) {
     connect(watcher,&QFutureWatcher<CycleResult>::finished,this,[this,watcher,signature,targetTool]{
         auto result=watcher->result();watcher->deleteLater();
         if(editorSession_.acceptCycle(std::move(result),signature,editorContext())) {
+            if(measurementWorkspace_ && service_.activeRecipe())measurementWorkspace_->observeAcquisition(*service_.activeRecipe(),*editorSession_.cycle);
             if(editorSession_.frame) {const auto& frame=*editorSession_.frame;imageViewer_->setImage(frame.preview());imageInfo_->setText(QString("%1×%2 px | Frame %3").arg(frame.size().width()).arg(frame.size().height()).arg(editorSession_.cycle->frameId));}
             if(!targetTool.isEmpty() && editorSession_.cycle->state!=ExecutionState::Skipped)for(const auto& r:editorSession_.cycle->tools)if(r.toolId==targetTool && r.state==ExecutionState::Done) {
                 const auto region=r.outputs.value("region"),score=r.outputs.value("score"),found=r.outputs.value("found");
@@ -175,7 +177,7 @@ void MainWindow::runExecution(const QString& targetTool) {
         } else {editorSession_.cycle.reset();matchInfo_->setText("READY — değişen ayar/görüntü nedeniyle çevrim sonucu atıldı.");}
         refreshMatchOverlay();refreshFlow();refreshCalibration();
     });
-    editorSession_.launch(watcher,[definition,directory,id,signature,cancel,targetTool,resolver]{return ExecutionService{}.run(definition,directory,id,signature,cancel,targetTool,{},resolver);});
+    editorSession_.launch(watcher,[definition,directory,id,signature,cancel,targetTool,resolver,acquisitionPlan]{return ExecutionService{}.run(definition,directory,id,signature,cancel,targetTool,{},resolver,nullptr,acquisitionPlan);});
 }
 void MainWindow::loadImageAsync(const QString& path,bool commit) {
     editorSession_.references.clear();

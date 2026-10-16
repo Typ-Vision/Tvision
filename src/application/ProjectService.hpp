@@ -37,6 +37,8 @@ public:
     QString setImageFile(const QString& absolutePath);
     QString imageFilePath() const;
     void setConnections(const QVector<ToolConnection>& connections);
+    void bindSourceSetup(const QString& sourceToolId,const QJsonObject& target);
+    void clearSourceSetup();
     void bindCalibration(const CalibrationDependency&);
     void clearCalibrationBinding();
     void setRuntimeOptions(QString trigger,QString measurementToolId);

@@ -116,6 +116,14 @@ QJsonObject ProductionRecipeService::dependencies(const Recipe& recipe,const QSt
     QJsonObject result{{"engine",current.engineVersion},{"tools",tools},{"models",models},{"assets",assets},{"calibration",calibration}};
     if(!references.isEmpty())result["referenceBindings"]=references;
     if(!current.systemCalibration.isEmpty()){SystemCalibration::decodeEvidence(current.systemCalibration);if(current.systemCalibration["executionDependency"].toObject()!=calibration)fail(ProductionError::DependencyChanged,"System binding differs from execution calibration");result["systemCalibration"]=current.systemCalibration;}
+    if(recipe.definition.contains("sourceSetup")){
+        const auto source=current.measurementSource;const auto acquisition=source["acquisition"].toObject();const auto ref=SystemCalibration::setupReference(recipe);
+        if(source.size()!=4 || source["schemaVersion"]!=1 || source["binding"]!=recipe.definition["sourceSetup"] || !ref || acquisition.size()!=3 || acquisition["target"]!=ref->toJson())fail(ProductionError::DependencyChanged,"Physical source snapshot mismatch");
+        const auto device=DeviceBinding::fromJson(acquisition["device"].toObject());const auto geometry=GeometryDescriptor::fromJson(acquisition["geometry"].toObject());
+        if(!geometry.complete || geometry.sensorRoi || geometry.binning || device.adapter!="webcam" || source["origin"]!=(SystemCalibration::source(recipe).kind=="image_file" ? "offline_replay":"camera_acquired"))fail(ProductionError::DependencyChanged,"Unsupported physical source snapshot");
+        if(!current.systemCalibration.isEmpty()){const auto s=SystemCalibration::decodeEvidence(current.systemCalibration);if(s.scope["target"]!=acquisition["target"] || s.scope["device"]!=acquisition["device"] || s.scope["setup"].toObject()["geometry"]!=acquisition["geometry"])fail(ProductionError::DependencyChanged,"Calibration/acquisition physical scope differs");}
+        result["measurementSource"]=source;
+    }else if(!current.measurementSource.isEmpty())fail(ProductionError::DependencyChanged,"Unexpected physical source snapshot");
     return result;
 }
 void ProductionRecipeService::requireCurrent(const ProductionSnapshot& s) const {
@@ -205,7 +213,7 @@ void ProductionRecipeService::finishCycle(quint64 ticket,const CycleResult& r) {
     for(const auto& f:r.frames)if(f.cycleId!=r.cycleId || f.frameId.isEmpty() || f.sourceId.isEmpty())fail(ProductionError::InvalidCompletion,"Çevrim frame kökeni uyumsuz.");
     for(const auto& log:records_)if(log["cycleId"]==r.cycleId)fail(ProductionError::InvalidCompletion,"Çevrim kimliği daha önce tamamlandı.");
     const auto configured=editorTools(cycle_.snapshot->recipe().definition);QSet<QString> seen;
-    const bool trusted=trustedCompletionRequired(configured) || cycle_.snapshot->dependencies().contains("systemCalibration");
+    const bool trusted=trustedCompletionRequired(configured) || cycle_.snapshot->dependencies().contains("systemCalibration") || cycle_.snapshot->dependencies().contains("measurementSource");
     if(trusted)try {
         if(r.completionSnapshot_!=cycle_.snapshot || r.completionTicket_!=ticket || r.completionDigest_.isEmpty() ||
            r.completionDigest_!=completionDigest(r))fail(ProductionError::InvalidCompletion,"Runtime completion evidence missing, changed or foreign to lease");
@@ -291,7 +299,7 @@ void ProductionRecipeService::record(const CycleResult* r,const QString& error) 
                 {"calibration",t.calibration ? QJsonValue(t.calibration->toJson()) : QJsonValue(QJsonValue::Null)}});
         }
     }
-    if(pendingRecord_.isEmpty())pendingRecord_=QJsonObject{{"schemaVersion",s.dependencies().contains("systemCalibration") ? 5:s.dependencies().contains("referenceBindings") ? 4:3},{"evaluationId",r ? r->evaluationId : QString{}},{"recordId",QUuid::createUuid().toString(QUuid::WithoutBraces)},{"beginEventId",cycleBeginId_},{"ticket",QString::number(cycle_.ticket)},{"principal",cyclePrincipal_},
+    if(pendingRecord_.isEmpty())pendingRecord_=QJsonObject{{"schemaVersion",s.dependencies().contains("measurementSource") ? 6:s.dependencies().contains("systemCalibration") ? 5:s.dependencies().contains("referenceBindings") ? 4:3},{"evaluationId",r ? r->evaluationId : QString{}},{"recordId",QUuid::createUuid().toString(QUuid::WithoutBraces)},{"beginEventId",cycleBeginId_},{"ticket",QString::number(cycle_.ticket)},{"principal",cyclePrincipal_},
         {"recipeId",s.recipe().id},{"recipeName",s.recipe().name},{"applicationType",typeKey(s.recipe().applicationType)},{"recipeVersion",s.recipe().recipeVersion},{"validationId",s.validation().id},
         {"configId",QString::fromLatin1(s.validation().contentId)},{"dependencyId",QString::fromLatin1(s.validation().dependencyId)},
         {"dependencies",s.dependencies()},{"startedAtUtc",cycleStarted_.toString(Qt::ISODateWithMs)},
@@ -299,6 +307,7 @@ void ProductionRecipeService::record(const CycleResult* r,const QString& error) 
         {"cycleId",r ? r->cycleId : QString{}},{"milliseconds",r ? QJsonValue(r->milliseconds) : QJsonValue(QJsonValue::Null)},{"state",r ? executionStateName(r->state) : "ERROR"},
         {"error",r ? r->error : error},{"frames",frames},{"tools",tools},{"communicationState",cycleCommunication_.isEmpty() ? "NOT_REQUESTED" : "RESULT_PENDING"},{"communication",cycleCommunication_}};
     if(s.dependencies().contains("referenceBindings"))pendingRecord_["referenceBindings"]=s.dependencies()["referenceBindings"];
+    if(s.dependencies().contains("measurementSource"))pendingRecord_["measurementSource"]=s.dependencies()["measurementSource"];
     if(s.dependencies().contains("systemCalibration"))pendingRecord_["systemCalibration"]=s.dependencies()["systemCalibration"];
     ProductionResultCodec::validate(pendingRecord_);
     persist("cycles",pendingRecord_["recordId"].toString(),pendingRecord_);

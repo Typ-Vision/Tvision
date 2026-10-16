@@ -1,5 +1,14 @@
 # Endüstriyel Machine Vision Yazılımı — UI Sayfa ve Ekran Gereksinimleri
 
+16 Ekim uygulama durumu — **KMC-0–8 tamamlandı (7a/7b ayrı)**. Reçetesiz iki sihirbaz/dosya denemesi, raster denetimli ayrı association, kurulum başına aktivasyon incelemesi, tek-source Editor/Runtime exact sourceSetup ve terminal6 Logs/CSV uygulandı. Legacy geçmiş açık beyanla bütün sürümleri koruyarak aktarılır; no-op/özgün hash ve eksik raster korunur. Bağımlılık import/export ve saved proje/history Save As bağlıdır; görüntüler otomatik paketlenmez. [Entegrasyon](../architecture/scoped-calibration-integration.md), [migration/taşıma](../architecture/measurement-setup-migration.md). **Sıradaki KMC-9 birleşik A kabulü**; aynı reçetede çok-source B, native/fiziksel/seri numarası/lens/robot/CUDA/dağıtım kabulü açıktır.
+
+
+16 Ekim 2026 — **KMC-5–8 Sistem özeti ve entegrasyon uygulandı:** Kalibrasyon ana sayfasında
+Sistem özeti seçildi. Kamera sayısı sabit değildir: sıfır kaynakta boş durum,
+tek kamerada sade görünüm, birden çok kamerada sarılan N kart (8–10 dahil).
+Reçetesiz kamera/dosya sihirbazı ve kurulum başına etkinlik ile çok-source
+Recipe Editor/Runtime ayrı teslimlerdir. [E1–E7 şartnamesi ve KMC kabul planı](../architecture/independent-calibration-implementation-plan.md).
+
 15 Ekim — **KUI-5 tamamlandı**: ana sayfa Etki incelemesi ve açık legacy aktarımı, bütün metrik araçlarda ortak etkin model, yeni araçta mm varsayılanı, raw/pointMm ayrımı, cache/TargetOnly/Runtime/Logs/CSV bağlıdır. Eski px tolerans/world ROI sayıları sessizce dönüştürülmez. Çalışan Runtime/worker/pending record/ACK değiştirmeyi engeller; Stop sonrasında açık değişim mümkündür. [Akış ve sınırlar](../architecture/system-calibration.md). Sıradaki KUI-6 tam Release/görsel kabulü. Alttaki kayıtlar tarihseldir.
 
 
@@ -588,3 +597,5 @@ Sonraki geliştirme önerisi (henüz uygulanmadı): önce manuel px/mm ve kalibr
 ## 8 Ekim — Manuel ölçek uygulama planı hazır
 
 [Manuel px/mm ve sade Calibration planı](../architecture/manual-scale-calibration-plan.md) önceki kısa kapsam notunun ayrıntılı devamıdır. C1 matematik/codec → C2 katalog/Measurement/Runtime → C3 sade ekran → C4 UI kabul → C5 birleşik test/belgeler. C1–C5 tamamlandı: matematik/codec, katalog/reçete/Runtime/CSV, sade üç yöntem ekranı ve birleşik yazılım kabulü mevcut. Yeni manual_planar_scale/1, record/dependency schema 3, eski hash/encode koruması, beş bölümlü üç yöntem UI ve doğrulamasız deneme/üretim ayrımı tanımlandı. Belgenin 7. bölümü GPT-6.1 Sol medium için kopyalanabilir başlangıç talimatıdır. P7 bu kapsamdan sonra; K4 ertelenmiş kalır.
+
+16 Ekim KMC-6/7a: reçetesiz bilinen ölçü/plaka/dosya sihirbazları ve raster denetimli ayrı deneme türetimi; kaynak properties’de açık source→exact kurulum bağı uygulanmıştır. Bağlama scoped-source/1 politikasına geçer, bağı kaldırmak legacy fallback sağlamaz. Editor yalnız ilgili immutable kurulum modelini kullanır; raw cache/TargetOnly acquisition0 korunur. Tek-source sınırı sürer. [Sözleşme](../architecture/scoped-calibration-integration.md).

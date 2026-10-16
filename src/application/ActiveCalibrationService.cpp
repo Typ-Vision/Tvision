@@ -63,15 +63,18 @@ CalibrationModelRecord CalibrationModelRecord::create(const PlanarCalibration& m
 }
 bool CalibrationModelRecord::activatable() const {return image_.origin!="trial_file" && (!accepted_ || *accepted_);}
 QJsonObject CalibrationModelRecord::encode() const {
+    if(migration_)return {{"schemaVersion",5},{"policy","setup-migration/1"},{"original",original_},{"derived",derived_},{"contentId",contentId_}};
     if(legacy_)return {{"schemaVersion",3},{"policy","legacy-validated/1"},{"modelReady",true},{"model",MeasurementService{}.encode(model_)},{"setup",setup_.toJson()},
         {"legacyEvidence",QJsonObject{{"modelContentId",model_.dependency().contentId},{"rasterEvidence","not_recorded"},{"independentControl","original_legacy_holdout"}}},{"name",name_},{"recordedAtUtc",recordedAt_.toString(Qt::ISODateWithMs)},{"contentId",contentId_}};
     QJsonArray samples,residuals;for(const auto& s:control_.samples)samples.append(sampleJson(s));for(double r:residuals_)residuals.append(r);
     QJsonObject result{{"schemaVersion",name_.isEmpty() ? 1:2},{"policy","model-ready/1"},{"modelReady",true},{"model",MeasurementService{}.encode(model_)},{"setup",setup_.toJson()},
         {"image",QJsonObject{{"origin",image_.origin},{"sourceToolId",image_.sourceToolId},{"frameId",image_.frameId},{"pixelHash",image_.pixelHash}}},
         {"control",QJsonObject{{"samples",samples},{"limitMm",control_.limitMillimetres ? QJsonValue(*control_.limitMillimetres) : QJsonValue()},{"residualsMm",residuals},{"accepted",accepted_ ? QJsonValue(*accepted_) : QJsonValue()}}},{"contentId",contentId_}};
+    if(!original_.isEmpty()){result["schemaVersion"]=4;result["original"]=original_;result["policy"]="setup-association/1";}
     if(!name_.isEmpty()){result["name"]=name_;result["recordedAtUtc"]=recordedAt_.toString(Qt::ISODateWithMs);}return result;
 }
 CalibrationModelRecord CalibrationModelRecord::named(const QString& name,QDateTime at) const {
+    require(!migration_,"Mapped records are immutable; create a new version");
     require(!name.trimmed().isEmpty() && name==name.trimmed() && name.size()<=128,"Invalid calibration name");
     require(at.isValid() && at.offsetFromUtc()==0,"UTC record date required");auto r=*this;r.name_=name;r.recordedAt_=at.toUTC();auto o=r.encode();o.remove("contentId");r.contentId_=digest(o);return r;
 }
@@ -79,8 +82,32 @@ CalibrationModelRecord CalibrationModelRecord::adoptLegacy(const PlanarCalibrati
     const auto m=MeasurementService{}.decode(MeasurementService{}.encode(model));const auto& d=m.dependency();setup.validate();require(m.validated() && d.lensId==setup.lensId && d.workingPlaneId==setup.planeId && d.resolution==setup.resolution && d.source==setup.source && d.target==setup.target,"Legacy adoption requires original accepted evidence and matching declared setup");
     CalibrationModelRecord r(m,setup,{"legacy_record",d.cameraId,{},{}},{});r.legacy_=true;r.residuals_=m.residualHoldoutMillimetres();r.accepted_=true;return r.named(name,at);
 }
+CalibrationModelRecord CalibrationModelRecord::associate(const CalibrationModelRecord& original,const MeasurementSetup& setup,const QString& name,QDateTime at){
+    require(original.original_.isEmpty() && !original.legacy_ && original.image_.origin=="trial_file","Only original raster-backed trial may be associated");
+    setup.validate();require(setup.resolution==original.setup_.resolution && setup.source==original.setup_.source && setup.target.axes==original.setup_.target.axes,"Association geometry/axes mismatch");
+    auto d=original.model_.dependency();d.calibrationId="association:"+digest({{"original",original.contentId()},{"setup",setup.toJson()}});d.version=1;d.contentId.clear();d.lensId=setup.lensId;d.workingPlaneId=setup.planeId;d.target=setup.target;
+    MeasurementService math;const auto encoded=math.encode(original.model_);
+    auto model=[&]{if(original.model_.mapping())return math.teachHomography(d,*original.model_.mapping());
+        if(original.model_.manualProvenance())return math.manualScale(d,original.model_.pixelsPerMillimetre(),*original.model_.manualProvenance());
+        return math.teach(d,sample(encoded["teaching"].toObject(),setup.source));}();
+    QVector<CalibrationSample> holdout;for(const auto& v:encoded["holdout"].toArray())holdout.append(sample(v.toObject(),setup.source));
+    if(original.model_.validated())model=math.validate(model,holdout,encoded["maxErrorMm"].toDouble());
+    auto image=original.image_;image.origin="setup_file";auto r=create(model,setup,image,original.control_);r.original_=original.encode();return r.named(name,at);
+}
+CalibrationModelRecord CalibrationModelRecord::mapLegacy(const CalibrationModelRecord& original,const MeasurementSetup& setup,const QString& name,QDateTime at){
+    require(original.original_.isEmpty() && original.image_.origin!="trial_file","Original legacy/global record required; associate trials separately");
+    setup.validate();require(setup.resolution==original.setup_.resolution && setup.lensId==original.setup_.lensId && setup.planeId==original.setup_.planeId && setup.source==original.setup_.source && setup.target.axes==original.setup_.target.axes,"Legacy optical/plane/raster/coordinate declaration differs; recalibrate explicitly");
+    auto d=original.model_.dependency();d.calibrationId="migration:"+digest({{"originalId",d.calibrationId},{"setup",setup.toJson()}});d.contentId.clear();d.target=setup.target;
+    MeasurementService math;const auto encoded=math.encode(original.model_);
+    auto model=[&]{if(original.model_.mapping())return math.teachHomography(d,*original.model_.mapping());if(original.model_.manualProvenance())return math.manualScale(d,original.model_.pixelsPerMillimetre(),*original.model_.manualProvenance());return math.teach(d,sample(encoded["teaching"].toObject(),setup.source));}();
+    QVector<CalibrationSample> holdout;for(const auto& v:encoded["holdout"].toArray())holdout.append(sample(v.toObject(),setup.source));if(original.model_.validated())model=math.validate(model,holdout,encoded["maxErrorMm"].toDouble());
+    auto r=original.legacy_ ? adoptLegacy(model,setup,name,at):create(model,setup,original.image_,original.control_).named(name,at);
+    r.derived_=r.encode();r.original_=original.encode();r.migration_=true;auto envelope=r.encode();envelope.remove("contentId");r.contentId_=digest(envelope);return r;
+}
 CalibrationModelRecord CalibrationModelRecord::decode(const QJsonObject& o){
     const int schema=integer(o,"schemaVersion");
+    if(schema==5){keys(o,{"schemaVersion","policy","original","derived","contentId"});require(o["original"].isObject() && o["derived"].isObject() && o["original"].toObject()["schemaVersion"].toInt()<=3 && o["derived"].toObject()["schemaVersion"].toInt()<=3,"Invalid migration wrapper");const auto original=decode(o["original"].toObject()),derived=decode(o["derived"].toObject());auto r=mapLegacy(original,derived.setup(),derived.name(),derived.recordedAt());require(r.encode()==o,"Migration replay/content mismatch");return r;}
+    if(schema==4){keys(o,{"schemaVersion","policy","modelReady","model","setup","image","control","contentId","name","recordedAtUtc","original"});require(o["original"].isObject() && o["original"].toObject()["schemaVersion"].toInt()<=3,"Invalid association origin");auto r=associate(decode(o["original"].toObject()),MeasurementSetup::fromJson(o["setup"].toObject()),text(o,"name"),QDateTime::fromString(text(o,"recordedAtUtc"),Qt::ISODateWithMs));require(r.encode()==o,"Association replay/content mismatch");return r;}
     if(schema==3){keys(o,{"schemaVersion","policy","modelReady","model","setup","legacyEvidence","name","recordedAtUtc","contentId"});require(o["policy"]=="legacy-validated/1" && o["modelReady"].isBool() && o["modelReady"].toBool() && o["model"].isObject() && o["setup"].isObject(),"Invalid legacy readiness policy");auto r=adoptLegacy(MeasurementService{}.decode(o["model"].toObject()),MeasurementSetup::fromJson(o["setup"].toObject()),text(o,"name"),QDateTime::fromString(text(o,"recordedAtUtc"),Qt::ISODateWithMs));require(r.encode()==o,"Legacy adoption evidence/hash mismatch");return r;}
     if(schema==2)keys(o,{"schemaVersion","policy","modelReady","model","setup","image","control","contentId","name","recordedAtUtc"});
     else keys(o,{"schemaVersion","policy","modelReady","model","setup","image","control","contentId"});

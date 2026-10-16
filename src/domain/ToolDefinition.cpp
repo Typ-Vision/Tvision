@@ -1,6 +1,7 @@
 #include "ToolDefinition.hpp"
 #include "ToolGraph.hpp"
 #include "ToolRegistry.hpp"
+#include "MeasurementSetupContract.hpp"
 #include <QJsonArray>
 #include <QSet>
 #include <QUuid>
@@ -102,7 +103,10 @@ QJsonObject encodeEditorTool(const ToolDefinition& t,int schema) {
     if(schema>=7)o["dependencies"]=encodeToolDependencies(t.dependencies);else require(t.dependencies.isEmpty(),"Cannot downgrade dependencies");return o;
 }
 void validateEditorDefinition(const QJsonObject& definition) {
-    editorTools(definition);editorConnections(definition);
+    const auto tools=editorTools(definition);editorConnections(definition);
+    if(definition.contains("calibrationPolicy"))require(definition["calibrationPolicy"]=="scoped-source/1","Unknown calibration policy");
+    if(definition.contains("sourceSetup")){require(definition["sourceSetup"].isObject(),"Source setup must be an object");const auto b=definition["sourceSetup"].toObject();keys(b,{"schemaVersion","sourceToolId","target"});require(b.size()==3 && b["schemaVersion"]==1 && b["sourceToolId"].isString() && b["target"].isObject(),"Invalid source setup schema");const auto target=b["target"].toObject();keys(target,{"schemaVersion","cameraId","setupId","revision"});require(target.size()==4 && target["schemaVersion"]==1 && target["cameraId"].isString() && target["setupId"].isString() && target["revision"].isDouble() && target["revision"].toDouble()==target["revision"].toInt() && target["revision"].toInt()>0 && target["revision"].toInt()<=1000000000,"Invalid source setup target");CameraId{target["cameraId"].toString()}.validate();SetupId{target["setupId"].toString()}.validate();bool found=false;for(const auto& t:tools)if(t.id==b["sourceToolId"].toString() && ToolRegistry::get(t.kind).acquisitionSource)found=true;require(found,"Source setup references a missing acquisition tool");}
+
     if(definition.contains("runtime")) {
         require(definition["runtime"].isObject(),"Runtime options must be an object.");const auto r=definition["runtime"].toObject();
         keys(r,{"trigger","measurementToolId"});

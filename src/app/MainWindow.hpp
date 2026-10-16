@@ -13,6 +13,7 @@
 #include "application/PlaneMappingService.hpp"
 #include "application/RuntimeCoordinator.hpp"
 #include "application/PlcRuntimeSocket.hpp"
+#include "application/MeasurementWorkspace.hpp"
 class QVBoxLayout;
 class QTableWidget;
 class QComboBox;
@@ -29,6 +30,7 @@ namespace visionflow {
 class ImageViewer;
 class EdgeProfileView;
 class CalibrationHome;
+class CalibrationOverview;
 class MainWindow : public QMainWindow {
 public:
     explicit MainWindow(const QString& settingsFile);
@@ -164,7 +166,7 @@ private:
     EditorSession editorSession_;
     CameraSession cameraSession_;
     EditorContext editorContext() const;
-    std::optional<ActiveCalibrationSnapshot> systemCalibrationSnapshot() const;
+    std::optional<ActiveCalibrationSnapshot> systemCalibrationSnapshot(const Recipe* recipe=nullptr) const;
     CalibrationResolver calibrationResolver(const Recipe&) const;
     QJsonObject systemCalibrationIdentity() const;
     QString calibrationSummary() const;
@@ -189,6 +191,10 @@ private:
     QVector<CameraDevice> cameraDevices_;
     ImageViewer* calibrationViewer_{};
     CalibrationHome* calibrationHome_{};
+    CalibrationOverview* calibrationOverview_{};
+    std::shared_ptr<MeasurementWorkspace> measurementWorkspace_;
+    QString measurementWorkspaceKey_;
+    QJsonObject editorCalibrationIdentity_;
     QLabel* calibrationFrameInfo_{};
     QLabel* calibrationPixelInfo_{};
     QWidget* calibrationControls_{};

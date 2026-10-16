@@ -1,5 +1,7 @@
 # VisionFlow iş listesi
 
+16 Ekim — **KMC-0–8 tamamlandı (7a/7b ayrı)**. Kullanıcının sonraki dört işi KMC-6 → KMC-7a → KMC-7b → KMC-8 sıralı tamamlandı. Reçetesiz iki yöntem/dosya, scoped tek-source Editor/Runtime, activation review, legacy history ve dependency transfer uygulanmıştır. **Sıradaki KMC-9 birleşik A kabulü**; başlatılmadı. [Plan](architecture/independent-calibration-implementation-plan.md), [entegrasyon](architecture/scoped-calibration-integration.md), [migration/taşıma](architecture/measurement-setup-migration.md). Tek-source sınırı sürer; B çok-source Editor/Runtime, native DPI/fiziksel KUI-6/T8.4.2b.3c/CUDA/dağıtım açık.
+
 12 Ekim güncel durum — **R1–R8 tamamlandı.** Yeni ortak Referans binding’leri immutable snapshot ve Runtime’ın süreç içi trusted completion kanıtıyla production yoluna bağlandı; tam kaynak/port/ofset/calibration kimliği terminal schema4, restart, Logs ve CSV’de korunur. Runtime Viewer aynı current resolver’ı kullanır; Stop/missing nominal fallback üretmez. Engine **execution/22**, editor8/raw1/world2/vf.socket2 korunur. Standalone Pattern/Shape ve eski poseTracking production kapısı T8.4.2b.3c corpus kabulüne kadar kapalıdır. **R8 tam Release kabulü: OFF/core 57/57, ON/UI 64/64. Sonraki T8.4.2b.3c** eksik corpus ve bütün production yollarının kapanışıdır. Güncel binary build/reference-ui/visionflow.exe. Alttaki teslim ve sıra kayıtları tarihseldir. [R7 sözleşmesi ve kabul eşlemesi](architecture/reference-production-acceptance.md). [R8 paket ve devir kanıtı](architecture/reference-release-acceptance.md).
 
 

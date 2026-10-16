@@ -204,11 +204,20 @@ void MainWindow::showToolProperties() {
         auto* run=new QPushButton(ToolRegistry::get(tool.kind).acquisitionSource ? "Görüntü al" : "Run Tool");run->setObjectName("runSelectedTool");form->addRow(run);
         connect(run,&QPushButton::clicked,this,[this,tool]{runExecution(tool.id);});
     }
+    if(ToolRegistry::get(tool.kind).acquisitionSource && measurementWorkspace_){
+        auto* setups=new QComboBox;setups->setObjectName("sourceSetupSelector");setups->addItem("Kurulum bağı yok",QJsonObject{});
+        const auto e=measurementWorkspace_->environment();for(const auto& s:e.current.setups)if(!e.archivedSetups.contains(s.id.value) && !e.archivedCameras.contains(s.camera.value))setups->addItem(s.name+QString(" • r%1").arg(s.revision),SetupReference{s.camera,s.id,s.revision}.toJson());
+        const auto current=service_.activeRecipe()->definition["sourceSetup"].toObject()["target"].toObject();for(int i=0;i<setups->count();++i)if(setups->itemData(i).toJsonObject()==current)setups->setCurrentIndex(i);
+        form->addRow("Ölçüm kurulumu",setups);form->addRow(note(calibrationSummary()));
+        auto* bind=new QPushButton("Kurulumu bağla");bind->setObjectName("sourceSetupApply");form->addRow(bind);
+        connect(bind,&QPushButton::clicked,this,[this,setups,tool]{try{if(editorSession_.busy() || runtimeJobs_.busy() || (runtimeCoordinator_ && (runtimeCoordinator_->state()==RuntimeState::Running || runtimeCoordinator_->state()==RuntimeState::Starting || runtimeCoordinator_->state()==RuntimeState::Stopping)) || (plc_ && plc_->blocking()))throw std::runtime_error("Önce Runtime/worker/pending kayıt/ACK işlemini bitirin.");const auto before=service_.activeRecipe()->definition;const auto target=setups->currentData().toJsonObject();if(target.isEmpty())service_.clearSourceSetup();else service_.bindSourceSetup(tool.id,target);if(before==service_.activeRecipe()->definition)return;editorSession_.frame.reset();editorSession_.invalidateResults();imageBinding_.clear();matchInfo_->clear();refreshWorkspace();}catch(const std::exception& e){displayError(QString::fromUtf8(e.what()));}});
+        auto* manage=new QPushButton("Kurulumları aç");manage->setObjectName("sourceSetupManage");form->addRow(manage);connect(manage,&QPushButton::clicked,this,[this]{selectPage("calibration");});
+    }
     if (tool.kind=="image_file") {
         auto* path=new QLineEdit(tool.parameters["path"].toString()); path->setReadOnly(true); path->setCursorPosition(0); path->setPlaceholderText("Seçilmedi"); path->setToolTip(path->text()); form->addRow("File",path);
         auto* choose=new QPushButton("Open Image…"); form->addRow(choose); connect(choose,&QPushButton::clicked,this,&MainWindow::openImageDialog);
     } else if(tool.kind=="webcam") {
-        auto* index=new QSpinBox;index->setObjectName("webcamIndex");index->setRange(0,63);index->setValue(tool.parameters["deviceIndex"].toInt());form->addRow("Device index",index);
+        auto* index=new QSpinBox;index->setObjectName("webcamIndex");index->setRange(0,63);index->setValue(tool.parameters["deviceIndex"].toInt());form->addRow("Device index",index);index->setEnabled(!service_.activeRecipe()->definition.contains("sourceSetup"));
         auto* timeout=new QSpinBox;timeout->setObjectName("webcamTimeout");timeout->setRange(1,60000);timeout->setSuffix(" ms");timeout->setValue(tool.parameters["timeoutMs"].toInt());form->addRow("Timeout",timeout);
         form->addRow(note("Run Flow: host isteğiyle tek kare. Donanım trigger/live/exposure/gain yok. Stop/deadline geç kareyi reddeder; sürücü çağrısını zorla kesmez. Index kalıcı cihaz kimliği değildir."));
         connect(index,&QSpinBox::valueChanged,this,[this]{applyToolProperties();});connect(timeout,&QSpinBox::valueChanged,this,[this]{applyToolProperties();});

@@ -1,12 +1,19 @@
-param([switch]$SmokeTest)
+param(
+    [switch]$SmokeTest,
+    [string]$BuildDirectory = 'build/reference-ui',
+    [string]$QtRoot = 'C:/Qt/6.12.0/mingw_64',
+    [string]$OpenCVRoot = 'C:/OpenCV/5.0.0/x64/mingw',
+    [string]$CompilerBin = 'C:/Qt/Tools/mingw1310_64/bin'
+)
 $ErrorActionPreference = 'Stop'
 $projectRoot = Split-Path -Parent $PSScriptRoot
-$executable = Join-Path $projectRoot 'build\visionflow.exe'
+$buildPath = if ([IO.Path]::IsPathRooted($BuildDirectory)) { $BuildDirectory } else { Join-Path $projectRoot $BuildDirectory }
+$executable = Join-Path $buildPath 'visionflow.exe'
 if (-not (Test-Path -LiteralPath $executable)) { throw 'Önce README içindeki derleme komutlarını çalıştırın.' }
 $previousPath = $env:PATH
 $previousPlatform = $env:QT_QPA_PLATFORM
 try {
-    $env:PATH = 'C:\OpenCV\5.0.0\x64\mingw\bin;C:\Qt\6.12.0\mingw_64\bin;C:\Qt\Tools\mingw1310_64\bin;' + $previousPath
+    $env:PATH = "$OpenCVRoot/bin;$QtRoot/bin;$CompilerBin;" + $previousPath
     if ($SmokeTest) {
         $env:QT_QPA_PLATFORM = 'offscreen'
         & $executable --smoke-test

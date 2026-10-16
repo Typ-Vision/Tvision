@@ -23,6 +23,7 @@ struct ProductionDependencies {
     QMap<QString,QString> assetHashes; // SHA-256 identities from a trusted asset resolver
     std::optional<CalibrationDependency> calibration;
     QJsonObject systemCalibration;
+    QJsonObject measurementSource;
 };
 struct RecipeValidation {
     QString id,principal;

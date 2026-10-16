@@ -1,11 +1,14 @@
 #pragma once
 #include "CalibrationCapture.hpp"
+#include "MeasurementSourceIdentity.hpp"
 #include "domain/Project.hpp"
 namespace visionflow {
 // Immutable value captured on the owner thread. No worker accesses the catalog.
 // The original model/evidence is never relabelled or written to legacy codecs.
 class SystemCalibration {
 public:
+    static std::optional<SetupReference> setupReference(const Recipe&);
+    static QJsonObject sourceBinding(const QString& sourceToolId,const SetupReference&);
     static ToolDefinition source(const Recipe&);
     static bool requestsCalibration(const Recipe&,bool includeOptionalPoints=true);
     static CalibrationDependency binding(const ActiveCalibrationSnapshot&,const QString& sourceToolId,const QString& rawCoordinates);

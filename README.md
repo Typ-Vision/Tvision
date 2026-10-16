@@ -1,5 +1,29 @@
 # VisionFlow Industrial Vision Suite
 
+16 Ekim — **KMC-0–8 tamamlandı (KMC-7a/7b ayrı paketler).** Setup → Calibration [Sistem özetini](docs/architecture/calibration-overview.md) açar. Kaydedilmiş proje yeterli, reçete gerekmez. 0/1/N kamera, metadata keşfi, kamera/kurulum yönetimi ve reçetesiz bilinen ölçü/plaka/dosya denemesi çalışır. Kamera sayısı sabit beşle sınırlı değildir; 8–10 dahil kartlar sarılır.
+
+Kaydet aday oluşturur; [aktivasyon incelemesi](docs/architecture/measurement-setup-migration.md) ayrı gerçek kamera karesi denetler. Deneme ilişkilendirmesi özgün rasterı yeniden hash kontrol ederek ayrı türetim oluşturur. Eski geçmiş açık kurulum beyanıyla bütün sürümleri koruyarak aktarılır; eksik raster kanıtı üretilmez. Önceki akış/kanıt ekranları korunur.
+
+[Editor/Runtime](docs/architecture/scoped-calibration-integration.md) açık kaynak→kurulum bağıyla yalnız ilgili immutable modeli kullanır; terminal6 kamera/kurulum/replay kanıtı Logs/CSV’de kalır. Bağ kaldırmak legacy fallback sağlamaz. Yeni serviste restart seçimleri hatırlar, kullanım izni vermez. Mevcut reçetede tek edinim kaynağı sınırı sürer; aynı reçetede çok-source üretim B teslimidir.
+
+Kalibrasyon bağımlılık paketi import/export ve kaydedilmiş projenin registry/katalog/legacy/üretim geçmişiyle Save As komutu bağlıdır. Görüntüler otomatik paketlenmez; hedef varlıklar denetlenir, eksik/çatışan hedef reddedilir. Ayrıntılar [taşıma sözleşmesindedir](docs/architecture/measurement-setup-migration.md).
+
+Kullanıcının istediği **KMC-6 → KMC-7a → KMC-7b → KMC-8** sırasıyla tamamlandı; **sıradaki KMC-9 birleşik A kabulü başlatılmadı**. Güncel doğrulama, görseller ve fiziksel kabul sınırları [ilerleme kaydında](docs/progress.md), sonraki işler [KMC planındadır](docs/architecture/independent-calibration-implementation-plan.md).
+
+## İş bilgisayarında geliştirme ortamı
+
+15 Ekim 2026: `C:/Projects/Tvision` için Qt 6.12.0 / MinGW 13.1.0 ve
+kaynak koddan derlenen OpenCV 5.0.0 kurulumu için
+[Windows ortamı ve tekrar kurulum komutları](docs/windows-workstation.md).
+Güncel derleme dizini `build/reference-ui`; çalıştırma: `./scripts/run-local.ps1`.
+Bu betik DLL yollarını yalnız başlattığı sürece ekler. Eski `build/visionflow.exe`
+hedefi için `./scripts/run-local.ps1 -BuildDirectory build` kullanılabilir.
+Kurulum/test kanıtı bağlantıdaki belgede tutulur; aşağıdaki tarihsel test sayıları
+bu bilgisayarda yeniden alınmış sonuçlar olarak yorumlanmamalıdır.
+OpenCV ve ZXing probe'ları geçti, güncel uygulama Release derlendi. 15 Ekim tarihsel kurulum testi ve
+başarısız testlerin erişimli tekrarı birlikte **66/70 farklı test** için başarılı
+kanıt vermişti; o dört UI testi KMC-0'da kapandı ve tek tam UI koşumu 70/70 geçti. Ayrıntılar bağlantıdaki doğrulama bölümündedir.
+
 15 Ekim — **KUI-5 tamamlandı**: tek etkin kalibrasyon Measurement/Caliper/Line/Circle/Geometry, ayrı Edge Point pointMm, Editor cache/TargetOnly ve immutable Runtime/Logs/CSV yoluna bağlandı. Calculate px kalır; eski px tolerans ve exact world ROI otomatik dönüştürülmez. Legacy kayıt aktarımı açık kurulum beyanı ister, eksik raster kanıtı üretmez. Execution23 / terminal5; [sözleşme ve kabul](docs/architecture/system-calibration.md). Sıradaki **KUI-6 tam Release kabulü**. Güncel binary build/reference-ui/visionflow.exe. Alttaki teslim kayıtları tarihseldir.
 ## Yeni kalibrasyon akışı — KUI-4/KUI-5
 
@@ -175,11 +199,11 @@ Yollar bu makineye aittir. CMake/Ninja PATH üzerinde olmalı; başka makinede Q
 ## UI çalıştırma ve kullanım
 
 ```powershell
-.\scripts\run-local.ps1
-.\scripts\run-local.ps1 -SmokeTest
+.\scripts\run-local.ps1 -BuildDirectory build
+.\scripts\run-local.ps1 -BuildDirectory build -SmokeTest
 ```
 
-PS1 çift tıklamada Not Defteri ile açılıyorsa `powershell.exe -ExecutionPolicy Bypass -File "C:\OpenCode\TVision\scripts\run-local.ps1"` kullanın.
+PS1 çift tıklamada Not Defteri ile açılıyorsa proje klasöründe PowerShell açıp betiği çalıştırın. Yeni iş bilgisayarı derlemesi için varsayılan `build/reference-ui` hedefini kullanın.
 
 Project Manager → New Project ile adı ve mevcut klasörde yeni `.vfproject` yolunu seçin; Save Project ilk kaydı yapar. Recipe Manager → New Recipe ile tür, ad ve görüntü kaynağı referansı girin; ortak editor açılır. Kaydedilmiş reçete değişince DRAFT/dirty olur; revizyon yalnız başarılı kayıtta artar. No-op Save artırmaz. Save/Ctrl+S tüm projeyi atomik kaydeder; başarısız commit/conflict dirty ve önceki dosyayı korur. Kapatma/proje değişiminde Save/Discard/Cancel vardır. Open Project ve Recipe Manager ile yeniden açılır. Copy/Delete/import/export/version history henüz yoktur.
 

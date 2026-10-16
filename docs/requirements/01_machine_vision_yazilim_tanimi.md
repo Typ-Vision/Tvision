@@ -1,5 +1,14 @@
 # Endüstriyel Machine Vision Yazılımı — Genel Tanım
 
+16 Ekim uygulama durumu — **KMC-0–8 tamamlandı (7a/7b ayrı)**. Reçetesiz iki sihirbaz/dosya denemesi, raster denetimli ayrı association, kurulum başına aktivasyon incelemesi, tek-source Editor/Runtime exact sourceSetup ve terminal6 Logs/CSV uygulandı. Legacy geçmiş açık beyanla bütün sürümleri koruyarak aktarılır; no-op/özgün hash ve eksik raster korunur. Bağımlılık import/export ve saved proje/history Save As bağlıdır; görüntüler otomatik paketlenmez. [Entegrasyon](../architecture/scoped-calibration-integration.md), [migration/taşıma](../architecture/measurement-setup-migration.md). **Sıradaki KMC-9 birleşik A kabulü**; aynı reçetede çok-source B, native/fiziksel/seri numarası/lens/robot/CUDA/dağıtım kabulü açıktır.
+
+
+16 Ekim — **Uygulanan A özellikleri / B hedefi:** reçetesiz kamera/dosya kalibrasyonu,
+kamera/ölçüm kurulumu başına etkin kayıt ve N kamera yönetimi. Tek kamera yaygın
+senaryodur; 8–10 kamera da hedeflenir. Sistem özeti tasarımı seçildi. Ayrı
+kameraların kalibrasyon yönetimi ile aynı reçetede çok-source yürütme A/B olarak
+ayrılır; A özellikleri uygulandı, birleşik KMC-9 kabulü ve B geliştirmesi açıktır. [KMC kapsamı ve kabul planı](../architecture/independent-calibration-implementation-plan.md).
+
 15 Ekim — **KUI-5 tamamlandı**: üç applicationType aynı tek etkin model/Editor/Runtime yolunu kullanır. Gerçek matematiksel hazır model, bağımsız kontrol, etkin seçim ve parça kararı ayrı kalır. Eksik/uyumsuz model mm/PASS üretmez; raw-only tanı çalışabilir. Legacy proof/no-op ve historique model kimliği korunur. [Uygulanan sözleşme](../architecture/system-calibration.md). KUI-6 tam kabul sıradadır; fiziksel/lens/robot açık. Alttaki kayıtlar tarihseldir.
 
 
@@ -379,3 +388,5 @@ Bu doküman “uygulama iskeletini oluştur”, “sınıf yapısını tasarla�
 ### HTML prototipinin kapsamı
 
 HTML dosyası görsel ve etkileşimli UI prototipidir. Reçete oluşturma, tür seçimi, ortak editöre geçiş, arama/filtreleme, kopyalama, browser draft kaydı, JSON import/export ve tür bazlı runtime görünümü örneklenir. Vision algoritmaları, kamera/robot bağlantısı, gerçek kalibrasyon, sürükle-bırak flow, ROI çizimi, yetkilendirme ve üretim doğrulaması uygulanmış değildir. Run Demo önceden tanımlı örnek sonuçlar gösterir.
+
+16 Ekim KMC-6/7a: reçetesiz bilinen ölçü/plaka/dosya sihirbazları ve raster denetimli ayrı deneme türetimi; kaynak properties’de açık source→exact kurulum bağı uygulanmıştır. Bağlama scoped-source/1 politikasına geçer, bağı kaldırmak legacy fallback sağlamaz. Editor yalnız ilgili immutable kurulum modelini kullanır; raw cache/TargetOnly acquisition0 korunur. Tek-source sınırı sürer. [Sözleşme](../architecture/scoped-calibration-integration.md).

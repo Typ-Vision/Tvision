@@ -8,6 +8,8 @@
 #include "domain/PoseTrackingConfig.hpp"
 #include "domain/ToolRegistry.hpp"
 #include "AcquisitionService.hpp"
+#include "WebcamAdapter.hpp"
+#include "MeasurementSourceIdentity.hpp"
 #include <QDir>
 #include <QFile>
 #include <QJsonDocument>
@@ -45,7 +47,7 @@ CycleResult ExecutionService::runTool(const QJsonObject& definition,const QStrin
     auto result=run(definition,directory,recipeId,configId,cancel,target,{},resolver,&evaluation);
     result.configId=captured;return result;
 }
-CycleResult ExecutionService::run(const QJsonObject& definition,const QString& directory,const QString& recipeId,const QByteArray& configId,const std::shared_ptr<std::atomic_bool>& cancel,const QString& targetTool,const std::optional<ImageFrame>& frameSnapshot,const CalibrationResolver& resolver,const TargetEvaluation* targetOnly) const {
+CycleResult ExecutionService::run(const QJsonObject& definition,const QString& directory,const QString& recipeId,const QByteArray& configId,const std::shared_ptr<std::atomic_bool>& cancel,const QString& targetTool,const std::optional<ImageFrame>& frameSnapshot,const CalibrationResolver& resolver,const TargetEvaluation* targetOnly,const QJsonObject& acquisition) const {
     CycleResult cycle;cycle.cycleId=QUuid::createUuid().toString(QUuid::WithoutBraces);cycle.frameId=QUuid::createUuid().toString(QUuid::WithoutBraces);cycle.recipeId=recipeId;cycle.configId=configId;
     cycle.targetToolId=targetTool;cycle.evaluationId=QUuid::createUuid().toString(QUuid::WithoutBraces);cycle.partial=targetOnly!=nullptr;
     if(targetOnly){cycle.frameId=targetOnly->frame.metadata().frameId;cycle.cycleId=targetOnly->frame.metadata().cycleId;}
@@ -158,9 +160,20 @@ CycleResult ExecutionService::run(const QJsonObject& definition,const QString& d
                         if(resolved){
                             cycle.executedTools.append(t.id);
                             if(ToolRegistry::get(t.kind).acquisitionSource)++cycle.acquisitions;
-                            r=worldTracking ? WorldTrackingService::execute(t,std::get<ImageFrame>(inputs.value("image").data),*worldTracking,cancel)
+                            if(t.kind=="webcam" && definition.contains("sourceSetup")){
+                                if(acquisition.isEmpty())throw std::runtime_error("Scoped webcam requires owner-thread acquisition snapshot");
+                                const auto binding=definition["sourceSetup"].toObject();if(binding["sourceToolId"]!=t.id || acquisition["target"]!=binding["target"])throw std::runtime_error("Scoped acquisition target mismatch");
+                                const auto device=DeviceBinding::fromJson(acquisition["device"].toObject());const auto geometry=GeometryDescriptor::fromJson(acquisition["geometry"].toObject());device.resolve(WebcamAdapter::discover());
+                                if(!geometry.complete || geometry.sensorRoi || geometry.binning)throw std::runtime_error("Unsupported scoped acquisition geometry");
+                                WebcamAdapter adapter({0,"qt",device.providerId,geometry.resolution});const auto actual=AcquisitionService{}.acquire(adapter,{t.id,cycle.cycleId,cycle.frameId,TriggerMode::Software,t.parameters["timeoutMs"].toInt(),cancel});
+                                if(actual.state!=AcquisitionState::Done || !actual.frame)throw std::runtime_error(actual.error.toUtf8().constData());r.state=ExecutionState::Done;r.outputs["image"]={outputPorts(t.kind).first(),actual.frame->image,true,cycle.frameId,cycle.cycleId,actual.frame->image.metadata()};
+                            }else r=worldTracking ? WorldTrackingService::execute(t,std::get<ImageFrame>(inputs.value("image").data),*worldTracking,cancel)
                                 :ToolExecutors::get(t.kind,measurement,resolvedRoi)(effective,inputs,directory,cycle.frameId,cycle.cycleId,cancel);
                         }
+                    }
+                    if(ToolRegistry::get(t.kind).acquisitionSource && definition.contains("sourceSetup") && r.state==ExecutionState::Done){
+                        const auto binding=definition["sourceSetup"].toObject();if(acquisition.isEmpty() || binding["sourceToolId"]!=t.id || acquisition["target"]!=binding["target"])throw std::runtime_error("Physical source requires exact immutable acquisition snapshot");
+                        const auto image=r.outputs.value("image");const auto geometry=GeometryDescriptor::fromJson(acquisition["geometry"].toObject());if(!image.valid || !std::holds_alternative<ImageFrame>(image.data) || std::get<ImageFrame>(image.data).size()!=geometry.resolution)throw std::runtime_error("Actual frame/physical source geometry mismatch");
                     }
                     const auto declaredOutputs=outputPorts(t.kind);
                     const bool referenceProducer=std::any_of(declaredOutputs.begin(),declaredOutputs.end(),[&](const auto& p){return referenceSourcePort(t.kind,p.id);});

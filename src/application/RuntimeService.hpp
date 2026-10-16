@@ -13,7 +13,9 @@ struct RuntimeIdentity {
 class RuntimeService {
 public:
     using SystemProvider=std::function<std::optional<ActiveCalibrationSnapshot>()>;
-    RuntimeService(QString directory,QString catalogPath,RuntimeIdentity identity,SystemProvider system={});
+    using ScopedProvider=std::function<std::optional<ActiveCalibrationSnapshot>(const Recipe&)>;
+    using AcquisitionProvider=std::function<QJsonObject(const Recipe&)>;
+    RuntimeService(QString directory,QString catalogPath,RuntimeIdentity identity,SystemProvider system={},ScopedProvider scoped={},AcquisitionProvider acquisition={});
     RecipeValidation validate(const Recipe&,const QString& projectDirectory,const ImageFrame& acquired);
     // Configuration-only preparation; never acquires or asserts actual frame readiness.
     void checkConfiguration(const Recipe&,const QString& projectDirectory) const;
@@ -35,6 +37,10 @@ public:
     static CycleResult execute(const ProductionCycle&,const QString& catalogPath,const std::shared_ptr<std::atomic_bool>& cancel);
     static MeasurementExecutionContext calibration(const ProductionSnapshot&,const ImageFrame&,const QString& catalogPath);
 private:
+    std::optional<ActiveCalibrationSnapshot> systemSnapshot(const Recipe&) const;
+    QJsonObject sourceDependencies(const Recipe&) const;
+    ProductionDependencies calibrationDependencies(const Recipe&) const;
+    ProductionDependencies declaredCalibrationDependencies(const Recipe&) const;
     ProductionDependencies dependencies(const Recipe&) const;
     ProductionDependencies declaredDependencies(const Recipe&) const;
     std::optional<ProductionDependencies> systemDependencies(const Recipe&) const;
@@ -45,6 +51,8 @@ private:
     QString catalogPath_;
     RuntimeIdentity identity_;
     SystemProvider system_;
+    ScopedProvider scoped_;
+    AcquisitionProvider acquisition_;
     QMap<QString,ImageFrame> installations_;
     QMap<QString,QJsonObject> declaredInstallations_;
     ProductionRecipeService production_;

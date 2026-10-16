@@ -108,7 +108,7 @@ void ProjectService::setTools(const QVector<ToolDefinition>& tools,const QVector
     const auto* active=activeRecipe(); if (!active) fail("Önce bir reçete açın."); const QString id=active->id;
     auto candidate=project();
     for (auto& r : candidate.recipes) if (r.id==id) {
-        auto definition=withEditorTools(r.definition,tools);
+        auto definition=withEditorTools(r.definition,tools);if(definition.contains("sourceSetup")){const auto source=definition["sourceSetup"].toObject()["sourceToolId"].toString();if(std::none_of(tools.begin(),tools.end(),[&](const auto& t){return t.id==source;}))definition.remove("sourceSetup");}
         auto connections=bindings ? *bindings:editorConnections(definition);
         const auto previous=editorTools(r.definition);
         auto removed=[&](const QString& id){
@@ -287,6 +287,13 @@ void ProjectService::bindCalibration(const CalibrationDependency& dependency) {
         validateProject(candidate);project_=candidate;changedRecipes_.insert(id);dirty_=true;return;
     }
 }
+void ProjectService::bindSourceSetup(const QString& source,const QJsonObject& target){
+    if(!activeRecipe())fail("Önce reçete açın.");auto definition=activeRecipe()->definition;definition["sourceSetup"]=QJsonObject{{"schemaVersion",1},{"sourceToolId",source},{"target",target}};definition["calibrationPolicy"]="scoped-source/1";validateEditorDefinition(definition);
+    if(definition==activeRecipe()->definition)return;auto candidate=project();const auto id=activeRecipe()->id;
+    for(auto& r:candidate.recipes)if(r.id==id){r.definition=definition;r.calibrationBinding.reset();r.calibrationReference.clear();r.status=RecipeStatus::Draft;}
+    validateProject(candidate);project_=candidate;changedRecipes_.insert(id);dirty_=true;
+}
+void ProjectService::clearSourceSetup(){if(!activeRecipe())fail("Önce reçete açın.");if(!activeRecipe()->definition.contains("sourceSetup"))return;auto candidate=project();const auto id=activeRecipe()->id;for(auto& r:candidate.recipes)if(r.id==id){r.definition.remove("sourceSetup");r.calibrationBinding.reset();r.calibrationReference.clear();r.status=RecipeStatus::Draft;}project_=candidate;changedRecipes_.insert(id);dirty_=true;}
 void ProjectService::clearCalibrationBinding() {
     if(!activeRecipe())fail("Önce reçete açın.");if(!activeRecipe()->calibrationBinding)return;
     const auto id=activeRecipe()->id;auto candidate=project();

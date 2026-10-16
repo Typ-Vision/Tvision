@@ -40,7 +40,7 @@ CalibrationWizard::CalibrationWizard(bool plate,std::optional<ToolDefinition> so
     auto page=[&]{auto* w=new QWidget;auto* v=new QVBoxLayout(w);pages_->addWidget(w);return v;};
     auto* image=page();image->addWidget(label("Referans aynı çalışma düzleminde olmalı. Image File veya Webcam kaynağı kullanılır."));
     auto* acquire=button(image,"Reçete kaynağından al","wizardAcquire");acquire->setEnabled(source_.has_value());
-    connect(acquire,&QPushButton::clicked,this,[this]{attempt([this]{session_.clear();pendingFrame_.reset();setup_.reset();controls_={};captureCancel_=std::make_shared<std::atomic_bool>(false);
+    connect(acquire,&QPushButton::clicked,this,[this]{if(independentTarget_){attempt([this]{captureIndependent();});return;}attempt([this]{session_.clear();pendingFrame_.reset();setup_.reset();controls_={};captureCancel_=std::make_shared<std::atomic_bool>(false);
         const auto source=*source_;const auto directory=directory_;const auto cancel=captureCancel_;auto* watcher=jobs_.watch<ImageLoad>(this,SessionJob::Image);
         connect(watcher,&QFutureWatcher<ImageLoad>::finished,this,[this,watcher]{auto r=watcher->result();watcher->deleteLater();if(captureCancel_ && !captureCancel_->load()){if(r.frame)presentFrame(*r.frame,false);else status_->setText(r.error);}refresh();});
         jobs_.launch(watcher,[source,directory,cancel]{ImageLoad r;try{r.frame=CalibrationCapture::acquire(source,directory,cancel);}catch(const std::exception& e){r.error=QString::fromUtf8(e.what());}return r;});refresh();});});
@@ -114,11 +114,36 @@ CalibrationWizard::CalibrationWizard(bool plate,std::optional<ToolDefinition> so
     pages_->setMinimumWidth(0);pages_->setSizePolicy(QSizePolicy::Ignored,QSizePolicy::Preferred);scroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     refresh();
 }
+CalibrationWizard::CalibrationWizard(bool plate,IndependentCaptureRequest target,QString directory,std::function<void(const CalibrationModelRecord&)> save,QWidget* parent,IndependentCaptureBackend backend)
+ :CalibrationWizard(plate,std::optional<ToolDefinition>{},directory,std::move(save),parent){
+    independentTarget_=std::move(target);backend_=std::move(backend);
+    auto* acquire=findChild<QPushButton*>("wizardAcquire");acquire->setText("Kameradan resim çek");acquire->setEnabled(independentTarget_->camera.has_value());
+    installation_->setText(independentTarget_->setup ? independentTarget_->setup->name:"Dosyadan deneme");
+    lens_->setText(independentTarget_->setup ? independentTarget_->setup->opticalProfile:"trial-lens");plane_->setText(independentTarget_->setup ? independentTarget_->setup->workingPlane:"trial-plane");
+    for(auto* field:{installation_,lens_,plane_})field->setReadOnly(true);
+    usage_->setCurrentIndex(independentTarget_->setup ? 1:0);
+    usage_->setToolTip("Kullanım seçimini dosyayı açmadan önce yapın. Yeni dosya/edinim önceki hesabı temizler.");
+}
+void CalibrationWizard::captureIndependent(QString path){
+    if(jobs_.busy())throw std::runtime_error("Önce devam eden işi durdurun.");
+    cancelWork();pendingFrame_.reset();setup_.reset();independentSetup_.reset();resultRecord_.reset();controls_={};lastResult_.reset();viewer_->clearImage();imageInfo_->setText("Görüntü yok.");step_=0;
+    auto request=*independentTarget_;request.filePath=path;
+    request.origin=path.isEmpty() ? SourceOrigin::CameraAcquired:usage_->currentIndex()==1 ? SourceOrigin::SetupFile:SourceOrigin::TrialFile;
+    if(request.origin==SourceOrigin::TrialFile){request.camera.reset();request.setup.reset();}
+    const auto job=independent_.begin(request);const auto backend=backend_;
+    auto* watcher=jobs_.watch<IndependentCaptureResult>(this,SessionJob::Image);
+    connect(watcher,&QFutureWatcher<IndependentCaptureResult>::finished,this,[this,watcher]{const auto r=watcher->result();watcher->deleteLater();
+        if(independent_.accept(r)){const auto frame=*independent_.math().frame();const auto setup=*independent_.acceptedSetup();const auto evidence=*independent_.evidence();
+            presentFrame(frame,evidence.origin!=SourceOrigin::CameraAcquired);independentSetup_=setup;independentOrigin_=evidence.origin==SourceOrigin::CameraAcquired ? "acquired":sourceOriginName(evidence.origin);
+            imageInfo_->setText(QString("%1 • %2×%3 px\nHedef: %4").arg(independentOrigin_).arg(frame.size().width()).arg(frame.size().height()).arg(evidence.target ? evidence.target->setup.value:"Yalnız deneme"));
+        }else if(!r.error().isEmpty())status_->setText(r.error());refresh();});
+    jobs_.launch(watcher,[job,backend]{return IndependentCalibrationSession::run(job,backend);});refresh();
+}
 CalibrationWizard::~CalibrationWizard(){cancelWork();}
-void CalibrationWizard::cancelWork(){session_.cancel();if(captureCancel_)captureCancel_->store(true);}
+void CalibrationWizard::cancelWork(){independent_.cancel();session_.cancel();if(independentTarget_){pendingFrame_.reset();setup_.reset();independentSetup_.reset();resultRecord_.reset();controls_={};step_=0;if(viewer_)viewer_->clearImage();if(imageInfo_)imageInfo_->setText("Görüntü yok.");}if(captureCancel_)captureCancel_->store(true);}
 void CalibrationWizard::reject(){cancelWork();QDialog::reject();}
 void CalibrationWizard::attempt(std::function<void()> f){try{status_->clear();f();}catch(const std::exception& e){status_->setText(QString::fromUtf8(e.what()));}refresh();}
-void CalibrationWizard::openFile(const QString& path){attempt([this,path]{if(jobs_.busy())throw std::runtime_error("Önce devam eden işi durdurun.");cancelWork();session_.clear();pendingFrame_.reset();setup_.reset();controls_={};resultRecord_.reset();viewer_->clearImage();captureCancel_=std::make_shared<std::atomic_bool>(false);const auto cancel=captureCancel_;auto* w=jobs_.watch<ImageLoad>(this,SessionJob::Image);connect(w,&QFutureWatcher<ImageLoad>::finished,this,[this,w,cancel]{const auto r=w->result();w->deleteLater();if(!cancel->load()){if(r.frame)presentFrame(*r.frame,true);else status_->setText(r.error);}refresh();});jobs_.launch(w,[path]{ImageLoad r;try{r.frame=ChessboardService::importImage(path).frame;}catch(const std::exception& e){r.error=QString::fromUtf8(e.what());}return r;});});}
+void CalibrationWizard::openFile(const QString& path){if(independentTarget_){attempt([this,path]{captureIndependent(path);});return;}attempt([this,path]{if(jobs_.busy())throw std::runtime_error("Önce devam eden işi durdurun.");cancelWork();session_.clear();pendingFrame_.reset();setup_.reset();controls_={};resultRecord_.reset();viewer_->clearImage();captureCancel_=std::make_shared<std::atomic_bool>(false);const auto cancel=captureCancel_;auto* w=jobs_.watch<ImageLoad>(this,SessionJob::Image);connect(w,&QFutureWatcher<ImageLoad>::finished,this,[this,w,cancel]{const auto r=w->result();w->deleteLater();if(!cancel->load()){if(r.frame)presentFrame(*r.frame,true);else status_->setText(r.error);}refresh();});jobs_.launch(w,[path]{ImageLoad r;try{r.frame=ChessboardService::importImage(path).frame;}catch(const std::exception& e){r.error=QString::fromUtf8(e.what());}return r;});});}
 void CalibrationWizard::presentFrame(ImageFrame f,bool imported){pendingFrame_=f;imported_=imported;checking_=false;pendingControl_=false;session_.clear();setup_.reset();controls_={};resultRecord_.reset();lastResult_.reset();step_=0;viewer_->setImage(f.preview());imageInfo_->setText(QString("%1 • %2×%3 px\n%4").arg(imported ? "Dosya kökenli":"Reçete kaynağından edinilmiş").arg(f.size().width()).arg(f.size().height()).arg(QFileInfo(f.path()).fileName()));displayPoints();refresh();}
 void CalibrationWizard::refresh(){pages_->setCurrentIndex(step_);heading_->setText(QString("%1 / 4 — %2").arg(step_+1).arg(QStringList{"Görüntü ve kurulum","Noktaları bul",plateMode_ ? "Noktaları onayla":"Çifti ve mesafeyi onayla","Sonuç ve kayıt"}[step_]));
     const bool plate=plateMode_ && !checking_;for(auto* w:QList<QWidget*>{pattern_,columns_,rows_,spacing_,findChild<QComboBox*>("wizardTargets"),findChild<QLineEdit*>("wizardTargetName"),findChild<QPushButton*>("wizardSaveTarget")})w->setVisible(plate);
@@ -126,7 +151,7 @@ void CalibrationWizard::refresh(){pages_->setCurrentIndex(step_);heading_->setTe
     for(auto* f:pages_->findChildren<QFormLayout*>())for(auto* field:QList<QWidget*>{columns_,rows_,spacing_})if(auto* text=f->labelForField(field))text->setVisible(plate);
     findChild<QPushButton*>("wizardCancelControl")->setVisible(checking_);findChild<QPushButton*>("wizardCancelControl")->setText(pendingControl_ ? "Yeni kontrolü iptal et":"Kontrol düzenlemesini bitir");
     back_->setEnabled(step_>0 && !jobs_.busy());next_->setEnabled(!jobs_.busy());next_->setText(QStringList{"Bu görüntüyü kullan",plateMode_ ? "Noktaları incele":"Seçili çifti kullan",plateMode_ ? "Onayla ve hesapla":"Hesapla","Kaydet ve bitir"}[step_]);
-    pages_->setEnabled(!jobs_.busy());usage_->setEnabled(imported_);if(jobs_.busy())status_->setText("İşlem sürüyor… Stop veya İptal kullanılabilir.");}
+    pages_->setEnabled(!jobs_.busy());usage_->setEnabled(independentTarget_ ? !pendingFrame_ && independentTarget_->setup.has_value():imported_);if(jobs_.busy())status_->setText("İşlem sürüyor… Stop veya İptal kullanılabilir.");}
 void CalibrationWizard::displayPoints(){
     QStringList selected;for(auto* i:points_->selectedItems())selected.append(i->data(Qt::UserRole).toString());
     QSignalBlocker block(points_);points_->clear();QVector<QPointF> pixels;QVector<QLineF> lines;
@@ -146,7 +171,9 @@ void CalibrationWizard::detect(){if(jobs_.busy())return;
     }refresh();
 }
 void CalibrationWizard::advance(){
-    if(step_==0){if(!pendingFrame_)throw std::runtime_error("Önce görüntü alın veya dosya açın.");ToolDefinition source;
+    if(step_==0 && independentTarget_){if(!pendingFrame_ || !independentSetup_)throw std::runtime_error("Önce görüntü alın veya dosya açın.");
+        const auto s=*independentSetup_;if(!setup_ || *setup_!=s || !session_.frame()){session_.useFrame(*pendingFrame_,s,independentOrigin_);setup_=s;controls_={};resultRecord_.reset();checking_=false;}viewer_->setRoiFrame(s.source.id);viewer_->setRoiEditable(true);++step_;
+    }else if(step_==0){if(!pendingFrame_)throw std::runtime_error("Önce görüntü alın veya dosya açın.");ToolDefinition source;
         if(source_)source=*source_;else {source.kind="image_file";source.parameters={{"path",pendingFrame_->path()}};}
         if(imported_ && usage_->currentIndex()==1 && !source_)throw std::runtime_error("Kurulum ilişkilendirmesi için hedef reçete kaynağını açın.");
         const auto s=CalibrationCapture::setup(source,directory_,*pendingFrame_,installation_->text(),lens_->text(),plane_->text());
