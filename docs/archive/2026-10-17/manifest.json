@@ -1,0 +1,94 @@
+{
+  "date": "2026-10-17",
+  "sources": [
+    {
+      "path": "docs/progress.md",
+      "bytes": 474742,
+      "sha256": "52e05b556d7cdde2d0dac4a221c1f202c8d712785d62c0a29427382d861038d1"
+    },
+    {
+      "path": "README.md",
+      "bytes": 69729,
+      "sha256": "dc5e29e6075128d3b921bc9eecb1846fefda22af7cddbcc7e43c995f40e6c684"
+    },
+    {
+      "path": "docs/architecture/industrial-camera-handoff.md",
+      "bytes": 5576,
+      "sha256": "2927120c18f479be38b4451d71fe29bbc47becd998380a16bb9bbd407ccc9b29"
+    },
+    {
+      "path": "docs/requirements/01_machine_vision_yazilim_tanimi.md",
+      "bytes": 43026,
+      "sha256": "a9be7b3e2aa2935ffc53a1c3f65ac240acd0508d39d2d98e85ab20cee38f3aad"
+    },
+    {
+      "path": "docs/requirements/02_machine_vision_ui_gereksinimleri.md",
+      "bytes": 65219,
+      "sha256": "c56af3f4e716cf8a4b9af4069f07a5f79b5555b4ef2f5b4075b8ed81b32e121c"
+    },
+    {
+      "path": "docs/requirements/03_cpp_qt_opencv_gereksinimleri.md",
+      "bytes": 32066,
+      "sha256": "bdc9826bd5bc4887b538b643999c0ed8230f0f7f3dcffaac13f9cbb31d8ef3d5"
+    }
+  ],
+  "archives": [
+    {
+      "path": "docs/archive/2026-10-17/progress-01.md",
+      "sha256_lf": "293ddef9acaab17c1b0b88056aa0f4788fb9741f4e56b2053dd42d9d292e07dd"
+    },
+    {
+      "path": "docs/archive/2026-10-17/progress-02.md",
+      "sha256_lf": "7dcfc6c0c1fb3c562a9814a0878234b0f9c5a5be717a8dc75128cbb650dec677"
+    },
+    {
+      "path": "docs/archive/2026-10-17/progress-03.md",
+      "sha256_lf": "2419011882c15f5b1ebbb417cea75742fdd59fd01587c18d0581a64ac815aa92"
+    },
+    {
+      "path": "docs/archive/2026-10-17/progress-04.md",
+      "sha256_lf": "056140d90535f34f8bb3e2bf26c19d4d31b4094ce540b2ee1451ddd1f766871d"
+    },
+    {
+      "path": "docs/archive/2026-10-17/progress-05.md",
+      "sha256_lf": "7c401d1f7afeaca9f201c46f65324c752be7442e93eccb663f1e038e3ebfb8a6"
+    },
+    {
+      "path": "docs/archive/2026-10-17/progress-06.md",
+      "sha256_lf": "4f9517db6824786072f4a32bbacf6da24fc245935a4621fdd0b850ba33f83488"
+    },
+    {
+      "path": "docs/archive/2026-10-17/progress-07.md",
+      "sha256_lf": "5b2100cf75ebd9e0ab4991b5ffb19c12596884d8ad99f6ec316aed7996086a80"
+    },
+    {
+      "path": "docs/archive/2026-10-17/progress-08.md",
+      "sha256_lf": "51d6cae37da3b2cb0aa957319c498e4adc759b84a2fe5d9106935ce97f625272"
+    },
+    {
+      "path": "docs/archive/2026-10-17/progress-09.md",
+      "sha256_lf": "31832895248327d9a78723f96f6e8f9e64f796122b5ce5d56c0e1f2c7bc8a3e6"
+    },
+    {
+      "path": "docs/archive/2026-10-17/README.md",
+      "sha256_lf": "c107849a96de95817e711f565931e3824c5585ffd834b9bb82927ef7b46f07ea"
+    },
+    {
+      "path": "docs/archive/2026-10-17/industrial-camera-handoff.md",
+      "sha256_lf": "ba3372c0b37fbee10e6774e3ed406381429e4849bdff77cf39ca1d7ba80bcf3b"
+    },
+    {
+      "path": "docs/archive/2026-10-17/01_machine_vision_yazilim_tanimi.md",
+      "sha256_lf": "56ab995eda23621075df70cee68617e402000f881ef725fd6c0cea93481ff19a"
+    },
+    {
+      "path": "docs/archive/2026-10-17/02_machine_vision_ui_gereksinimleri.md",
+      "sha256_lf": "6b6525e48839655542b1963a2f883c19e7cca7d5b5575b3206eb7a81ba37396b"
+    },
+    {
+      "path": "docs/archive/2026-10-17/03_cpp_qt_opencv_gereksinimleri.md",
+      "sha256_lf": "9a15c320c746ba935bbca098b22bab2cd1f3ce489f250705de1c61be0f2d1f72"
+    }
+  ],
+  "archive_hash_format": "sha256-utf8-lf (CRLF normalized to LF only; source hashes retain original bytes)"
+}
