@@ -6,6 +6,7 @@ görev” ifadeleri yazıldıkları tarihe aittir.
 
 | Dönem / görev | Kayıt |
 | --- | --- |
+| 17 Ekim 2026 — ICM-04d kısmi | [Tetik eşleştirme çekirdeği, gerçek bağlantı/kare ve native engeller](2026-10-17-icm-04d.md) |
 | 17 Ekim 2026 — ICM-04c | [Bounded stream probe, owned Mono8 frame ve cleanup kabulü](2026-10-17-icm-04c.md) |
 | 17 Ekim 2026 — ICM-04b | [Feature erişimi, transactional configure/readback ve doğrulanan rollback](2026-10-17-icm-04b.md) |
 | 17 Ekim 2026 — ICM-REVIEW-01-FIX | [SDK enumerate sahipliği ve setup revision uyumluluğu düzeltmeleri](2026-10-17-icm-review-01-fix.md) |

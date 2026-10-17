@@ -32,6 +32,8 @@ int main(int argc,char** argv){QCoreApplication app(argc,argv);try{
     check(a->readFeature(handle,"ExposureTime",feature)==0&&feature.type==FeatureType::Float&&feature.unit=="us"&&std::get<double>(feature.value)==123.5,"float metadata ABI");
     check(a->writeFeature(handle,"ExposureTime",124.5)==0,"float write ABI");
     check(a->readFeature(handle,"PixelFormat",feature)==0&&std::get<QString>(feature.value)=="Mono8"&&feature.entries.value("Mono8")==17301505,"enum XML symbol ABI");
+    check(a->readFeature(handle,"TriggerMode",feature)==0&&std::get<QString>(feature.value)=="On"&&feature.entries.value("On")==1,"inline GenApi enum entry");
+    check(a->readFeature(handle,"OtherEnum",feature)==0&&std::get<QString>(feature.value)=="On"&&feature.entries.value("On")==7,"inline enum symbols scoped per enumeration");
     check(a->readFeature(handle,"ReverseX",feature)==0&&std::get<bool>(feature.value)==false&&a->writeFeature(handle,"ReverseX",true)==0,"boolean ABI");
     check(a->readFeature(handle,"DeviceModelName",feature)==0&&std::get<QString>(feature.value)=="CAM","string ABI");
     check(a->readFeature(handle,"Missing",feature)==0&&feature.access==FeatureAccess::Missing,"missing node ABI");
@@ -48,7 +50,7 @@ int main(int argc,char** argv){QCoreApplication app(argc,argv);try{
         if(scenario==3)check(frame.chunks,"native chunk flag");
         if(scenario==4)check(frame.pixelFormat!=0x01080001,"native packed format preserved");
         OecsBuffer duplicate;check(a->waitBuffer(handle,37,duplicate)==oecs::errorParameter,"one outstanding native buffer");
-        check(a->releaseBuffer(handle)==0&&a->stopStream(handle)==0&&a->flushStream(handle)==0&&resources()==0,"native release stop flush balances resources");
+        check(a->releaseBuffer(handle)==0&&a->flushStream(handle)==0&&a->stopStream(handle)==0&&resources()==0,"native release stop flush balances resources");
         check(a->releaseBuffer(handle)==oecs::errorParameter,"no duplicate native release");
     }
     check(!a->unload() && a->destroyHandle(handle)==0,"live handle pins binding until destroy");

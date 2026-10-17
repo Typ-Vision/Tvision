@@ -5,7 +5,7 @@ C++20 / Qt Widgets / OpenCV ile endüstriyel görüntü işleme uygulaması.
 UI algoritma veya donanım SDK'sını doğrudan çağırmaz.
 
 **Güncel görev, son doğrulama ve açık engeller [devir özetindedir](docs/progress.md).**
-Bu README giriş ve kullanım rehberidir; teslim günlüğü değildir.
+Bu README giriş ve kullanım rehberidir.
 
 ## Uygulanan kapsam
 
@@ -64,14 +64,17 @@ PowerShell 7 ile mevcut Release probe'unu explicit x64 U3V producer üzerinden �
 pwsh -NoProfile -File scripts/diagnose-camera.ps1 -OpenCheck
 ```
 
-`-ProducerPath`, `-ProbePath`, `-OutputDirectory` ve bağımlılık dizinleri değiştirilebilir.
-Varsayılan rapor `build/icm/01a/local/diagnostic.json`; ham probe çıktısı ve doğrudan
-DLL import envanteri aynı dizindedir. Betik sürüm/hash, PE mimarisi, process/machine
-ortam farkı, child PATH, komut ve exit code kaydeder. Kalıcı ortamı değiştirmez.
-`NO_DEVICES` discovery'nin tamamlanıp sıfır cihaz bulduğudur; kamera kabulü değildir.
-`NO_DEVICES`/`DEVICES_DISCOVERED` exit 0, diğer tanı durumları exit 1 döner.
-Open/close yalnız keşfedilen cihazlarda denenir; grab uygulanmış değildir.
-DLL aday yolları Windows loader çözümlemesinin veya dağıtımın doğrulandığı anlamına gelmez.
+`-ProducerPath`, `-ProbePath`, `-OutputDirectory` değiştirilebilir; rapor varsayılanı
+`build/icm/01a/local/diagnostic.json`. Sürüm/hash, mimari, ortam ve exit code kaydedilir; kalıcı ortam değişmez. `NO_DEVICES`/`DEVICES_DISCOVERED` exit 0,
+diğer durumlar exit 1'dir. Bu GenTL probe grab yapmaz; sıfır cihaz kabul değildir.
+
+Fiziksel erişim sandbox içinde 0 cihaz dönebilir; sandbox dışı C API exact open/grab
+başarısı [04d kaydında](docs/archive/2026-10-17-icm-04d.md). SDK opt-in build'deki
+`oecs_capture_probe` elle çalıştırılır, otomatik CTest değildir. Argümanlar: mutlak
+DLL yolu, exact vendor, model, seri ve output.pgm yolu. Runtime DLL dizini child
+PATH'te olmalıdır. Probe mevcut TriggerMode Off ister, ayar yazmaz, owned rasteri
+SDK kapanışından sonra kaydeder. Hata exit 1'dir. Native software-trigger admission
+henüz yoktur; gerçek cihazın FrameBurstStart farkı çözülmeden FrameStart kuralı açılmaz.
 
 ## Temel kullanım
 

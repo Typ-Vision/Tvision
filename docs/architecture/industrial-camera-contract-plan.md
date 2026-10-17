@@ -164,8 +164,8 @@ Bu advertised payload bütçesidir; vendor iç bookkeeping/USB transfer belleği
 hard sınırı değildir. Retained owned ImageFrame bütçesinden ayrıdır.
 
 C API kendi pool allocate/queue/revoke işlemlerini yönetir: SetImageNodeNum →
-StartGrabbing → GetImageBuffer → owned copy → FreeImageBuffer → StopGrabbing →
-ClearImageBuffer; oturum sonunda CloseDevice/DestroyHandle/unload. Bu SDK başlığında
+StartGrabbing → GetImageBuffer → owned copy → FreeImageBuffer → ClearImageBuffer →
+StopGrabbing; oturum sonunda CloseDevice/DestroyHandle/unload. Bu SDK başlığında
 stride ve ayrı completion status yoktur: native yol yalnız `nFrameLen == width × height`,
 kayıp paketsiz Mono8 kabul eder. Belirsiz padding/truncation/overflow, packed/renk ve
 unparsed chunk reddedilir; stride açıkça bildiren backend fixture'ı padded rows sınar.
@@ -245,3 +245,33 @@ Save As/dependency export/import yerel SDK binary'sini paketlemez. Yeni projede
 device/profile korunur, producer rota eşleme ve gerçek kabul yeniden gerekir.
 Sdk runtime/driver redistributable lisansı ICM-02'de kayda alınır; DLL mevcutluğu
 temiz makine kurulumu kabulü değildir.
+
+### ICM-04d uygulama sınırı ve fiziksel bulgular
+
+`IndustrialSoftwareCapture` owner worker'da source için private UUID cycle/frame
+admission oluşturur ve mevcut AcquisitionService sonucunu kullanır. Tek in-flight
+SDK işi; process genelinde yeniden açılışta tekrar kullanılmayan generation;
+ready/command/wait/copy/cleanup sonrasında iptal ve monoton deadline kontrolü vardır.
+Pool ve wait'e kalan bütçe uygulanır. Reentrant/foreign worker isteği SDK'ya gitmez.
+
+Backend arm kanıtı ancak eski exposure'ları quiesce edip stream-ready ve actual
+counter epoch doğrulayabiliyorsa geçerlidir. Bir sonraki kareye host generation
+etiketlemek kanıt değildir. Frame aynı epoch'ta ve arm'daki 32-bit frame/trigger
+sayaçlarının modulo tam ardılı olmalıdır. Eksik kanıt, reset/gap/duplicate/late kare
+ERROR verir; eşit piksel hash'i ret nedeni değildir. Owned copy ve tüm cleanup
+başarılı olmadan frame/evidence dönmez. Kalıcı schema değişmedi;
+trusted Runtime/lease/production capability hâlâ sonraki görevlerdedir.
+
+Native OECS arm/command yolu **henüz uygulanmadı**, default unsupported döner;
+fixture başarısı gerçek trigger yeteneği değildir. 17 Ekim gerçek cihaz yalnız
+FrameBurstStart bildiriyor; FrameStart kuralı korunur. AcquisitionStatusSelector
+missing ve AcquisitionStatus unavailable; sorgulanan TriggerCounter/FrameCounter/
+Chunk/Event alanlarından kanıt alınamadı. Native ready/counter/epoch yolu ve selector
+sözleşmesi çözülmeden ICM-04d tamamlanmış sayılmaz. Ayrıntı
+[04d kaydında](../archive/2026-10-17-icm-04d.md).
+
+Gerçek nested EnumEntry çocukları enumeration kapsamında ayrıştırılır; On/Off gibi
+local isimler başka enum'u ezmez. ClearImageBuffer Stop'tan sonra CALLORDER verdiği
+için cleanup sırası Free → Clear (stream çalışırken) → Stop'tur; flush hatasında da
+Stop denenir. Stop başarısızsa hata/Faulted korunur. Flush tek başına tazelik kanıtı
+değildir. Bu düzeltmeler önceki fixture-only varsayımlarını geçersiz kılar.

@@ -39,6 +39,9 @@ public:
     // Bounded diagnostic acquisition. Consumer must copy; no trigger/freshness admission.
     void probeFrame(const OecsStreamLimits&,const std::function<void(const OecsBuffer&)>& copy);
 
+    // remaining() checks monotonic deadline/cancel; throws on expiry. No IDs supplied by UI.
+    OecsTriggerArm softwareFrame(const OecsStreamLimits&,const std::function<int()>& remaining,
+                                const std::function<void(const OecsBuffer&)>& copy);
     OecsSessionStage stage() const;
     // A handle or library cleanup failed: the DLL is never unloaded by this session again.
     bool libraryPinned() const;
@@ -55,6 +58,10 @@ private:
     OecsDeviceInfo deviceInfo_;
     bool configurationFault_=false;
     bool streaming_=false,bufferHeld_=false,streamDirty_=false,probing_=false;
+    void captureFrame(const OecsStreamLimits&,const std::function<void(const OecsBuffer&)>&,
+                      const std::function<int()>& remaining={},
+                      const std::function<void()>& ready={},
+                      const std::function<void(const OecsBuffer&)>& validate={});
     QString cleanupStream();
     void requireOpen() const;
 };

@@ -60,7 +60,7 @@ int main(int argc,char** argv){QCoreApplication app(argc,argv);try{
         auto s=std::make_shared<State>();auto owner=session(s);
         OecsStreamLimits limits;limits.poolBytes=40;limits.timeoutMs=27;
         auto result=IndustrialFrameProbe::capture(*owner,limits);
-        check(s->calls==QStringList{"pool","start","wait","release","stop","flush"},"stream order");
+        check(s->calls==QStringList{"pool","start","wait","release","flush","stop"},"stream order");
         check(s->pool==4&&s->timeout==27&&s->held==0&&s->running==0&&s->mutated,"bounded SDK pool/wait/release");
         const auto hash=result.frame.contentId();
         check(result.frame.pixelText(0,0)=="Gray: 1"&&result.frame.pixelText(2,1)=="Gray: 6","padded Mono8 copied without padding");
@@ -87,7 +87,7 @@ int main(int argc,char** argv){QCoreApplication app(argc,argv);try{
         auto owner=session(s);rejects([&]{IndustrialFrameProbe::capture(*owner,limits);});
         check(s->poolCalls==0,"invalid budget rejected before pool allocation");owner->close();balanced(*s);
     }
-    for(const auto& failure:QStringList{"pool","start","wait","release","stop","flush"}){
+    for(const auto& failure:QStringList{"pool","start","wait","release","flush","stop"}){
         auto s=std::make_shared<State>();s->fail=failure;auto owner=session(s);
         rejects([&]{IndustrialFrameProbe::capture(*owner);});
         check(owner->stage()==OecsSessionStage::Faulted,"failed probe requires explicit close/reopen");

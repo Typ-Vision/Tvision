@@ -6,6 +6,8 @@
 #include <QJsonObject>
 #include <QLibrary>
 #include <QFileInfo>
+#include <QFile>
+#include <QDir>
 #include <QScopeGuard>
 #include <MvCameraControl.h>
 #include <cstddef>
@@ -28,7 +30,7 @@ int main(int argc, char** argv) {
                     {"physicalAcceptance", false}, {"grabAttempted", false}};
     int exitCode=0;
     try {
-        if(argc!=3) throw std::runtime_error("usage: industrial_backend_probe --oecs|--gentl absolute-dll-or-cti");
+        if(argc!=3 && argc!=4) throw std::runtime_error("usage: industrial_backend_probe --oecs|--gentl absolute-dll-or-cti [xml-output-directory]");
         const QString mode=QString::fromLocal8Bit(argv[1]);
         const auto path=QFileInfo(QString::fromLocal8Bit(argv[2])).absoluteFilePath();
         out["path"]=path;
@@ -119,6 +121,19 @@ int main(int argc, char** argv) {
                         unsigned length=0;
                         device["xmlSizeCode"]=code(MV_XML_GetGenICamXML(handle,nullptr,0,&length));
                         device["xmlRequiredBytes"]=double(length);
+                        if(argc==4 && length>0 && length<=8*1024*1024){
+                            QByteArray xml(int(length),'\0');unsigned actual=0;
+                            const int xmlCode=MV_XML_GetGenICamXML(handle,reinterpret_cast<unsigned char*>(xml.data()),length,&actual);
+                            device["xmlReadCode"]=code(xmlCode);device["xmlActualBytes"]=double(actual);
+                            if(xmlCode==0 && actual>0 && actual<=length){
+                                xml.resize(int(actual));
+                                const QString serial=bounded(info->SpecialInfo.stUsb3VInfo.chSerialNumber);
+                                if(serial.contains('/')||serial.contains('\\')||serial.contains(".."))throw std::runtime_error("unsafe serial filename");
+                                QFile file(QDir(QString::fromLocal8Bit(argv[3])).absoluteFilePath(serial+".xml"));
+                                if(!file.open(QIODevice::WriteOnly)||file.write(xml)!=xml.size())throw std::runtime_error("XML output failed");
+                                device["xmlFile"]=file.fileName();
+                            }
+                        }
                         auto closed=MV_CC_CloseDevice(handle);
                         device["closeCode"]=code(closed);
                         if(closed==MV_OK) opened=false;

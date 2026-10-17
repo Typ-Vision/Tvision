@@ -4,6 +4,8 @@
 #include <QSet>
 #include <mutex>
 #include <exception>
+#include <atomic>
+#include <limits>
 
 namespace visionflow {
 namespace {
@@ -109,7 +111,7 @@ void OecsSession::close() {
 namespace visionflow {
 void OecsSession::requireOpen() const {
     if(std::this_thread::get_id()!=owner_)throw OecsSessionError(OecsFailure::WrongThread,"thread",0,"OECS feature access requires owner worker");
-    if(stage_!=OecsSessionStage::Open||streamDirty_)throw OecsSessionError(OecsFailure::InvalidState,"feature",0,"OECS session is not idle/open");
+    if(stage_!=OecsSessionStage::Open||streamDirty_||probing_)throw OecsSessionError(OecsFailure::InvalidState,"feature",0,"OECS session is not idle/open");
 }
 CameraFeature OecsSession::feature(const QString& name){
     requireOpen();CameraFeature f;f.name=name;
@@ -131,15 +133,62 @@ OecsDeviceInfo OecsSession::deviceInfo() const {requireOpen();return deviceInfo_
 QString OecsSession::cleanupStream(){
     QStringList failures;
     if(bufferHeld_){const int rc=api_->releaseBuffer(handle_);if(rc==0)bufferHeld_=false;else failures<<"release:"+hex(rc);}
-    if(streaming_){const int rc=api_->stopStream(handle_);if(rc==0)streaming_=false;else failures<<"stop:"+hex(rc);}
     if(streamDirty_){const int rc=api_->flushStream(handle_);if(rc!=0)failures<<"flush:"+hex(rc);}
+    // ClearImageBuffer requires acquisition still running on the physical OECS SDK.
+    // Stop remains mandatory even after a release/flush error.
+    if(streaming_){const int rc=api_->stopStream(handle_);if(rc==0)streaming_=false;else failures<<"stop:"+hex(rc);}
     if(failures.isEmpty())streamDirty_=false;
     return failures.join(", ");
 }
 void OecsSession::probeFrame(const OecsStreamLimits& limits,const std::function<void(const OecsBuffer&)>& copy){
+    captureFrame(limits,copy);
+}
+OecsTriggerArm OecsSession::softwareFrame(const OecsStreamLimits& limits,const std::function<int()>& remaining,
+                                        const std::function<void(const OecsBuffer&)>& copy){
+    requireOpen();
+    if(!remaining)throw OecsSessionError(OecsFailure::ConfigurationFailed,"deadline",0,"Monotonic budget required");
+    // Process-wide generations survive close/reopen and different session instances.
+    static std::atomic<quint64> next{1};
+    quint64 generation=next.load();
+    do {
+        if(generation==std::numeric_limits<quint64>::max())throw OecsSessionError(OecsFailure::InvalidState,"generation",0,"Generation exhausted");
+    }while(!next.compare_exchange_weak(generation,generation+1));
+    for(const auto& pair: {std::pair{"TriggerSelector","FrameStart"},std::pair{"TriggerMode","On"},std::pair{"TriggerSource","Software"}}){
+        const auto f=feature(pair.first);
+        if((f.access!=FeatureAccess::ReadOnly&&f.access!=FeatureAccess::ReadWrite)||f.type!=FeatureType::Enumeration||
+           !std::holds_alternative<QString>(f.value)||std::get<QString>(f.value)!=pair.second)
+            throw OecsSessionError(OecsFailure::ConfigurationFailed,"trigger-settings",0,"Actual FrameStart/On/Software required");
+    }
+    const auto budget=[&]{
+        const int ms=remaining();
+        if(ms<=0)throw OecsSessionError(OecsFailure::ApiError,"deadline",0,"Expired trigger budget");
+        return ms;
+    };
+    OecsTriggerArm arm;
+    const auto check=[](int rc,const char* stage){if(rc!=0)throw OecsSessionError(OecsFailure::ApiError,stage,rc,"Software trigger correlation unavailable or failed");};
+    captureFrame(limits,copy,budget,[&]{
+        // A flush alone is insufficient: backend must also quiesce in-flight old exposures.
+        check(api_->flushStream(handle_),"trigger-flush");
+        check(api_->prepareSoftwareTrigger(handle_,generation,budget(),arm),"trigger-ready");
+        budget();
+        if(arm.generation!=generation)throw OecsSessionError(OecsFailure::ApiError,"trigger-epoch",0,"Unproven trigger epoch");
+        check(api_->executeSoftwareTrigger(handle_),"trigger-command");
+        budget();
+    },[&](const OecsBuffer& f){
+        // Exact modulo-32 successor supports wrap; reset/gaps/duplicates are errors.
+        if(!f.triggerEvidence||f.triggerGeneration!=generation||f.hardwareFrameId!=quint32(arm.frameCounter+quint32(1))||
+           f.triggerCounter!=quint32(arm.triggerCounter+quint32(1)))
+            throw OecsSessionError(OecsFailure::ApiError,"trigger-frame",0,"Frame cannot be attributed to this trigger");
+    });
+    return arm;
+}
+void OecsSession::captureFrame(const OecsStreamLimits& limits,const std::function<void(const OecsBuffer&)>& copy,
+                              const std::function<int()>& remaining,const std::function<void()>& ready,
+                              const std::function<void(const OecsBuffer&)>& validate){
     requireOpen();
     const auto invalid=[](const char* message){throw OecsSessionError(OecsFailure::ConfigurationFailed,"stream-validation",0,message);};
     if(!copy||limits.buffers<1||limits.buffers>64||limits.poolBytes==0||limits.poolBytes>512ULL*1024*1024||limits.timeoutMs<1||limits.timeoutMs>30000)invalid("Invalid stream limits");
+    if(remaining)remaining();
     // Read actual payload before the SDK can allocate its internal pool.
     const auto payload=feature("PayloadSize"),width=feature("Width"),height=feature("Height"),format=feature("PixelFormat");
     const auto integer=[&](const CameraFeature& f)->quint64 {
@@ -154,15 +203,24 @@ void OecsSession::probeFrame(const OecsStreamLimits& limits,const std::function<
     std::exception_ptr failure;
     probing_=true;
     try {
+        if(remaining)remaining();
         call(api_->setBufferCount(handle_,limits.buffers),"pool");
+        if(remaining)remaining();
         // Start may partially succeed. Always attempt stop/flush after entering it.
         streaming_=streamDirty_=true;
         call(api_->startStream(handle_),"start");
+        if(remaining)remaining();
+        if(ready)ready();
         OecsBuffer frame;
-        call(api_->waitBuffer(handle_,limits.timeoutMs,frame),"wait");
+        const int wait=remaining?std::min(limits.timeoutMs,remaining()):limits.timeoutMs;
+        if(wait<=0)throw OecsSessionError(OecsFailure::ApiError,"deadline",0,"Expired wait budget");
+        call(api_->waitBuffer(handle_,wait,frame),"wait");
         bufferHeld_=true;
+        if(remaining)remaining();
+        if(validate)validate(frame);
         if(!frame.data||!frame.complete||frame.overflow||frame.chunks||frame.pixelFormat!=0x01080001||frame.width!=w||frame.height!=h||frame.stride<w||frame.stride>bytes/h||frame.bytes!=frame.stride*h||frame.bytes>bytes)invalid("Invalid/incomplete/unsupported Mono8 buffer");
         copy(frame); // Owned copy finishes before release, including exception paths.
+        if(remaining)remaining();
     }catch(...){failure=std::current_exception();}
     const auto cleanup=cleanupStream();
     probing_=false;
@@ -172,6 +230,7 @@ void OecsSession::probeFrame(const OecsStreamLimits& limits,const std::function<
         if(failure)try{std::rethrow_exception(failure);}catch(const std::exception& e){message+="; acquisition: "+QString::fromUtf8(e.what());}catch(...){message+="; acquisition failed";}
         throw OecsSessionError(OecsFailure::CleanupFailed,"stream-cleanup",0,message);
     }
+    if(!failure&&remaining)try{remaining();}catch(...){failure=std::current_exception();}
     if(failure){
         configurationFault_=true;stage_=OecsSessionStage::Faulted;
         std::rethrow_exception(failure);

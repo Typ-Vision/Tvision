@@ -172,13 +172,37 @@ private:
         QByteArray bytes(qsizetype(length),'\0');unsigned actual=0;int status=getXml_(h,reinterpret_cast<unsigned char*>(bytes.data()),length,&actual);
         if(status!=0)return status;if(actual==0||actual>length)return oecs::errorParameter;bytes.resize(actual);
         while(bytes.endsWith('\0'))bytes.chop(1);
-        QXmlStreamReader xml(bytes);QString node;int depth=0,nodeDepth=-1;
+        QXmlStreamReader xml(bytes);
+        struct Scope {QString key,tag;int depth;};
+        QVector<Scope> scopes;int depth=0;
+        const QStringList properties={"Unit","Inc","pInc","pEnumEntry","Value","Symbolic"};
         while(!xml.atEnd()){
-            xml.readNext();if(xml.isStartElement()){
-                ++depth;const auto attr=xml.attributes().value("Name");if(!attr.isEmpty()){node=attr.toString();nodeDepth=depth;}
-                else if(!node.isEmpty() && depth==nodeDepth+1){const auto prop=xml.name().toString();const auto value=xml.readElementText();--depth;
-                    auto& target=result[node][prop];if(!target.isEmpty())target+='\n';target+=value;}
-            }else if(xml.isEndElement()){if(depth==nodeDepth){node.clear();nodeDepth=-1;}--depth;}
+            xml.readNext();
+            if(xml.isStartElement()){
+                ++depth;
+                const auto tag=xml.name().toString();
+                const auto name=xml.attributes().value("Name").toString();
+                if(!name.isEmpty()){
+                    QString key=name;
+                    // GenApi permits inline EnumEntry children with reused local names.
+                    // Keep the enclosing Enumeration alive and scope entries to it.
+                    if(tag=="EnumEntry"&&!scopes.isEmpty()&&scopes.back().tag=="Enumeration"){
+                        const auto parent=scopes.back().key;
+                        key=parent+"/EnumEntry/"+name;
+                        auto& refs=result[parent]["pEnumEntry"];
+                        if(!refs.isEmpty())refs+='\n';refs+=key;
+                        result[key]["Symbolic"]=name;
+                    }
+                    scopes.push_back({key,tag,depth});
+                }else if(!scopes.isEmpty()&&depth==scopes.back().depth+1&&properties.contains(tag)){
+                    const auto value=xml.readElementText();--depth;
+                    auto& target=result[scopes.back().key][tag];
+                    if(!target.isEmpty())target+='\n';target+=value;
+                }
+            }else if(xml.isEndElement()){
+                if(!scopes.isEmpty()&&depth==scopes.back().depth)scopes.pop_back();
+                --depth;
+            }
         }
         if(xml.hasError())return oecs::errorParameter;
         xmlCache_.insert(h,result);return 0;

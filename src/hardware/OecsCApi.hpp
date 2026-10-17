@@ -16,6 +16,15 @@ struct OecsBuffer {
     quint64 bytes=0,stride=0,hardwareFrameId=0,deviceTicks=0;
     quint32 width=0,height=0,pixelFormat=0;
     bool complete=true,overflow=false,chunks=false;
+    quint64 triggerGeneration=0;
+    quint32 triggerCounter=0;
+    bool triggerEvidence=false;
+};
+// Backend evidence from a quiescent, trigger-ready stream. Baselines must be actual
+// device counters in this epoch, never inferred from arrival order or pixel hashes.
+struct OecsTriggerArm {
+    quint64 generation=0;
+    quint32 frameCounter=0,triggerCounter=0;
 };
 struct OecsStreamLimits {
     quint32 buffers=4;
@@ -25,6 +34,7 @@ struct OecsStreamLimits {
 // MV_* status values the session interprets; copied by value, no SDK header needed.
 namespace oecs {
 constexpr int ok=0;
+constexpr int errorUnsupported=int(0x80000001u);
 constexpr int errorHandle=int(0x80000000u),errorParameter=int(0x80000004u),errorLoadLibrary=int(0x8000000Cu);
 constexpr int errorAccessDenied=int(0x80000203u),errorBusy=int(0x80000204u);
 }
@@ -45,6 +55,12 @@ public:
     virtual int destroyHandle(void* handle)=0;
     virtual int readFeature(void*,const QString&,CameraFeature&) {return oecs::errorLoadLibrary;}
     virtual int writeFeature(void*,const QString&,const FeatureValue&) {return oecs::errorLoadLibrary;}
+    // prepare must drain/quiesce old exposures, verify stream-ready and establish an
+    // actual counter epoch. waitBuffer may tag generation ONLY from that epoch's
+    // hardware event evidence. Echoing the caller generation on any next frame is invalid.
+    // Native OECS currently cannot prove this; fail closed before sending a command.
+    virtual int prepareSoftwareTrigger(void*,quint64,int,OecsTriggerArm&) {return oecs::errorUnsupported;}
+    virtual int executeSoftwareTrigger(void*) {return oecs::errorUnsupported;}
     virtual int setBufferCount(void*,quint32) {return oecs::errorLoadLibrary;}
     virtual int startStream(void*) {return oecs::errorLoadLibrary;}
     virtual int waitBuffer(void*,int,OecsBuffer&) {return oecs::errorLoadLibrary;}

@@ -1,6 +1,6 @@
 # Endüstriyel kamera entegrasyonu — ICM ana planı
 
-17 Ekim 2026. **ICM-04c backend tek-kare probe mevcut; ürün acquisition bağlantısı henüz yok.** Uygulayıcı hedefi:
+17 Ekim 2026. **Gerçek owned Mono8 tanı karesi alındı; ICM-04d native trigger açık, ürün acquisition bağlantısı yok.** Uygulayıcı hedefi:
 **GPT-6.1-sol / medium** (kullanıcının Sol6.1 medium tercihi). Bu belge model
 ayarını değiştirmez veya başka bir chat başlatmaz. Yeni kullanıcı yönlendirmesi,
 KMC-10e sonrasında fiziksel kalibrasyon kabulünden önce gerçek kamera entegrasyonudur.
@@ -34,7 +34,7 @@ Bu plan 6B/industrial acquisition açığını devralır; ayrı ikinci kamera mi
 | SDK | OECS v1.2 kullanıcı bildirimi; yerel OECS ve ITALA dizinleri mevcut |
 | U3V producer | `C:/Program Files (x86)/Common Files/OECS/Runtime/Win64_x64/MvProducerU3V.cti`, dosya sürümü 1.0.0.5 |
 | Son fiziksel ön kontrol | `build/opto-coe-u-pre-reboot-probe.json`: DONE, errors boş, 0 cihaz; open/grab yok |
-| Reboot | Kullanıcı installer isteğini erteledi; gerçekleştiği ayrıca doğrulanacak |
+| Reboot | 17 Ekim kullanıcı + CIM doğruladı; sandbox dışı C API exact open/grab/close başarılı, [kanıt](../archive/2026-10-17-icm-04d.md) |
 | Son yazılım kabulü | KMC-10e UI/ZXing ON 87/87, core OFF 73/73; yeni ICM kabulü değildir |
 
 Yerel `OECS/Development/Includes/MvCameraControl.h` C linkage/API bildirimleri ve
@@ -78,7 +78,7 @@ izni olarak sunulmaz. Production capability, ICM-08b trusted terminal kapısı b
 
 **ICM-00, ICM-01a, ICM-03a, ICM-03b ve ICM-04a–c yazılımı tamamlandı; ICM-01b açık; ICM-02 offline/koşullu tamamlandı.**
 [Backend kararı](industrial-camera-backend-decision.md): OECS C API;
-gerçek cihaz readback/grab açık. Diğer satırlar PLANLANDI.
+gerçek cihaz readback/owned Mono8 probe başarılı; ICM-04d çekirdek/fixture kısmi, native trigger açık. Diğer satırlar PLANLANDI.
 [ICM-01a tanı kabulü](../archive/2026-10-17-icm-01a.md) fiziksel kapıları kapatmaz.
 Bağımlılıklar görevin başlatılabilmesini ifade eder; fiziksel kapı ayrıca belirtilir.
 
