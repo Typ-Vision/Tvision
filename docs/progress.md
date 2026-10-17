@@ -83,8 +83,8 @@ başlangıçta arşivin tamamını okumayın.
   ayrıntı ve kapsam [B kabul belgesinde](architecture/multi-source-release-acceptance.md).
 - Güncel UI `build/reference-ui/visionflow.exe`, core `build/kmc9-core-off`.
   Başlatma `.\scripts\run-local.ps1`; build/PATH komutları README'dedir.
-- Çalışma ağacında önceki değişiklikler bulunuyor; `git status --short` ile yeniden
-  kontrol edin, bunları geri almayın. Bu bakımda commit/push yapılmadı.
+- ICM-02'ye kadarki işler `53bb972` commit'indedir; bundan sonra her görev ID'li
+  tek commit'tir. Codex yönetici, Claude Code alt görev uygulayıcısıdır (AGENTS).
   `config/local.ui.ini` değiştirilmedi; test/raporlar `build/` altında kalır.
 
 ## Kapanış ve sonraki adım

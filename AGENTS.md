@@ -13,3 +13,7 @@ UTF-8 boyut sınırları: progress 8.000, README 8.000, AGENTS 4.000; başlangı
 C++20 / Qt Widgets / OpenCV; UI algoritma veya donanım SDK'sını doğrudan çağırmaz. Üç applicationType tek Recipe Editor / Runtime kullanır. Reçete, execution ve parça karar durumları ayrı kalır. Gerçek sonuç olmadan PASS, skor veya robot pose gösterme.
 
 Yerel toolchain/build komutları README'dedir. UI değişikliklerinde Release derleme, ilgili CTest ve görsel kontrol yap. Makineye özel panel ayarları `config/local.ui.ini`; test ayarları ve görseller `build/` altında tutulur. Kurulum, dağıtım ve CUDA hızının doğrulandığını kanıtsız beyan etme.
+
+## Ajanlar arası çalışma
+
+Codex yönetici ajandır; Claude Code kullanıcının veya Codex'in atadığı alt görevleri uygular. Ajanlar paralel çalışmaz. Devir yalnız repo belgeleriyle yapılır; proje kararını ajana özel hafızaya yazma. Kapanış kaydına `Uygulayıcı: Codex` veya `Uygulayıcı: Claude Code` satırı ekle; her tamamlanan görevi görev ID'li tek commit olarak kaydet (`ICM-03a: …`). Push yalnız kullanıcı isteğiyle.

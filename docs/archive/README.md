@@ -13,6 +13,7 @@ görev” ifadeleri yazıldıkları tarihe aittir.
 | 17 Ekim 2026 ve öncesi — ICM-00, KMC, KUI, R, T ve ilk geliştirme | [133 başlıklı geçmiş dizini ve eski belge kopyaları](2026-10-17/index.md) |
 
 Yeni kapanış için `YYYY-MM-DD-gorev-id.md` ekleyin ve bu tabloya bağlantısını yazın.
+Kaydın başında `Uygulayıcı: Codex` veya `Uygulayıcı: Claude Code` satırı bulunur.
 Kaydın kapsam/dosya/doğrulama/sınırlama/sonraki görev bilgilerini burada tekrarlamayın.
 Mevcut tarihsel kayıtları değiştirmeyin; bir düzeltme gerekiyorsa yeni kayıttan
 eski kayda bağlantı vererek neyin düzeltildiğini belirtin.
