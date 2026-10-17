@@ -5,8 +5,8 @@ Son yönlendirme önceliklidir. Ayrıntılar [arşivde](archive/README.md); topl
 
 ## Devam noktası
 
-- **Üç sıralı hazırlık işi:** [ICM-04e-b](archive/2026-10-18-icm-04e-b.md) tamam;
-  1000 fixture çevrimi/2000 grab/100 teardown/20 blocked shutdown. Sırada 05a-a, 07a-a.
+- **Üç sıralı hazırlık:** [04e-b](archive/2026-10-18-icm-04e-b.md) stress ve
+  [05a-a](archive/2026-10-18-icm-05a-a.md) exact keşif/resolve tamam; sırada 07a-a.
 - **Kullanıcı: destek beklemeden ilerle.** [ICM-04e-a](archive/2026-10-18-icm-04e-a.md)
   tamam: exact fiziksel lease, kalıcı worker, owner polling/JobSession shutdown,
   geç kare bastırma ve cleanup-failure karantinası; native/ürün bağlantısı yok.
@@ -93,8 +93,8 @@ sözleşme/kabul bölümleri; büyük belgelerde önce başlık/ID arayın. Beli
 
 ## Son doğrulama ve çalışma ortamı
 
-- **ICM-04e-b yeni koşum**: core OFF Release build ve ilgili CTest **4/4** geçti;
-  `build/icm/04e-b/`. Tam suite/UI/donanım testi yapılmadı.
+- **ICM-05a-a yeni koşum**: core OFF Release build, ilgili CTest **4/4**;
+  `build/icm/05a-a/`. 04e-b stress de bu oturumda 4/4 geçti.
 - Eski sonuçlar arşivdedir; yeni koşum değildir.
   `plc_socket_runtime` aralıklı başarısızlığı/kök neden açık kalır.
 - Güncel UI `build/reference-ui/visionflow.exe`, core `build/kmc9-core-off`.

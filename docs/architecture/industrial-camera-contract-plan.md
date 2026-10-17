@@ -64,6 +64,14 @@ Endüstriyel kamera `MeasurementCamera2` ile yazılır: `physical` zorunlu, `dev
 revision'ı korur, device/physical değişiminde artırır; environment commit bunu zorunlu kılar.
 Aynı kullanılabilir kimlik iki CameraId'ye bağlanamaz. Yerel rota saklama ve keşif ICM-05a'dadır.
 
+**ICM-05a-a yazılım hazırlığı:** `CameraService::groupIndustrial/resolveIndustrial`
+caller-supplied snapshot'ı doğrular. Kullanılabilir exact kimlikler tek grupta,
+serisiz kayıtlar ayrı kalır; aynı enumeration içindeki tekrar ambiguous'dur.
+Birden çok rotada explicit local route gerekir; rota kaybolursa fallback yoktur.
+Cancelled/error içeren kısmi tarama resolve edilemez. Sonuç bir keşif değeridir;
+actual open doğrulaması, lease, capability veya trusted completion değildir.
+Native enumeration, ortak webcam discovery ve ürün factory bağlantısı henüz yoktur.
+
 ## 3. Acquisition profile ve gerçek geometri
 
 Versioned profile en az pixel format, width/height/offset, binning/decimation/reverse

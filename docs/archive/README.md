@@ -6,6 +6,7 @@ görev” ifadeleri yazıldıkları tarihe aittir.
 
 | Dönem / görev | Kayıt |
 | --- | --- |
+| 18 Ekim 2026 — ICM-05a-a | [Keşif gruplama ve exact resolve hazırlığı](2026-10-18-icm-05a-a.md) |
 | 18 Ekim 2026 — ICM-04e-b | [Worker 1000 fixture çevrimi ve teardown stress](2026-10-18-icm-04e-b.md) |
 | 18 Ekim 2026 — ICM-04e-a | [Kamera lease, kalıcı worker ve Stop/shutdown yazılım hazırlığı](2026-10-18-icm-04e-a.md) |
 | 18 Ekim 2026 — ICM-03c | [Destek beklerken bağımsız ölçüm rasteri ve geometri adayı](2026-10-18-icm-03c.md) |

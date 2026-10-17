@@ -7,6 +7,10 @@ Fiziksel test yoksa sonuç yazılım kabulü olarak kaydedilir.
 
 ## ICM-05a — ortak keşif, registry ve adapter factory
 
+**05a-a bağımsız hazırlığı tamam:** CameraService üzerinde fixture snapshot gruplama
+ve exact resolve; SDK enumeration, ortak webcam DTO, kayıt/factory/lease bağlantısı
+yok. Ana 05a kabulü ve 04e önkoşulu korunur.
+
 - Önkoşul: 04e.
 - Dosyalar: CameraService, MeasurementWorkspace, MeasurementEnvironment,
   ScopedActiveCalibration ve yeni application provider/factory.
