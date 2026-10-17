@@ -5,10 +5,11 @@ Kullanıcının son yönlendirmesi önceliklidir. Ayrıntılar [arşivde](archiv
 
 ## Devam noktası
 
-- **Kullanıcı: destek beklemeden ilerle.** [ICM-03c](archive/2026-10-18-icm-03c.md)
-  tamam: owned ölçüm rasteri, ayrı geometriler ve invalidation adayı;
-  provider/persistence/UI bağlantısı yok. Sıradaki **ICM-04e-a yazılım hazırlığı**;
-  native 04e/G1 hâlâ 04d'ye bağlı.
+- **Kullanıcı: destek beklemeden ilerle.** [ICM-04e-a](archive/2026-10-18-icm-04e-a.md)
+  tamam: exact fiziksel lease, kalıcı worker, owner polling/JobSession shutdown,
+  geç kare bastırma ve cleanup-failure karantinası; native/ürün bağlantısı yok.
+  [ICM-03c](archive/2026-10-18-icm-03c.md) owned ölçüm rasteri/geometri adayı da hazır;
+  provider/persistence/UI bağlantısı yok. Native 04e/G1 hâlâ 04d'ye bağlı.
 - **ICM-04d kısmi: gecikmiş command Stop/Start'ı aşıyor; native Unavailable**.
   [Yeni uzun pozlama/gecikme deneyi](archive/2026-10-18-icm-04d-pending.md):
   12 senaryo/36 command/32 kare. Delay=500 ms iken Clear→Stop→Start sonrası,
@@ -92,8 +93,8 @@ sözleşme/kabul bölümleri; büyük belgelerde önce başlık/ID arayın. Beli
 
 ## Son doğrulama ve çalışma ortamı
 
-- **ICM-03c yeni koşum**: core OFF Release ilgili hedef build ve CTest **9/9** geçti;
-  `build/icm/03c-raster/`. Tam suite/UI/görsel/donanım testi yapılmadı.
+- **ICM-04e-a yeni koşum**: core OFF Release ilgili hedef build ve CTest **8/8** geçti;
+  `build/icm/04e-a/`. Tam suite/UI/görsel/donanım testi yapılmadı.
 - Eski test/build sonuçları arşivdedir; yeni koşum değildir.
   `plc_socket_runtime` aralıklı başarısızlığı/kök neden açık kalır.
 - Güncel UI `build/reference-ui/visionflow.exe`, core `build/kmc9-core-off`.
@@ -103,8 +104,8 @@ sözleşme/kabul bölümleri; büyük belgelerde önce başlık/ID arayın. Beli
 
 ## Kapanış ve sonraki adım
 
-Sıradaki **ICM-04e-a owner/worker/lease yazılım hazırlığı**; kullanıcı destek
-beklememeyi istedi. Native geçiş/admission açılmaz; tamamlanan 03c helper'ı çalışan
+**04e-a tamam**; sıradaki native ICM-04e, 04d belgeli cancel/drain/reset bariyerine
+bağlı. Bağımsız alt görevde native kapı korunur. 03c helper'ını çalışan
 kalibrasyon/Editor özelliği diye sunmayın. Ölçüm adayı kamera configure girdisi değildir.
 [04d cancel incelemesi](archive/2026-10-18-icm-04d-cancel-audit.md): AcquisitionAbort
 yok; DeviceReset garantisiz, çalıştırılmadı. Üretici taslağı gönderilmedi.

@@ -197,6 +197,27 @@ Replug history/seçimi korur fakat açık reconnect/reconfigure/activation/repre
 tanısı verilir. Cross-process üretim lease ve kesilemeyen SDK için process isolation
 ayrı kapsam. Stop bütçesi aşıldı mesajı kaynakların serbest kaldığı anlamına gelmez.
 
+**ICM-04e-a yazılım sınırı** (`application/CameraWorkerSession`): exact
+`PhysicalDeviceIdentity` vendor/model/serial anahtarıyla Calibration/Editor/Runtime
+arasında process-local exclusive lease alınır; source, producer yolu ve kullanım
+amacı ikinci sahip yaratmaz. Factory, komutlar, shutdown ve backend destructor tek
+kalıcı worker'da çalışır. Controller yalnız owner thread'de `poll()` ile completion
+işler; tek uçuşta iş vardır, production FIFO doluluğu SDK dispatch'ten önce reddedilir.
+`requestStop()` generation/cancel ve kuyruğu hemen geçersizleştirir; bekleyen komut
+drain olduktan sonra caller açık `submit(Stop)` acknowledgement veya
+`requestShutdown()` cleanup ister. Bu işlem donanım pending-trigger bariyeri değildir.
+Eksik/yanlış frame, exception ve geç completion başarı yayımlamaz.
+
+Worker ömrü bir `JobSession::Connection` işiyle izlenir; shutdown yeni iş almaz,
+bütçe aşımı join/cleanup yerine geçmez. Lease ancak backend shutdown/destruction
+ve worker join sonrasında bırakılır. Cleanup exception'ında kamera lease'i süreç
+ömrünce karantinada kalır; shutdown Ready worker'ın bittiğini söyler, hata temizlendi
+anlamına gelmez (lifecycle Fault/error korunur). Destructor cancel+join yapar,
+kesilemeyen SDK çağrısında bloklanabilir; UI kapanışı önce nonblocking shutdown
+polling yapmalıdır. Backend shutdown sözleşmesi partial/fault durumunda da cleanup
+gerektirir. Native factory ve ürün servis bağlantıları henüz yoktur; bu sınır
+OecsSession backend kilidini kaldırmaz veya ICM-04d/04e/G1 kabulünü açmaz.
+
 **ICM-04a uygulanan ömür** (`hardware/OecsSession`, `hardware/OecsCApi`): SDK'sız `OecsCApi`
 sınırı; gerçek binding yalnız `VISIONFLOW_OECS_INCLUDE_DIR` ile derlenir ve DLL'i dinamik yükler.
 Oturum sahibi kuran iş parçacığıdır; yabancı iş parçacığı SDK çağıramaz. Açılış sırası load →

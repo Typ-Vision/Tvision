@@ -177,6 +177,10 @@ gerçek open/feature/unit/grab doğrulaması açık.
   hazırlığı** yapılabilir: owner/worker, process-local lease, geç sonuç bastırma ve
   stop bütçesi fixture'ları. Bu alt adım native tetik/preview geçişini veya 04e/G1
   kabulünü açmaz; native bölümün 04d önkoşulu sürer.
+- **04e-a tamamlandı (18 Ekim)**: `CameraWorkerSession` persistent worker ve
+  exact fiziksel lease; owner polling/JobSession shutdown, geç kare bastırma ve
+  cleanup-failure karantinası fixture kabulü. [Kapanış](../archive/2026-10-18-icm-04e-a.md).
+  Native backend/factory, ürün bağlantısı ve preview→production donanım bariyeri açık.
 - Dosyalar: CameraLifecycle, application camera session/lease ve JobSession bağlantısı.
 - İş: controller owner thread ile SDK worker sınırı; preview latest-drop ve production
   FIFO ayrımı; aynı kamera için Calibration/Editor/Runtime exclusive lease. Stop ve
