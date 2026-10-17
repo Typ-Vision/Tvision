@@ -75,3 +75,36 @@ FrameSpecInfo frame/trigger reset kapsamı ve raster dışı eşdeğer metadata 
 tek tetik/burst davranışını anlatır; incelenen bu açıklama ready/counter epoch
 garantisi sağlamaz. Yerel SDK header ve cihaz XML'i destek/semantik için ayrı
 kaynaklardır. ICM-04d tamamlanmadı; ICM-04e henüz başlamaz.
+## Raster dışı yol incelemesi — 17 Ekim 2026
+
+[Yeni salt okunur tanı](../archive/2026-10-17-icm-04d-semantics.md) firmware
+`V1.4.8 190411,19012902` üzerinde alternatif Chunk/Event/ready düğümü bulamadı.
+Bu, başka firmware veya üreticiye özel API bulunmadığı iddiası değildir.
+SDK'da `MV_FRAME_OUT_INFO_EX` içindeki sayaç ve unparsed chunk alanlarının
+bulunması cihazın raster dışı metadata gönderdiğini kanıtlamaz.
+
+- XML `TriggerSoftwareAvailInq_Int` formülü yalnız `SRC=7 && MODE=1` kontrol eder;
+  command'ın WriteOnly olması exposure-ready veya kabul edilmiş tetik kanıtı değildir.
+- `AcquisitionStatus` erişimi `IsLineScan_Ava` ile line-scan cihaz türüne bağlıdır.
+  Area-scan cihazdaki unavailable durumu ham register erişimiyle aşılmaz.
+  `LineSource` yalnız ExposureActive içerir; FrameTriggerWait output alternatifi yoktur.
+- `DeviceTimestampLatch` WriteOnly, `DeviceTimestamp` ve increment ReadOnly'dir;
+  latch çalıştırılmadan iki sayının 0 okunması timestamp desteği yokluğu değildir.
+  XML timestamp'i ns, increment'i ns/tick olarak tanımlar; bu bilgi buffer tick'inin
+  hangi exposure/transport olayına ait olduğunu veya sayaç epoch'unu açıklamaz.
+  Increment düğümündeki ImposedAccessMode RW, alttaki register RO'yu yazılabilir yapmaz.
+- XML AcquisitionStop'u mevcut frame sonunda durma olarak tanımlar. Komut dönüşünün
+  bu sonu beklediği, SDK StopGrabbing'in bununla aynı bariyeri kurduğu veya Clear'ın
+  daha sonra gelecek eski exposure'ı engellediği belgelenmemiştir. SDK Clear açıklaması
+  acquisition sürerken buffer temizlemeyi anlatır; exposure iptal garantisi vermez.
+
+[Üretici kılavuzu §3.10.2, s.35–36](https://www.opto-e.cn/repository/_shared/COE-U-series-USB3.0-Camera-User-Manual-20190412.pdf)
+metadata'nın görüntüye gömülmesini açıklar ve önceki byte bulgusunu destekler.
+Buradaki 32-bit embedded timestamp formatı ile DeviceTimestamp ns değeri veya
+SDK buffer timestamp'i eşdeğer varsayılmaz. İncelenen kaynaklarla mevcut full-sensor
+sözleşmesini sağlayan native yol kurulamadı; Unavailable korunur.
+
+Sonraki bağımlılık [hazır üretici soru taslağına](industrial-camera-vendor-questions.md)
+yanıt veya bu koşulları sağlayan yeni teknik kanıttır. Taslak gönderilmedi.
+Yeni kanıt gelmeden aynı 100-trigger koşumunu veya latch/tick karşılaştırmasını
+tekrarlamak admission engelini kapatmaz; 04e hâlâ başlamaz.

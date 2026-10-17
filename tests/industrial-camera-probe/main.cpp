@@ -105,14 +105,22 @@ int main(int argc, char** argv) {
                         // An unavailable node is not a zero-valued hardware oracle. No
                         // selectors, counters, cache, commands or user sets are written.
                         QJsonArray triggerContract;
-                        for(const char* name : {"AcquisitionMode", "AcquisitionBurstFrameCount",
+                        for(const char* name : {"DeviceVendorName", "DeviceModelName", "DeviceSerialNumber",
+                            "DeviceVersion", "DeviceFirmwareVersion", "AcquisitionMode", "AcquisitionBurstFrameCount",
                             "AcquisitionFrameCount", "TriggerSelector", "TriggerMode", "TriggerSource",
                             "TriggerSoftware", "TriggerCacheEnable", "TriggerDelay", "ExposureMode",
                             "AcquisitionStatusSelector", "AcquisitionStatus", "TriggerCounter", "FrameCounter",
                             "CounterSelector", "CounterEventSource", "CounterResetSource", "CounterValue",
                             "CounterCurrentValue", "CounterValueAtReset", "ChunkModeActive", "ChunkSelector",
                             "ChunkEnable", "EventSelector", "EventNotification", "DeviceTimestamp",
-                            "DeviceTimestampFrequency", "DeviceTimestampIncrement",
+                            "DeviceTimestampFrequency", "DeviceTimestampIncrement", "DeviceTimestampLatch",
+                            "GevTimestampTickFrequency", "TimestampLatch", "TimestampLatchValue",
+                            "ChunkFrameID", "ChunkFramecounter", "ChunkTriggerIndex", "ChunkTimestamp",
+                            "EventFrameTrigger", "EventFrameTriggerTimestamp", "EventExposureEnd",
+                            "EventExposureEndTimestamp", "EventFrameStart", "EventFrameStartTimestamp",
+                            "AcquisitionStart", "AcquisitionStop", "AcquisitionAbort", "AcquisitionActive",
+                            "FrameTriggerWait", "ExposureActive", "LineSelector", "LineMode", "LineSource",
+                            "LineStatus", "LineStatusAll", "DeviceLinkAcquisitionStatus",
                             "FrameSpecInfoSelector", "FrameSpecInfo"}) {
                             QJsonObject node{{"name",name}};
                             MV_XML_AccessMode access=AM_Undefined;
@@ -159,6 +167,13 @@ int main(int argc, char** argv) {
                                         } else if(type==IFT_IFloat) {
                                             MVCC_FLOATVALUE v{};readCode=MV_CC_GetFloatValue(handle,name,&v);
                                             if(readCode==MV_OK) node["value"]=v.fCurValue;
+                                        } else if(type==IFT_IString) {
+                                            MVCC_STRINGVALUE v{};readCode=MV_CC_GetStringValue(handle,name,&v);
+                                            if(readCode==MV_OK) {
+                                                size_t length=0;
+                                                while(length<sizeof(v.chCurValue) && v.chCurValue[length]) ++length;
+                                                node["value"]=QString::fromLatin1(v.chCurValue,int(length));
+                                            }
                                         }
                                         node["readCode"]=code(readCode);
                                     }

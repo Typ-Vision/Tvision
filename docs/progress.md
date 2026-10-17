@@ -6,16 +6,19 @@ başlangıçta arşivin tamamını okumayın.
 
 ## Devam noktası
 
-- **ICM-04d kısmi: FrameSpecInfo sayaç yolu bulundu; admission açık** (Codex).
-  Önceki sıfır sayaçlar kapalı metadata ayarındaydı. Timestamp/Framecounter/
-  ExtTriggerCount açık 2×100 tanıda sayaçlar 1–100; raster byte 4–11 metadata.
-  Ayarlar geri yüklendi; mevcut full-sensor ölçüm kabulüne bu raster giremez.
-  Native backend henüz correlation uygulamıyor; typed capability Unavailable,
-  stream/ayar okuması/tetik öncesi ret. [Kayıt](archive/2026-10-17-icm-04d-correlation.md),
-  [karar](architecture/industrial-camera-trigger-correlation.md).
-  **Devam: ICM-04d raster dışı metadata ve ready/epoch yolu**.
-  Ready/quiescence, reset/reopen ve temiz sensör rasteri çözülmeden 04d
-  tamamlandı veya 04e hazır denmez. FrameBurstStart sessiz FrameStart alias'ı olmaz.
+- **ICM-04d kısmi: raster dışı/ready araştırması tamam; dış teknik kanıt gerekli**
+  (Codex). Yeni salt okunur exact cihaz sorgusu ve XML/SDK incelemesi alternatif
+  Chunk/Event yolu bulamadı. TriggerSoftware erişimi yalnız On/Software ayarıdır;
+  hazır kanıtı değildir. Firmware `V1.4.8 190411,19012902`.
+  [Yeni kayıt](archive/2026-10-17-icm-04d-semantics.md),
+  [karar](architecture/industrial-camera-trigger-correlation.md),
+  [üretici soru taslağı](architecture/industrial-camera-vendor-questions.md) (gönderilmedi).
+  Önceki [2×100 metadata tanısı](archive/2026-10-17-icm-04d-correlation.md): sayaçlar
+  1–100, raster byte 4–11 metadata; ayarlar restore edildi. Ürün için temiz raster,
+  ready/quiescence ve baseline/epoch hâlâ açık; native capability Unavailable.
+  **Devam: üreticiden belgeli raster dışı metadata + ready/epoch yolu veya eşdeğer
+  yeni teknik kanıt**. Aynı tanıyı tekrarlamak engeli kapatmaz; 04e başlamaz.
+  FrameBurstStart sessiz FrameStart alias'ı olmaz.
 - [ICM-04c](archive/2026-10-17-icm-04c.md): bounded owned Mono8 probe/pool kabulü.
   Nested GenApi enum parser ve ClearImageBuffer sırası önceki kayıtta düzeltildi.
   **Exact cihazdan 2448×2048 Mono8 tanı karesi ve temiz close alındı.**
@@ -74,10 +77,9 @@ başlangıçta arşivin tamamını okumayın.
   PnP: OE USB3 Machine Vision Camera, Status OK. Actual vendor/model/seri:
   Opto Engineering Srl / COE-050-M-USB-050-IR-C / **02A2220000627**.
   Device ID=1 seri değildir. Lens tam modeli/kurulum eksik.
-- `build/icm/04d/real-mono8.{pgm,png}` ve aynı dizindeki actual/failure logları:
-  piksel aralığı **0–12**, sahne neredeyse siyah; sahne/ölçüm veya tazelik kabulü
-  değil. O eski raster tanısında ayar/tetik yoktu; yeni tetik denemesi ayrı. GenTL discovery 1;
-  read-only open **-1007** (C API başarısından ayrı).
+- `build/icm/04d/real-mono8.{pgm,png}`: piksel **0–12**, sahne neredeyse siyah;
+  sahne/ölçüm/tazelik kabulü değil. GenTL discovery 1, read-only open **-1007**;
+  C API başarısından ayrı. Ayrıntı bağlı 04d kayıtlarında.
 - TriggerSelector yalnız **FrameBurstStart**, burst=1, cache=false. CounterEventSource
   yalnız Off/Line0/Line2; ayrı FrameSpecInfo metadata sayacı var. On/Software aktifken de
   AcquisitionStatusSelector missing, AcquisitionStatus unavailable. Native ready/epoch açık. ClearImageBuffer
@@ -90,26 +92,24 @@ başlangıçta arşivin tamamını okumayın.
 
 ## Son doğrulama ve çalışma ortamı
 
-- **Yeni ICM-04d correlation**: core/UI/SDK ve probe Release build exit 0;
-  ilgili CTest core/UI **9/9**, SDK **10/10**. `build/icm/04d-contract/`;
-  her build'de `icm-04d-contract-tests.xml`. UI değişmedi, tam suite koşulmadı.
-- Önceki native/çekirdek testleri `build/icm/04d-native/`, `build/icm/04d/` ve
-  bağlı arşivlerde; fixture fiziksel admission değildir.
-- 04a/04b/review test kapsamı ilgili arşivlerde. 03b core **74/74**, UI **87/88**:
-  `plc_socket_runtime` aralıklı, kök neden açık. Tarihsel sonuçlar yeni koşum değildir.
-- Önceki tam yazılım kabulü KMC-10e: UI **87/87**, core **73/73**;
-  [B kabulü](architecture/multi-source-release-acceptance.md).
+- **Yeni ICM-04d semantics**: opt-in read-only probe Release build exit 0;
+  exact cihaz open/readback/XML/close/destroy başarılı; JSON/XML assertion kontrolü
+  geçti. `build/icm/04d-semantics/`. Ayar/tetik/grab yok; ürün/UI değişmedi,
+  yeni CTest veya görsel kontrol koşulmadı.
+- Önceki correlation Release core/UI/SDK + probe başarılı; ilgili CTest core/UI
+  **9/9**, SDK **10/10**: [kayıt](archive/2026-10-17-icm-04d-correlation.md).
+  04a/04b/03b/KMC test ayrıntıları bağlı arşivlerdedir; tarihsel sonuçlar yeni koşum
+  değildir. `plc_socket_runtime` aralıklı başarısızlığı/kök neden açık kalır.
 - Güncel UI `build/reference-ui/visionflow.exe`, core `build/kmc9-core-off`.
   Başlatma `.\scripts\run-local.ps1`; build/PATH komutları README'dedir.
-- ICM-02'ye kadarki işler `53bb972` commit'indedir; sonrası her görev ID'li tek
-  commit'tir. Push yalnız kullanıcı isteğiyle. Ajanlar sıralı çalışır; Codex yönetici,
-  Claude Code alt görev uygulayıcısıdır. `config/local.ui.ini` değiştirilmedi;
-  test/raporlar `build/` altında kalır.
+- ICM-02 baseline `53bb972`; sonrası görev ID'li tek commit. Push kullanıcı
+  isteğiyle. Ajanlar sıralıdır. Yerel INI korunur; test/raporlar `build/` altındadır.
 
 ## Kapanış ve sonraki adım
 
-Sıradaki **ICM-04d raster dışı metadata + ready/epoch**. FrameSpecInfo piksellere
-yazıyor; temiz raster ve reset/baseline garantisi yok. Kararın kabul koşulları
-sağlanmadan native capability açılmaz; 04e bundan sonradır.
+Sıradaki **ICM-04d dış teknik kanıt**: üretici soru taslağındaki temiz Mono8 metadata,
+ready/accepted-command, Stop/Clear bariyeri ve counter/timestamp epoch sorularına
+belgeli yanıt. Taslak gönderilmedi. Koşullar sağlanmadan native capability açılmaz;
+04e bundan sonradır.
 ICM-01b için reboot sonrası OECS sahne görüntüsü/release ve G1 için 04e/stress açık.
 [Bağlam bakımı](archive/2026-10-17-context-maintenance.md).
