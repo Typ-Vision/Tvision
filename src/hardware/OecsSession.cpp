@@ -72,6 +72,7 @@ OecsDeviceInfo OecsSession::open(const OecsDeviceSelector& selector) {
     status=api_->openExclusive(handle);
     if(status==oecs::errorBusy||status==oecs::errorAccessDenied)throw fail(F::Busy,"open",status,QString("OECS kamera meşgul veya erişim reddedildi (başka uygulama sahibi olabilir): %1").arg(hex(status)),handle,true);
     if(status!=oecs::ok)throw fail(F::ApiError,"open",status,QString("OECS kamera açılamadı: %1").arg(hex(status)),handle,true);
+    deviceInfo_=info;
     handle_=handle;
     stage_=OecsSessionStage::Open;
     return info;
@@ -79,7 +80,8 @@ OecsDeviceInfo OecsSession::open(const OecsDeviceSelector& selector) {
 
 void OecsSession::close() {
     if(std::this_thread::get_id()!=owner_)throw OecsSessionError(OecsFailure::WrongThread,"thread",0,"OECS oturumu yalnız sahibi olan iş parçacığından kapatılabilir");
-    if(stage_!=OecsSessionStage::Open)return;
+    if(stage_!=OecsSessionStage::Open && !configurationFault_)return;
+    configurationFault_=false;
     QString firstStage;
     int firstCode=0;
     const auto note=[&](const char* stage,int code){if(firstStage.isEmpty()){firstStage=stage;firstCode=code;}};
@@ -99,4 +101,27 @@ void OecsSession::close() {
     }
     if(!firstStage.isEmpty())throw OecsSessionError(OecsFailure::CleanupFailed,firstStage,firstCode,QString("OECS oturumu temiz kapatılamadı (%1): %2").arg(firstStage,hex(firstCode)));
 }
+}
+
+namespace visionflow {
+void OecsSession::requireOpen() const {
+    if(std::this_thread::get_id()!=owner_)throw OecsSessionError(OecsFailure::WrongThread,"thread",0,"OECS feature access requires owner worker");
+    if(stage_!=OecsSessionStage::Open)throw OecsSessionError(OecsFailure::InvalidState,"feature",0,"OECS session is not idle/open");
+}
+CameraFeature OecsSession::feature(const QString& name){
+    requireOpen();CameraFeature f;f.name=name;
+    const int status=api_->readFeature(handle_,name,f);
+    if(status!=oecs::ok)throw OecsSessionError(OecsFailure::ApiError,"read:"+name,status,"OECS feature read failed");
+    return f;
+}
+QVector<CameraFeature> OecsSession::features(){requireOpen();QVector<CameraFeature> result;for(const auto& name:acquisitionFeatureNames())result.push_back(feature(name));return result;}
+void OecsSession::writeFeature(const QString& name,const FeatureValue& value){
+    const auto f=feature(name);validateFeatureWrite(f,value);
+    if(featureEquivalent(f,value))return;
+    const int status=api_->writeFeature(handle_,name,value);
+    if(status!=oecs::ok)throw OecsSessionError(OecsFailure::ApiError,"write:"+name,status,"OECS feature write failed");
+    if(!featureEquivalent(feature(name),value))throw OecsSessionError(OecsFailure::ConfigurationFailed,"readback:"+name,0,"OECS actual differs from requested");
+}
+void OecsSession::configurationFault(){requireOpen();configurationFault_=true;stage_=OecsSessionStage::Faulted;}
+OecsDeviceInfo OecsSession::deviceInfo() const {requireOpen();return deviceInfo_;}
 }

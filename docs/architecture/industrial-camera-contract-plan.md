@@ -108,6 +108,25 @@ Profile `revised` ve `verifyApplied` ilgili tablo satırlarını kullanır. Appl
 kritik geometri reddedilir; float temsil toleransı ICM-04b'dedir. Environment commit profile
 revision geçişini zorunlu kılar, silme reddedilir; Save As profili rota/readback/izin olmadan taşır.
 
+ICM-04b uygulaması: `IndustrialCameraConfiguration` yalnız owner worker'daki açık,
+exclusive ve idle `OecsSession` üzerinde çalışır; projeyi değiştirmez veya etkinleştirmez.
+SFNC envanterinde access/type, numeric range/increment, XML unit/enum sembolleri okunur.
+ExposureTime integer veya float olabilir; mikro-saniye (`us`/`µs`) ve Gain `dB`
+kanıtı gerekir. Float karşılaştırması yalnız tam değer veya `double(float(requested))`
+kabul eder; komşu float değeri tolerans sayılmaz. Actual raporda yuvarlanmış değer
+korunur, profile kimliği requested üzerinden kalır; integer yazımlar exact'tir.
+Kritik geometri node'larının tamamı readable olmalıdır; eksik node için model kanıtı
+henüz tanımlanmadığından NotApplicable üretilmez. Aktif TriggerSelector FrameStart
+olmalıdır; farklı selector bankası ve external trigger açık ret verir.
+Literal XML enum Value/Unit/float Inc desteklenir; çözülemeyen dolaylı enum/float
+increment bilgisi güvenli ret verir. XML oturum başına en fazla 8 MiB, payload
+readback en fazla 512 MiB ile sınırlıdır; gerçek buffer/stride kabulü ICM-04c'dedir.
+Transaction önce snapshot alır, trigger/auto kapatır, geometriyi ve manual ayarları
+uygular, tüm hedefleri ve kimliği tekrar okur. Hata alan yazım da değişmiş kabul edilir;
+rollback bütün eski readable envanterle doğrulanır. Doğrulanamazsa Fault olur,
+yeniden configure reddedilir; owner-thread close handle'ı temizleyebilir. UserSetSave yoktur.
+Stream henüz eklenmedi; ICM-04c/04e bu idle önkoşulunu lifecycle'a bağlamalıdır.
+
 Externally changed settings begin öncesi ve actual capture sınırında kontrol edilir.
 Gerekli exclusive erişim/ayar kararlılığı kanıtlanamıyorsa kalibre production reddedilir.
 Readback ön/son tek başına tüm kamera içi yarışların fiziksel kanıtı gibi sunulmaz.

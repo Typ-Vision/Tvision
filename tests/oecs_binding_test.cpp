@@ -26,9 +26,20 @@ int main(int argc,char** argv){QCoreApplication app(argc,argv);try{
     void* handle=nullptr;
     check(a->createHandle(0,&handle)==0,"create A after B enumeration");
     check(QString::fromLatin1(serial(handle))==selected[0].serial && marker(handle)==0x12345678,"create uses complete owned A record");
+    CameraFeature feature;
+    check(a->readFeature(handle,"Width",feature)==0&&feature.type==FeatureType::Integer&&std::get<qint64>(feature.value)==640&&feature.increment==1,"int feature ABI");
+    check(a->writeFeature(handle,"Width",qint64(641))==0,"int write ABI");
+    check(a->readFeature(handle,"ExposureTime",feature)==0&&feature.type==FeatureType::Float&&feature.unit=="us"&&std::get<double>(feature.value)==123.5,"float metadata ABI");
+    check(a->writeFeature(handle,"ExposureTime",124.5)==0,"float write ABI");
+    check(a->readFeature(handle,"PixelFormat",feature)==0&&std::get<QString>(feature.value)=="Mono8"&&feature.entries.value("Mono8")==17301505,"enum XML symbol ABI");
+    check(a->readFeature(handle,"ReverseX",feature)==0&&std::get<bool>(feature.value)==false&&a->writeFeature(handle,"ReverseX",true)==0,"boolean ABI");
+    check(a->readFeature(handle,"DeviceModelName",feature)==0&&std::get<QString>(feature.value)=="CAM","string ABI");
+    check(a->readFeature(handle,"Missing",feature)==0&&feature.access==FeatureAccess::Missing,"missing node ABI");
+    check(a->writeFeature(handle,"UserSetSave",qint64(1))==oecs::errorParameter,"no EEPROM commands");
     check(!a->unload() && a->destroyHandle(handle)==0,"live handle pins binding until destroy");
     check(a->createHandle(1,&handle)==oecs::errorParameter,"filtered index cannot select absent entry");
     check(a->unload() && b->unload(),"unload both bindings");
+    check(a->readFeature(nullptr,"Width",feature)==oecs::errorLoadLibrary,"unloaded feature access rejected");
     std::atomic<bool> passed{true};std::barrier start(2);
     const auto worker=[&]{
         auto api=makeOecsCApi();QString localReason;

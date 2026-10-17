@@ -182,6 +182,12 @@ AcquisitionChange acquisitionChange(const AcquisitionBasis& before,const Acquisi
 }
 QString verifyApplied(const MeasurementSetupDescriptor& setup,const AcquisitionProfile& profile,const AcquisitionReadback& readback){
     const auto id=profile.acquisitionId(setup);readback.validate();AcquisitionBasis applied{setup,profile};applied.setup.geometry=readback.geometry.descriptor();applied.profile->requested=readback.settings;
+    // OECS float ABI rounds to binary32; keep actual values in the report and only
+    // canonicalize comparison to the exact binary32 representation. Integers remain exact upstream.
+    const auto represented=[](double a,double b){return a==b || a==double(float(b));};
+    if(represented(readback.settings.exposureTimeUs,profile.requested.exposureTimeUs))applied.profile->requested.exposureTimeUs=profile.requested.exposureTimeUs;
+    if(represented(readback.settings.gain,profile.requested.gain))applied.profile->requested.gain=profile.requested.gain;
+
     require(acquisitionChange({setup,profile},applied).cacheCompatible(),"Applied acquisition differs from requested profile");return id;
 }
 void MeasurementSetupContract::validate(int capacity) const {

@@ -6,7 +6,7 @@
 #include <thread>
 
 namespace visionflow {
-enum class OecsFailure {Unavailable,WrongThread,InvalidState,InvalidSelector,NotFound,Ambiguous,Busy,ApiError,CleanupFailed};
+enum class OecsFailure {Unavailable,WrongThread,InvalidState,InvalidSelector,NotFound,Ambiguous,Busy,ApiError,CleanupFailed,ConfigurationFailed};
 class OecsSessionError : public std::runtime_error {
 public:
     OecsSessionError(OecsFailure failure,QString stage,int code,const QString& message);
@@ -30,6 +30,12 @@ public:
     OecsSession& operator=(const OecsSession&)=delete;
     OecsDeviceInfo open(const OecsDeviceSelector& selector);
     void close();
+    QVector<CameraFeature> features();
+    CameraFeature feature(const QString& name);
+    void writeFeature(const QString& name,const FeatureValue& value);
+    void configurationFault(); // retains handle for owner-thread close; prevents further configure
+    OecsDeviceInfo deviceInfo() const;
+
     OecsSessionStage stage() const;
     // A handle or library cleanup failed: the DLL is never unloaded by this session again.
     bool libraryPinned() const;
@@ -43,5 +49,8 @@ private:
     quint32 sdkVersion_=0;
     void* handle_=nullptr;
     QString claimKey_;
+    OecsDeviceInfo deviceInfo_;
+    bool configurationFault_=false;
+    void requireOpen() const;
 };
 }

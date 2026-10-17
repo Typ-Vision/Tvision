@@ -6,10 +6,11 @@ başlangıçta arşivin tamamını okumayın.
 
 ## Devam noktası
 
-- **Son ürün teslimi: ICM-04a backend session/handle ömrü** (Claude Code):
-  SDK'sız `OecsCApi` sınırı, opsiyonel dinamik binding, worker'a bağlı `OecsSession`;
-  her aşamada ters cleanup, busy tanısı, canlı handle varken unload yok; gerçek open yok.
-  [Kapanış](archive/2026-10-17-icm-04a.md). Önceki 03b profile/geometri
+- **Son yazılım teslimi: ICM-04b configure/readback** (Codex): SFNC feature erişimi,
+  transactional ayarlar, exact int/binary32 karşılaştırması, doğrulanan rollback;
+  belirsizlikte Fault ve owner-thread cleanup. [Kapanış](archive/2026-10-17-icm-04b.md).
+  Gerçek feature/readback açık. Önceki 04a session/handle ömrü (Claude Code)
+  [kapanışta](archive/2026-10-17-icm-04a.md); 03b profile/geometri
   [kapanışta](archive/2026-10-17-icm-03b.md), 03a kimlik/rota [kapanışta](archive/2026-10-17-icm-03a.md).
   Backend kararı OECS C API ([ICM-02](archive/2026-10-17-icm-02.md)); şema/hash haritası
   [ICM-00 kaydındadır](architecture/industrial-camera-baseline.md).
@@ -18,11 +19,11 @@ başlangıçta arşivin tamamını okumayın.
   Setup revision uyumlulukta karşılaştırılır; A→B→A eski kalibrasyonu geri açmaz,
   rename/no-op ve legacy hash korunur. [Kapanış ve kanıt](archive/2026-10-17-icm-review-01-fix.md).
   [İnceleme](archive/2026-10-17-icm-review-01.md) arşivdedir.
-  **Sonraki görev ICM-04b configure/readback**.
+  **Sonraki görev ICM-04c stream/buffer/owned Mono8 frame**.
   **ICM-01b fiziksel başlangıç açık**; [deneme kaydı](archive/2026-10-17-icm-01b.md).
   [Görev kartları](architecture/industrial-camera-tasks-foundation.md).
   ICM-00 veya tamamlanmış KMC görevlerini yeniden başlatmayın.
-- Kamera hedefi COE-U USB3/OECS. Endüstriyel backend/feature/stream/grab ve
+- Kamera hedefi COE-U USB3/OECS. Backend session/feature yazılımı mevcut; stream/grab ve
   kalibrasyon/Editor/Runtime entegrasyonu henüz uygulanmadı; capture/production
   ret kapıları kabul yapılmadan kaldırılmaz.
 
@@ -62,7 +63,7 @@ başlangıçta arşivin tamamını okumayın.
   kapatıldı; release kesin değil. Exact model/seri/Mono8 raster araçla doğrulanmadı.
   OECS isimli süreç görülmedi; CIM boot/PNP sorgusu erişim hatası verdi.
   Device ID=1 seri değildir. Lens Basler 25 mm beyanı; tam model/kurulum eksik.
-- C API x64 header compile/load/version/enum çalıştı; feature/unit/readback ve
+- C API x64 header compile/load/version/enum çalıştı; fiziksel feature/unit/readback ve
   stream/frame ABI/cleanup gerçek cihazda açık. Vendor redistributable izni ve
   temiz makine dağıtımı doğrulanmadı; runtime yokluğunda açık unavailable gerekir.
 - Fiziksel kamera/seri sürekliliği/ölçüm/PLC/robot/lens, native DPI/çoklu monitör,
@@ -71,6 +72,10 @@ başlangıçta arşivin tamamını okumayın.
 
 ## Son doğrulama ve çalışma ortamı
 
+- ICM-04b: core/UI Release build exit 0, her birinde ilgili **6/6** CTest;
+  SDK'lı Release build exit 0, ilgili **5/5**. Tam suite koşulmadı, UI değişmedi.
+  Yeni DLL binding/enum denemesi yine **0 cihaz**; fiziksel feature/open yok.
+  Kanıt `build/icm/04b/`, JUnit ilgili build'lerde `icm-04b-final-tests.xml`.
 - ICM-REVIEW-01-FIX: core/UI Release build exit 0; her birinde hedefli **6/6**
   CTest, SDK'lı yapıda binding/lifetime/setup **3/3** geçti.
   Tam suite koşulmadı. Önceki iki kusurun probe'u artık doğru kamera ve üç uyumluluk
@@ -80,14 +85,10 @@ başlangıçta arşivin tamamını okumayın.
   SDK'lı opt-in build `build/icm/04a/sdk` 2/2: DLL yüklendi, sürüm 0x3050200, **0 cihaz**.
   Kanıt `build/icm/04a/`, JUnit `<build>/icm-04a-tests.xml`; UI değişmedi.
   ICM-03b tarihsel: core 74/74, UI 87/88 (`plc_socket_runtime` aralıklı; kök neden açık).
-- ICM-02/01a tarihsel: UI/core build ve her birinde ilgili **2/2 CTest** geçti;
-  tam suite koşulmadı. ABI/export/negatif senaryolar ve tanı kanıtları
-  `build/icm/02/`, `build/icm/01a/` ve ilgili kapanış kayıtlarında korundu.
-- Yeni SDK koşumu `build/icm/01a/local/diagnostic.json`; sürüm/hash/PE, ortam
-  farkı, doğrudan import envanteri ve exit 0 kayıtlı. Bu fiziksel kabul değildir.
-- ICM-00 tarihsel: UI/core Release build ve ilgili core **12/12 CTest** geçti;
-  tam suite koşumu değildir. Ayrıntı/kanıt [baseline'da](architecture/industrial-camera-baseline.md)
-  ve `build/icm/00/verification.json` içinde korunur.
+- ICM-02/01a tarihsel build/test/ABI/tanı kanıtları `build/icm/02/`,
+  `build/icm/01a/` ve ilgili kapanış kayıtlarındadır; fiziksel kabul değildir.
+- ICM-00 tarihsel doğrulaması [baseline](architecture/industrial-camera-baseline.md)
+  ve `build/icm/00/verification.json` içindedir.
 - Önceki tam yazılım kabulü KMC-10e: UI **87/87**, core **73/73**;
   ayrıntı ve kapsam [B kabul belgesinde](architecture/multi-source-release-acceptance.md).
 - Güncel UI `build/reference-ui/visionflow.exe`, core `build/kmc9-core-off`.
@@ -103,6 +104,7 @@ ICM-01a [tanı kapanışı](archive/2026-10-17-icm-01a.md) ve diğer teslimler a
 ICM-01b için kullanıcı reboot sonrası OECS gerçek Mono8 görüntüsü, exact model/seri
 ve viewer release sonrası discovery/open kanıtı gerekir; reboot/driver değişimi yapılmadı.
 ICM-01b açık. ICM-REVIEW-01 bulguları [düzeltme teslimiyle](archive/2026-10-17-icm-review-01-fix.md)
-kapandı; sıradaki ICM-04b (gerçek readback cihaz ister). Claude Code ile sıralı görev ve Codex incelemesiyle devam.
+kapandı; sıradaki ICM-04c. ICM-04b gerçek feature/readback kabulü cihaz ister;
+fixture kanıtı fiziksel kapıları kapatmaz. Ajanlar sıralı çalışır.
 
 Kapanışta özeti güncelleyin ve ayrıntıyı arşive bağlayın; AGENTS boyut sınırlarını koruyun.

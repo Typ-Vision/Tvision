@@ -1,4 +1,5 @@
 #pragma once
+#include "hardware/CameraFeatures.hpp"
 #include <QString>
 #include <QVector>
 #include <memory>
@@ -30,6 +31,8 @@ public:
     virtual int openExclusive(void* handle)=0;
     virtual int closeDevice(void* handle)=0;
     virtual int destroyHandle(void* handle)=0;
+    virtual int readFeature(void*,const QString&,CameraFeature&) {return oecs::errorLoadLibrary;}
+    virtual int writeFeature(void*,const QString&,const FeatureValue&) {return oecs::errorLoadLibrary;}
 };
 // Dynamic MvCameraControl binding when built with VISIONFLOW_OECS_INCLUDE_DIR, otherwise an
 // implementation whose load() always fails with an explicit reason.
