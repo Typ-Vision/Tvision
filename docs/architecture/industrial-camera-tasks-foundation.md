@@ -5,7 +5,8 @@
 **ICM-01b açık** ([ön kontrol](../archive/2026-10-17-icm-01b.md));
 **ICM-02 offline/koşullu tamamlandı** ([karar](industrial-camera-backend-decision.md));
 **ICM-03a tamamlandı** ([kapanış](../archive/2026-10-17-icm-03a.md));
-**ICM-03b tamamlandı** ([kapanış](../archive/2026-10-17-icm-03b.md)).
+**ICM-03b tamamlandı** ([kapanış](../archive/2026-10-17-icm-03b.md));
+**ICM-04a tamamlandı** ([kapanış](../archive/2026-10-17-icm-04a.md); gerçek open açık).
 Diğer kartlar **PLANLANDI**. Ortak tamamlanma şartı:
 ilgili Release build/test, kapsamın kanıtı, sınırlamalar ve sonraki ID tarih/görev
 arşiv kaydına yazılır; progress'in kısa özeti ve bağlantısı güncellenir.

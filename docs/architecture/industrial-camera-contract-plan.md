@@ -152,6 +152,14 @@ Replug history/seçimi korur fakat açık reconnect/reconfigure/activation/repre
 tanısı verilir. Cross-process üretim lease ve kesilemeyen SDK için process isolation
 ayrı kapsam. Stop bütçesi aşıldı mesajı kaynakların serbest kaldığı anlamına gelmez.
 
+**ICM-04a uygulanan ömür** (`hardware/OecsSession`, `hardware/OecsCApi`): SDK'sız `OecsCApi`
+sınırı; gerçek binding yalnız `VISIONFLOW_OECS_INCLUDE_DIR` ile derlenir ve DLL'i dinamik yükler.
+Oturum sahibi kuran iş parçacığıdır; yabancı iş parçacığı SDK çağıramaz. Açılış sırası load →
+USB enumerate → exact vendor+model+seri → süreç içi sahiplik → create → exclusive open; hata
+tamamlanan aşamaları ters sırada geri alır. Close hatasında da destroy yapılır; destroy veya unload
+başarısızsa DLL kaldırılmaz, oturum Faulted olur ve yeniden açılmaz. `MV_E_BUSY`/`MV_E_ACCESS_DENIED`
+ve süreç içi ikinci sahip Busy tanısıdır. GenTL süreç kilidi değişmedi; gerçek cihaz open kanıtı yok.
+
 ## 6. Kalibrasyon, recipe ve Runtime
 
 IndependentCalibrationSession hem webcam hem industrial adapter factory kullanır;
