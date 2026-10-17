@@ -6,6 +6,7 @@ görev” ifadeleri yazıldıkları tarihe aittir.
 
 | Dönem / görev | Kayıt |
 | --- | --- |
+| 17 Ekim 2026 — ICM-03a | [Fiziksel kimlik, yerel rota/backend ayrımı ve MeasurementCamera2](2026-10-17-icm-03a.md) |
 | 17 Ekim 2026 — ICM-02 | [Koşullu backend kararı ve MinGW ABI deneyi](2026-10-17-icm-02.md) |
 | 17 Ekim 2026 — ICM-01b açık | [Fiziksel ön kontrol ve kullanıcı beyanı](2026-10-17-icm-01b.md) |
 | 17 Ekim 2026 — ICM-01a | [SDK/probe tanısı, fixture kabulü ve fiziksel sınırlar](2026-10-17-icm-01a.md) |

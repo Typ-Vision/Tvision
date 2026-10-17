@@ -30,6 +30,47 @@ struct DeviceBinding {
     int resolve(const QVector<DeviceBinding>& discovered) const;
     DeviceBinding rebound(const DeviceBinding&) const;
 };
+// ICM-03a industrial identity. PhysicalDeviceIdentity is portable project data;
+// TransportLocator and BackendIdentity are local discovery facts, never project identity.
+struct PhysicalDeviceIdentity {
+    QString vendor, model, serial;
+    // provider_reported: vendor/model without serial; serial_reported: all three actual values.
+    DeviceIdentityConfidence confidence=DeviceIdentityConfidence::Unavailable;
+    bool operator==(const PhysicalDeviceIdentity&) const = default;
+    // Serial alone is not unique: only exact vendor+model+serial may select a device.
+    bool usable() const {return confidence==DeviceIdentityConfidence::SerialReported;}
+    void validate() const;
+    QJsonObject toJson() const;
+    static PhysicalDeviceIdentity fromJson(const QJsonObject&);
+};
+struct TransportLocator {
+    QString backend; // oecs (direct C API, no producer) or gentl (canonical absolute producer path)
+    QString producer, interfaceId, deviceId;
+    bool operator==(const TransportLocator&) const = default;
+    void validate() const;
+    QJsonObject toJson() const;
+    static TransportLocator fromJson(const QJsonObject&);
+};
+struct BackendIdentity {
+    QString adapter, runtimeVersion, runtimeSha256;
+    int adapterVersion=1;
+    bool operator==(const BackendIdentity&) const = default;
+    void validate() const;
+    QJsonObject toJson() const;
+    static BackendIdentity fromJson(const QJsonObject&);
+    // Path independent: moving the same binary keeps it, replacing the binary changes it.
+    QString fingerprint() const;
+};
+struct DiscoveredDevice {
+    PhysicalDeviceIdentity identity;
+    TransportLocator route;
+    BackendIdentity backend;
+    bool operator==(const DiscoveredDevice&) const = default;
+    void validate() const;
+};
+// Every route of exactly one physical device, in discovery order. The same identity twice
+// within one enumeration (backend+producer) is ambiguous. No index or next-device fallback.
+QVector<int> resolveRoutes(const PhysicalDeviceIdentity&,const QVector<DiscoveredDevice>&);
 struct GeometryDescriptor {
     QSize resolution;
     std::optional<QRect> sensorRoi;
@@ -45,10 +86,15 @@ struct MeasurementCamera {
     CameraId id;
     QString name;
     DeviceBinding device;
+    // Present only for industrial cameras (schema 2); device is then an inert gentl/unavailable
+    // binding that carries the revision. Absent keeps the exact legacy schema 1 bytes.
+    std::optional<PhysicalDeviceIdentity> physical{};
     bool operator==(const MeasurementCamera&) const = default;
     void validate() const;
     QJsonObject toJson() const;
     static MeasurementCamera fromJson(const QJsonObject&);
+    // Explicit remap: rename keeps the device revision; device or physical change increments it.
+    MeasurementCamera rebound(const MeasurementCamera&) const;
 };
 struct MeasurementSetupDescriptor {
     SetupId id;

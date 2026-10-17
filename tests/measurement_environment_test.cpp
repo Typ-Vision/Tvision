@@ -41,5 +41,19 @@ int main(int argc,char** argv){QCoreApplication app(argc,argv);try{
     auto tampered=QJsonDocument::fromJson(catalogBytes).object();tampered["projectId"]="other";write(repo.catalogPath(),QJsonDocument(tampered).toJson());reject([&]{repo.load();},"catalog tamper/project swap rejected");write(repo.catalogPath(),catalogBytes);
     const auto valid=bytes(repo.path());for(int mutation=0;mutation<6;++mutation){auto bad=QJsonDocument::fromJson(valid).object();if(mutation==0)bad["schemaVersion"]=2;if(mutation==1)bad["revision"]=1.5;if(mutation==2)bad["extra"]=true;if(mutation==3)bad.remove("history");if(mutation==4)bad["operational"]=QJsonObject{{"c2","missing"}};if(mutation==5)bad["projectId"]="other";write(repo.path(),QJsonDocument(bad).toJson());reject([&]{repo.load();},"strict schema/tamper rejected");}write(repo.path(),valid);
     auto deletion=repo.load();deletion.current.cameras.removeLast();reject([&]{repo.commit(repo.load(),deletion);},"deletion forbidden");auto rewrite=repo.load();rewrite.history[0].name="rewritten";reject([&]{repo.commit(repo.load(),rewrite);},"immutable history cannot be rewritten");
+    {// ICM-03a: industrial identity persists without a local route; remap is explicit and revisioned.
+        MeasurementEnvironmentRepository plantRepo(dir.path()+"/industrial.vfproject","project-I",10);MeasurementEnvironmentRegistry plant(plantRepo);
+        MeasurementSetupContract line;line.cameras.append({{"line"},"Line camera",{"gentl","",DeviceIdentityConfidence::Unavailable,1,{false,true,false,false}},PhysicalDeviceIdentity{"OECS","COE-050-M-USB-050-IR-C","SN-0001",DeviceIdentityConfidence::SerialReported}});
+        line.setups.append({{"line-setup"},{"line"},"Line setup","lens","plane",1,1,{{2448,2048},{},{},true}});plant.replace(line);
+        check(MeasurementEnvironmentRegistry(plantRepo).snapshot().encode(10)==plant.snapshot().encode(10),"industrial identity restart roundtrip");
+        const auto stored=bytes(plantRepo.path());check(stored.contains("SN-0001") && !stored.contains("producer") && !stored.contains(".cti"),"environment stores physical identity, no local producer route");
+        auto renamedLine=plant.snapshot().current;renamedLine.cameras[0].name="Renamed line";plant.replace(renamedLine);
+        check(plant.snapshot().current.cameras[0].physical==line.cameras[0].physical && plant.snapshot().current.cameras[0].device.revision==1,"rename keeps industrial identity and revision");
+        auto silent=plant.snapshot();silent.current.cameras[0].physical->serial="SN-0002";reject([&]{plantRepo.commit(plant.snapshot(),silent);},"silent identity swap without revision rejected");
+        auto stale=plant.snapshot().current;auto staleCamera=stale.cameras[0];staleCamera.physical->serial="SN-0002";stale.cameras[0]=stale.cameras[0].rebound(staleCamera);reject([&]{plant.replace(stale);},"rebind without setup device revision rejected");
+        auto rebind=stale;auto relinked=rebind.setups[0];relinked.deviceRevision=2;rebind.setups[0]=rebind.setups[0].revised(relinked);plant.replace(rebind);
+        check(plant.snapshot().current.cameras[0].device.revision==2 && plant.snapshot().current.setups[0].revision==2 && plant.snapshot().history.size()==2,"explicit rebind increments device and setup revision");
+        MeasurementEnvironmentRepository plantCopy(dir.path()+"/industrial-copy.vfproject","project-I-copy",10);plantCopy.importBundle(plantRepo.exportBundle());
+        check(plantCopy.load().current.cameras[0].physical==plant.snapshot().current.cameras[0].physical,"Save As carries physical identity without route");}
     QTextStream(stdout)<<checks<<" measurement environment checks passed\n";return 0;
 }catch(const std::exception& e){QTextStream(stderr)<<e.what()<<" after "<<checks<<" checks\n";return 1;}}

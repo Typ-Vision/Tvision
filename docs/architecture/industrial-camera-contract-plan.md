@@ -52,6 +52,18 @@ konfigürasyonu ile taşınabilir device/profile ayrı saklanır. Binary fingerp
 yerel yol ve fiziksel kimlik farklı alanlar olur; aynı binary başka dizine taşınınca
 optik kalibrasyon bozulmaz fakat transport yeniden çözülüp Runtime hazırlanır.
 
+**ICM-03a uygulanan değer tipleri** (`domain/MeasurementSetupContract`): `PhysicalDeviceIdentity1`
+vendor/model/serial + güven; yalnız `serial_reported` (üçü dolu) kullanılabilir, seri tek başına
+eşleşmez. `TransportLocator1` (`oecs` producer'sız / `gentl` canonical mutlak producer) ve
+`BackendIdentity1` (adapter sürümü, runtime sürümü, küçük harf SHA-256; yol içermez) yerel
+keşif değerleridir, proje JSON'una girmez. `resolveRoutes` aynı kimliği farklı producer'larda
+tek cihazın rotaları sayar; aynı backend+producer içinde tekrar belirsizdir; boş/yok ise ret.
+Endüstriyel kamera `MeasurementCamera2` ile yazılır: `physical` zorunlu, `device` inert
+`gentl`/unavailable binding'dir ve revision'ı taşır; softwareCapture kapalı kalır.
+`physical` yoksa kamera bayt bayt schema 1'dir. `MeasurementCamera::rebound` ad değişiminde
+revision'ı korur, device/physical değişiminde artırır; environment commit bunu zorunlu kılar.
+Aynı kullanılabilir kimlik iki CameraId'ye bağlanamaz. Yerel rota saklama ve keşif ICM-05a'dadır.
+
 ## 3. Acquisition profile ve gerçek geometri
 
 Versioned profile en az pixel format, width/height/offset, binning/decimation/reverse
