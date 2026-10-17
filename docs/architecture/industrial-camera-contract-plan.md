@@ -294,8 +294,17 @@ etkisi henüz doğrulanmadı. FrameStart şartı ve 04e bağımlılığı korunu
 Onaylanan yön tam sensör 2448×2048 ediniminden, sensör başlangıcı (0,1) olan
 2448×2047 ölçüm rasteri üretmektir; donanım OffsetY değiştirilmez. Yeni geometri
 kimliği/kalibrasyon invalidation ve typed raster politikası ürün entegrasyonunda
-zorunludur. Bu aşamada yalnız [opt-in fiziksel tanı](industrial-camera-trigger-correlation.md)
-uygulandı; native adapter/schema/UI henüz bu çıktıyı kullanmaz. Bu izin counter
+zorunludur. [Opt-in fiziksel tanıya](industrial-camera-trigger-correlation.md) ek olarak
+ICM-03c `IndustrialMeasurementRaster` application servisi bu dönüşümü explicit uygular:
+actual `GeometryReadback` değişmez, sonuç ayrı `measurementGeometry`, acquisition
+içindeki region, input content ID ve versioned policy ID taşır. Geçerli exact model,
+tam-sensör/raw Mono8 ve bilinen identity transform gerektirir. Eski coordinateSystemId
+çıktıya kopyalanmaz; timestamp/admission alanları uydurulmaz. `revisedSetup` yalnız
+ölçüm geometrisi adayı üretir; mevcut revision/invalidation kurallarını kullanır.
+**Bu aday kamera configure girdisi değildir**: donanım tam-sensör kalır. Persist
+edilen acquisition/measurement ayrımı ve ortak provider bağlantısı sonraki entegrasyonda
+uygulanmadan aday otomatik kaydedilmez/aktive edilmez. Native adapter/schema/UI
+henüz bu çıktıyı kullanmaz. Bu izin counter
 epoch'u kanıtlamaz; mevcut ActualCounterEpoch ve erken Unavailable reddi korunur.
 
 Gerçek nested EnumEntry çocukları enumeration kapsamında ayrıştırılır; On/Off gibi

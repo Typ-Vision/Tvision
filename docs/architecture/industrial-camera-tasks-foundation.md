@@ -105,6 +105,19 @@ gerçek open/feature/unit/grab doğrulaması açık.
 - Test: yeni profile/geometry corpus, measurement_setup_migration ve project_persistence.
 - Kapsam dışı: gerçek sensor ROI/binning/packed-format desteği veya lens düzeltmesi.
 
+## ICM-03c — bağımsız ölçüm raster dönüşümü
+
+- Önkoşul: 03b ve ilk sensör satırını dışlama kullanıcı kararı; 04d yanıtını beklemez.
+- İş: application katmanında explicit tam-sensör Mono8 → satır 0 hariç owned raster;
+  actual donanım geometri kanıtını ve türetilen ölçüm geometrisini ayrı taşı.
+- Kabul: 2448×2047, sensör origin (0,1), her retained piksel aynı; OffsetY yazılmaz.
+  Unknown/reverse/binning/decimation/offset ve yanlış model/format/dimensions ret.
+  Explicit kurulum adayı geometri revizyonu/kalibrasyon/cache/preparation invalidation
+  kurallarını kullanır; tekrar aynı dönüşüm no-op. Legacy codec/hash değişmez.
+- Kapsam dışı: persist edilen crop politikası, otomatik aktivasyon, kamera configure
+  veya Editor/Runtime bağlantısı. Ölçüm adayı donanım configure girdisi değildir.
+- Test: industrial_measurement_raster ve ilgili mevcut geometri/kalibrasyon corpus'u.
+
 ## ICM-04a — backend session ve handle ömrü
 
 - Önkoşul: 02 karar kaydı, 03b.
@@ -160,6 +173,10 @@ gerçek open/feature/unit/grab doğrulaması açık.
 ## ICM-04e — lifecycle, sahiplik ve preview
 
 - Önkoşul: 04d.
+- 18 Ekim kullanıcı yönlendirmesiyle destek beklerken **04e-a bağımsız yazılım
+  hazırlığı** yapılabilir: owner/worker, process-local lease, geç sonuç bastırma ve
+  stop bütçesi fixture'ları. Bu alt adım native tetik/preview geçişini veya 04e/G1
+  kabulünü açmaz; native bölümün 04d önkoşulu sürer.
 - Dosyalar: CameraLifecycle, application camera session/lease ve JobSession bağlantısı.
 - İş: controller owner thread ile SDK worker sınırı; preview latest-drop ve production
   FIFO ayrımı; aynı kamera için Calibration/Editor/Runtime exclusive lease. Stop ve

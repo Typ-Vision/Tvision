@@ -18,6 +18,8 @@ KMC-10e sonrasında fiziksel kalibrasyon kabulünden önce gerçek kamera entegr
    belirsizlik/çelişkide okumayı genişletin. [Devir şablonu](industrial-camera-handoff.md).
 
 Güncel görev sırası ve son kanıt [progress'tedir](../progress.md);
+18 Ekim kullanıcı yönlendirmesiyle 04d üretici yanıtı beklenirken bağımsız 03c
+ölçüm rasteri ve 04e-a yazılım hazırlığı ilerler; native/üretim kabul kapıları korunur.
 [ICM-00 başlangıç kaydı](industrial-camera-baseline.md) tamamlandı. Bir oturumun varsayılan kapsamı bir görevdir; kullanıcı
 bir sıra verirse aynı sırada devam edilir. Tamamlanan KMC paketleri tekrarlanmaz.
 Bu plan 6B/industrial acquisition açığını devralır; ayrı ikinci kamera mimarisi kurmaz.

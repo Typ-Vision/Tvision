@@ -5,21 +5,25 @@ Kullanıcının son yönlendirmesi önceliklidir. Ayrıntılar [arşivde](archiv
 
 ## Devam noktası
 
+- **Kullanıcı: destek beklemeden ilerle.** [ICM-03c](archive/2026-10-18-icm-03c.md)
+  tamam: owned ölçüm rasteri, ayrı geometriler ve invalidation adayı;
+  provider/persistence/UI bağlantısı yok. Sıradaki **ICM-04e-a yazılım hazırlığı**;
+  native 04e/G1 hâlâ 04d'ye bağlı.
 - **ICM-04d kısmi: gecikmiş command Stop/Start'ı aşıyor; native Unavailable**.
   [Yeni uzun pozlama/gecikme deneyi](archive/2026-10-18-icm-04d-pending.md):
   12 senaryo/36 command/32 kare. Delay=500 ms iken Clear→Stop→Start sonrası,
   yeni command olmadan **8/8 eski kare** geldi: frame/trigger=1/0; sonraki yeni
   command=2/1. Exposure=500 ms/delay=0 sessiz 0/4; garanti değil.
   Genel Stop/Start bariyeri elendi. Belgeli pending-command cancel veya
-  completion/drain/reset sınırı eksik; 04e başlamaz.
+  completion/drain/reset eksik; native 04e kapalı.
   [Önceki Clear deneyi](archive/2026-10-18-icm-04d-barrier.md): Clear-only 3/3
   eski kare; kısa pozlama restart 0/6 ve aynı handle'da sayaç reseti.
   [Karar](architecture/industrial-camera-trigger-correlation.md),
   [üretici soru taslağı](architecture/industrial-camera-vendor-questions.md) (gönderilmedi).
   Belgeli bariyer + tek bekleyen tetik alternatif stratejidir; ready/iki sayaç
   aynı anda zorunlu değil. **İlk sensör satırını ölçümden çıkarma izni
-  kalıcıdır**: 2448×2047, origin (0,1) tanı doğrulandı; ürün geometri/kalibrasyon
-  entegrasyonu açık. FrameBurstStart sessiz FrameStart alias'ı olmaz.
+  kalıcıdır**: 2448×2047, origin (0,1); dönüşüm servisi hazır, canlı ürün bağlantısı
+  açık. FrameBurstStart sessiz FrameStart alias'ı olmaz.
   [Timestamp karşı örneği](archive/2026-10-17-icm-04d-timestamp.md): latch çalışıyor,
   ham frameTicks>latch 12 eski kareyi yanlış geçirdi; fit ölçeğiyle admission yok.
   [2×100 metadata](archive/2026-10-17-icm-04d-correlation.md): sayaç 1–100,
@@ -27,12 +31,8 @@ Kullanıcının son yönlendirmesi önceliklidir. Ayrıntılar [arşivde](archiv
   Chunk/Event bulmadı; transport metadata yokluğu çıkarılamaz.
 - [ICM-04c](archive/2026-10-17-icm-04c.md) tamam: bounded owned Mono8 probe/pool,
   exact 2448×2048 kare/close. Native stride/completion yok; exact tight Mono8 kabul.
-  Önceki teslimler: [04b](archive/2026-10-17-icm-04b.md) transaction/rollback,
-  [04a](archive/2026-10-17-icm-04a.md) session (Claude Code),
-  [03b](archive/2026-10-17-icm-03b.md) geometri,
-  [03a](archive/2026-10-17-icm-03a.md) kimlik,
-  [02](archive/2026-10-17-icm-02.md) C API;
-  [baseline](architecture/industrial-camera-baseline.md) şema/hash.
+  Önceki 02–04b teslimleri [arşiv dizininde](archive/README.md); 04a Claude Code.
+  [Baseline](architecture/industrial-camera-baseline.md) şema/hash kaynağıdır.
 - **ICM-REVIEW-01 kapalı**: SDK enumerate/owned kopya kilitli; create owned kayıtla.
   Setup revision karşılaştırılır; A→B→A eski kalibrasyonu açmaz; rename/no-op/legacy
   hash korunur. [Düzeltme](archive/2026-10-17-icm-review-01-fix.md),
@@ -92,10 +92,8 @@ sözleşme/kabul bölümleri; büyük belgelerde önce başlık/ID arayın. Beli
 
 ## Son doğrulama ve çalışma ortamı
 
-- Son adım statik cancel incelemesi: XML/header assertions geçti;
-  `build/icm/04d-cancel-audit/`. Yeni donanım/build/CTest/görsel koşumu yok.
-  Önceki pending tanısı ve 2/2 SDK CTest kanıtı
-  [pending arşivinde](archive/2026-10-18-icm-04d-pending.md).
+- **ICM-03c yeni koşum**: core OFF Release ilgili hedef build ve CTest **9/9** geçti;
+  `build/icm/03c-raster/`. Tam suite/UI/görsel/donanım testi yapılmadı.
 - Eski test/build sonuçları arşivdedir; yeni koşum değildir.
   `plc_socket_runtime` aralıklı başarısızlığı/kök neden açık kalır.
 - Güncel UI `build/reference-ui/visionflow.exe`, core `build/kmc9-core-off`.
@@ -105,13 +103,11 @@ sözleşme/kabul bölümleri; büyük belgelerde önce başlık/ID arayın. Beli
 
 ## Kapanış ve sonraki adım
 
-Sıradaki **ICM-04d üretici yanıtı: pending-command cancel/completion sınırı**.
-[Yerel cancel incelemesi](archive/2026-10-18-icm-04d-cancel-audit.md): XML'de
-AcquisitionAbort yok; DeviceReset açıklaması pending iptal/completion garantisi
-vermiyor; çalıştırılmadı. Sekiz SDK header'ında adında abort/cancel/drain olan API
-bulunmadı; CHM açılamadı. Üretici taslağında tek engelleyici soru öne alındı;
-gönderilmedi. Belgeli cancel veya completion/drain/reset prosedürü gerekli.
-Delay=0, close/open veya sessizlik kanıt değil; aynı deneyi tekrarlamayın. Native Unavailable;
-04e bundan sonra. İlk satır ürün geometri/kalibrasyon invalidation açık.
+Sıradaki **ICM-04e-a owner/worker/lease yazılım hazırlığı**; kullanıcı destek
+beklememeyi istedi. Native geçiş/admission açılmaz; tamamlanan 03c helper'ı çalışan
+kalibrasyon/Editor özelliği diye sunmayın. Ölçüm adayı kamera configure girdisi değildir.
+[04d cancel incelemesi](archive/2026-10-18-icm-04d-cancel-audit.md): AcquisitionAbort
+yok; DeviceReset garantisiz, çalıştırılmadı. Üretici taslağı gönderilmedi.
+Delay=0, close/open/sessizlik kanıt değil; aynı deneyi tekrarlamayın. Native Unavailable.
 ICM-01b için OECS sahne/release, G1 için 04e/stress açık.
 [Bağlam bakımı](archive/2026-10-17-context-maintenance.md).

@@ -189,8 +189,9 @@ karenin byte 4–7/8–11 alanları SDK sayaçlarıyla eşleşti. İlk kareden r
 - Ürün entegrasyonunda bu çıktı politikası geometri/kalibrasyon kimliğine dahil
   edilmeli; 2448×2048 için hazırlanmış model/kalibrasyon sessizce yeniden kullanılamaz.
   Sensör offset'i ile yazılım raster başlangıcı ayrı alanlardır.
-- **Şu an yalnız opt-in tanı çıktısıdır.** Native adapter, persistent geometri
-  şeması, kalibrasyon ve UI henüz bu politikayı uygulamaz; capability Unavailable.
+- Opt-in tanıya ek olarak [ICM-03c](../archive/2026-10-18-icm-03c.md) application
+  dönüşüm servisi ve explicit geometri adayı eklendi. Native adapter, persistent
+  crop politikası, aktivasyon ve UI bağlantısı henüz yok; capability Unavailable.
 
 Dolayısıyla raster engeli için yetkilendirilmiş ve fiziksel örneği alınmış yol var;
 kalan öncelik ready/epoch başlangıcı ve hata sonrası recovery bariyeridir. Üretici

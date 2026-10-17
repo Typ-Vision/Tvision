@@ -6,6 +6,7 @@ görev” ifadeleri yazıldıkları tarihe aittir.
 
 | Dönem / görev | Kayıt |
 | --- | --- |
+| 18 Ekim 2026 — ICM-03c | [Destek beklerken bağımsız ölçüm rasteri ve geometri adayı](2026-10-18-icm-03c.md) |
 | 18 Ekim 2026 — ICM-04d cancel incelemesi | [XML/header abort ve reset sınırı; üreticiye öncelikli soru](2026-10-18-icm-04d-cancel-audit.md) |
 | 18 Ekim 2026 — ICM-04d pending | [Gecikmiş software command Stop/Start sonrasında eski kare üretti](2026-10-18-icm-04d-pending.md) |
 | 18 Ekim 2026 — ICM-04d bariyer | [Clear eski kare karşı örneği, Stop/Start gözlemi ve stream sayaç reseti](2026-10-18-icm-04d-barrier.md) |
