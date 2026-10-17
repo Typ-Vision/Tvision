@@ -270,6 +270,15 @@ Chunk/Event alanlarından kanıt alınamadı. Native ready/counter/epoch yolu ve
 sözleşmesi çözülmeden ICM-04d tamamlanmış sayılmaz. Ayrıntı
 [04d kaydında](../archive/2026-10-17-icm-04d.md).
 
+Sonraki [native tanı](../archive/2026-10-17-icm-04d-native-diagnostic.md) ayrı
+opt-in executable'dır; ürün backend'inin unsupported sınırını değiştirmez.
+FrameBurstStart/burst=1/cache=false ile iki açılışta 100'er tetik/100'er buffer
+gözlendi. Raw `nFrameCounter`/`nTriggerIndex` hep 0; `nFrameNum` yeniden açılışta
+0'dan başlıyor. On/Software aktifken de ready düğümü yok. Quiet timeout, başarılı
+command, artan tick/frame number ve değişen hash actual counter epoch yerine
+kullanılamaz. CounterEventSource yalnız Off/Line0/Line2 destekliyor; bu sayaç
+software-trigger oracle'ı değildir. H02 sahne/tazelik ve production kabulü açık kalır.
+
 Gerçek nested EnumEntry çocukları enumeration kapsamında ayrıştırılır; On/Off gibi
 local isimler başka enum'u ezmez. ClearImageBuffer Stop'tan sonra CALLORDER verdiği
 için cleanup sırası Free → Clear (stream çalışırken) → Stop'tur; flush hatasında da

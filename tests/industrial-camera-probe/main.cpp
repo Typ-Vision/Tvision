@@ -101,6 +101,71 @@ int main(int argc, char** argv) {
                     auto open=MV_CC_OpenDevice(handle, MV_ACCESS_Exclusive, 0);
                     device["openCode"]=code(open); opened=open==MV_OK;
                     if(opened) {
+                        // Read the node's declared type/access before reading its value.
+                        // An unavailable node is not a zero-valued hardware oracle. No
+                        // selectors, counters, cache, commands or user sets are written.
+                        QJsonArray triggerContract;
+                        for(const char* name : {"AcquisitionMode", "AcquisitionBurstFrameCount",
+                            "AcquisitionFrameCount", "TriggerSelector", "TriggerMode", "TriggerSource",
+                            "TriggerSoftware", "TriggerCacheEnable", "TriggerDelay", "ExposureMode",
+                            "AcquisitionStatusSelector", "AcquisitionStatus", "TriggerCounter", "FrameCounter",
+                            "CounterSelector", "CounterEventSource", "CounterResetSource", "CounterValue",
+                            "CounterCurrentValue", "CounterValueAtReset", "ChunkModeActive", "ChunkSelector",
+                            "ChunkEnable", "EventSelector", "EventNotification", "DeviceTimestamp",
+                            "DeviceTimestampFrequency", "DeviceTimestampIncrement"}) {
+                            QJsonObject node{{"name",name}};
+                            MV_XML_AccessMode access=AM_Undefined;
+                            const int accessCode=MV_XML_GetNodeAccessMode(handle,name,&access);
+                            node["accessCode"]=code(accessCode);
+                            if(accessCode==MV_OK) {
+                                const char* accessName="Undefined";
+                                switch(access) {
+                                case AM_NI:accessName="Missing";break;
+                                case AM_NA:accessName="Unavailable";break;
+                                case AM_WO:accessName="WriteOnly";break;
+                                case AM_RO:accessName="ReadOnly";break;
+                                case AM_RW:accessName="ReadWrite";break;
+                                default:break;
+                                }
+                                node["access"]=accessName;
+                                if(access==AM_RO || access==AM_RW) {
+                                    MV_XML_InterfaceType type=IFT_IBase;
+                                    const int typeCode=MV_XML_GetNodeInterfaceType(handle,name,&type);
+                                    node["typeCode"]=code(typeCode);
+                                    if(typeCode==MV_OK) {
+                                        node["interfaceType"]=int(type);
+                                        int readCode=MV_E_SUPPORT;
+                                        if(type==IFT_IInteger) {
+                                            MVCC_INTVALUE_EX v{};readCode=MV_CC_GetIntValueEx(handle,name,&v);
+                                            if(readCode==MV_OK) {
+                                                node["value"]=QString::number(v.nCurValue);
+                                                node["minimum"]=QString::number(v.nMin);
+                                                node["maximum"]=QString::number(v.nMax);
+                                                node["increment"]=QString::number(v.nInc);
+                                            }
+                                        } else if(type==IFT_IEnumeration) {
+                                            MVCC_ENUMVALUE v{};readCode=MV_CC_GetEnumValue(handle,name,&v);
+                                            if(readCode==MV_OK) {
+                                                node["value"]=double(v.nCurValue);
+                                                QJsonArray supported;
+                                                for(unsigned n=0;n<v.nSupportedNum && n<MV_MAX_XML_SYMBOLIC_NUM;++n)
+                                                    supported.append(double(v.nSupportValue[n]));
+                                                node["supportedValues"]=supported;
+                                            }
+                                        } else if(type==IFT_IBoolean) {
+                                            bool v=false;readCode=MV_CC_GetBoolValue(handle,name,&v);
+                                            if(readCode==MV_OK) node["value"]=v;
+                                        } else if(type==IFT_IFloat) {
+                                            MVCC_FLOATVALUE v{};readCode=MV_CC_GetFloatValue(handle,name,&v);
+                                            if(readCode==MV_OK) node["value"]=v.fCurValue;
+                                        }
+                                        node["readCode"]=code(readCode);
+                                    }
+                                }
+                            }
+                            triggerContract.append(node);
+                        }
+                        device["triggerContract"]=triggerContract;
                         QJsonArray features;
                         for(const char* name : {"Width", "Height", "OffsetX", "OffsetY", "PayloadSize"}) {
                             MVCC_INTVALUE_EX value{}; auto rc=MV_CC_GetIntValueEx(handle,name,&value);

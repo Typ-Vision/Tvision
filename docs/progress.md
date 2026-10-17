@@ -6,16 +6,17 @@ başlangıçta arşivin tamamını okumayın.
 
 ## Devam noktası
 
-- **ICM-04d kısmi: eşleştirme çekirdeği/fixture hazır, native trigger açık** (Codex).
-  Private cycle/frame admission, generation + actual sayaç kanıtı, tek in-flight,
-  monoton bütçe ve geç/iptal sonucu bastırma eklendi. Native hazır/tetik korelasyonu
-  kanıtı yoksa unsupported/ERROR; gerçek trigger komutu henüz bağlanmadı.
-  [Kayıt ve kanıt](archive/2026-10-17-icm-04d.md).
-  **Devam: ICM-04d cihaz sözleşmesi** — actual selector yalnız FrameBurstStart;
-  FrameStart kuralını sessiz alias ile gevşetmeyin. Ready/counter/epoch yolu
-  doğrulanmadan 04d tamamlandı veya 04e hazır denmez.
+- **ICM-04d kısmi: gerçek trigger tanısı tamam, native admission açık** (Codex).
+  İki ayrı oturumda 100'er software trigger/100'er kare gözlendi; ayarlar geri
+  yüklendi, bağımsız readback ve temiz close doğrulandı. Raw frameCounter/triggerIndex
+  hep 0, frameNumber her açılışta 0–99. Ready/counter/epoch kanıtı oluşmadı.
+  [Yeni tanı kaydı](archive/2026-10-17-icm-04d-native-diagnostic.md),
+  [çekirdek/fixture](archive/2026-10-17-icm-04d.md).
+  **Devam: ICM-04d korelasyon sözleşmesi** — FrameBurstStart/burst=1 fiziksel
+  gözlemi FrameStart alias'ı değildir. Vendor ready/epoch garantisi veya ayrı,
+  kanıtlanabilir sözleşme olmadan 04d tamamlandı veya 04e hazır denmez.
 - [ICM-04c](archive/2026-10-17-icm-04c.md): bounded owned Mono8 probe/pool kabulü.
-  Bu oturumda gerçek nested GenApi enum parser ve ClearImageBuffer sırası düzeltildi.
+  Nested GenApi enum parser ve ClearImageBuffer sırası önceki kayıtta düzeltildi.
   **Exact cihazdan 2448×2048 Mono8 tanı karesi ve temiz close alındı.**
   Native stride/completion alanı yok: yalnız exact tight Mono8 kabul edilir.
 - Önceki [ICM-04b](archive/2026-10-17-icm-04b.md): SFNC feature erişimi,
@@ -75,13 +76,13 @@ başlangıçta arşivin tamamını okumayın.
   Device ID=1 seri değildir. Lens tam modeli/kurulum eksik.
 - `build/icm/04d/real-mono8.{pgm,png}` ve aynı dizindeki actual/failure logları:
   piksel aralığı **0–12**, sahne neredeyse siyah; sahne/ölçüm veya tazelik kabulü
-  değil. Ayar yazılmadı, software trigger gönderilmedi. GenTL discovery 1;
+  değil. O eski raster tanısında ayar/tetik yoktu; yeni tetik denemesi ayrı. GenTL discovery 1;
   read-only open **-1007** (C API başarısından ayrı).
-- TriggerSelector yalnız **FrameBurstStart**. AcquisitionStatusSelector missing,
-  AcquisitionStatus unavailable; sorgulanan TriggerCounter/FrameCounter/Chunk/Event
-  alanları hata verdi. Native ready/counter/epoch eşleştirme açık. ClearImageBuffer
+- TriggerSelector yalnız **FrameBurstStart**, burst=1, cache=false. CounterEventSource
+  yalnız Off/Line0/Line2; software sayaç kaynağı yok. On/Software aktifken de
+  AcquisitionStatusSelector missing, AcquisitionStatus unavailable. Native ready/epoch açık. ClearImageBuffer
   **stream çalışırken**, sonra Stop gerekir; ters sıra gerçek CALLORDER verdi.
-- Gerçek seri/open/grab ilk kanıtı var; 100 trigger/1000 cycle/teardown stress,
+- Gerçek seri/open/grab ve 2×100 tanı tetiği var; H02 sahne/tazelik, 1000 cycle/teardown stress,
   viewer/release sahne kabulü, vendor redistributable ve temiz makine dağıtımı yok.
   Pool advertised payload bütçesidir, SDK/RSS hard sınırı değil.
 - Fiziksel seri sürekliliği/ölçüm/PLC/robot/lens, native DPI/çoklu monitör,
@@ -89,16 +90,14 @@ başlangıçta arşivin tamamını okumayın.
 
 ## Son doğrulama ve çalışma ortamı
 
-- **ICM-04d yeni koşum**: core/UI/SDK Release build exit 0; ilgili CTest
-  core **9/9**, UI **9/9**, SDK **10/10**. Tam suite koşulmadı, UI değişmedi.
-  Kanıt `build/icm/04d/*-final-{build,tests}.log`, her build'de
-  `icm-04d-final-tests.xml`. SDK ABI fixture nested/local enum ve aktif stream'de
-  flush şartını sınar; trigger fixture fiziksel kabul değildir.
+- **Yeni ICM-04d native tanı**: opt-in probe ve SDK Release build exit 0;
+  ilgili SDK CTest **10/10**, `build/icm/04d-native/`, SDK'da
+  `icm-04d-native-tests.xml`. UI/core suite yeniden koşulmadı; UI değişmedi.
+- Önceki ICM-04d: core/UI **9/9**, SDK **10/10**; `build/icm/04d/`.
+  Fixture fiziksel trigger admission kabulü değildir.
 - ICM-04c tarihsel: core/UI 7/7, SDK 9/9; `build/icm/04c/`.
-- Tarihsel: 04b core/UI **6/6**, SDK **5/5**; review-fix core/UI **6/6**, SDK **3/3**.
-  04a tam suite core **75/75**, UI **89/89**. 03b core **74/74**, UI **87/88**
-  (`plc_socket_runtime` aralıklı; kök neden açık). Yeni koşum olarak sunmayın;
-  kanıt/kapsam ilgili kapanışlarda korunur.
+- 04a/04b/review test kapsamı ilgili arşivlerde. 03b core **74/74**, UI **87/88**:
+  `plc_socket_runtime` aralıklı, kök neden açık. Tarihsel sonuçlar yeni koşum değildir.
 - Önceki tam yazılım kabulü KMC-10e: UI **87/87**, core **73/73**;
   [B kabulü](architecture/multi-source-release-acceptance.md).
 - Güncel UI `build/reference-ui/visionflow.exe`, core `build/kmc9-core-off`.
@@ -110,8 +109,8 @@ başlangıçta arşivin tamamını okumayın.
 
 ## Kapanış ve sonraki adım
 
-Sıradaki **ICM-04d native cihaz sözleşmesini çözme ve gerçek trigger kabulü**.
-Yalnız FrameBurstStart destekleyen actual cihaz ile FrameStart gereksinimi farkı,
-güvenilir ready/counter/epoch kanıtıyla çözülmeli. 04e bundan sonradır.
+Sıradaki **ICM-04d ready/epoch sözleşmesi kararı**. Salt 100/100 gözlemi mevcut
+actual sayaç sözleşmesini kapatmaz. Vendor garantisi veya doğrulanabilir alternatif
+gerekiyor; aynı düğüm/tetik tanısını tekrarlamak engeli çözmez. 04e bundan sonradır.
 ICM-01b için reboot sonrası OECS sahne görüntüsü/release ve G1 için 04e/stress açık.
-Önceki [bağlam bakımı](archive/2026-10-17-context-maintenance.md) ve tarihsel kopyalar korundu.
+[Bağlam bakımı](archive/2026-10-17-context-maintenance.md).

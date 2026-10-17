@@ -72,9 +72,9 @@ Fiziksel erişim sandbox içinde 0 cihaz dönebilir; sandbox dışı C API exact
 başarısı [04d kaydında](docs/archive/2026-10-17-icm-04d.md). SDK opt-in build'deki
 `oecs_capture_probe` elle çalıştırılır, otomatik CTest değildir. Argümanlar: mutlak
 DLL yolu, exact vendor, model, seri ve output.pgm yolu. Runtime DLL dizini child
-PATH'te olmalıdır. Probe mevcut TriggerMode Off ister, ayar yazmaz, owned rasteri
-SDK kapanışından sonra kaydeder. Hata exit 1'dir. Native software-trigger admission
-henüz yoktur; gerçek cihazın FrameBurstStart farkı çözülmeden FrameStart kuralı açılmaz.
+PATH'te olmalıdır. Probe TriggerMode Off ister, ayar yazmaz; rasteri SDK kapanınca
+kaydeder. Hata exit 1'dir. Ayrı [100-trigger tanısı ve komutu](docs/archive/2026-10-17-icm-04d-native-diagnostic.md)
+geçici ayarları geri yükler. Native production admission henüz yoktur.
 
 ## Temel kullanım
 
