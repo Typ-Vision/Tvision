@@ -1,10 +1,12 @@
 # VisionFlow — güncel devir
 
 Güncelleme: 18 Ekim 2026.
-Kullanıcının son yönlendirmesi önceliklidir. Ayrıntılar [arşivde](archive/README.md); topluca okumayın.
+Son yönlendirme önceliklidir. Ayrıntılar [arşivde](archive/README.md); topluca okumayın.
 
 ## Devam noktası
 
+- **Üç sıralı hazırlık işi:** [ICM-04e-b](archive/2026-10-18-icm-04e-b.md) tamam;
+  1000 fixture çevrimi/2000 grab/100 teardown/20 blocked shutdown. Sırada 05a-a, 07a-a.
 - **Kullanıcı: destek beklemeden ilerle.** [ICM-04e-a](archive/2026-10-18-icm-04e-a.md)
   tamam: exact fiziksel lease, kalıcı worker, owner polling/JobSession shutdown,
   geç kare bastırma ve cleanup-failure karantinası; native/ürün bağlantısı yok.
@@ -17,19 +19,17 @@ Kullanıcının son yönlendirmesi önceliklidir. Ayrıntılar [arşivde](archiv
   command=2/1. Exposure=500 ms/delay=0 sessiz 0/4; garanti değil.
   Genel Stop/Start bariyeri elendi. Belgeli pending-command cancel veya
   completion/drain/reset eksik; native 04e kapalı.
-  [Önceki Clear deneyi](archive/2026-10-18-icm-04d-barrier.md): Clear-only 3/3
-  eski kare; kısa pozlama restart 0/6 ve aynı handle'da sayaç reseti.
+  [Önceki Clear deneyi](archive/2026-10-18-icm-04d-barrier.md): Clear-only eski kare; restart garanti değil.
   [Karar](architecture/industrial-camera-trigger-correlation.md),
   [üretici soru taslağı](architecture/industrial-camera-vendor-questions.md) (gönderilmedi).
   Belgeli bariyer + tek bekleyen tetik alternatif stratejidir; ready/iki sayaç
   aynı anda zorunlu değil. **İlk sensör satırını ölçümden çıkarma izni
   kalıcıdır**: 2448×2047, origin (0,1); dönüşüm servisi hazır, canlı ürün bağlantısı
   açık. FrameBurstStart sessiz FrameStart alias'ı olmaz.
-  [Timestamp karşı örneği](archive/2026-10-17-icm-04d-timestamp.md): latch çalışıyor,
-  ham frameTicks>latch 12 eski kareyi yanlış geçirdi; fit ölçeğiyle admission yok.
-  [2×100 metadata](archive/2026-10-17-icm-04d-correlation.md): sayaç 1–100,
-  raster byte 4–11 metadata. [Semantik](archive/2026-10-17-icm-04d-semantics.md)
-  Chunk/Event bulmadı; transport metadata yokluğu çıkarılamaz.
+  [Timestamp karşı örneği](archive/2026-10-17-icm-04d-timestamp.md): ham timestamp admission yok.
+  [Metadata](archive/2026-10-17-icm-04d-correlation.md),
+  [semantik](archive/2026-10-17-icm-04d-semantics.md): raster byte 4–11 sayaç;
+  Chunk/Event bulunmadı; transport metadata yokluğu çıkarılamaz.
 - [ICM-04c](archive/2026-10-17-icm-04c.md) tamam: bounded owned Mono8 probe/pool,
   exact 2448×2048 kare/close. Native stride/completion yok; exact tight Mono8 kabul.
   Önceki 02–04b teslimleri [arşiv dizininde](archive/README.md); 04a Claude Code.
@@ -93,18 +93,18 @@ sözleşme/kabul bölümleri; büyük belgelerde önce başlık/ID arayın. Beli
 
 ## Son doğrulama ve çalışma ortamı
 
-- **ICM-04e-a yeni koşum**: core OFF Release ilgili hedef build ve CTest **8/8** geçti;
-  `build/icm/04e-a/`. Tam suite/UI/görsel/donanım testi yapılmadı.
-- Eski test/build sonuçları arşivdedir; yeni koşum değildir.
+- **ICM-04e-b yeni koşum**: core OFF Release build ve ilgili CTest **4/4** geçti;
+  `build/icm/04e-b/`. Tam suite/UI/donanım testi yapılmadı.
+- Eski sonuçlar arşivdedir; yeni koşum değildir.
   `plc_socket_runtime` aralıklı başarısızlığı/kök neden açık kalır.
 - Güncel UI `build/reference-ui/visionflow.exe`, core `build/kmc9-core-off`.
   Başlatma `.\scripts\run-local.ps1`; build/PATH komutları README'dedir.
 - ICM-02 baseline `53bb972`; sonrası görev ID'li tek commit. Push kullanıcı
-  isteğiyle. Ajanlar sıralıdır. Yerel INI korunur; test/raporlar `build/` altındadır.
+  isteğiyle. Ajanlar sıralıdır. Yerel INI korunur; kanıtlar `build/` altındadır.
 
 ## Kapanış ve sonraki adım
 
-**04e-a tamam**; sıradaki native ICM-04e, 04d belgeli cancel/drain/reset bariyerine
+**04e-a/b yazılım hazırlığı tamam**; sıradaki native ICM-04e, 04d belgeli cancel/drain/reset bariyerine
 bağlı. Bağımsız alt görevde native kapı korunur. 03c helper'ını çalışan
 kalibrasyon/Editor özelliği diye sunmayın. Ölçüm adayı kamera configure girdisi değildir.
 [04d cancel incelemesi](archive/2026-10-18-icm-04d-cancel-audit.md): AcquisitionAbort

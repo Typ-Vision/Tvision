@@ -39,10 +39,46 @@ CameraWorkerSession::Factory factory(std::shared_ptr<Probe> p){return [p]{return
 void command(CameraWorkerSession& s,CameraOperation op){s.submit(op);until([&]{return s.poll();});}
 void streaming(CameraWorkerSession& s){for(auto op:{CameraOperation::Connect,CameraOperation::Configure,CameraOperation::Start})command(s,op);}
 void shutdown(CameraWorkerSession& s){s.requestShutdown();until([&]{return s.shutdownState()==ShutdownState::Ready;});}
+void stress(){
+    // Reuse the exact identity after every joined teardown; both queue policies
+    // must clear pending images across every explicit Stop/Start generation.
+    for(int session=0;session<100;++session){
+        auto p=std::make_shared<Probe>();
+        const auto mode=session%2 ? FrameQueueMode::PreviewLatest : FrameQueueMode::ProductionFifo;
+        CameraWorkerSession s(identity("stress"),CameraLeaseUse::Editor,"source",mode,factory(p),1);
+        command(s,CameraOperation::Connect);command(s,CameraOperation::Configure);
+        for(int cycle=0;cycle<10;++cycle){
+            command(s,CameraOperation::Start);const auto generation=s.lifecycle().generation();
+            command(s,CameraOperation::Grab);auto frame=s.take();
+            check(frame && frame->image.size()==QSize(1,1),"stress owned image missing");
+            command(s,CameraOperation::Grab);check(s.lifecycle().stats().depth==1,"stress queued image missing");
+            s.requestStop();check(!s.take() && s.lifecycle().generation()>generation,"stress Stop did not invalidate queue");
+            command(s,CameraOperation::Stop);
+            check(s.lifecycle().state()==CameraState::Configured,"stress explicit Stop acknowledgement missing");
+        }
+        check(s.lifecycle().stats().accepted==20 && s.lifecycle().stats().cleared==10 && s.lifecycle().stats().highWater==1,"stress queue accounting");
+        command(s,CameraOperation::Disconnect);shutdown(s);
+        check(p->calls==43 && p->closed && p->destroyed && !p->wrongThread,"stress cleanup/thread accounting");
+    }
+    // Block each grab until shutdown has invalidated it. The final Ready must
+    // imply joined destruction and no late frame before the next lease opens.
+    for(int session=0;session<20;++session){
+        auto p=std::make_shared<Probe>();std::promise<void> release;p->gate=release.get_future().share();
+        CameraWorkerSession s(identity("stress-stop"),CameraLeaseUse::Calibration,"source",FrameQueueMode::PreviewLatest,factory(p));
+        streaming(s);s.submit(CameraOperation::Grab);until([&]{return p->entered.load();});
+        s.requestShutdown();
+        rejects([&]{CameraWorkerSession rival(identity("stress-stop"),CameraLeaseUse::Runtime,"source",FrameQueueMode::PreviewLatest,factory(p));});
+        release.set_value();until([&]{return s.shutdownState()==ShutdownState::Ready;});
+        check(!s.take() && p->destroyed && p->closed && !p->wrongThread,"stress shutdown leaked late frame or backend");
+    }
+}
 }
 int main(int argc,char** argv){
     QCoreApplication app(argc,argv);
     try {
+        if(app.arguments().contains("--stress")){
+            stress();QTextStream(stdout)<<"PASS: 1000 fixture cycles, 2000 owned grabs, 100 teardown/release and 20 blocked-grab shutdowns\n";return 0;
+        }
         auto p=std::make_shared<Probe>();
         auto invalid=identity();invalid.confidence=DeviceIdentityConfidence::ProviderReported;invalid.serial.clear();
         rejects([&]{CameraWorkerSession s(invalid,CameraLeaseUse::Editor,"source",FrameQueueMode::PreviewLatest,factory(p));});
