@@ -1,0 +1,72 @@
+#include "application/MeasurementWorkspace.hpp"
+#include "application/ProjectService.hpp"
+#include "application/EditorSession.hpp"
+#include "application/SourceFrameIndex.hpp"
+#include <QCoreApplication>
+#include <QTemporaryDir>
+#include <QDir>
+#include <QTextStream>
+#include <QThread>
+#include <QFile>
+#include <thread>
+#include <cmath>
+#include <QUuid>
+using namespace visionflow;
+namespace {int checks=0;void check(bool b,const char* s){++checks;if(!b)throw std::runtime_error(s);}template<class F>void reject(F f){++checks;try{f();}catch(...){return;}throw std::runtime_error("Expected rejection");}
+QImage stripe(int index=0){QImage im(640,200,QImage::Format_Grayscale8);im.fill(10+index);for(int y=0;y<200;++y)for(int x=100+index;x<400+11*index;++x)im.scanLine(y)[x]=220;return im;}
+class Adapter:public AcquisitionAdapter {public:int index=0;explicit Adapter(int i):index(i){}AcquisitionCapabilities capabilities()const override{return {"webcam",true};}ImageFrame acquire(const AcquisitionRequest&)const override{auto im=stripe(index);return ImageFrame::fromBuffer(im.constBits(),im.sizeInBytes(),640,200,im.bytesPerLine(),PixelFormat::Gray8);}};
+CalibrationModelRecord teach(MeasurementWorkspace& w,const MeasurementCamera& c,const MeasurementSetupDescriptor& s,double mm,int index){IndependentCaptureRequest req;req.origin=SourceOrigin::CameraAcquired;req.camera=c;req.setup=s;IndependentCaptureBackend backend{[&]{return QVector<DeviceBinding>{c.device};},[index](const DeviceBinding&,const GeometryDescriptor&){return std::make_unique<Adapter>(index);}};IndependentCalibrationSession session;check(session.accept(IndependentCalibrationSession::run(session.begin(req),backend)),"Actual fixture probe");auto& math=session.math();check(math.accept(CalibrationWizardSession::run(math.scanPair("width",{{"image"},ScanSegment{{20,100},{620,100},4}}))),"Real caliper");math.setKnownMillimetres(mm);auto r=math.calculate().named("Scale");const SetupReference ref{c.id,s.id,s.revision};w.calibrations().save(ref,r);w.calibrations().setOperational(c.id,s.id);w.calibrations().activate(ref,r.contentId(),session);return r;}
+const ToolResult& result(const CycleResult& c,const QString& id){for(const auto& r:c.tools)if(r.toolId==id)return r;throw std::runtime_error("Missing result");}
+}
+
+class DelayedSource final:public AcquisitionAdapter {
+public:
+    int delay;std::shared_ptr<std::atomic_bool> stop;explicit DelayedSource(int ms,std::shared_ptr<std::atomic_bool> cancel={}):delay(ms),stop(std::move(cancel)){}
+    AcquisitionCapabilities capabilities()const override{return {"webcam",true};}
+    ImageFrame acquire(const AcquisitionRequest&)const override{QThread::msleep(delay);if(stop)stop->store(true);auto image=stripe(2);return ImageFrame::fromBuffer(image.constBits(),image.sizeInBytes(),640,200,image.bytesPerLine(),PixelFormat::Gray8);}
+};
+
+int main(int argc,char** argv){QCoreApplication app(argc,argv);try{
+QTemporaryDir dir(QDir::currentPath()+"/kmc10c1-XXXXXX");check(dir.isValid(),"Build fixture");const auto path=dir.filePath("project.vfproject");ProjectService project;project.createProject("Multi Runtime core","",path,"file");project.save();MeasurementWorkspace workspace(path,project.project().id,[]{return true;});MeasurementSetupContract contract;
+for(int i=0;i<10;++i){const auto id=QString::number(i);contract.cameras.append({{"c"+id},"Camera "+id,{"webcam","717"+id,DeviceIdentityConfidence::ProviderReported,1,{true,true,false,false}}});contract.setups.append({{"s"+id},contract.cameras.last().id,"Setup "+id,"lens","plane",1,1,{{640,200},{},{},true}});check(stripe(i==1 ? 0:i).save(dir.filePath("source-"+id+".png")),"Source raster");}
+workspace.replace(contract);for(int i=0;i<10;++i)teach(workspace,contract.cameras[i],contract.setups[i],i+1,i==1 ? 0:i);
+QVector<SetupReference> refs;for(int i=0;i<2;++i)refs.append({contract.cameras[i].id,contract.setups[i].id,1});
+reject([&]{workspace.calibrations().snapshots(refs,[&]{auto renamed=contract;renamed.cameras[0].name="Renamed during read";workspace.replace(renamed);});});check(workspace.calibrations().snapshots(refs).size()==2,"Retry reads whole stable registry set");
+reject([&]{workspace.calibrations().snapshots(refs,[&]{teach(workspace,contract.cameras[0],contract.setups[0],101,0);});});teach(workspace,contract.cameras[0],contract.setups[0],1,0);check(workspace.calibrations().snapshots(refs).size()==2,"Retry reads whole stable model/permission set");
+for(int n:{2,10})for(const auto type:{ApplicationType::Measurement,ApplicationType::DefectInspection,ApplicationType::RobotGuidance}){
+project.createRecipe(QString("Production %1 %2").arg(n).arg(typeKey(type)),"",type,"file");project.enableMultiSource();QVector<QString> sources,metrics;QVector<ToolConnection> links;
+for(int i=0;i<n;++i){const auto source=project.addTool("image_file");project.setImageFile(dir.filePath(QString("source-%1.png").arg(i)),source);const auto left=project.addTool("edge_point"),right=project.addTool("edge_point"),metric=project.addTool("measurement");sources<<source;metrics<<metric;
+for(auto t:project.tools())if(t.id==left || t.id==right){t.parameters["scanRoi"]=ToolRoi{{source+"/image"},ScanSegment{{20,100},{620,100},4}}.toJson();t.parameters["polarity"]=t.id==left ? "rising":"falling";project.updateTool(t);}
+links<<ToolConnection{source,"image",left,"image"}<<ToolConnection{source,"image",right,"image"}<<ToolConnection{left,"point",metric,"p1"}<<ToolConnection{right,"point",metric,"p2"};project.bindSourceSetup(source,SetupReference{contract.cameras[i].id,contract.setups[i].id,1}.toJson());}
+project.setConnections(links);project.save();const auto recipe=*project.activeRecipe();bool allow=true;int corrupt=0,providerCalls=0;RuntimeIdentity identity{"engineer",[&](const QString& principal,ProductionAction){return allow && principal=="engineer";}};
+MultiSourceRuntimeService runtime(identity,[&](const Recipe& r){++providerCalls;auto set=workspace.productionSources(r);if(corrupt==1)set.sources.remove(sources.first());if(corrupt==2)set.sources.insert("foreign",{});if(corrupt==3)std::swap(set.sources[sources[0]],set.sources[sources[1]]);if(corrupt==4)set.sources[sources[0]].engineVersion="foreign-engine";return set;});
+allow=false;reject([&]{runtime.prepare(recipe,dir.path());});allow=true;runtime.prepare(recipe,dir.path());check(runtime.active()->validation().scope=="multi_source_in_memory/1" && runtime.active()->dependencies()["sourceSet"].toObject().size()==n,"In-memory scope/complete admitted set");const auto admitted=runtime.active();
+{auto oversized=recipe;oversized.definition["vendor"]=QString(16*1024*1024,'x');const auto calls=providerCalls;reject([&]{runtime.prepare(oversized,dir.path());});check(providerCalls==calls && runtime.active()==admitted,"Whole definition budget rejects before provider work");}
+for(int fault:{1,2,3,4}){corrupt=fault;reject([&]{runtime.prepare(recipe,dir.path());});check(runtime.active()==admitted,"Failed prepare preserves whole previous snapshot");}corrupt=0;
+bool wrongThread=false;std::thread([&]{try{runtime.active();}catch(const ProductionException& e){wrongThread=e.code()==ProductionError::WrongThread;}}).join();check(wrongThread,"Owner thread enforced");
+auto duplicateRecipe=recipe;auto bindings=duplicateRecipe.definition["sourceSetups"].toObject();auto repeated=bindings[sources[0]].toObject();repeated["sourceToolId"]=sources[1];bindings[sources[1]]=repeated;duplicateRecipe.definition["sourceSetups"]=bindings;reject([&]{runtime.prepare(duplicateRecipe,dir.path());});check(runtime.active()==admitted,"Repeated physical setup cannot replace snapshot set");
+ProductionRecipeService disk([](const QString&,ProductionAction){return true;});reject([&]{disk.validate("engineer",recipe,dir.path());});
+if(n==2)workspace.calibrations().disconnect(contract.cameras[9].id);
+const auto lease=runtime.begin();check(runtime.busy(),"Admitted lease busy");reject([&]{runtime.begin();});reject([&]{runtime.prepare(recipe,dir.path());});
+teach(workspace,contract.cameras[0],contract.setups[0],101,0);auto done=RuntimeService::execute(lease,"unused",{});check(done.state==ExecutionState::Done && done.acquisitions==n && done.frames.size()==n && done.frameId.isEmpty(),"Immutable N-source worker real execution");
+for(int i=0;i<n;++i){const auto value=result(done,metrics[i]).outputs["value"];check(value.valid && std::abs(std::get<double>(value.data)-(i+1))<.001 && value.origin.sourceId==sources[i],"Admit-time independent mm/model oracle");}
+const auto raw0=result(done,sources[0]).outputs["image"],raw1=result(done,sources[1]).outputs["image"];check(std::get<ImageFrame>(raw0.data).contentId()==std::get<ImageFrame>(raw1.data).contentId() && raw0.frameId!=raw1.frameId,"Same pixels retain different source/frame/model identities");
+for(int mutation=0;mutation<7;++mutation){auto bad=done;if(mutation==0)bad.partial=true;if(mutation==1)bad.frames.removeLast();if(mutation==2)bad.frames.append(bad.frames.first());if(mutation==3)std::swap(bad.frames[0].sourceId,bad.frames[1].sourceId);if(mutation==4)bad.tools.removeLast();if(mutation==5)bad.tools.last().outputs["value"].data=999.;if(mutation==6)bad.frameId=bad.frames.first().frameId;reject([&]{runtime.finish(lease.ticket,bad);});check(runtime.busy() && !runtime.lastCompletion(),"Changed completion never commits/clears lease");}
+MultiSourceRuntimeService other(identity,[&](const Recipe& r){return workspace.productionSources(r);});other.prepare(recipe,dir.path());const auto foreignLease=other.begin();const auto foreign=RuntimeService::execute(foreignLease,"",{});reject([&]{runtime.finish(lease.ticket,foreign);});other.finish(foreignLease.ticket,foreign);
+auto editor=ExecutionService{}.run(recipe.definition,dir.path(),recipe.id,admitted->validation().contentId,{}, {}, {},[&](const ImageFrame& f){return RuntimeService::calibration(*admitted,f,"");},nullptr,{{"sources",QJsonObject{}}});reject([&]{runtime.finish(lease.ticket,editor);});
+auto changed=done;changed.frames[0].frameId="forged";reject([&]{RuntimeService::suppressCancelled(lease,changed);});
+runtime.finish(lease.ticket,done);check(!runtime.busy() && runtime.lastCompletion()->cycleId==done.cycleId,"Actual trusted completion accepted in memory");reject([&]{runtime.finish(lease.ticket,done);});reject([&]{runtime.requireReady();});
+runtime.prepare(recipe,dir.path());const auto updated=runtime.begin();auto newResult=RuntimeService::execute(updated,"",{});check(std::abs(std::get<double>(result(newResult,metrics[0]).outputs["value"].data)-101)<.001,"Reprepare uses new whole model set");runtime.finish(updated.ticket,newResult);
+const auto cancelLease=runtime.begin();auto stopped=RuntimeService::execute(cancelLease,"",std::make_shared<std::atomic_bool>(true));check(stopped.state==ExecutionState::Skipped && stopped.frames.isEmpty() && stopped.acquisitions==0,"Stop suppresses N-source values");runtime.finish(cancelLease.ticket,stopped);
+const auto lateLease=runtime.begin();auto late=RuntimeService::execute(lateLease,"",{});RuntimeService::suppressCancelled(lateLease,late);check(late.state==ExecutionState::Skipped && late.frames.isEmpty(),"Late Stop re-seals unchanged trusted completion");runtime.finish(lateLease.ticket,late);
+const auto errorLease=runtime.begin();check(QFile::remove(dir.filePath("source-1.png")),"Remove admitted source file");auto error=RuntimeService::execute(errorLease,"",{});check(error.state==ExecutionState::Error && result(error,metrics[1]).outputs.isEmpty(),"Partial acquisition error cannot measure missing source");runtime.finish(errorLease.ticket,error);check(runtime.lastCompletion()->state==ExecutionState::Error,"Partial ERROR retained without aggregate PASS");check(stripe(0).save(dir.filePath("source-1.png")),"Restore source fixture");
+const auto failedWorker=runtime.begin();check(!runtime.lastCompletion(),"Begin clears previous published completion");reject([&]{runtime.abandon(failedWorker.ticket+1,"failure");});runtime.abandon(failedWorker.ticket,"Worker failure before completion");check(!runtime.busy() && !runtime.lastCompletion() && !runtime.failure().isEmpty(),"Abandon keeps failure without fake frame/result");
+RuntimeService persisted(dir.filePath("persistent"),path+".calibrations.json",identity);reject([&]{persisted.prepare(recipe,dir.path());});check(!persisted.active(),"Persistent Runtime schema9 gate remains closed");
+teach(workspace,contract.cameras[0],contract.setups[0],1,0);if(n==2)teach(workspace,contract.cameras[9],contract.setups[9],10,9);
+}
+
+project.createRecipe("Raw mixed sources","",ApplicationType::Measurement,"file");project.enableMultiSource();const auto file=project.addTool("image_file");project.setImageFile(dir.filePath("source-0.png"),file);const auto camera=project.addTool("webcam");for(auto t:project.tools())if(t.id==camera){t.parameters["timeoutMs"]=1;project.updateTool(t);}const auto rawRecipe=*project.activeRecipe();workspace.calibrations().disconnect(contract.cameras[0].id);
+MultiSourceRuntimeService raw({"engineer",[](const QString&,ProductionAction){return true;}},[&](const Recipe& r){return workspace.productionSources(r);});raw.prepare(rawRecipe,dir.path());auto lease=raw.begin();auto actual=RuntimeService::execute(lease,"",{},[](const ToolDefinition& t)->std::unique_ptr<AcquisitionAdapter>{if(t.kind!="webcam")return {};return std::make_unique<DelayedSource>(0);});check(actual.state==ExecutionState::Done && actual.frames.size()==2 && actual.acquisitions==2,"Raw mixed set needs no unused calibration permission");raw.finish(lease.ticket,actual);
+lease=raw.begin();actual=RuntimeService::execute(lease,"",{},[](const ToolDefinition& t)->std::unique_ptr<AcquisitionAdapter>{if(t.kind!="webcam")return {};return std::make_unique<DelayedSource>(20);});check(actual.state==ExecutionState::Error && result(actual,camera).outputs.isEmpty(),"Late admitted webcam cannot publish output");raw.finish(lease.ticket,actual);
+QTextStream(stdout)<<checks<<" multi-source production checks passed\n";return 0;
+}catch(const std::exception& e){QTextStream(stderr)<<"FAIL after "<<checks<<": "<<e.what()<<'\n';return 1;}}

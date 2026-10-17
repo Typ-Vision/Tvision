@@ -3,6 +3,7 @@
 #include "app/ImageViewer.hpp"
 #include "application/CalibrationService.hpp"
 #include "application/MeasurementWorkspace.hpp"
+#include "application/ProjectService.hpp"
 #include <QApplication>
 #include <QTest>
 #include <QTemporaryDir>
@@ -57,7 +58,15 @@ int main(int argc,char** argv){QApplication app(argc,argv);try{
         CalibrationWizard d(true,source,tmp.path(),[&](const auto& r){plate=r;});d.resize(1400,900);d.show();app.processEvents();setup(d);d.openFile(boardPath);idle(d);click(d,"wizardNext");widget<QComboBox>(d,"wizardPattern")->setCurrentIndex(pattern);widget<QSpinBox>(d,"wizardColumns")->setValue(pattern==0 ? 9:8);widget<QDoubleSpinBox>(d,"wizardSpacing")->setValue(5);widget<QLineEdit>(d,"wizardTargetName")->setText(QString("Plate %1").arg(pattern));click(d,"wizardSaveTarget");check(widget<QComboBox>(d,"wizardTargets")->findText(QString("Plate %1").arg(pattern))>=0,"Named target definition can be reused");click(d,"wizardDetect");idle(d);click(d,"wizardNext");check(widget<QLabel>(d,"wizardHeading")->text().startsWith("3"),"Plate detection advance");d.grab().save(QString("kui4-plate%1-normal.png").arg(pattern));click(d,"wizardNext");d.resize(850,600);app.processEvents();d.grab().save(QString("kui4-plate%1-small.png").arg(pattern));click(d,"wizardNext");check(plate && !plate->activatable() && plate->model().mapping(),"Plate trial is calculated, cannot activate");check(plate->model().mapping()->observation().target.pattern==(pattern==0 ? CalibrationGridPattern::Chessboard:CalibrationGridPattern::SymmetricCircles),"Plate descriptor preserved");
     }
     CalibrationWizard cancel(false,source,tmp.path(),[](const auto&){throw std::runtime_error("Unexpected save");});cancel.show();setup(cancel);cancel.openFile(path);click(cancel,"wizardStop");idle(cancel);check(!widget<QLabel>(cancel,"wizardImageInfo")->text().contains("640"),"Stop suppresses late file completion");click(cancel,"wizardCancel");check(cancel.result()==QDialog::Rejected,"Cancel discards draft");
-    MeasurementWorkspace workspace(tmp.filePath("independent.vfproject"),"independent",[]{return true;});
+    const auto independentPath=tmp.filePath("independent.vfproject");
+    ProjectService independentProject;
+    independentProject.createProject("Recipe-free acceptance","",independentPath,"file");
+    independentProject.save();
+    QFile independentFile(independentPath);
+    check(independentFile.open(QIODevice::ReadOnly),"Saved empty project readable");
+    const auto emptyProjectBytes=independentFile.readAll();independentFile.close();
+    check(independentProject.project().recipes.isEmpty(),"Recipe-free acceptance begins with saved empty project");
+    MeasurementWorkspace workspace(independentPath,independentProject.project().id,[]{return true;});
     MeasurementCamera camera{{"camera-A"},"Camera",{"webcam","7174",DeviceIdentityConfidence::ProviderReported,1,{true,true,false,false}}};
     MeasurementSetupDescriptor descriptor{{"setup-A"},camera.id,"Setup","lens","plane",1,1,{{640,200},{},{},true}};workspace.replace({{camera},{descriptor}});
     IndependentCaptureRequest target;target.camera=camera;target.setup=descriptor;
@@ -66,7 +75,40 @@ int main(int argc,char** argv){QApplication app(argc,argv);try{
         widget<QComboBox>(independent,"wizardUsage")->setCurrentIndex(trial==1 ? 0:1);if(trial==2)click(independent,"wizardAcquire");else independent.openFile(path);idle(independent);click(independent,"wizardNext");draw(independent,{20,100},{620,100});click(independent,"wizardDetect");idle(independent);click(independent,"wizardNext");widget<QDoubleSpinBox>(independent,"wizardKnownMm")->setValue(10);click(independent,"wizardNext");
         independent.resize(850,600);app.processEvents();independent.grab().save(QString("kmc6-independent-%1-small.png").arg(trial));click(independent,"wizardNext");
         check(independentRecord && std::abs(independentRecord->model().millimetresPerPixel()-.025)<.00001,"Recipe-free wizard real 400px/10mm");check(workspace.environment().selections.isEmpty(),"Wizard save does not activate");}
-    for(int pattern=0;pattern<2;++pattern){IndependentCaptureRequest trial;CalibrationWizard plateWizard(true,trial,tmp.path(),[&](const auto& r){workspace.saveTrial(r);});plateWizard.resize(1400,900);plateWizard.show();app.processEvents();plateWizard.openFile(tmp.filePath(QString("plate%1.png").arg(pattern)));idle(plateWizard);click(plateWizard,"wizardNext");widget<QComboBox>(plateWizard,"wizardPattern")->setCurrentIndex(pattern);widget<QSpinBox>(plateWizard,"wizardColumns")->setValue(pattern==0 ? 9:8);widget<QDoubleSpinBox>(plateWizard,"wizardSpacing")->setValue(5);click(plateWizard,"wizardDetect");idle(plateWizard);click(plateWizard,"wizardNext");click(plateWizard,"wizardNext");plateWizard.grab().save(QString("kmc6-independent-plate%1-normal.png").arg(pattern));click(plateWizard,"wizardNext");check(plateWizard.result()==QDialog::Accepted,"Recipe-free plate wizard saves actual H trial");}
+    auto plateSetup=descriptor;plateSetup.id={"setup-plate"};plateSetup.geometry.resolution={640,480};
+    workspace.replace({{camera},{descriptor,plateSetup}});
+    const SetupReference plateRef{camera.id,plateSetup.id,plateSetup.revision};
+    for(int pattern=0;pattern<2;++pattern){
+        const auto boardPath=tmp.filePath(QString("plate%1.png").arg(pattern));
+        const auto board=QImage(boardPath).convertToFormat(QImage::Format_Grayscale8);
+        for(int origin=0;origin<3;++origin){
+            IndependentCaptureRequest request;
+            if(origin){request.camera=camera;request.setup=plateSetup;}
+            IndependentCaptureBackend backend{[&]{return QVector<DeviceBinding>{camera.device};},[&](const DeviceBinding&,const GeometryDescriptor&){return std::make_unique<CameraFixture>(board);}};
+            std::optional<CalibrationModelRecord> plateRecord;
+            CalibrationWizard plateWizard(true,request,tmp.path(),[&](const auto& r){plateRecord=r;if(origin)workspace.calibrations().save(plateRef,r);else workspace.saveTrial(r);},nullptr,backend);
+            plateWizard.resize(1400,900);plateWizard.show();app.processEvents();
+            widget<QComboBox>(plateWizard,"wizardUsage")->setCurrentIndex(origin ? 1:0);
+            if(origin==2)click(plateWizard,"wizardAcquire");else plateWizard.openFile(boardPath);
+            idle(plateWizard);click(plateWizard,"wizardNext");
+            widget<QComboBox>(plateWizard,"wizardPattern")->setCurrentIndex(pattern);
+            widget<QSpinBox>(plateWizard,"wizardColumns")->setValue(pattern==0 ? 9:8);
+            widget<QDoubleSpinBox>(plateWizard,"wizardSpacing")->setValue(5);
+            click(plateWizard,"wizardDetect");idle(plateWizard);click(plateWizard,"wizardNext");click(plateWizard,"wizardNext");
+            check(plateWizard.grab().save(QString("kmc9-plate%1-origin%2-normal.png").arg(pattern).arg(origin)),"Plate normal visual evidence");
+            plateWizard.resize(850,600);app.processEvents();
+            check(plateWizard.grab().save(QString("kmc9-plate%1-origin%2-small.png").arg(pattern).arg(origin)),"Plate small visual evidence");
+            check(widget<QPushButton>(plateWizard,"wizardNext")->geometry().bottom()<=plateWizard.height(),"Plate small-screen footer visible");
+            click(plateWizard,"wizardNext");
+            check(plateWizard.result()==QDialog::Accepted && plateRecord && plateRecord->model().mapping(),"Recipe-free plate saves actual H for each origin");
+            check(plateRecord->image().origin==(origin==0 ? "trial_file":origin==1 ? "setup_file":"acquired") && plateRecord->activatable()==(origin!=0),"Plate origin and candidate readiness remain distinct");
+            const auto& mapping=*plateRecord->model().mapping();
+            check(mapping.observation().target.pattern==(pattern==0 ? CalibrationGridPattern::Chessboard:CalibrationGridPattern::SymmetricCircles),"Independent plate pattern preserved");
+            check(std::abs(PlaneMappingService::distance(mapping,mapping.observation().pixels[0],mapping.observation().pixels[1]).millimetres-5)<.01,"Independent 45px/5mm plate oracle");
+            check(CalibrationModelRecord::decode(plateRecord->encode()).encode()==plateRecord->encode(),"Each plate origin strict replay");
+            check(workspace.environment().selections.isEmpty(),"Plate save never activates");
+        }
+    }
     const auto original=*independentRecord;const auto originalBytes=original.encode();
     const SetupReference ref{camera.id,descriptor.id,1};const auto associated=workspace.associate(original,ref,path);
     check(original.encode()==originalBytes && associated.originalContentId()==original.contentId() && associated.image().origin=="setup_file" && associated.model().dependency().cameraId==original.model().dependency().cameraId,"Association retains original raster and session provenance");
@@ -74,5 +116,7 @@ int main(int argc,char** argv){QApplication app(argc,argv);try{
     bool missingRejected=false;try{workspace.associate(original,ref,tmp.filePath("missing.png"));}catch(...){missingRejected=true;}check(missingRejected,"Missing original raster cannot associate");
     QImage changed=stripe;changed.setPixelColor(5,5,Qt::white);const auto changedPath=tmp.filePath("changed.png");changed.save(changedPath);bool changedRejected=false;try{workspace.associate(original,ref,changedPath);}catch(...){changedRejected=true;}check(changedRejected,"Changed raster cannot associate");
     CalibrationWizard independentCancel(false,target,tmp.path(),[](const auto&){throw std::runtime_error("Unexpected independent save");});independentCancel.show();independentCancel.openFile(path);click(independentCancel,"wizardStop");idle(independentCancel);check(!widget<QLabel>(independentCancel,"wizardImageInfo")->text().contains("640"),"Independent Stop rejects late file");
+    check(independentFile.open(QIODevice::ReadOnly) && independentFile.readAll()==emptyProjectBytes,"Independent calibration preserves saved project bytes");
+    check(ProjectRepository{}.load(independentPath).recipes.isEmpty(),"Independent methods and origins never create a hidden recipe");
     QTextStream(stdout)<<"PASS "<<checks<<" UI checks; fixtures "<<tmp.path()<<'\n';tmp.setAutoRemove(false);return 0;
 }catch(const std::exception& e){QTextStream(stderr)<<"FAIL after "<<checks<<": "<<e.what()<<'\n';return 1;}}

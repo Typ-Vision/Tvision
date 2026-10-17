@@ -1,6 +1,6 @@
 # Reçeteden bağımsız kalibrasyon ve değişken kamera sayısı — geliştirme planı
 
-16 Ekim 2026. **Durum: KMC-0–8 tamamlandı (7a/7b ayrı); sıradaki KMC-9 birleşik A kabulü.** [Kimlik](measurement-setup-contract.md), [registry](measurement-environment.md), [reçetesiz edinim](independent-calibration-capture.md), [kurulum etkinliği](scoped-active-calibration.md), [Sistem özeti](calibration-overview.md), [scoped Editor/Runtime](scoped-calibration-integration.md) ve [açık migration/taşıma](measurement-setup-migration.md) uygulandı. Kullanıcının dört paket isteği KMC-6 → KMC-7a → KMC-7b → KMC-8 sırasında tamamlandı; KMC-9 başlatılmadı. Tek-source sınırı sürer; çok-source üretim B teslimidir. Legacy compatibility yalnız açık geçiş yapmamış reçetelerde korunur.
+17 Ekim 2026. **Durum: KMC-0–9 A yazılım kabulü tamamlandı (7a/7b ayrı); KMC-10a DAG/frame sözleşmesi uygulandı; KMC-10b execution/Editor uygulandı; KMC-10c1 çekirdek, KMC-10c2 terminal ve KMC-10d Runtime UI uygulandı; KMC-10e B yazılım kabulü ve fiziksel devir dokümanı tamamlandı; fiziksel kabul ayrı açık.** [Kimlik](measurement-setup-contract.md), [registry](measurement-environment.md), [reçetesiz edinim](independent-calibration-capture.md), [kurulum etkinliği](scoped-active-calibration.md), [Sistem özeti](calibration-overview.md), [scoped Editor/Runtime](scoped-calibration-integration.md) ve [açık migration/taşıma](measurement-setup-migration.md) uygulandı. Kullanıcının dört paket isteği KMC-6 → KMC-7a → KMC-7b → KMC-8 sırasında tamamlandı; [KMC-9 birleşik yazılım kabulü](independent-calibration-acceptance.md) UI/ZXing ON 80/80 ve Widgets OFF/ZXing OFF 68/68 ile tamamlandı. N kalibrasyon yönetimi tamamlandı; Editor editor9 çok-source çalıştırır; Runtime editor9 için bütün-source provider ile çalışır; terminal7 ve N-kamera UI bağlıdır; fiziksel kabul ayrı açıktır. Legacy compatibility yalnız açık geçiş yapmamış reçetelerde korunur.
 
 **Kamera sayısı sabit değildir.** Birçok makine tek kamera, bazıları 8–10 kamera kullanacaktır. Önceki taslaktaki beş kamera yalnız örnektir. Ürün, veri modeli, UI ve testlerde sabit beşli dizi veya 5 üst sınırı kullanılmaz. Tasarım N kamera içindir; kaynak/bellek sınırları açık, ölçülebilir ve yapılandırılabilir olmalıdır. “Sınırsız kamera” iddiası yoktur.
 
@@ -13,7 +13,7 @@
 - Kalibrasyonun kaydı ve etkinleştirilmesi ayrı işlemler olarak kalmalı.
 - Ana ekran **Sistem özeti** olmalı. Kurulum odaklı alternatif ayrıca ikinci bir ürün modu olarak geliştirilmez.
 - Tek kamera öncelikli sade kullanım; gerektiğinde 8–10 ve farklı kamera sayıları desteklenmeli.
-- İlk tasarım turu planlama içindi. Güncel dört paket yönlendirmesi KMC-6, KMC-7a, KMC-7b ve KMC-8 ile tamamlandı; sonraki KMC-9 ayrı yetkilendirme bekler; donanım ve kullanıcı ayarları değişmez.
+- İlk tasarım turu planlama içindi. Güncel dört paket yönlendirmesi KMC-6, KMC-7a, KMC-7b ve KMC-8 ile tamamlandı; sonraki görev yönlendirmesiyle KMC-9 A yazılım kabulü de tamamlandı; B sözleşmesi KMC-10a ile uygulandı; donanım ve kullanıcı ayarları değişmedi.
 
 ### Ayrıntılı planın başlangıç politikaları
 
@@ -298,7 +298,7 @@ kalan kabul ve sonraki değişiklik progress'e yazılır; sıradaki paket erken 
 - Sıfır reçetede Etki incelemesi boş fakat geçerli; aktivasyon bununla engellenmez. Source actual denetimi reçeteden bağımsızdır.
 - Kabul: `measurement_setup_migration`, `ui_scoped_calibration_activation`; v1–3 wrapper/legacy kayıtlar, bütün sürümler, ret/çatışma/tekrar, bağımsız aktif seçim, offline/busy/error, exact world etkisi.
 
-### KMC-9 — A tesliminin birleşik kabulü
+### KMC-9 — A tesliminin birleşik kabulü (tamamlandı)
 
 - Yeni/legacy boş ve dolu projeler; 0/1/2/8/10 kamera, tüm iki yöntem/dosya kökenleri ve üç applicationType üzerinden tam senaryolar.
 - UI ON/ZXing ON ve Widgets OFF/ZXing OFF Release tam CTest; normal/küçük ekran ve gerçek kullanıcı akışı görsel kabul. Sayılar o koşumdaki envanterden yazılır.
@@ -307,6 +307,11 @@ kalan kabul ve sonraki değişiklik progress'e yazılır; sıradaki paket erken 
 
 ### KMC-10a — Çok kaynaklı DAG ve frame sözleşmesi
 
+**Tamamlandı:** [editor9 opt-in, DAG kökeni ve source-frame sözleşmesi](multi-source-graph-contract.md).
+Root/recipe1–2, legacy codec/hash ve execution24/terminal6 korunur. Bu paket
+programatik sözleşmedir; schema9 execution/production açık ret verir. Son kabul
+kanıtları [progress](../progress.md); sonraki paket KMC-10b'dir.
+
 - Recipe/source schema, ToolDefinition/ToolGraph ve ToolValues frame semantiği. Yeni çok-source schema opt-in; eski no-op hash korunur.
 - Kaynak→dal/coordinate kimliği, required sources, per-port origin ve bounded source-frame index. CycleResult legacy frameId'nin yeni anlamı açık belirlenir; tek kareye sahte eşleme yapılmaz.
 - Cross-source image/region/point/reference/geometry reddi. Bu aşamada Production çok-source kapısı kapalı kalır.
@@ -314,12 +319,16 @@ kalan kabul ve sonraki değişiklik progress'e yazılır; sıradaki paket erken 
 
 ### KMC-10b — Çok kaynaklı execution ve Editor
 
+Uygulandı. [Kullanım, kabul ve sınırlar](multi-source-execution-editor.md); Release/CTest kanıtları [progress](../progress.md).
+
 - ExecutionService source başına frame ve resolver, sıralı acquisition, toplam deadline/cancel ve bellek bütçesi. Mevcut webcam kilidi paralel donanım desteği varmış gibi kaldırılmaz.
 - EditorSession per-source frame/cache; hedef tool yalnız kendi upstream kaynağını kullanır. Viewer source seçici, her branch'e doğru overlay, kaynak silme/yenileme davranışı.
 - Bir kameradaki parametre/kalibrasyon değişimi yalnız bağımlı dalları invalid eder. Raw/processed frame zinciri kamera kimliğini kaybetmez.
 - Kabul: `multi_source_execution`, `multi_source_target_only`, `ui_multi_source_editor`; 10 farklı gerçek dosya rasterı/farklı model, bağımsız ölçü oracle'ları, acquisition sayaçları, timeout/Stop/late frame, karışmış frame retleri. Production kapısı hâlâ kapalı.
 
 ### KMC-10c1 — Çok kaynaklı immutable Runtime ve completion çekirdeği
+
+Uygulandı; programatik/bellek kabulüdür. [Sözleşme ve sınırlar](multi-source-production-contract.md). Bu çekirdek paketinin kapanışında persistent/UI kapısı kapalıydı; KMC-10c2 ile bütün-set Runtime üzerinden açıldı.
 
 - Required source kümesinin tek tutarlı snapshot seti; admission anında sürüm seti sabitlenir. İki registry okuması arasında değişim ya bütün seti yeniden alır ya conflict verir.
 - ProductionRecipeService kaynak sayısı ve tek frameId varsayımları, ToolResultCodec/replay, completion resolver ve digest birlikte güncellenir. Kontrolü kaldırarak çok-source açılmaz.
@@ -329,6 +338,8 @@ kalan kabul ve sonraki değişiklik progress'e yazılır; sıradaki paket erken 
 
 ### KMC-10c2 — Çok kaynaklı terminal, restart ve dış sonuç kanıtı
 
+Uygulandı; [terminal7/retry/restart/socket sözleşmesi](multi-source-runtime-terminal.md). KMC-10e tam Release UI 87/87 / core OFF 73/73 kabulüne dahildir.
+
 - Yeni terminal schema/okuyucu/Logs/CSV tam snapshot setini taşır; eski 1–5 kayıtlarının anlamı korunur. N source-frame eşleşmesi ve immutable model seti kalıcı kayıttan tekrar doğrulanır.
 - Record failure/retry aynı trusted completion'ı saklar; yeniden capture veya model çözümü yapmaz. Restart, yetki veya güncel etkinlik uydurmaz; yalnız geçmiş sonucu okur.
 - vf.socket/2 mevcut seçili scalar output mapping semantiği korunur. Çoklu output/aggregate part decision eklenmez; timeout/ACK/dedup/outbox mevcut sınırları aşılmış gösterilmez.
@@ -336,12 +347,16 @@ kalan kabul ve sonraki değişiklik progress'e yazılır; sıradaki paket erken 
 
 ### KMC-10d — Çok kaynaklı Runtime görünümü ve N-kamera UX
 
+Uygulandı; [kaynak seçimi, model ve actual frame gösterimi](multi-source-runtime-terminal.md#runtime-kullanımı-ve-n-kaynak-ux).
+
 - E7 N kaynak hazırlık tablosu, selected frame Viewer, kaynak bazlı hata/kalibrasyon gösterimi, Logs/CSV erişimi.
 - Kullanılmayan offline kamera iş hazırlığını etkilemez. Aynı kamera bir reçetede iki çelişkili profille istenirse açık ret; aynı fiziksel kaynağın tekrar kullanım politikası açık tanımlanır, iki gizli capture yapılmaz.
 - 8–10 kaynakta gereksiz canlı preview yok; listeler klavye ve küçük ekranda erişilebilir.
 - Kabul: `ui_multi_source_runtime`; 1/2/8/10 kaynak, busy/Stop, preparation vs actual frame, geçmiş sürüm gösterimi, 1400×900/850×600 görseller.
 
 ### KMC-10e — B teslimi ve fiziksel kabul devir paketi
+
+[Birleşik kabul, kapasite ve fiziksel devir listesi](multi-source-release-acceptance.md); tam Release UI/ZXing ON 87/87 ve Widgets OFF/ZXing OFF 73/73 geçti. B yazılım kabulü ve devir dokümanı tamamlandı; fiziksel kabul ayrı açıktır.
 
 - Tam Release ON/OFF CTest, legacy migration/replay/socket/code/world/pose regresyonları ve uçtan uca N kaynak senaryoları.
 - Kapasiteyi sayı yerine frame boyutu/toplam byte/deadline ile ölç; fixture boyutları ve kaynak sayısı raporda. 10 küçük PNG başarısı 10 endüstriyel kameranın üretim hızını kanıtlamaz.
@@ -374,7 +389,7 @@ Mevcut regresyon çekirdeği: `active_calibration_contract`, `calibration_wizard
 
 ## 8. Yerel doğrulama ve kanıt düzeni
 
-Başlangıç kaynağı README ve `docs/windows-workstation.md`; bu makinenin yolları aşağıdadır. Mevcut cache uyumluysa yeniden configure/install yapılmaz. Bu komutlar **plan örneğidir, bu tur çalıştırılmadı**.
+Başlangıç kaynağı README ve `docs/windows-workstation.md`; bu makinenin yolları aşağıdadır. Mevcut cache uyumluysa yeniden configure/install yapılmaz. KMC-9 gerçek ayrı ON/UI ve OFF/core koşumları, komutları ve kanıtları [kabul kaydındadır](independent-calibration-acceptance.md). Aşağıdaki komutlar genel örnektir; reference-core önceki ZXing ON cache olarak korunur, KMC-9 OFF koşumu build/kmc9-core-off kullanır.
 
 ```powershell
 $env:PATH = 'C:\OpenCV\5.0.0\x64\mingw\bin;C:\Qt\6.12.0\mingw_64\bin;C:\Qt\Tools\mingw1310_64\bin;C:\Qt\Tools\CMake_64\bin;C:\Qt\Tools\Ninja;' + $env:PATH

@@ -3,6 +3,7 @@
 #include "domain/ToolRegistry.hpp"
 #include <QCryptographicHash>
 #include <QJsonDocument>
+#include <QJsonArray>
 #include <QSet>
 #include <stdexcept>
 namespace visionflow {
@@ -12,6 +13,16 @@ QString digest(const QJsonObject& o){return QString::fromLatin1(QCryptographicHa
 void valid(const ActiveCalibrationSnapshot& snapshot){const auto r=CalibrationModelRecord::decode(snapshot.record.encode());const auto& d=r.model().dependency();require(snapshot.selection.id==d.calibrationId && snapshot.selection.version==d.version && snapshot.selection.contentId==r.contentId() && snapshot.selection.revision>0 && snapshot.selection.revision<=1000000000 && r.activatable(),"Invalid active model-ready selection/evidence");
     if(!snapshot.scope.isEmpty()){const auto o=snapshot.scope;require(o.size()==5 && o["setup"].isObject() && o["schemaVersion"]==1 && o["target"].isObject() && o["device"].isObject() && o["geometryId"].isString(),"Invalid scoped calibration envelope");const auto ref=SetupReference::fromJson(o["target"].toObject());const auto device=DeviceBinding::fromJson(o["device"].toObject());const auto setup=MeasurementSetupDescriptor::fromJson(o["setup"].toObject());require(setup.camera==ref.camera && setup.id==ref.setup && setup.revision==ref.revision && setup.deviceRevision==device.revision && setup.geometryId()==o["geometryId"].toString() && setup.opticalProfile==r.setup().lensId && setup.workingPlane==r.setup().planeId && setup.geometry.resolution==r.setup().resolution,"Scope descriptor mismatch");require(r.setup().id==ref.setup.value+"/"+QString::number(ref.revision) && r.setup().adapter==device.adapter && r.setup().configId==CalibrationWizardSession::configurationId({{"geometryId",o["geometryId"]},{"device",device.toJson()}}),"Scoped physical installation/evidence mismatch");}}
 QJsonObject selection(const ActiveCalibrationSelection& s){return {{"id",s.id},{"version",s.version},{"contentId",s.contentId},{"revision",s.revision}};}
+}
+Recipe SystemCalibration::branch(const Recipe& recipe,const QString& source) {
+    auto r=recipe;const auto tools=editorTools(r.definition);const auto connections=editorConnections(r.definition);const auto graph=validateGraph(tools,connections);
+    QJsonArray array;QVector<ToolConnection> links;QSet<QString> ids;
+    for(const auto& t:tools)if(t.id==source || graph.toolSources.value(t.id)==source){array.append(encodeEditorTool(t,9));ids.insert(t.id);}
+    for(const auto& c:connections)if(ids.contains(c.sourceTool) && ids.contains(c.targetTool))links.append(c);
+    r.definition["editor"]=QJsonObject{{"schemaVersion",9},{"tools",array},{"connections",QJsonArray{}}};r.definition=withEditorConnections(r.definition,links);
+    auto binding=r.definition["sourceSetups"].toObject()[source].toObject();const auto legacy=r.definition["sourceSetup"].toObject();if(binding.isEmpty() && legacy["sourceToolId"]==source)binding=legacy;
+    r.definition.remove("sourceSetups");r.definition.remove("sourceSetup");if(!binding.isEmpty())r.definition["sourceSetup"]=binding;
+    r.definition["calibrationPolicy"]="scoped-source/1";r.calibrationBinding.reset();return r;
 }
 QJsonObject SystemCalibration::sourceBinding(const QString& source,const SetupReference& target){target.validate();return {{"schemaVersion",1},{"sourceToolId",source},{"target",target.toJson()}};}
 std::optional<SetupReference> SystemCalibration::setupReference(const Recipe& r){if(!r.definition.contains("sourceSetup"))return {};const auto o=r.definition["sourceSetup"].toObject();require(o.size()==3 && o["schemaVersion"]==1 && o["sourceToolId"]==source(r).id && o["target"].isObject(),"Invalid source/setup binding");return SetupReference::fromJson(o["target"].toObject());}

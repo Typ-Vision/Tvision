@@ -7,6 +7,7 @@ namespace visionflow {
 // The original model/evidence is never relabelled or written to legacy codecs.
 class SystemCalibration {
 public:
+    static Recipe branch(const Recipe&,const QString& source);
     static std::optional<SetupReference> setupReference(const Recipe&);
     static QJsonObject sourceBinding(const QString& sourceToolId,const SetupReference&);
     static ToolDefinition source(const Recipe&);

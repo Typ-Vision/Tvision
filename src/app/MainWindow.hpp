@@ -34,6 +34,8 @@ class CalibrationOverview;
 class MainWindow : public QMainWindow {
 public:
     explicit MainWindow(const QString& settingsFile);
+    bool verifyMultiSource(const QString& artifacts);
+    bool verifyMultiSourceRuntime(const QString& artifacts);
     bool verifyShell();
     bool verifyWorkspace(const QString& artifactDirectory);
     bool verifyEditor(const QString& artifactDirectory);
@@ -231,6 +233,9 @@ private:
     QLabel* runtimeStatus_{};
     QLabel* runtimeSummary_{};
     QComboBox* runtimeTools_{};
+    QComboBox* runtimeSources_{};
+    QTableWidget* runtimePreparation_{};
+    void refreshRuntimeSources();
     QTableWidget* logTable_{};
     QLabel* logStatus_{};
 };

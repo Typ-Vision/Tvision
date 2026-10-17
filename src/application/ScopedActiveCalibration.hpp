@@ -26,14 +26,14 @@ public:
     void setOperational(const CameraId&,const SetupId&);
     void disconnect(const CameraId&);
     void refreshAvailability(const QVector<DeviceBinding>&);
-    QVector<ScopedCalibrationSnapshot> snapshots(const QVector<SetupReference>&) const;
+    QVector<ScopedCalibrationSnapshot> snapshots(const QVector<SetupReference>&,std::function<void()> beforeVerify={}) const;
 private:
     void owner() const;
     MeasurementSetup installation(const MeasurementEnvironment&,const SetupReference&) const;
     MeasurementEnvironmentRepository repository_;
     ActiveCalibrationService::ChangeGate gate_;
     QThread* thread_;
-    struct Permission { RememberedCalibration selection; int revision; };
+    struct Permission { RememberedCalibration selection; int revision; bool operator==(const Permission&) const = default; };
     QMap<QString,Permission> permissions_;
     int revision_=0;
     QSet<QString> usedProbes_;

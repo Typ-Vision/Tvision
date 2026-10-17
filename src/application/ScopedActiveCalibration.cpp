@@ -1,5 +1,7 @@
 #include "ScopedActiveCalibration.hpp"
 #include <stdexcept>
+#include <QFile>
+#include <QCryptographicHash>
 namespace visionflow {
 namespace {QJsonObject setupProof(const MeasurementEnvironment& e,const SetupReference& r){for(auto s:e.current.setups)if(s.id==r.setup && s.revision==r.revision){s.name=s.id.value;return s.toJson();}throw std::runtime_error("Missing setup proof");}
 QString sGeometryId(const MeasurementEnvironment& e,const SetupReference& r){for(const auto& s:e.current.setups)if(s.id==r.setup && s.revision==r.revision)return s.geometryId();throw std::runtime_error("Missing setup geometry");}
@@ -68,14 +70,16 @@ void ScopedActiveCalibrationService::disconnect(const CameraId& camera){owner();
 void ScopedActiveCalibrationService::refreshAvailability(const QVector<DeviceBinding>& devices){
     const auto e=environment();for(const auto& c:e.current.cameras)try{c.device.resolve(devices);}catch(const std::exception&){disconnect(c.id);}
 }
-QVector<ScopedCalibrationSnapshot> ScopedActiveCalibrationService::snapshots(const QVector<SetupReference>& refs) const {
-    const auto e=environment();QVector<ScopedCalibrationSnapshot> out;QSet<QString> seen;
+QVector<ScopedCalibrationSnapshot> ScopedActiveCalibrationService::snapshots(const QVector<SetupReference>& refs,std::function<void()> beforeVerify) const {
+    auto fingerprint=[&]{QFile f(repository_.catalogPath());if(!f.exists())return QByteArray("missing");require(f.open(QIODevice::ReadOnly) && f.size()<=4*1024*1024,"Catalog snapshot bounded read failed");const auto bytes=f.read(4*1024*1024+1);require(f.error()==QFileDevice::NoError && bytes.size()<=4*1024*1024,"Catalog snapshot read failed");return QCryptographicHash::hash(bytes,QCryptographicHash::Sha256);};
+    const auto before=fingerprint();const auto e=environment();const auto permissions=permissions_;
+    const auto models=ActiveCalibrationService(repository_.catalogPath(),e.projectId,gate_).records();QVector<ScopedCalibrationSnapshot> out;QSet<QString> seen;
     for(const auto& ref:refs){require(!seen.contains(ref.setup.value),"Duplicate snapshot target");seen.insert(ref.setup.value);
         const auto expected=installation(e,ref);require(e.operational.value(ref.camera.value)==ref.setup.value && permissions_.contains(ref.setup.value),"Installation requires explicit activation");
         const auto p=permissions_.value(ref.setup.value);require(p.selection.target==ref && e.selections.contains(p.selection),"Selection changed; reactivate");bool found=false;
-        for(const auto& r:records(ref))if(r.contentId()==p.selection.contentId && r.activatable() && r.setup()==expected){
+        for(const auto& r:models)if(r.contentId()==p.selection.contentId && r.activatable() && r.setup()==expected){
             for(const auto& c:e.current.cameras)if(c.id==ref.camera)out.append({ref,c.device,{r,{p.selection.id,p.selection.contentId,p.selection.version,p.revision},{{"schemaVersion",1},{"target",ref.toJson()},{"device",c.device.toJson()},{"geometryId",sGeometryId(e,ref)},{"setup",setupProof(e,ref)}}}});found=true;
         }require(found,"Calibration dependency unavailable");
-    }return out;
+    }if(beforeVerify)beforeVerify();require(before==fingerprint() && e.encode()==environment().encode() && permissions==permissions_,"Calibration snapshot set changed; retry whole admission");return out;
 }
 }

@@ -16,16 +16,20 @@ int main(int argc, char* argv[]) {
     QFile theme(":/resources/theme.qss");
     if (!theme.open(QIODevice::ReadOnly)) return 2;
     app.setStyleSheet(QString::fromUtf8(theme.readAll()));
+    const bool multiRuntimeOnly=app.arguments().contains("--multi-source-runtime-smoke");
+    const bool multiOnly=app.arguments().contains("--multi-source-smoke");
     const bool circleOnly=app.arguments().contains("--circle-smoke");
     const bool systemOnly=app.arguments().contains("--system-calibration-smoke");
     const bool geometryOnly=app.arguments().contains("--geometry-smoke");
     const bool poseOnly=app.arguments().contains("--pose-tracking-smoke");
     const bool usabilityOnly=app.arguments().contains("--usability-smoke");
-    const bool smoke = app.arguments().contains("--smoke-test") || circleOnly || geometryOnly || poseOnly || usabilityOnly || systemOnly;
+    const bool smoke = app.arguments().contains("--smoke-test") || circleOnly || geometryOnly || poseOnly || usabilityOnly || systemOnly || multiOnly || multiRuntimeOnly;
     const QDir buildDir(QCoreApplication::applicationDirPath());
     visionflow::MainWindow window(buildDir.filePath(smoke ? "ui-smoke.ini" : "../config/local.ui.ini"));
     window.show();
     if (smoke) QTimer::singleShot(100, &app, [&]{
+        if(multiRuntimeOnly){QFontDatabase::addApplicationFont(QDir(qEnvironmentVariable("WINDIR", "C:/Windows")).filePath("Fonts/segoeui.ttf"));bool valid=false;try{valid=window.verifyMultiSourceRuntime(buildDir.absolutePath());}catch(const std::exception& e){QTextStream(stderr)<<e.what()<<'\n';}window.close();app.exit(valid ? 0:1);return;}
+        if(multiOnly){QFontDatabase::addApplicationFont(QDir(qEnvironmentVariable("WINDIR", "C:/Windows")).filePath("Fonts/segoeui.ttf"));bool valid=false;try{valid=window.verifyMultiSource(buildDir.absolutePath());}catch(const std::exception& e){QTextStream(stderr)<<e.what()<<'\n';}window.close();app.exit(valid ? 0:1);return;}
         if(systemOnly){QFontDatabase::addApplicationFont(QDir(qEnvironmentVariable("WINDIR", "C:/Windows")).filePath("Fonts/segoeui.ttf"));bool valid=false;try{valid=window.verifySystemCalibration(buildDir.absolutePath());}catch(const std::exception& e){QTextStream(stderr)<<e.what()<<'\n';}window.close();app.exit(valid ? 0:1);return;}
         if(usabilityOnly){QFontDatabase::addApplicationFont(QDir(qEnvironmentVariable("WINDIR", "C:/Windows")).filePath("Fonts/segoeui.ttf"));bool valid=false;try{valid=window.verifyEditorUsability(buildDir.absolutePath());}catch(const std::exception& e){QTextStream(stderr)<<e.what()<<'\n';}window.close();app.exit(valid ? 0:1);return;}
         if(poseOnly){QFontDatabase::addApplicationFont(QDir(qEnvironmentVariable("WINDIR", "C:/Windows")).filePath("Fonts/segoeui.ttf"));bool valid=false;try{valid=window.verifyPoseTracking(buildDir.absolutePath());}catch(const std::exception& e){QTextStream(stderr)<<e.what()<<'\n';}window.close();app.exit(valid ? 0:1);return;}

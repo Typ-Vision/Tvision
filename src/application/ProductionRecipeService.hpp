@@ -25,6 +25,7 @@ struct ProductionDependencies {
     QJsonObject systemCalibration;
     QJsonObject measurementSource;
 };
+struct MultiSourceDependencies {QMap<QString,ProductionDependencies> sources;};
 struct RecipeValidation {
     QString id,principal;
     QByteArray contentId,dependencyId;
@@ -39,6 +40,7 @@ public:
     const QJsonObject& dependencies() const { return dependencies_; }
 private:
     friend class ProductionRecipeService;
+    friend class MultiSourceRuntimeService;
     Recipe recipe_;
     QString directory_;
     RecipeValidation validation_;
@@ -70,6 +72,9 @@ public:
     bool busy() const;
 private:
     friend class RuntimeService;
+    friend class MultiSourceRuntimeService;
+    static QJsonObject validateMultiSourceCompletion(const ProductionCycle&,const CycleResult&,const QMap<QString,std::shared_ptr<const ProductionSnapshot>>&);
+    static QByteArray recipeContent(const Recipe&,const QString& directory);
     static QByteArray completionDigest(const CycleResult&);
     void owner() const;
     void permission(const QString&,ProductionAction) const;

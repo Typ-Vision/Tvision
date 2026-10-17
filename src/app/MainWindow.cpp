@@ -31,7 +31,7 @@ QFrame* card(const QString& title, const QString& text) {
 }
 }
 MainWindow::MainWindow(const QString& settingsFile) : settingsFile_(settingsFile) {
-    smokeMode_=QCoreApplication::arguments().contains("--system-calibration-smoke") || QCoreApplication::arguments().contains("--usability-smoke") || QCoreApplication::arguments().contains("--smoke-test") || QCoreApplication::arguments().contains("--circle-smoke") || QCoreApplication::arguments().contains("--geometry-smoke");
+    smokeMode_=QCoreApplication::arguments().contains("--multi-source-smoke") || QCoreApplication::arguments().contains("--system-calibration-smoke") || QCoreApplication::arguments().contains("--usability-smoke") || QCoreApplication::arguments().contains("--smoke-test") || QCoreApplication::arguments().contains("--circle-smoke") || QCoreApplication::arguments().contains("--geometry-smoke");
     setWindowTitle("VisionFlow Industrial Vision Suite"); resize(1400,900); setMinimumSize(850,600);
     auto* file = menuBar()->addMenu("File");
     auto* create=file->addAction("New Project"); create->setShortcut(QKeySequence::New);
@@ -123,7 +123,8 @@ QWidget* MainWindow::makeDashboard() {
     connect(projects,&QPushButton::clicked,this,[this]{selectPage("projects");}); layout->addStretch(); return page;
 }
 void MainWindow::selectPage(const QString& id) {
-    if(operatorMode_ && id!="runtime")return;
+    // Operator history is read-only and has an explicit return to Runtime.
+    if(operatorMode_ && id!="runtime" && id!="logs")return;
     const int index = pageIds_.indexOf(id); if (index<0) return;
     if (id!="editor" && pages_->currentIndex()==pageIds_.indexOf("editor") && !applyToolProperties()) {
         const QSignalBlocker blocker(navigation_);

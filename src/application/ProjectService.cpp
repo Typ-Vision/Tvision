@@ -108,7 +108,8 @@ void ProjectService::setTools(const QVector<ToolDefinition>& tools,const QVector
     const auto* active=activeRecipe(); if (!active) fail("Önce bir reçete açın."); const QString id=active->id;
     auto candidate=project();
     for (auto& r : candidate.recipes) if (r.id==id) {
-        auto definition=withEditorTools(r.definition,tools);if(definition.contains("sourceSetup")){const auto source=definition["sourceSetup"].toObject()["sourceToolId"].toString();if(std::none_of(tools.begin(),tools.end(),[&](const auto& t){return t.id==source;}))definition.remove("sourceSetup");}
+        auto base=r.definition;if(base.contains("sourceSetup") && std::none_of(tools.begin(),tools.end(),[&](const auto& t){return t.id==base["sourceSetup"].toObject()["sourceToolId"].toString();}))base.remove("sourceSetup");if(base.contains("sourceSetups")){auto bindings=base["sourceSetups"].toObject();for(auto i=bindings.begin();i!=bindings.end();)if(std::none_of(tools.begin(),tools.end(),[&](const auto& t){return t.id==i.key();}))i=bindings.erase(i);else ++i;base["sourceSetups"]=bindings;}
+        auto definition=withEditorTools(base,tools);if(definition.contains("sourceSetup")){const auto source=definition["sourceSetup"].toObject()["sourceToolId"].toString();if(std::none_of(tools.begin(),tools.end(),[&](const auto& t){return t.id==source;}))definition.remove("sourceSetup");}
         auto connections=bindings ? *bindings:editorConnections(definition);
         const auto previous=editorTools(r.definition);
         auto removed=[&](const QString& id){
@@ -126,9 +127,15 @@ void ProjectService::setTools(const QVector<ToolDefinition>& tools,const QVector
         project_=candidate; changedRecipes_.insert(id); dirty_=true; return;
     }
 }
+void ProjectService::enableMultiSource() {
+    if(!activeRecipe())fail("Recipe required");const auto definition=withMultiSourceSchema(activeRecipe()->definition);
+    if(definition==activeRecipe()->definition)return;
+    for(auto& r:project_->recipes)if(r.id==activeId_){r.definition=definition;r.status=RecipeStatus::Draft;}
+    dirty_=true;changedRecipes_.insert(activeId_);
+}
 QString ProjectService::addTool(const QString& kind) {
     auto list=tools(); const auto params=defaultParameters(kind);
-    if (kind=="image_file") for (const auto& t : list) if (t.kind==kind) { return t.id; }
+    if (kind=="image_file" && activeRecipe()->definition["editor"].toObject()["schemaVersion"].toInt()!=9) for (const auto& t : list) if (t.kind==kind) { return t.id; }
     int suffix=1; QString name;
     do {
         name=toolLabel(kind).replace(' ','_')+"_"+QString::number(suffix++);
@@ -240,10 +247,11 @@ void ProjectService::removeTool(const QString& id) {
     const auto it=std::find_if(list.begin(),list.end(),[&](const auto& t){return t.id==id;});
     if (it==list.end()) fail("Tool bulunamadı."); list.erase(it); setTools(list);
 }
-QString ProjectService::setImageFile(const QString& absolutePath) {
+QString ProjectService::setImageFile(const QString& absolutePath,const QString& source) {
     if (!QFileInfo(absolutePath).isAbsolute() || !QFileInfo(absolutePath).isFile()) fail("Görüntü dosyası yolu mevcut ve mutlak olmalı.");
     auto list=tools();
-    auto it=std::find_if(list.begin(),list.end(),[](const auto& t){return t.kind=="image_file";});
+    auto it=std::find_if(list.begin(),list.end(),[&](const auto& t){return t.kind=="image_file" && (source.isEmpty() || t.id==source);});
+    if(!source.isEmpty() && it==list.end())fail("Selected image source missing");
     if (it==list.end()) {
         ToolDefinition source{newId(),"image_file","Image_File_1","",true,defaultParameters("image_file")};
         int suffix=1;
@@ -288,12 +296,15 @@ void ProjectService::bindCalibration(const CalibrationDependency& dependency) {
     }
 }
 void ProjectService::bindSourceSetup(const QString& source,const QJsonObject& target){
-    if(!activeRecipe())fail("Önce reçete açın.");auto definition=activeRecipe()->definition;definition["sourceSetup"]=QJsonObject{{"schemaVersion",1},{"sourceToolId",source},{"target",target}};definition["calibrationPolicy"]="scoped-source/1";validateEditorDefinition(definition);
+    if(!activeRecipe())fail("Önce reçete açın.");auto definition=activeRecipe()->definition;const auto binding=QJsonObject{{"schemaVersion",1},{"sourceToolId",source},{"target",target}};
+    if(definition["editor"].toObject()["schemaVersion"]==9){auto bindings=definition["sourceSetups"].toObject();const auto legacy=definition.value("sourceSetup").toObject();if(!legacy.isEmpty()){bindings[legacy["sourceToolId"].toString()]=legacy;definition.remove("sourceSetup");}bindings[source]=binding;definition["sourceSetups"]=bindings;}else definition["sourceSetup"]=binding;definition["calibrationPolicy"]="scoped-source/1";validateEditorDefinition(definition);
     if(definition==activeRecipe()->definition)return;auto candidate=project();const auto id=activeRecipe()->id;
     for(auto& r:candidate.recipes)if(r.id==id){r.definition=definition;r.calibrationBinding.reset();r.calibrationReference.clear();r.status=RecipeStatus::Draft;}
     validateProject(candidate);project_=candidate;changedRecipes_.insert(id);dirty_=true;
 }
-void ProjectService::clearSourceSetup(){if(!activeRecipe())fail("Önce reçete açın.");if(!activeRecipe()->definition.contains("sourceSetup"))return;auto candidate=project();const auto id=activeRecipe()->id;for(auto& r:candidate.recipes)if(r.id==id){r.definition.remove("sourceSetup");r.calibrationBinding.reset();r.calibrationReference.clear();r.status=RecipeStatus::Draft;}project_=candidate;changedRecipes_.insert(id);dirty_=true;}
+void ProjectService::clearSourceSetup(const QString& source){
+    if(activeRecipe() && activeRecipe()->definition["editor"].toObject()["schemaVersion"]==9){auto d=activeRecipe()->definition;auto bindings=d.value("sourceSetups").toObject();if(!source.isEmpty() && !bindings.contains(source) && d.value("sourceSetup").toObject()["sourceToolId"]!=source)return;if(source.isEmpty())bindings={};else bindings.remove(source);d["sourceSetups"]=bindings;if(source.isEmpty() || d.value("sourceSetup").toObject()["sourceToolId"]==source)d.remove("sourceSetup");if(d==activeRecipe()->definition)return;for(auto& r:project_->recipes)if(r.id==activeId_){r.definition=d;r.status=RecipeStatus::Draft;}dirty_=true;changedRecipes_.insert(activeId_);return;}
+if(!activeRecipe())fail("Önce reçete açın.");if(!activeRecipe()->definition.contains("sourceSetup"))return;auto candidate=project();const auto id=activeRecipe()->id;for(auto& r:candidate.recipes)if(r.id==id){r.definition.remove("sourceSetup");r.calibrationBinding.reset();r.calibrationReference.clear();r.status=RecipeStatus::Draft;}project_=candidate;changedRecipes_.insert(id);dirty_=true;}
 void ProjectService::clearCalibrationBinding() {
     if(!activeRecipe())fail("Önce reçete açın.");if(!activeRecipe()->calibrationBinding)return;
     const auto id=activeRecipe()->id;auto candidate=project();

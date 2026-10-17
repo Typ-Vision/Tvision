@@ -16,6 +16,7 @@
 #include <QDataStream>
 #include "domain/ReferenceConfig.hpp"
 #include "SystemCalibration.hpp"
+#include "SourceFrameIndex.hpp"
 #include <cmath>
 #include <algorithm>
 
@@ -36,6 +37,33 @@ bool trustedCompletionRequired(const QVector<ToolDefinition>& tools) {
         (t.parameters.contains("referenceBinding") || t.kind=="pattern_pose" || t.kind=="shape_pose");});
 }
 bool terminal(ExecutionState s) {return s==ExecutionState::Done || s==ExecutionState::Error || s==ExecutionState::Skipped;}
+}
+QByteArray ProductionRecipeService::recipeContent(const Recipe& r,const QString& directory){return content(r,directory);}
+QJsonObject ProductionRecipeService::validateMultiSourceCompletion(const ProductionCycle& lease,const CycleResult& r,const QMap<QString,std::shared_ptr<const ProductionSnapshot>>& branches){
+    QJsonObject evidence;
+    auto invalid=[&](bool ok,const char* text){if(!ok)fail(ProductionError::InvalidCompletion,text);};
+    invalid(lease.snapshot && lease.ticket && r.completionSnapshot_==lease.snapshot && r.completionTicket_==lease.ticket && !r.completionDigest_.isEmpty() && r.completionDigest_==completionDigest(r),"Missing/changed/foreign multi-source trusted completion");
+    invalid((lease.snapshot->validation().scope=="multi_source_in_memory/1" || lease.snapshot->validation().scope=="multi_source_runtime/1") && !r.partial && r.targetToolId.isEmpty() && terminal(r.state) && r.recipeId==lease.snapshot->recipe().id && r.configId==lease.snapshot->validation().contentId && !r.cycleId.isEmpty(),"Invalid multi-source completion scope/identity");
+    const auto configured=editorTools(lease.snapshot->recipe().definition);const auto graph=validateSourceGraph(configured,editorConnections(lease.snapshot->recipe().definition));invalid(graph.valid() && branches.size()==graph.requiredSources.size(),"Snapshot graph/source set mismatch");
+    QStringList acquired;for(const auto& frame:r.frames){invalid(graph.requiredSources.contains(frame.sourceId) && !acquired.contains(frame.sourceId),"Duplicate/foreign acquired source");acquired.append(frame.sourceId);}
+    if(!r.frames.isEmpty()){SourceFrameIndex index(r.cycleId,acquired,r.frames);for(const auto& tool:r.tools)for(const auto& value:tool.outputs)if(value.valid)index.validatePort(graph.toolSources.value(tool.toolId),value,value.port);}
+    else for(const auto& tool:r.tools)for(const auto& value:tool.outputs)invalid(!value.valid,"Output without acquired frame");
+    if(r.state==ExecutionState::Done){invalid(acquired.size()==graph.requiredSources.size(),"DONE missing required source");SourceFrameIndex index(r.cycleId,graph.requiredSources,r.frames);invalid(r.frameId==index.legacyFrameId(),"Wrong compatibility frame ID");}
+    else if(graph.requiredSources.size()>1)invalid(r.frameId.isEmpty(),"Multi-source error invented shared frame ID");
+    QSet<QString> seen;for(const auto& tool:r.tools){invalid(!seen.contains(tool.toolId) && std::any_of(configured.cbegin(),configured.cend(),[&](const auto& t){return t.id==tool.toolId;}),"Duplicate/foreign completed tool");seen.insert(tool.toolId);if(!graph.requiredSources.contains(graph.toolSources.value(tool.toolId)))invalid(tool.state==ExecutionState::Skipped && tool.outputs.isEmpty() && tool.decision==PartDecision::NotEvaluated && !tool.calibration,"Disabled branch carried output");}
+    if(r.state==ExecutionState::Done)invalid(seen.size()==configured.size(),"DONE missing tool results");
+    for(const auto& source:graph.requiredSources){const auto snapshot=branches.value(source);invalid(bool(snapshot) && snapshot->dependencies()==lease.snapshot->dependencies()["sourceSet"].toObject()[source].toObject(),"Branch dependency set mismatch");
+        // Frozen dependency accessor, no live model resolution during completion.
+        ProductionRecipeService verifier([](const QString&,ProductionAction){return true;});verifier.active_=snapshot;verifier.cycle_={lease.ticket,snapshot};verifier.cyclePrincipal_=snapshot->validation().principal;verifier.cycleBeginId_=QUuid::createUuid().toString(QUuid::WithoutBraces);verifier.cycleStarted_=QDateTime::currentDateTimeUtc();
+        verifier.completionResolver_=[snapshot](const ImageFrame& image){if(snapshot->dependencies().contains("systemCalibration"))return SystemCalibration::resolve(SystemCalibration::decodeEvidence(snapshot->dependencies()["systemCalibration"].toObject()),snapshot->recipe(),snapshot->projectDirectory(),image);MeasurementExecutionContext c;c.rawSize=image.size();c.error="Raw-only immutable source";return c;};
+        auto part=r;part.configId=snapshot->validation().contentId;part.frames.clear();part.tools.clear();part.executedTools.clear();part.frameId.clear();
+        for(const auto& frame:r.frames)if(frame.sourceId==source){part.frames.append(frame);part.frameId=frame.frameId;}
+        for(const auto& tool:r.tools)if(graph.toolSources.value(tool.toolId)==source)part.tools.append(tool);
+        for(const auto& id:r.executedTools)if(graph.toolSources.value(id)==source)part.executedTools.append(id);part.acquisitions=part.executedTools.contains(source) ? 1:0;
+        part.completionSnapshot_=snapshot;part.completionTicket_=lease.ticket;part.completionDigest_=completionDigest(part);verifier.finishCycle(lease.ticket,part);
+        evidence[source]=verifier.cycleRecords().last();
+    }
+    return evidence;
 }
 QByteArray ProductionRecipeService::completionDigest(const CycleResult& r) {
     QByteArray bytes;QDataStream out(&bytes,QIODevice::WriteOnly);
@@ -138,6 +166,7 @@ RecipeValidation ProductionRecipeService::validate(const QString& principal,cons
         Project p;p.id=QUuid::createUuid().toString();p.name="Validation";p.cameraReference=draft.cameraReference;
         p.createdAt=p.modifiedAt=QDateTime::currentDateTimeUtc();p.recipes={draft};validateProject(p);
         validateEditorDefinition(draft.definition);
+        if(draft.definition["editor"].toObject()["schemaVersion"].toInt()==9)throw std::runtime_error("Editor9 requires whole source-set Runtime preparation");
         const auto tools=editorTools(draft.definition);const auto connections=editorConnections(draft.definition);
         const auto graph=validateGraph(tools,connections);
         if(!graph.valid())throw std::runtime_error(graph.errors.join("\n").toUtf8().constData());

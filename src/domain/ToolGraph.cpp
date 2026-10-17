@@ -47,7 +47,7 @@ QJsonObject withEditorConnections(QJsonObject definition,const QVector<ToolConne
 }
 GraphValidation validateGraph(const QVector<ToolDefinition>& tools,const QVector<ToolConnection>& connections) {
     GraphValidation r; QMap<QString,ToolDefinition> nodes; QMap<QString,int> indegree; QMap<QString,QStringList> next; QSet<QString> bound;
-    for (const auto& t:tools) {nodes[t.id]=t; indegree[t.id]=0;}
+    for (const auto& t:tools) {if(nodes.contains(t.id))r.errors<<"Duplicate tool ID: "+t.id;nodes[t.id]=t; indegree[t.id]=0;}
     for (const auto& c:connections) {
         if (!nodes.contains(c.sourceTool) || !nodes.contains(c.targetTool)) {r.errors<<"Eksik tool: "+c.sourceTool+" → "+c.targetTool;continue;}
         auto outputs=outputPorts(nodes[c.sourceTool].kind), inputs=inputPorts(nodes[c.targetTool].kind);
@@ -106,6 +106,30 @@ GraphValidation validateGraph(const QVector<ToolDefinition>& tools,const QVector
     QStringList ready; for (const auto& t:tools) if (indegree[t.id]==0) ready<<t.id;
     while (!ready.isEmpty()) {const auto id=ready.takeFirst(); r.order<<id; for (const auto& target:next[id]) if (--indegree[target]==0) ready<<target;}
     if (r.order.size()!=tools.size()) r.errors<<"Döngüsel bağımlılık (DAG gerekli).";
+    // Resolve disabled branches too; a disabled bridge cannot hide a cross-camera
+    // geometric connection. Legacy execution still handles disabled inputs as SKIPPED.
+    for(const auto& id:r.order) {
+        const auto& t=nodes[id];QSet<QString> origins;
+        if(ToolRegistry::get(t.kind).acquisitionSource) {
+            origins.insert(id);if(t.enabled)r.requiredSources.append(id);
+        }
+        for(const auto& c:connections)if(c.targetTool==id && nodes.contains(c.sourceTool)) {
+            const auto source=r.toolSources.value(c.sourceTool);
+            if(!source.isEmpty())origins.insert(source);
+        }
+        if(origins.size()>1)r.errors<<t.name+": cross-source inputs are not supported";
+        else if(origins.size()==1) {
+            const auto source=*origins.cbegin();r.toolSources[id]=source;
+            for(const auto& p:outputPorts(t.kind))r.portSources[id][p.id]=source;
+        }
+    }
     return r;
+}
+GraphValidation validateSourceGraph(const QVector<ToolDefinition>& tools,const QVector<ToolConnection>& connections) {
+    auto result=validateGraph(tools,connections);QMap<QString,ToolDefinition> nodes;
+    for(const auto& t:tools)nodes[t.id]=t;
+    for(const auto& c:connections)if(nodes.contains(c.sourceTool) && nodes.contains(c.targetTool) && nodes[c.targetTool].enabled && !nodes[c.sourceTool].enabled)
+        result.errors<<nodes[c.targetTool].name+": disabled upstream "+c.sourceTool;
+    return result;
 }
 }

@@ -4,6 +4,7 @@
 #include "CalibrationWorkflow.hpp"
 #include "SystemCalibration.hpp"
 namespace visionflow {
+class MultiSourceRuntimeService;
 struct RuntimeIdentity {
     QString principal;
     ProductionRecipeService::Authorize authorize;
@@ -15,7 +16,9 @@ public:
     using SystemProvider=std::function<std::optional<ActiveCalibrationSnapshot>()>;
     using ScopedProvider=std::function<std::optional<ActiveCalibrationSnapshot>(const Recipe&)>;
     using AcquisitionProvider=std::function<QJsonObject(const Recipe&)>;
-    RuntimeService(QString directory,QString catalogPath,RuntimeIdentity identity,SystemProvider system={},ScopedProvider scoped={},AcquisitionProvider acquisition={});
+    using MultiProvider=std::function<MultiSourceDependencies(const Recipe&)>;
+    RuntimeService(QString directory,QString catalogPath,RuntimeIdentity identity,SystemProvider system={},ScopedProvider scoped={},AcquisitionProvider acquisition={},MultiProvider multi={});
+    ~RuntimeService();
     RecipeValidation validate(const Recipe&,const QString& projectDirectory,const ImageFrame& acquired);
     // Configuration-only preparation; never acquires or asserts actual frame readiness.
     void checkConfiguration(const Recipe&,const QString& projectDirectory) const;
@@ -23,18 +26,18 @@ public:
     void activate(const Recipe&,const QString& projectDirectory);
     void rollback(const QString& validationId);
     ProductionCycle begin(const QJsonObject& communication={});
-    void requireReady() const {production_.requireReady(identity_.principal);}
+    void requireReady() const;
     void finish(quint64 ticket,const CycleResult&);
     void observeInstallation(const Recipe&);
-    std::shared_ptr<const ProductionSnapshot> active() const {return production_.active();}
-    bool busy() const {return production_.busy();}
+    std::shared_ptr<const ProductionSnapshot> active() const;
+    bool busy() const;
     QString principal() const {return identity_.principal;}
     const std::optional<RecipeValidation>& validation() const {return validation_;}
     QVector<QJsonObject> records() const {return store_.recent("cycles");}
     static ImageFrame probe(const Recipe&,const QString& directory,const std::shared_ptr<std::atomic_bool>& cancel);
     // Late Stop may only suppress an unchanged, trusted completion for this lease.
     static void suppressCancelled(const ProductionCycle&,CycleResult&);
-    static CycleResult execute(const ProductionCycle&,const QString& catalogPath,const std::shared_ptr<std::atomic_bool>& cancel);
+    static CycleResult execute(const ProductionCycle&,const QString& catalogPath,const std::shared_ptr<std::atomic_bool>& cancel,ExecutionService::SourceAdapterFactory factory={});
     static MeasurementExecutionContext calibration(const ProductionSnapshot&,const ImageFrame&,const QString& catalogPath);
 private:
     std::optional<ActiveCalibrationSnapshot> systemSnapshot(const Recipe&) const;
@@ -57,5 +60,8 @@ private:
     QMap<QString,QJsonObject> declaredInstallations_;
     ProductionRecipeService production_;
     std::optional<RecipeValidation> validation_;
+    MultiProvider multiProvider_;
+    std::unique_ptr<MultiSourceRuntimeService> multi_;
+    bool multiMode_=false;
 };
 }

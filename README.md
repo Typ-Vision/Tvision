@@ -1,14 +1,23 @@
 # VisionFlow Industrial Vision Suite
 
-16 Ekim — **KMC-0–8 tamamlandı (KMC-7a/7b ayrı paketler).** Setup → Calibration [Sistem özetini](docs/architecture/calibration-overview.md) açar. Kaydedilmiş proje yeterli, reçete gerekmez. 0/1/N kamera, metadata keşfi, kamera/kurulum yönetimi ve reçetesiz bilinen ölçü/plaka/dosya denemesi çalışır. Kamera sayısı sabit beşle sınırlı değildir; 8–10 dahil kartlar sarılır.
+17 Ekim kamera incelemesi: GenTL keşif/read-only kontrolü mevcut; gerçek endüstriyel stream/grab ve kalibrasyon/Editor/Runtime bağlantısı henüz uygulanmadı. Opto kamera için mevcut sınırlar ve önerilen GenICam/vendor SDK yolu [entegrasyon değerlendirmesinde](docs/architecture/industrial-camera-integration-assessment.md).
+
+17 Ekim KMC-10c2/10d uygulandı: editor9 bütün-set Runtime preparation, terminal7/restart/Logs/CSV ve vf.socket2 scalar mapping; N kaynak hazırlık tablosu, seçili gerçek frame/overlay ve immutable model gösterimi. [Kalıcı Runtime sözleşmesi](docs/architecture/multi-source-runtime-terminal.md). **KMC-10e B yazılım kabulü ve fiziksel devir dokümanı tamamlandı: tam Release UI/ZXing ON 87/87; Widgets OFF/ZXing OFF 73/73**; [B kabul ve fiziksel devir](docs/architecture/multi-source-release-acceptance.md). Aşağıdaki tarihli teslim kayıtları kendi kapanış durumlarını anlatır; güncel durum bu paragraftır. Fiziksel/native/lens/industrial/PLC/robot/CUDA/kurulum/dağıtım kabulü açık.
+
+17 Ekim KMC-10c1: tek tutarlı source/model snapshot seti, yalnız bellekte immutable admission, ortak Runtime worker ve N-frame trusted completion/replay uygulandı. Kullanıcının kalıcı editor9 production kapısı KMC-10c2 kabulüne kadar kapalıdır. [Programatik kapsam ve sınırlar](docs/architecture/multi-source-production-contract.md). Sıradaki KMC-10c2.
+
+16 Ekim KMC-10b: explicit editor9 ile çok kaynaklı Editor/execution, kaynak başına kare/cache/model, sıralı acquisition ve toplam süre/retained bellek bütçesi uygulandı. Viewer kaynak seçici ve TargetOnly acquisition0 bağlıdır. Production editor9 kapısı KMC-10c2 kabulüne kadar kapalıdır; sıradaki KMC-10c1. [Kullanım, sözleşme ve sınırlar](docs/architecture/multi-source-execution-editor.md).
+
+
+16 Ekim — **KMC-0–9 tamamlandı (KMC-7a/7b ayrı paketler).** Setup → Calibration [Sistem özetini](docs/architecture/calibration-overview.md) açar. Kaydedilmiş proje yeterli, reçete gerekmez. 0/1/N kamera, metadata keşfi, kamera/kurulum yönetimi ve reçetesiz bilinen ölçü/plaka/dosya denemesi çalışır. Kamera sayısı sabit beşle sınırlı değildir; 8–10 dahil kartlar sarılır.
 
 Kaydet aday oluşturur; [aktivasyon incelemesi](docs/architecture/measurement-setup-migration.md) ayrı gerçek kamera karesi denetler. Deneme ilişkilendirmesi özgün rasterı yeniden hash kontrol ederek ayrı türetim oluşturur. Eski geçmiş açık kurulum beyanıyla bütün sürümleri koruyarak aktarılır; eksik raster kanıtı üretilmez. Önceki akış/kanıt ekranları korunur.
 
-[Editor/Runtime](docs/architecture/scoped-calibration-integration.md) açık kaynak→kurulum bağıyla yalnız ilgili immutable modeli kullanır; terminal6 kamera/kurulum/replay kanıtı Logs/CSV’de kalır. Bağ kaldırmak legacy fallback sağlamaz. Yeni serviste restart seçimleri hatırlar, kullanım izni vermez. Mevcut reçetede tek edinim kaynağı sınırı sürer; aynı reçetede çok-source üretim B teslimidir.
+[Editor/Runtime](docs/architecture/scoped-calibration-integration.md) açık kaynak→kurulum bağıyla yalnız ilgili immutable modeli kullanır; terminal6 kamera/kurulum/replay kanıtı Logs/CSV’de kalır. Bağ kaldırmak legacy fallback sağlamaz. Yeni serviste restart seçimleri hatırlar, kullanım izni vermez. Editor çok kaynaklı editor9 çalıştırır; Runtime tek-source kalır, çok-source üretim KMC-10c1/c2 teslimidir.
 
 Kalibrasyon bağımlılık paketi import/export ve kaydedilmiş projenin registry/katalog/legacy/üretim geçmişiyle Save As komutu bağlıdır. Görüntüler otomatik paketlenmez; hedef varlıklar denetlenir, eksik/çatışan hedef reddedilir. Ayrıntılar [taşıma sözleşmesindedir](docs/architecture/measurement-setup-migration.md).
 
-Kullanıcının istediği **KMC-6 → KMC-7a → KMC-7b → KMC-8** sırasıyla tamamlandı; **sıradaki KMC-9 birleşik A kabulü başlatılmadı**. Güncel doğrulama, görseller ve fiziksel kabul sınırları [ilerleme kaydında](docs/progress.md), sonraki işler [KMC planındadır](docs/architecture/independent-calibration-implementation-plan.md).
+**KMC-9 birleşik A yazılım kabulü tamamlandı:** Release UI/ZXing ON tam CTest **80/80**, Widgets OFF/ZXing OFF **68/68** geçti. N kalibrasyon yönetimi tamamlandı; Runtime tek kaynaklıdır; Editor KMC-10b ile çok-source çalıştırır. Normal/küçük ekran akışları offscreen incelendi; fiziksel/native kabul açık. [Kabul matrisi ve kanıtlar](docs/architecture/independent-calibration-acceptance.md). **KMC-10a çok kaynaklı DAG/frame sözleşmesi** explicit editor9, dal/port kökeni ve bounded frame indeksi sunar; schema9 production kapısı kapalıdır. [Programatik sözleşme ve sınırlar](docs/architecture/multi-source-graph-contract.md). **KMC-10b uygulandı; sıradaki KMC-10c1.** Güncel doğrulama ve fiziksel kabul sınırları [ilerleme kaydında](docs/progress.md), sonraki işler [KMC planındadır](docs/architecture/independent-calibration-implementation-plan.md).
 
 ## İş bilgisayarında geliştirme ortamı
 
