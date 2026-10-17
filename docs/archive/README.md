@@ -6,6 +6,7 @@ görev” ifadeleri yazıldıkları tarihe aittir.
 
 | Dönem / görev | Kayıt |
 | --- | --- |
+| 18 Ekim 2026 — ICM-04d cancel incelemesi | [XML/header abort ve reset sınırı; üreticiye öncelikli soru](2026-10-18-icm-04d-cancel-audit.md) |
 | 18 Ekim 2026 — ICM-04d pending | [Gecikmiş software command Stop/Start sonrasında eski kare üretti](2026-10-18-icm-04d-pending.md) |
 | 18 Ekim 2026 — ICM-04d bariyer | [Clear eski kare karşı örneği, Stop/Start gözlemi ve stream sayaç reseti](2026-10-18-icm-04d-barrier.md) |
 | 17 Ekim 2026 — ICM-04d timestamp | [Çalışan latch, iki saat ölçeği, yanlış tazelik karşı örneği ve alternatif strateji](2026-10-17-icm-04d-timestamp.md) |

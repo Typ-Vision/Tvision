@@ -92,12 +92,10 @@ sözleşme/kabul bölümleri; büyük belgelerde önce başlık/ID arayın. Beli
 
 ## Son doğrulama ve çalışma ortamı
 
-- **Yeni ICM-04d pending tanısı**: ayrı opt-in Release build exit 0;
-  12 senaryo/36 command/32 kare, restart sonrası 8 gecikmiş eski kare.
-  Exposure/delay dahil restore/cleanup, bağımsız readback ve JSON/layout/hash
-  assertions geçti. `build/icm/04d-pending/`. İlgili mevcut SDK CTest **2/2 yeni koşum**.
-  Ürün/UI değişmedi; ürün rebuild, tam suite/görsel/stress koşulmadı.
-  Önceki kanıtlar `build/icm/04d-barrier/` ve `build/icm/04d-timestamp/` altında.
+- Son adım statik cancel incelemesi: XML/header assertions geçti;
+  `build/icm/04d-cancel-audit/`. Yeni donanım/build/CTest/görsel koşumu yok.
+  Önceki pending tanısı ve 2/2 SDK CTest kanıtı
+  [pending arşivinde](archive/2026-10-18-icm-04d-pending.md).
 - Eski test/build sonuçları arşivdedir; yeni koşum değildir.
   `plc_socket_runtime` aralıklı başarısızlığı/kök neden açık kalır.
 - Güncel UI `build/reference-ui/visionflow.exe`, core `build/kmc9-core-off`.
@@ -107,10 +105,13 @@ sözleşme/kabul bölümleri; büyük belgelerde önce başlık/ID arayın. Beli
 
 ## Kapanış ve sonraki adım
 
-Sıradaki **ICM-04d pending-command cancel/completion sınırı**: exact firmware için
-belgeli cancel veya teslim/drain/reset prosedürü. Delay'ı sonradan 0 yapmak,
-close/open veya sessiz beklemek kanıt değil. Üretici taslağı 8/8 karşı örnekle hazır,
-gönderilmedi. Aynı kısa sessizlik deneylerini tekrarlamayın. Native Unavailable;
+Sıradaki **ICM-04d üretici yanıtı: pending-command cancel/completion sınırı**.
+[Yerel cancel incelemesi](archive/2026-10-18-icm-04d-cancel-audit.md): XML'de
+AcquisitionAbort yok; DeviceReset açıklaması pending iptal/completion garantisi
+vermiyor; çalıştırılmadı. Sekiz SDK header'ında adında abort/cancel/drain olan API
+bulunmadı; CHM açılamadı. Üretici taslağında tek engelleyici soru öne alındı;
+gönderilmedi. Belgeli cancel veya completion/drain/reset prosedürü gerekli.
+Delay=0, close/open veya sessizlik kanıt değil; aynı deneyi tekrarlamayın. Native Unavailable;
 04e bundan sonra. İlk satır ürün geometri/kalibrasyon invalidation açık.
 ICM-01b için OECS sahne/release, G1 için 04e/stress açık.
 [Bağlam bakımı](archive/2026-10-17-context-maintenance.md).

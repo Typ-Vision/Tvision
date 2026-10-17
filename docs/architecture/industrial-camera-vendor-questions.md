@@ -5,6 +5,18 @@ Internal decision: [trigger correlation](industrial-camera-trigger-correlation.m
 
 Subject: COE-050-M-USB-050-IR-C — clean Mono8 metadata and software trigger readiness
 
+**Blocking question to answer first:** on firmware V1.4.8 190411,19012902,
+what supported procedure cancels a delayed software trigger or proves that all
+pre-boundary commands have completed before accepting a new trigger? A command
+with TriggerDelay=500000 us survived ClearImageBuffer → StopGrabbing → StartGrabbing
+in 8/8 trials. Please provide the exact API/node sequence, completion condition,
+and failure/recovery behavior. The captured XML has no AcquisitionAbort command.
+It has DeviceReset, described only as restoring initial state/default settings;
+does that reset cancel pending commands, and what signal proves reset completion
+and a new counter epoch? We have not executed DeviceReset. A documented solution
+to this question is enough to evaluate the single-outstanding-trigger strategy;
+the remaining questions below describe alternatives and measurement constraints.
+
 We are integrating one COE-U camera through the OECS C API. We need a documented
 way to associate each accepted software trigger with exactly one new frame while
 preserving all pixels in an explicitly defined measurement region. The full sensor
