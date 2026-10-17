@@ -92,6 +92,19 @@ EEPROM/UserSetSave yapılmaz; geçici çalışma ayarları varsayılandır.
 | Producer/SDK sürümü | Backend capability ve preparation yeniden kontrol edilir; optik model sessiz değiştirilmez |
 | UI adı/panel düzeni | Geometri/profile hash değişmez |
 
+**ICM-03b uygulanan değer tipleri** (`domain/MeasurementSetupContract`): geometri setup'ındır;
+`GeometryDescriptor2` endüstriyel setup'ta offset (sensorRoi), binning, decimation ve reverse'ü
+birlikte açık yazar, yoksa schema 1 bayt/hash aynıdır; webcam setup'ı schema 2 alamaz, endüstriyel
+complete setup schema 1 kalamaz. `AcquisitionProfile1` (ProfileId, CameraId, SetupId, ad, revision,
+`requested` = `AcquisitionSettings1`: pixel format, trigger enabled/selector/source, exposure/gain
+auto+değer, ışık beyanı) ilk sürümde yalnız Mono8 ve manual exposure/gain kabul eder; contract
+`profiles` boş değilse schema 2'dir. `acquisitionId` = geometryId + requested; ad/ID/revision dışarıda.
+Tablo tek kuraldır: `acquisitionChange` → setup/geometry/pixelFormat/acquisition/backend satırları;
+setup ve profile `revised` ile `verifyApplied` aynı kuralı kullanır. Applied readback
+(`AcquisitionReadback1`, özellik başına reported/not_applicable/unknown) projeye yazılmaz; unknown
+kritik geometri reddedilir; float temsil toleransı ICM-04b'dedir. Environment commit profile
+revision geçişini zorunlu kılar, silme reddedilir; Save As profili rota/readback/izin olmadan taşır.
+
 Externally changed settings begin öncesi ve actual capture sınırında kontrol edilir.
 Gerekli exclusive erişim/ayar kararlılığı kanıtlanamıyorsa kalibre production reddedilir.
 Readback ön/son tek başına tüm kamera içi yarışların fiziksel kanıtı gibi sunulmaz.

@@ -76,7 +76,7 @@ izni olarak sunulmaz. Production capability, ICM-08b trusted terminal kapısı b
 
 ## Görev envanteri ve bağımlılıklar
 
-**ICM-00, ICM-01a ve ICM-03a tamamlandı; ICM-01b açık; ICM-02 offline/koşullu tamamlandı.**
+**ICM-00, ICM-01a, ICM-03a ve ICM-03b tamamlandı; ICM-01b açık; ICM-02 offline/koşullu tamamlandı.**
 [Backend kararı](industrial-camera-backend-decision.md): OECS C API;
 gerçek cihaz readback/grab açık. Diğer satırlar PLANLANDI.
 [ICM-01a tanı kabulü](../archive/2026-10-17-icm-01a.md) fiziksel kapıları kapatmaz.

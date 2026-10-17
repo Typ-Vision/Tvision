@@ -6,12 +6,13 @@ başlangıçta arşivin tamamını okumayın.
 
 ## Devam noktası
 
-- **Son görev: ICM-03a cihaz kimliği/rota sözleşmesi tamamlandı** (Claude Code):
-  PhysicalDeviceIdentity1, yerel TransportLocator1/BackendIdentity1, MeasurementCamera2;
-  legacy schema 1 bayt/hash aynı. [Kapanış](archive/2026-10-17-icm-03a.md).
+- **Son görev: ICM-03b acquisition profile/geometry revision tamamlandı** (Claude Code):
+  GeometryDescriptor2, AcquisitionProfile1/Settings1, applied readback, tek invalidation
+  kuralı `acquisitionChange`; legacy bayt/hash aynı. [Kapanış](archive/2026-10-17-icm-03b.md).
+  Önceki ICM-03a kimlik/rota sözleşmesi [kapanışta](archive/2026-10-17-icm-03a.md).
   Backend kararı OECS C API ([ICM-02](archive/2026-10-17-icm-02.md)); şema/hash haritası
   [ICM-00 kaydındadır](architecture/industrial-camera-baseline.md).
-- **Sıradaki bağımsız ürün görevi: ICM-03b — acquisition profile ve geometry revision**.
+- **Sıradaki bağımsız ürün görevi: ICM-04a — backend session ve handle ömrü**.
   **ICM-01b fiziksel başlangıç açık**; [deneme kaydı](archive/2026-10-17-icm-01b.md).
   [Görev kartları](architecture/industrial-camera-tasks-foundation.md).
   ICM-00 veya tamamlanmış KMC görevlerini yeniden başlatmayın.
@@ -65,9 +66,10 @@ başlangıçta arşivin tamamını okumayın.
 
 ## Son doğrulama ve çalışma ortamı
 
-- ICM-03a: Release UI/core tam build exit 0; tam suite UI **88/88**, core **73/74**.
-  `plc_socket_runtime` tam koşumda çıktısız düştü, ayrı 5/5 geçti; kök neden açık.
-  Kanıt `build/icm/03a/`, JUnit `<build>/icm-03a-tests.xml`; UI değişmedi.
+- ICM-03b: Release UI/core tam build exit 0; tam suite core **74/74**, UI **87/88**.
+  `plc_socket_runtime` ("Stop cannot send stale PASS") düştü, ayrı 5/5 geçti; 03a'daki
+  aralıklı düşmeyle aynı, kök neden açık. Kanıt `build/icm/03b/`, JUnit
+  `<build>/icm-03b-tests.xml`; UI değişmedi. ICM-03a tarihsel: UI 88/88, core 73/74.
 - ICM-02: ayrı MinGW Release ABI probe configure/build exit 0; export kontrolleri,
   iki negatif senaryo geçti. GenApi başlık derlemesi beklenen engeli kaydetti.
   Ana UI/core Release build exit 0 (no work); her birinde `camera_transport` +
@@ -93,14 +95,15 @@ başlangıçta arşivin tamamını okumayın.
 
 ## Kapanış ve sonraki adım
 
-ICM-03a [kapanış](archive/2026-10-17-icm-03a.md), ICM-01b
+ICM-03b [kapanış](archive/2026-10-17-icm-03b.md), ICM-03a
+[kapanış](archive/2026-10-17-icm-03a.md), ICM-01b
 [açık fiziksel deneme](archive/2026-10-17-icm-01b.md), ICM-02
 [koşullu kapanış](archive/2026-10-17-icm-02.md). ICM-01a
 [tanı kapanışı](archive/2026-10-17-icm-01a.md) korundu.
 Önceki [bağlam bakımı](archive/2026-10-17-context-maintenance.md) ve tarihsel kopyalar korundu.
 ICM-01b için kullanıcı reboot sonrası OECS gerçek Mono8 görüntüsü, exact model/seri
 ve viewer release sonrası discovery/open kanıtı gerekir; reboot/driver değişimi yapılmadı.
-ICM-01b açık kaldı; sıradaki bağımsız görev ICM-03b'dir.
+ICM-01b açık kaldı; sıradaki bağımsız görev ICM-04a'dır.
 
 Her kapanışta bu özeti güncelleyin, günlük eklemeyin. Ayrıntılı kapsam/dosyalar/
 doğrulama/sınırlama/sonraki görev kaydını `docs/archive/` altında tutup buradan

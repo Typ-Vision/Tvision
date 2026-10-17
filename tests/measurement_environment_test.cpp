@@ -44,7 +44,7 @@ int main(int argc,char** argv){QCoreApplication app(argc,argv);try{
     {// ICM-03a: industrial identity persists without a local route; remap is explicit and revisioned.
         MeasurementEnvironmentRepository plantRepo(dir.path()+"/industrial.vfproject","project-I",10);MeasurementEnvironmentRegistry plant(plantRepo);
         MeasurementSetupContract line;line.cameras.append({{"line"},"Line camera",{"gentl","",DeviceIdentityConfidence::Unavailable,1,{false,true,false,false}},PhysicalDeviceIdentity{"OECS","COE-050-M-USB-050-IR-C","SN-0001",DeviceIdentityConfidence::SerialReported}});
-        line.setups.append({{"line-setup"},{"line"},"Line setup","lens","plane",1,1,{{2448,2048},{},{},true}});plant.replace(line);
+        line.setups.append({{"line-setup"},{"line"},"Line setup","lens","plane",1,1,{{2448,2048},QRect(0,0,2448,2048),QSize(1,1),true,QSize(1,1),GeometryMirror{}}});plant.replace(line);
         check(MeasurementEnvironmentRegistry(plantRepo).snapshot().encode(10)==plant.snapshot().encode(10),"industrial identity restart roundtrip");
         const auto stored=bytes(plantRepo.path());check(stored.contains("SN-0001") && !stored.contains("producer") && !stored.contains(".cti"),"environment stores physical identity, no local producer route");
         auto renamedLine=plant.snapshot().current;renamedLine.cameras[0].name="Renamed line";plant.replace(renamedLine);
@@ -54,6 +54,20 @@ int main(int argc,char** argv){QCoreApplication app(argc,argv);try{
         auto rebind=stale;auto relinked=rebind.setups[0];relinked.deviceRevision=2;rebind.setups[0]=rebind.setups[0].revised(relinked);plant.replace(rebind);
         check(plant.snapshot().current.cameras[0].device.revision==2 && plant.snapshot().current.setups[0].revision==2 && plant.snapshot().history.size()==2,"explicit rebind increments device and setup revision");
         MeasurementEnvironmentRepository plantCopy(dir.path()+"/industrial-copy.vfproject","project-I-copy",10);plantCopy.importBundle(plantRepo.exportBundle());
-        check(plantCopy.load().current.cameras[0].physical==plant.snapshot().current.cameras[0].physical,"Save As carries physical identity without route");}
+        check(plantCopy.load().current.cameras[0].physical==plant.snapshot().current.cameras[0].physical,"Save As carries physical identity without route");
+        // ICM-03b: profile persists, transitions are revisioned and Save As grants no usage.
+        auto withProfile=plant.snapshot().current;const auto lineSetup=withProfile.setups[0];
+        withProfile.profiles.append({{"line-profile"},{"line"},{"line-setup"},"Production",1,{"Mono8",{true,"FrameStart","Software"},AutoMode::Off,5000,AutoMode::Off,0,""}});plant.replace(withProfile);
+        const auto acquisition=plant.snapshot().current.profiles[0].acquisitionId(lineSetup);
+        check(MeasurementEnvironmentRegistry(plantRepo).snapshot().encode(10)==plant.snapshot().encode(10),"profile restart exact roundtrip");
+        auto silentExposure=plant.snapshot();silentExposure.current.profiles[0].requested.exposureTimeUs=8000;reject([&]{plantRepo.commit(plant.snapshot(),silentExposure);},"exposure change without profile revision rejected");
+        auto renamedProfile=plant.snapshot().current;renamedProfile.profiles[0].name="Renamed production";plant.replace(renamedProfile);
+        check(plant.snapshot().current.profiles[0].revision==1 && plant.snapshot().current.profiles[0].acquisitionId(lineSetup)==acquisition,"profile rename keeps revision and acquisition identity");
+        auto exposed=plant.snapshot().current;auto next=exposed.profiles[0];next.requested.exposureTimeUs=8000;exposed.profiles[0]=exposed.profiles[0].revised(next);plant.replace(exposed);
+        check(plant.snapshot().current.profiles[0].revision==2 && plant.snapshot().current.setups[0]==lineSetup && plant.snapshot().history.size()==2 && plant.snapshot().current.profiles[0].acquisitionId(lineSetup)!=acquisition,"exposure revises profile only, setup history untouched");
+        auto dropped=plant.snapshot();dropped.current.profiles.clear();reject([&]{plantRepo.commit(plant.snapshot(),dropped);},"profile deletion rejected");
+        MeasurementEnvironmentRepository profileCopy(dir.path()+"/industrial-profile-copy.vfproject","project-P-copy",10);profileCopy.importBundle(plantRepo.exportBundle());const auto copied=profileCopy.load();
+        check(copied.current.profiles==plant.snapshot().current.profiles && copied.current.profiles[0].acquisitionId(copied.current.setups[0])==plant.snapshot().current.profiles[0].acquisitionId(lineSetup),"Save As carries profile and acquisition identity");
+        const auto copiedBytes=bytes(profileCopy.path());check(copiedBytes.contains("line-profile") && !copiedBytes.contains("producer") && !copiedBytes.contains(".cti") && !copiedBytes.contains("evidence") && !copied.current.cameras[0].device.capabilities.softwareCapture,"copied profile carries no route, readback or capture permission");}
     QTextStream(stdout)<<checks<<" measurement environment checks passed\n";return 0;
 }catch(const std::exception& e){QTextStream(stderr)<<e.what()<<" after "<<checks<<" checks\n";return 1;}}

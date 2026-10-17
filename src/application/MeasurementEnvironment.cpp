@@ -65,6 +65,7 @@ MeasurementEnvironment MeasurementEnvironmentRepository::commit(const Measuremen
     QLockFile lock(path()+".lock");require(lock.tryLock(0),"Environment locked");QLockFile catalogLock(catalogPath()+".lock");require(catalogLock.tryLock(0),"Calibration dependency locked");const auto disk=load();require(disk.encode(capacity_)==expected.encode(capacity_),"Environment revision conflict; reload required");require(next.projectId==projectId_ && next.revision==expected.revision,"Invalid commit base");
     // No deletions or history rewriting; archive preserves referenced identities.
     for(const auto& c:disk.current.cameras){bool found=false;for(const auto& n:next.current.cameras)if(c.id==n.id){require(c.rebound(n)==n,"Invalid device revision transition");found=true;}require(found,"Camera deletion requires archive");}
+    for(const auto& p:disk.current.profiles){bool found=false;for(const auto& n:next.current.profiles)if(p.id==n.id){require(p.revised(n)==n,"Invalid profile revision transition");found=true;}require(found,"Profile deletion is not supported");}
     require(next.history.size()>=disk.history.size(),"History cannot shrink");for(int i=0;i<disk.history.size();++i)require(next.history[i]==disk.history[i],"Immutable history changed");
     next.encode(capacity_);validateDependencies(next);if(next.encode(capacity_)==disk.encode(capacity_))return disk;require(disk.revision<1000000000,"Environment revision exhausted");++next.revision;writeJson(path(),next.encode(capacity_),fault);return next;
 }
