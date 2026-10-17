@@ -6,6 +6,7 @@ görev” ifadeleri yazıldıkları tarihe aittir.
 
 | Dönem / görev | Kayıt |
 | --- | --- |
+| 17 Ekim 2026 — ICM-REVIEW-01 | [Üç Claude Code tesliminin incelemesi; iki açık düzeltme](2026-10-17-icm-review-01.md) |
 | 17 Ekim 2026 — ICM-04a | [OECS C API oturum/handle ömrü, ters cleanup ve busy tanısı](2026-10-17-icm-04a.md) |
 | 17 Ekim 2026 — ICM-03a | [Fiziksel kimlik, yerel rota/backend ayrımı ve MeasurementCamera2](2026-10-17-icm-03a.md) |
 | 17 Ekim 2026 — ICM-03b | [Acquisition profile, geometri şema 2 ve tek invalidation kuralı](2026-10-17-icm-03b.md) |

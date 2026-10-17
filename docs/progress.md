@@ -6,14 +6,17 @@ başlangıçta arşivin tamamını okumayın.
 
 ## Devam noktası
 
-- **Son görev: ICM-04a backend session/handle ömrü tamamlandı** (Claude Code):
+- **Son ürün teslimi: ICM-04a backend session/handle ömrü** (Claude Code):
   SDK'sız `OecsCApi` sınırı, opsiyonel dinamik binding, worker'a bağlı `OecsSession`;
   her aşamada ters cleanup, busy tanısı, canlı handle varken unload yok; gerçek open yok.
   [Kapanış](archive/2026-10-17-icm-04a.md). Önceki 03b profile/geometri
   [kapanışta](archive/2026-10-17-icm-03b.md), 03a kimlik/rota [kapanışta](archive/2026-10-17-icm-03a.md).
   Backend kararı OECS C API ([ICM-02](archive/2026-10-17-icm-02.md)); şema/hash haritası
   [ICM-00 kaydındadır](architecture/industrial-camera-baseline.md).
-- **Sıradaki bağımsız ürün görevi: ICM-04b — feature erişimi ve configure/readback**.
+- **ICM-REVIEW-01 incelemesi tamamlandı; iki kusur açık** (Codex): SDK enumerate
+  belleği başka instance tarafından değişince yanlış handle bilgisi; A→B→A setup
+  revision değişimi ortak uyumluluk kuralından kaçıyor. [Kanıt ve düzeltme kapsamı](archive/2026-10-17-icm-review-01.md).
+  **Önce bu bulgular düzeltilecek; ardından ICM-04b configure/readback**.
   **ICM-01b fiziksel başlangıç açık**; [deneme kaydı](archive/2026-10-17-icm-01b.md).
   [Görev kartları](architecture/industrial-camera-tasks-foundation.md).
   ICM-00 veya tamamlanmış KMC görevlerini yeniden başlatmayın.
@@ -67,19 +70,16 @@ başlangıçta arşivin tamamını okumayın.
 
 ## Son doğrulama ve çalışma ortamı
 
+- ICM-REVIEW-01: core/UI Release build exit 0 (no work); her birinde hedefli **6/6**
+  CTest geçti, tam suite koşulmadı. İki kusur izole fixture'da tekrar üretildi:
+  `build/icm/review/reproduction.log`; JUnit `<build>/icm-review-tests.xml`.
 - ICM-04a: Release UI/core tam build exit 0; tam suite core **75/75**, UI **89/89**.
   SDK'lı opt-in build `build/icm/04a/sdk` 2/2: DLL yüklendi, sürüm 0x3050200, **0 cihaz**.
   Kanıt `build/icm/04a/`, JUnit `<build>/icm-04a-tests.xml`; UI değişmedi.
   ICM-03b tarihsel: core 74/74, UI 87/88 (`plc_socket_runtime` aralıklı; kök neden açık).
-- ICM-02: ayrı MinGW Release ABI probe configure/build exit 0; export kontrolleri,
-  iki negatif senaryo geçti. GenApi başlık derlemesi beklenen engeli kaydetti.
-  Ana UI/core Release build exit 0 (no work); her birinde `camera_transport` +
-  `camera_probe_diagnostics` **2/2 CTest** yeni koşumda geçti. Tam suite koşulmadı.
-  Kanıt `build/icm/02/`, JUnit `<build>/icm-02-tests.xml`; UI değişmedi.
-- ICM-01a tarihsel: iki Release build exit 0; UI ve core'da `camera_transport` +
-  `camera_probe_diagnostics` **2/2 CTest** geçti (her yapılandırmada sekiz tanı
-  senaryosu). PowerShell parse başarılı. Kanıt `build/icm/01a/`, JUnit her build'de
-  `icm-01a-tests.xml`; fixture ayrıntıları `<build>/icm/01a/fixtures/`.
+- ICM-02/01a tarihsel: UI/core build ve her birinde ilgili **2/2 CTest** geçti;
+  tam suite koşulmadı. ABI/export/negatif senaryolar ve tanı kanıtları
+  `build/icm/02/`, `build/icm/01a/` ve ilgili kapanış kayıtlarında korundu.
 - Yeni SDK koşumu `build/icm/01a/local/diagnostic.json`; sürüm/hash/PE, ortam
   farkı, doğrudan import envanteri ve exit 0 kayıtlı. Bu fiziksel kabul değildir.
 - ICM-00: Release UI/ZXing ON ve Widgets OFF/ZXing OFF build exit 0; ilgili core
@@ -104,7 +104,8 @@ ICM-04a [kapanış](archive/2026-10-17-icm-04a.md), ICM-03b
 Önceki [bağlam bakımı](archive/2026-10-17-context-maintenance.md) ve tarihsel kopyalar korundu.
 ICM-01b için kullanıcı reboot sonrası OECS gerçek Mono8 görüntüsü, exact model/seri
 ve viewer release sonrası discovery/open kanıtı gerekir; reboot/driver değişimi yapılmadı.
-ICM-01b açık kaldı; sıradaki bağımsız görev ICM-04b'dir (gerçek readback cihaz ister).
+ICM-01b açık. Önce ICM-REVIEW-01 bulguları kapatılmalı, sonra ICM-04b
+(gerçek readback cihaz ister). Claude Code ile sıralı görev ve Codex incelemesiyle devam.
 
 Her kapanışta bu özeti güncelleyin, günlük eklemeyin. Ayrıntılı kapsam/dosyalar/
 doğrulama/sınırlama/sonraki görev kaydını `docs/archive/` altında tutup buradan
