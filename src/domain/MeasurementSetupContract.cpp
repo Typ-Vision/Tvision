@@ -31,6 +31,10 @@ template<class T> QJsonObject feature(GeometryEvidence e,T x,T y){QJsonObject o{
 GeometryEvidence featureEvidence(const QJsonObject& f){const auto e=parseEvidence(string(f,"evidence"));if(e==GeometryEvidence::Reported)keys(f,{"evidence","x","y"});else keys(f,{"evidence"});return e;}
 // Profile rows of the invalidation table, shared by acquisitionChange and AcquisitionProfile::revised.
 void settingsRows(const AcquisitionSettings& a,const AcquisitionSettings& b,AcquisitionChange& c){c.pixelFormat=a.pixelFormat!=b.pixelFormat;auto same=a;same.pixelFormat=b.pixelFormat;c.acquisition=same!=b;}
+// Field changes generate a revision; compatibility also compares that revision.
+bool setupFieldsChanged(const MeasurementSetupDescriptor& x,const MeasurementSetupDescriptor& y){
+    return x.id!=y.id || x.camera!=y.camera || x.opticalProfile!=y.opticalProfile || x.workingPlane!=y.workingPlane || x.deviceRevision!=y.deviceRevision;
+}
 }
 void CameraId::validate() const {text(value);}
 void SetupId::validate() const {text(value);}
@@ -116,7 +120,7 @@ QJsonObject MeasurementSetupDescriptor::toJson() const {validate();return {{"sch
 MeasurementSetupDescriptor MeasurementSetupDescriptor::fromJson(const QJsonObject& o){keys(o,{"schemaVersion","id","cameraId","name","opticalProfile","workingPlane","revision","deviceRevision","geometry"});schema(o);MeasurementSetupDescriptor s{{string(o,"id")},{string(o,"cameraId")},string(o,"name"),string(o,"opticalProfile"),string(o,"workingPlane"),integer(o,"revision"),integer(o,"deviceRevision"),GeometryDescriptor::fromJson(object(o,"geometry"))};s.validate();return s;}
 MeasurementSetupDescriptor MeasurementSetupDescriptor::revised(const MeasurementSetupDescriptor& next) const {
     validate();next.validate();require(id==next.id && camera==next.camera,"Setup cannot silently change camera/identity");require(next.deviceRevision>=deviceRevision,"Setup cannot restore an older device mapping");auto result=next;result.revision=this->revision;
-    const auto change=acquisitionChange({*this},{next});if(change.setup || change.geometry){require(this->revision<1000000000,"Setup revision exhausted");++result.revision;}return result;
+    if(setupFieldsChanged(*this,next) || geometry!=next.geometry){require(this->revision<1000000000,"Setup revision exhausted");++result.revision;}return result;
 }
 QString MeasurementSetupDescriptor::geometryId() const {validate();require(geometry.complete,"Unknown critical geometry is not compatible");auto o=toJson();o.remove("name");return digest(o);}
 QString MeasurementSetupDescriptor::cacheId(const QJsonObject& settings) const {return digest({{"geometryId",geometryId()},{"acquisitionSettings",settings}});}
@@ -171,7 +175,7 @@ AcquisitionReadback AcquisitionReadback::fromJson(const QJsonObject& o){keys(o,{
 AcquisitionChange acquisitionChange(const AcquisitionBasis& before,const AcquisitionBasis& after){
     AcquisitionChange change;for(const auto* b:{&before,&after}){b->setup.validate();if(b->profile){b->profile->requested.validate();require(b->profile->setup==b->setup.id && b->profile->camera==b->setup.camera,"Profile/setup mismatch");}}
     const auto& x=before.setup;const auto& y=after.setup;
-    change.setup=x.id!=y.id || x.camera!=y.camera || x.opticalProfile!=y.opticalProfile || x.workingPlane!=y.workingPlane || x.deviceRevision!=y.deviceRevision;
+    change.setup=setupFieldsChanged(x,y) || x.revision!=y.revision;
     change.geometry=x.geometry!=y.geometry;
     if(before.profile && after.profile)settingsRows(before.profile->requested,after.profile->requested,change);else if(before.profile || after.profile)change.pixelFormat=change.acquisition=true;
     change.backend=before.backend!=after.backend;return change;

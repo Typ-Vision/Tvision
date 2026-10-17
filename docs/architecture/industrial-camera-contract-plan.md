@@ -100,7 +100,10 @@ complete setup schema 1 kalamaz. `AcquisitionProfile1` (ProfileId, CameraId, Set
 auto+değer, ışık beyanı) ilk sürümde yalnız Mono8 ve manual exposure/gain kabul eder; contract
 `profiles` boş değilse schema 2'dir. `acquisitionId` = geometryId + requested; ad/ID/revision dışarıda.
 Tablo tek kuraldır: `acquisitionChange` → setup/geometry/pixelFormat/acquisition/backend satırları;
-setup ve profile `revised` ile `verifyApplied` aynı kuralı kullanır. Applied readback
+Setup `revised` alan farklarından revision üretir; çağıranın revision değerini kullanmaz.
+Uyumluluk ayrıca setup revision farkını reddeder: A→B→A, eski etiketlere dönse de
+eski calibration/cache/preparation ile uyumlu değildir. Rename/no-op revision üretmez.
+Profile `revised` ve `verifyApplied` ilgili tablo satırlarını kullanır. Applied readback
 (`AcquisitionReadback1`, özellik başına reported/not_applicable/unknown) projeye yazılmaz; unknown
 kritik geometri reddedilir; float temsil toleransı ICM-04b'dedir. Environment commit profile
 revision geçişini zorunlu kılar, silme reddedilir; Save As profili rota/readback/izin olmadan taşır.
@@ -155,7 +158,10 @@ ayrı kapsam. Stop bütçesi aşıldı mesajı kaynakların serbest kaldığı a
 **ICM-04a uygulanan ömür** (`hardware/OecsSession`, `hardware/OecsCApi`): SDK'sız `OecsCApi`
 sınırı; gerçek binding yalnız `VISIONFLOW_OECS_INCLUDE_DIR` ile derlenir ve DLL'i dinamik yükler.
 Oturum sahibi kuran iş parçacığıdır; yabancı iş parçacığı SDK çağıramaz. Açılış sırası load →
-USB enumerate → exact vendor+model+seri → süreç içi sahiplik → create → exclusive open; hata
+USB enumerate → exact vendor+model+seri → süreç içi sahiplik → create → exclusive open.
+SDK enumerate ve tam `MV_CC_DEVICE_INFO` kopyası süreç genelinde tek kilit altında yapılır;
+create, instance'ın sahip olduğu kopyayı kullanır. Yeni SDK enumeration yolları da aynı
+kilidi kullanmalıdır; SDK'ya ait geçici adresler enumerate sonrasında saklanmaz. Hata
 tamamlanan aşamaları ters sırada geri alır. Close hatasında da destroy yapılır; destroy veya unload
 başarısızsa DLL kaldırılmaz, oturum Faulted olur ve yeniden açılmaz. `MV_E_BUSY`/`MV_E_ACCESS_DENIED`
 ve süreç içi ikinci sahip Busy tanısıdır. GenTL süreç kilidi değişmedi; gerçek cihaz open kanıtı yok.

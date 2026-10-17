@@ -36,6 +36,20 @@ int main(int argc,char** argv){QCoreApplication app(argc,argv);try{
     for(int change=0;change<5;++change){next=original.setups[0];if(change==0)next.opticalProfile="lens-B";if(change==1)next.workingPlane="plane-B";if(change==2){next.geometry.resolution={320,240};next.geometry.sensorRoi=QRect(10,20,640,480);}if(change==3)next.geometry.sensorRoi=QRect(11,20,1280,960);if(change==4)next.deviceRevision=2;
         next=original.setups[0].revised(next);check(next.revision==2 && next.geometryId()!=original.setups[0].geometryId(),"physical change increments revision/hash");}
     const auto& setup=original.setups[0];
+    // A -> B -> A is a new physical setup even when every label returns to A.
+    for(const auto& base:{setup,MeasurementSetupDescriptor::fromJson(setup.toJson())}){
+        auto b=base;b.opticalProfile="lens-B";b=base.revised(b);
+        auto restored=b.revised(base);
+        check(b.revision==2 && restored.revision==3 && restored.geometryId()!=base.geometryId(),"restored setup has a fresh revision/hash");
+        for(const auto& pair:{std::pair{base,restored},std::pair{restored,base}}){
+            const auto c=acquisitionChange({pair.first},{pair.second});
+            check(c.setup && !c.calibrationCompatible() && !c.cacheCompatible() && !c.preparationCompatible(),"setup history invalidates all compatibility in both directions");
+        }
+        check(restored.revised(restored)==restored,"no-op at revision 3 does not increment");
+        auto label=restored;label.name="Renamed restored setup";label.revision=1;
+        label=restored.revised(label);
+        check(label.revision==3 && label.geometryId()==restored.geometryId() && acquisitionChange({restored},{label}).preparationCompatible(),"rename ignores caller revision and preserves compatibility");
+    }
     check(setup.cacheId({{"exposure",100}})!=setup.cacheId({{"exposure",200}}) && setup.geometryId()==original.setups[0].geometryId(),"exposure affects cache, not geometric compatibility");
     next=setup;next.camera={"camera-1"};reject([&]{setup.revised(next);},"silent camera reassignment rejected");
     next=setup;next.geometry.complete=false;reject([&]{next.geometryId();},"unknown critical geometry cannot be compatible");
@@ -143,7 +157,7 @@ int main(int argc,char** argv){QCoreApplication app(argc,argv);try{
         if(change==0)g.sensorRoi=QRect(8,0,2448,2048);if(change==1)g.reverse=GeometryMirror{true,false};if(change==2)g.reverse=GeometryMirror{false,true};if(change==3){g.resolution={1224,1024};g.decimation=QSize(2,2);}
         auto sameRevision=moved;check(sameRevision.geometryId()!=lineSetup.geometryId() && GeometryDescriptor::fromJson(moved.geometry.toJson())==moved.geometry,"critical geometry alone changes geometry hash and roundtrips");
         moved=lineSetup.revised(moved);const auto c=acquisitionChange({lineSetup,profile},{moved,profile});
-        check(moved.revision==2 && moved.geometryId()!=lineSetup.geometryId() && c==AcquisitionChange{false,true,false,false,false} && !c.calibrationCompatible() && profile.acquisitionId(moved)!=acquisition,"same-size offset/reverse and decimation reject old calibration");}
+        check(moved.revision==2 && moved.geometryId()!=lineSetup.geometryId() && c==AcquisitionChange{true,true,false,false,false} && !c.calibrationCompatible() && profile.acquisitionId(moved)!=acquisition,"same-size offset/reverse and decimation reject old calibration");}
     auto exposed=profile;exposed.requested.exposureTimeUs=8000;exposed=profile.revised(exposed);auto change=acquisitionChange({lineSetup,profile},{lineSetup,exposed});
     check(exposed.revision==2 && exposed.acquisitionId(lineSetup)!=acquisition && change==AcquisitionChange{false,false,false,true,false} && change.calibrationCompatible() && !change.cacheCompatible(),"exposure changes only acquisition identity");
     for(int row=0;row<4;++row){auto next=profile;if(row==0)next.requested.gain=6;if(row==1)next.requested.trigger={false,{},{}};if(row==2)next.requested.trigger.source="Line1";if(row==3)next.requested.illumination.clear();

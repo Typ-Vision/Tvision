@@ -13,17 +13,18 @@ başlangıçta arşivin tamamını okumayın.
   [kapanışta](archive/2026-10-17-icm-03b.md), 03a kimlik/rota [kapanışta](archive/2026-10-17-icm-03a.md).
   Backend kararı OECS C API ([ICM-02](archive/2026-10-17-icm-02.md)); şema/hash haritası
   [ICM-00 kaydındadır](architecture/industrial-camera-baseline.md).
-- **ICM-REVIEW-01 incelemesi tamamlandı; iki kusur açık** (Codex): SDK enumerate
-  belleği başka instance tarafından değişince yanlış handle bilgisi; A→B→A setup
-  revision değişimi ortak uyumluluk kuralından kaçıyor. [Kanıt ve düzeltme kapsamı](archive/2026-10-17-icm-review-01.md).
-  **Önce bu bulgular düzeltilecek; ardından ICM-04b configure/readback**.
+- **ICM-REVIEW-01 bulguları kapatıldı — ICM-REVIEW-01-FIX** (Codex): SDK enumerate
+  ve tam cihaz bilgisi kopyası süreç genelinde kilitli; create owned kopyayı kullanır.
+  Setup revision uyumlulukta karşılaştırılır; A→B→A eski kalibrasyonu geri açmaz,
+  rename/no-op ve legacy hash korunur. [Kapanış ve kanıt](archive/2026-10-17-icm-review-01-fix.md).
+  [İnceleme](archive/2026-10-17-icm-review-01.md) arşivdedir.
+  **Sonraki görev ICM-04b configure/readback**.
   **ICM-01b fiziksel başlangıç açık**; [deneme kaydı](archive/2026-10-17-icm-01b.md).
   [Görev kartları](architecture/industrial-camera-tasks-foundation.md).
   ICM-00 veya tamamlanmış KMC görevlerini yeniden başlatmayın.
 - Kamera hedefi COE-U USB3/OECS. Endüstriyel backend/feature/stream/grab ve
   kalibrasyon/Editor/Runtime entegrasyonu henüz uygulanmadı; capture/production
   ret kapıları kabul yapılmadan kaldırılmaz.
-- Önceki bağlam bakımı ve ICM-01a tanı teslimi arşivde korundu.
 
 ## Göreve göre oku
 
@@ -70,9 +71,11 @@ başlangıçta arşivin tamamını okumayın.
 
 ## Son doğrulama ve çalışma ortamı
 
-- ICM-REVIEW-01: core/UI Release build exit 0 (no work); her birinde hedefli **6/6**
-  CTest geçti, tam suite koşulmadı. İki kusur izole fixture'da tekrar üretildi:
-  `build/icm/review/reproduction.log`; JUnit `<build>/icm-review-tests.xml`.
+- ICM-REVIEW-01-FIX: core/UI Release build exit 0; her birinde hedefli **6/6**
+  CTest, SDK'lı yapıda binding/lifetime/setup **3/3** geçti.
+  Tam suite koşulmadı. Önceki iki kusurun probe'u artık doğru kamera ve üç uyumluluk
+  reddini gösteriyor. Kanıt `build/icm/review-01-fix/`; JUnit ilgili build'lerde
+  `icm-review-01-fix-final-tests.xml` (ön koşum kayıtları da korundu).
 - ICM-04a: Release UI/core tam build exit 0; tam suite core **75/75**, UI **89/89**.
   SDK'lı opt-in build `build/icm/04a/sdk` 2/2: DLL yüklendi, sürüm 0x3050200, **0 cihaz**.
   Kanıt `build/icm/04a/`, JUnit `<build>/icm-04a-tests.xml`; UI değişmedi.
@@ -82,10 +85,9 @@ başlangıçta arşivin tamamını okumayın.
   `build/icm/02/`, `build/icm/01a/` ve ilgili kapanış kayıtlarında korundu.
 - Yeni SDK koşumu `build/icm/01a/local/diagnostic.json`; sürüm/hash/PE, ortam
   farkı, doğrudan import envanteri ve exit 0 kayıtlı. Bu fiziksel kabul değildir.
-- ICM-00: Release UI/ZXing ON ve Widgets OFF/ZXing OFF build exit 0; ilgili core
-  **12/12 CTest** geçti. UI 87/core 73 sayıları o görevde test envanteridir,
-  yeni tam suite koşumu değildir. Kanıt: `build/icm/00/verification.json` ve
-  [başlangıç kaydı](architecture/industrial-camera-baseline.md).
+- ICM-00 tarihsel: UI/core Release build ve ilgili core **12/12 CTest** geçti;
+  tam suite koşumu değildir. Ayrıntı/kanıt [baseline'da](architecture/industrial-camera-baseline.md)
+  ve `build/icm/00/verification.json` içinde korunur.
 - Önceki tam yazılım kabulü KMC-10e: UI **87/87**, core **73/73**;
   ayrıntı ve kapsam [B kabul belgesinde](architecture/multi-source-release-acceptance.md).
 - Güncel UI `build/reference-ui/visionflow.exe`, core `build/kmc9-core-off`.
@@ -96,18 +98,11 @@ başlangıçta arşivin tamamını okumayın.
 
 ## Kapanış ve sonraki adım
 
-ICM-04a [kapanış](archive/2026-10-17-icm-04a.md), ICM-03b
-[kapanış](archive/2026-10-17-icm-03b.md), ICM-01b
-[açık fiziksel deneme](archive/2026-10-17-icm-01b.md), ICM-02
-[koşullu kapanış](archive/2026-10-17-icm-02.md). ICM-01a
-[tanı kapanışı](archive/2026-10-17-icm-01a.md) korundu.
+ICM-01a [tanı kapanışı](archive/2026-10-17-icm-01a.md) ve diğer teslimler arşivde korundu.
 Önceki [bağlam bakımı](archive/2026-10-17-context-maintenance.md) ve tarihsel kopyalar korundu.
 ICM-01b için kullanıcı reboot sonrası OECS gerçek Mono8 görüntüsü, exact model/seri
 ve viewer release sonrası discovery/open kanıtı gerekir; reboot/driver değişimi yapılmadı.
-ICM-01b açık. Önce ICM-REVIEW-01 bulguları kapatılmalı, sonra ICM-04b
-(gerçek readback cihaz ister). Claude Code ile sıralı görev ve Codex incelemesiyle devam.
+ICM-01b açık. ICM-REVIEW-01 bulguları [düzeltme teslimiyle](archive/2026-10-17-icm-review-01-fix.md)
+kapandı; sıradaki ICM-04b (gerçek readback cihaz ister). Claude Code ile sıralı görev ve Codex incelemesiyle devam.
 
-Her kapanışta bu özeti güncelleyin, günlük eklemeyin. Ayrıntılı kapsam/dosyalar/
-doğrulama/sınırlama/sonraki görev kaydını `docs/archive/` altında tutup buradan
-bağlayın. Progress en fazla 8.000, README 8.000, AGENTS 4.000 UTF-8 bayt;
-başlangıç toplamı en fazla 20.000 bayt olmalıdır.
+Kapanışta özeti güncelleyin ve ayrıntıyı arşive bağlayın; AGENTS boyut sınırlarını koruyun.

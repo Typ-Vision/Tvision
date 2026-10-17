@@ -1,6 +1,7 @@
 #include "hardware/OecsCApi.hpp"
 #include <QFileInfo>
 #include <QLibrary>
+#include <mutex>
 #ifdef VISIONFLOW_WITH_OECS_SDK
 #include <MvCameraControl.h>
 #endif
@@ -8,6 +9,9 @@
 namespace visionflow {
 namespace {
 #ifdef VISIONFLOW_WITH_OECS_SDK
+// Every in-process SDK enumeration must hold this through the owned copy.
+// SDK device-list storage is shared even between separate binding instances.
+std::mutex enumerationMutex;
 template<size_t N> QString bounded(const unsigned char (&text)[N]) {
     size_t n=0;
     while(n<N&&text[n])++n;
@@ -32,31 +36,32 @@ public:
     bool unload() override {
         if(liveHandles_>0)return false;
         unbind();
-        pointers_.clear();
+        deviceInfos_.clear();
         library_.unload();
         return true;
     }
     quint32 sdkVersion() override {return version_?quint32(version_()):0;}
     int enumerateUsb(QVector<OecsDeviceInfo>& devices) override {
         devices.clear();
-        pointers_.clear();
+        deviceInfos_.clear();
         if(!enum_)return oecs::errorLoadLibrary;
-        list_={};
-        const int status=enum_(MV_USB_DEVICE,&list_);
+        const std::lock_guard lock(enumerationMutex);
+        MV_CC_DEVICE_INFO_LIST list{};
+        const int status=enum_(MV_USB_DEVICE,&list);
         if(status!=MV_OK)return status;
-        for(unsigned i=0;i<list_.nDeviceNum&&i<MV_MAX_DEVICE_NUM;++i) {
-            const MV_CC_DEVICE_INFO* info=list_.pDeviceInfo[i];
+        for(unsigned i=0;i<list.nDeviceNum&&i<MV_MAX_DEVICE_NUM;++i) {
+            const MV_CC_DEVICE_INFO* info=list.pDeviceInfo[i];
             if(!info||info->nTLayerType!=MV_USB_DEVICE)continue;
             const MV_USB3_DEVICE_INFO& usb=info->SpecialInfo.stUsb3VInfo;
             devices.push_back({bounded(usb.chVendorName),bounded(usb.chModelName),bounded(usb.chSerialNumber),bounded(usb.chUserDefinedName),bounded(usb.chDeviceVersion),quint16(usb.idVendor),quint16(usb.idProduct),quint32(usb.nDeviceNumber)});
-            pointers_.push_back(info);
+            deviceInfos_.push_back(*info);
         }
         return MV_OK;
     }
     int createHandle(int index,void** handle) override {
         if(!create_)return oecs::errorLoadLibrary;
-        if(index<0||index>=pointers_.size())return oecs::errorParameter;
-        const int status=create_(handle,pointers_[index]);
+        if(index<0||index>=deviceInfos_.size())return oecs::errorParameter;
+        const int status=create_(handle,&deviceInfos_[index]);
         if(status==MV_OK)++liveHandles_;
         else *handle=nullptr;
         return status;
@@ -79,8 +84,7 @@ private:
     decltype(&::MV_CC_OpenDevice) open_=nullptr;
     decltype(&::MV_CC_CloseDevice) close_=nullptr;
     decltype(&::MV_CC_DestroyHandle) destroy_=nullptr;
-    MV_CC_DEVICE_INFO_LIST list_{};
-    QVector<const MV_CC_DEVICE_INFO*> pointers_;
+    QVector<MV_CC_DEVICE_INFO> deviceInfos_;
     int liveHandles_=0;
 };
 #else
