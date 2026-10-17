@@ -228,3 +228,38 @@ transport teslim/duplicate semantiği hâlâ açık. Öncelik exact firmware iç
 barrier/completion/reset garantisidir; bunu sağlamadan başka bir kısa sessizlik
 koşumu admission açmaz. Üretici taslağı bu bulgularla güncellendi, gönderilmedi.
 Native Unavailable ve ICM-04e önkoşulu korunur.
+
+## Bekleyen gecikmiş tetik karşı örneği — 18 Ekim 2026
+
+[Uzun pozlama/gecikme deneyi](../archive/2026-10-18-icm-04d-pending.md)
+önceki kısa koşumdan farklı üç zamanlama profilini sınadı. Her profil iki turda,
+command sonrasında 0 veya 100 ms bekleyerek Clear→Stop→Start uyguladı. Ardından
+yeni command olmadan 1250 ms gözlem bütçesi ayrıldı; sonraki command ayrı gönderildi.
+ExposureTime ve TriggerDelay geçici yazıldı, readback ve final restore doğrulandı.
+
+| Pozlama / tetik gecikmesi | Restart sonrası eski command karesi | Sonraki command sayaçları |
+| --- | --- | --- |
+| 500 ms / 0 | 0/4 | frame=1, trigger=1 |
+| 5 ms / 500 ms | **4/4** | frame=2, trigger=1 |
+| 500 ms / 500 ms | **4/4** | frame=2, trigger=1 |
+
+Sekiz eski kare restart sonrası **frameCounter=1, triggerIndex=0, frameNumber=0**
+ile geldi; byte 4/8 embedded değerleri SDK alanlarıyla eşleşti. Yeni command henüz
+yokken gelen bu kareler doğrudan karşı örnektir: **Clear→Stop→Start, bekleyen
+gecikmiş software command için genel bir eski-kare bariyeri değildir.** Stop
+çağrısı bu örneklerde yaklaşık 37–57 ms döndü; eski kareler restart sonrasında
+365–961 ms içinde teslim edildi. Resetlenmiş frameCounter=1 tek başına tazelik
+değildir. TriggerIndex=0 farkı gözlendi; mevcut iki-sayaç kuralı bu örneği kabul
+eder iddiası yoktur. ActualCounterEpoch için gereken arm/baseline hâlâ yoktur.
+
+Sıfır gecikmeli uzun pozlama dört kez sessiz kaldı; bu sonuç o profil için genel
+quiescence garantisi değildir. Delayed command'ın exposure mı yoksa başka bir
+device/transport aşaması mı olarak kaldığı bu tanıyla ayrıştırılmaz. Delay=0'a
+sonradan yazmak, flush, close/open veya bekleme süresi eklemek kanıtsız recovery
+stratejisi olmaz. Özellikle preview/önceki sahibi gecikmeli ayar kullanmışsa yeni
+profilin delay=0 readback'i geçmiş command'ın yokluğunu ispatlamaz.
+
+Sıradaki bağımlılık exact firmware için bekleyen software command'ı iptal eden
+veya sonuna kadar teslim/tüketim sınırı kuran belgeli prosedür ve reset semantiğidir.
+Kısa sessizlik deneyleri tekrarlanmaz. Üretici sorusu somut karşı örnekle güncellendi,
+gönderilmedi; native Unavailable ve 04e kapısı korunur.

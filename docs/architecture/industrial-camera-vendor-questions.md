@@ -62,6 +62,16 @@ the counter strategy; it is not a requirement imposed by the camera standard.
    without another command in 3/3 trials. Clear/Stop/Start delivered none in six
    350 ms observation windows (three immediate, three after 150 ms). This does
    not prove quiescence. Which documented completion condition closes this gap?
+   A subsequent long-exposure/delay experiment found a counterexample: with
+   TriggerDelay=500000 us and ExposureTime=5000 or 500000 us, a pre-stop software
+   command delivered a frame AFTER Clear/Stop/Start and BEFORE any new command in
+   8/8 trials (stop requested immediately or 100 ms after command). Stop returned
+   in about 37–57 ms; the old frame arrived 365–961 ms after the post-restart wait
+   began. Zero-delay / 500000 us exposure showed none in four 1250 ms windows.
+   What supported procedure cancels a pending delayed software command, or gives
+   a completion/drain boundary that accounts for it? Is setting TriggerDelay=0
+   effective for already-pending commands? Please document, rather than infer
+   from a quiet timeout, the guarantees across stop/start and close/open.
 4. **Counter epoch.** What resets nFrameCounter and nTriggerIndex: acquisition
    start/stop, ClearImageBuffer, close/open, device reset or power cycle? How can we
    read a baseline before the first accepted trigger without modifying image pixels?
@@ -70,6 +80,11 @@ the counter strategy; it is not a requirement imposed by the camera standard.
    In all six Clear/Stop/Start trials on the same open handle, the first subsequent
    command returned nFrameCounter=1, nTriggerIndex=1 and nFrameNum=0. Please confirm
    the reset point and whether any delayed pre-stop command/frame can survive it.
+   In the new delayed-command counterexamples, the old frame had nFrameCounter=1,
+   nTriggerIndex=0, nFrameNum=0; the next genuinely new command returned 2/1/1.
+   Embedded bytes 4–7 and 8–11 matched these SDK counters. Thus frameCounter=1
+   after restart alone cannot establish freshness. Please explain these separate
+   frame/trigger reset and increment events.
 5. **Timestamp alternative.** DeviceTimestamp is described in ns; the embedded
    timestamp in manual §3.10.2 uses second/cycle/offset fields. What event, units,
    rollover and reset rules apply to nDevTimeStampHigh/Low? Is DeviceTimestampLatch

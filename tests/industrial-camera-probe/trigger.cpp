@@ -13,6 +13,7 @@
 #include <QLibrary>
 #include <MvCameraControl.h>
 #include <algorithm>
+#include <cmath>
 #include <iostream>
 #include <stdexcept>
 #include <vector>
@@ -39,11 +40,12 @@ int main(int argc,char** argv) {
     int measurementWidth=0,measurementHeight=0;
     try {
         const bool validRow=argc==7 && QString::fromLocal8Bit(argv[5])=="--frame-spec-valid-row";
-        const bool streamBarrier=argc==6 && QString::fromLocal8Bit(argv[5])=="--stream-barrier";
+        const bool pendingBarrier=argc==6 && QString::fromLocal8Bit(argv[5])=="--pending-barrier";
+        const bool streamBarrier=(argc==6 && QString::fromLocal8Bit(argv[5])=="--stream-barrier") || pendingBarrier;
         const bool frameSpec=(argc==6 && QString::fromLocal8Bit(argv[5])=="--frame-spec") || validRow || streamBarrier;
         const bool timestampFence=argc==6 && QString::fromLocal8Bit(argv[5])=="--timestamp-fence";
         if((argc!=5 && !frameSpec && !timestampFence) || !QFileInfo(QString::fromLocal8Bit(argv[1])).isAbsolute())
-            throw std::runtime_error("usage: oecs_trigger_diagnostic absolute-dll exact-vendor exact-model exact-serial [--frame-spec|--timestamp-fence|--stream-barrier|--frame-spec-valid-row absolute-output.pgm]");
+            throw std::runtime_error("usage: oecs_trigger_diagnostic absolute-dll exact-vendor exact-model exact-serial [--frame-spec|--timestamp-fence|--stream-barrier|--pending-barrier|--frame-spec-valid-row absolute-output.pgm]");
         if(validRow) {
             measurementPath=QString::fromLocal8Bit(argv[6]);
             if(!QFileInfo(measurementPath).isAbsolute())throw std::runtime_error("absolute measurement output path required");
@@ -52,6 +54,7 @@ int main(int argc,char** argv) {
         out["timestampFenceExperiment"]=timestampFence;
         out["validRowExperiment"]=validRow;
         out["streamBarrierExperiment"]=streamBarrier;
+        out["pendingBarrierExperiment"]=pendingBarrier;
         out["streamBarrierProven"]=false;
         QLibrary lib(QString::fromLocal8Bit(argv[1]));
         if(!lib.load())throw std::runtime_error(lib.errorString().toStdString());
@@ -64,6 +67,7 @@ int main(int argc,char** argv) {
         API(MV_CC_GetImageBuffer);API(MV_CC_FreeImageBuffer);API(MV_CC_ClearImageBuffer);
         API(MV_XML_GetNodeAccessMode);
         API(MV_CC_GetFloatValue);
+        API(MV_CC_SetFloatValue);
         MV_CC_DEVICE_INFO_LIST list{};check(MV_CC_EnumDevices(MV_USB_DEVICE,&list),"enumerate");
         if(list.nDeviceNum>MV_MAX_DEVICE_NUM)throw std::runtime_error("invalid device count");
         std::vector<MV_CC_DEVICE_INFO> matches;
@@ -82,6 +86,8 @@ int main(int argc,char** argv) {
         unsigned originalSpecSelector=0;
         bool specSelectorSaved=false,specTouched=false;
         std::vector<std::pair<unsigned,bool>> specSnapshot;
+        std::vector<std::pair<const char*,float>> timingSnapshot;
+        bool timingTouched=false;
         MV_FRAME_OUT frame{}; // One borrowed slot survives every exceptional path.
         QJsonArray samples,cleanup;
         QJsonArray latchSamples;
@@ -103,6 +109,18 @@ int main(int argc,char** argv) {
             if(originalMode!=0 || enumValue("AcquisitionMode").nCurValue!=2 ||
                enumValue("PixelFormat").nCurValue!=0x01080001)
                 throw std::runtime_error("requires trigger Off, Continuous, Mono8");
+            if(pendingBarrier) {
+                for(const char* name:{"ExposureTime","TriggerDelay"}) {
+                    MVCC_FLOATVALUE value{};check(MV_CC_GetFloatValue(handle,name,&value),name);
+                    if(!std::isfinite(value.fCurValue) || value.fMin>5000 || value.fMax<500000)
+                        throw std::runtime_error("pending experiment requires supported timing range 5000..500000us");
+                    if(QString::fromLatin1(name)=="TriggerDelay" && value.fMin>0)
+                        throw std::runtime_error("pending experiment requires supported zero delay");
+                    timingSnapshot.emplace_back(name,value.fCurValue);
+                }
+                out["originalTiming"]=QJsonObject{{"ExposureTime",timingSnapshot[0].second},
+                    {"TriggerDelay",timingSnapshot[1].second}};
+            }
             const auto width=intValue("Width"),height=intValue("Height"),payload=intValue("PayloadSize");
             if(width<=0 || height<=0 || width>2448 || height>2048 || payload!=width*height)
                 throw std::runtime_error("requires bounded tight Mono8 payload");
@@ -203,9 +221,9 @@ int main(int argc,char** argv) {
                     out["exposureAuto"]=double(enumValue("ExposureAuto").nCurValue);
                     if(out["exposureAuto"].toInt()!=0)throw std::runtime_error("disable auto exposure before diagnostic");
                 }
-                if(out["TriggerDelay"].toDouble()!=0 || out["ExposureTime"].toDouble()<=0 ||
-                   out["ExposureTime"].toDouble()>100000)
-                    throw std::runtime_error("barrier diagnostic requires manual exposure <=100ms and zero trigger delay; no settings written");
+                if(!pendingBarrier && (out["TriggerDelay"].toDouble()!=0 || out["ExposureTime"].toDouble()<=0 ||
+                   out["ExposureTime"].toDouble()>100000))
+                    throw std::runtime_error("barrier diagnostic requires exposure <=100ms and zero trigger delay");
                 const auto command=[&] {
                     out["commandsAttempted"]=out["commandsAttempted"].toInt()+1;
                     check(MV_CC_SetCommandValue(handle,"TriggerSoftware"),"barrier command");
@@ -247,10 +265,17 @@ int main(int argc,char** argv) {
                 };
                 QJsonArray episodes;
                 out["episodes"]=episodes;
-                for(int round=0;round<3;++round)for(bool restart:{false,true})for(unsigned delay:{0u,150u}) {
+                const auto runEpisode=[&](int round,bool restart,unsigned delay,unsigned window,unsigned frameWait) {
                     QJsonObject episode{{"round",round+1},{"restart",restart},{"abandonedDelayMs",int(delay)}};
                     QJsonArray events;
-                    command();auto control=receive(1000,"control");events.append(control);
+                    for(const char* name:{"ExposureTime","TriggerDelay"}) {
+                        MVCC_FLOATVALUE v{};check(MV_CC_GetFloatValue(handle,name,&v),name);
+                        episode[name]=double(v.fCurValue);
+                    }
+                    // Preserve partial observations on an exceptional path too.
+                    const auto publish=[&] {episode["events"]=events;out["inProgressEpisode"]=episode;};
+                    publish();
+                    command();auto control=receive(frameWait,"control");events.append(control);publish();
                     if(!control["received"].toBool())throw std::runtime_error("control frame missing");
                     requireQuiet();
                     command();episode["abandonedCommandAfterNs"]=QString::number(experimentTimer.nsecsElapsed());
@@ -266,12 +291,33 @@ int main(int argc,char** argv) {
                         episode["restartAfterNs"]=QString::number(experimentTimer.nsecsElapsed());
                         // No post-start Clear: it could hide a leaked old frame.
                     }
-                    auto after=receive(350,"afterFenceWithoutNewCommand");events.append(after);
+                    publish();
+                    auto after=receive(window,"afterFenceWithoutNewCommand");events.append(after);publish();
                     if(after["received"].toBool())requireQuiet();
-                    command();auto fresh=receive(1000,"afterNewCommand");events.append(fresh);
+                    command();auto fresh=receive(frameWait,"afterNewCommand");events.append(fresh);publish();
                     if(!fresh["received"].toBool())throw std::runtime_error("post-fence command frame missing");
                     requireQuiet();
                     episode["events"]=events;episodes.append(episode);out["episodes"]=episodes;
+                    out.remove("inProgressEpisode");
+                };
+                if(pendingBarrier) {
+                    for(int round=0;round<2;++round)for(const auto profile:
+                        {std::pair<float,float>{500000,0},{5000,500000},{500000,500000}}) {
+                        check(MV_CC_ClearImageBuffer(handle),"profile clear");
+                        check(MV_CC_StopGrabbing(handle),"profile stop");stream=false;
+                        timingTouched=true; // A failed write may still have changed device state.
+                        check(MV_CC_SetFloatValue(handle,"ExposureTime",profile.first),"set experiment exposure");
+                        check(MV_CC_SetFloatValue(handle,"TriggerDelay",profile.second),"set experiment delay");
+                        for(const auto& setting:{std::pair<const char*,float>{"ExposureTime",profile.first},{"TriggerDelay",profile.second}}) {
+                            MVCC_FLOATVALUE v{};check(MV_CC_GetFloatValue(handle,setting.first,&v),setting.first);
+                            if(std::abs(v.fCurValue-setting.second)>1.0f)throw std::runtime_error("timing profile readback mismatch");
+                        }
+                        check(MV_CC_StartGrabbing(handle),"profile start");stream=true;
+                        for(unsigned delay:{0u,100u})runEpisode(round,true,delay,1250,2000);
+                    }
+                }else {
+                    for(int round=0;round<3;++round)for(bool restart:{false,true})for(unsigned delay:{0u,150u})
+                        runEpisode(round,restart,delay,350,1000);
                 }
             }
             for(int n=0;!streamBarrier && n<(timestampFence?24:(validRow?12:100));++n) {
@@ -337,14 +383,24 @@ int main(int argc,char** argv) {
                 check(MV_CC_FreeImageBuffer(handle,&frame),"free");held=false;
                 out["framesReceived"]=n+1;requireQuiet();
             }
-            out["status"]=streamBarrier?"OBSERVED_STREAM_FENCES_NOT_ADMISSION":(timestampFence?"OBSERVED_TIMESTAMP_FENCES_NOT_ADMISSION":
-                (validRow?"OBSERVED_VALID_ROW_RASTER_NOT_ADMISSION":"OBSERVED_100_COMMAND_FRAME_PAIRS_NOT_ADMISSION"));
+            out["status"]=pendingBarrier?"OBSERVED_PENDING_FENCES_NOT_ADMISSION":(streamBarrier?"OBSERVED_STREAM_FENCES_NOT_ADMISSION":(timestampFence?"OBSERVED_TIMESTAMP_FENCES_NOT_ADMISSION":
+                (validRow?"OBSERVED_VALID_ROW_RASTER_NOT_ADMISSION":"OBSERVED_100_COMMAND_FRAME_PAIRS_NOT_ADMISSION")));
         } catch(const std::exception& e){out["error"]=e.what();out["status"]="ERROR";exitCode=1;}
         // Attempt every cleanup/restore operation even if an earlier operation failed.
         bool cleanupOk=true;
         const auto record=[&](const char* stage,int rc){cleanup.append(QJsonObject{{"stage",stage},{"code",code(rc)}});if(rc!=MV_OK){cleanupOk=false;exitCode=1;}};
         if(held)record("free outstanding",MV_CC_FreeImageBuffer(handle,&frame));
         if(stream){record("clear",MV_CC_ClearImageBuffer(handle));record("stop",MV_CC_StopGrabbing(handle));}
+        if(opened && timingTouched) {
+            bool restored=true;
+            for(const auto& [name,value]:timingSnapshot) {
+                const auto rc=MV_CC_SetFloatValue(handle,name,value);record(name,rc);
+                MVCC_FLOATVALUE actual{};const auto read=MV_CC_GetFloatValue(handle,name,&actual);record("timing restore readback",read);
+                restored=rc==MV_OK && read==MV_OK && actual.fCurValue==value && restored;
+            }
+            out["timingRestored"]=restored;
+            if(!restored){cleanupOk=false;exitCode=1;}
+        }
         if(opened && specSelectorSaved) {
             bool specRestored=true;
             if(specTouched)for(const auto& [bank,enabled]:specSnapshot) {

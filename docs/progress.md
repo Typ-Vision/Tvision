@@ -1,21 +1,23 @@
 # VisionFlow — güncel devir
 
 Güncelleme: 18 Ekim 2026.
-Kullanıcının son yönlendirmesi önceliklidir. Ayrıntılar [arşiv dizininde](archive/README.md);
-Arşivi topluca okumayın.
+Kullanıcının son yönlendirmesi önceliklidir. Ayrıntılar [arşivde](archive/README.md); topluca okumayın.
 
 ## Devam noktası
 
-- **ICM-04d kısmi: Clear-only bariyeri çürütüldü; native hâlâ Unavailable**.
-  [Yeni karşı deney](archive/2026-10-18-icm-04d-barrier.md): 12 senaryo/36 command,
-  27 kare. Hemen Clear sonrası yeni command olmadan 3/3 eski kare geldi.
-  Clear→Stop→Start sonrası 0/6; fakat sessizlik garanti değil. Altı restart'ta
-  aynı açık handle'ın sonraki frame/trigger sayacı 1/1'e döndü. Exact firmware
-  stop completion/gecikmiş command/teslim semantiği açık; 04e başlamaz.
+- **ICM-04d kısmi: gecikmiş command Stop/Start'ı aşıyor; native Unavailable**.
+  [Yeni uzun pozlama/gecikme deneyi](archive/2026-10-18-icm-04d-pending.md):
+  12 senaryo/36 command/32 kare. Delay=500 ms iken Clear→Stop→Start sonrası,
+  yeni command olmadan **8/8 eski kare** geldi: frame/trigger=1/0; sonraki yeni
+  command=2/1. Exposure=500 ms/delay=0 sessiz 0/4; garanti değil.
+  Genel Stop/Start bariyeri elendi. Belgeli pending-command cancel veya
+  completion/drain/reset sınırı eksik; 04e başlamaz.
+  [Önceki Clear deneyi](archive/2026-10-18-icm-04d-barrier.md): Clear-only 3/3
+  eski kare; kısa pozlama restart 0/6 ve aynı handle'da sayaç reseti.
   [Karar](architecture/industrial-camera-trigger-correlation.md),
   [üretici soru taslağı](architecture/industrial-camera-vendor-questions.md) (gönderilmedi).
-  Belgeli eski-frame bariyeri + exclusive tek bekleyen tetik adaydır; iki sayaç ve
-  ready düğümü aynı anda zorunlu değil. **İlk sensör satırını ölçümden çıkarma izni
+  Belgeli bariyer + tek bekleyen tetik alternatif stratejidir; ready/iki sayaç
+  aynı anda zorunlu değil. **İlk sensör satırını ölçümden çıkarma izni
   kalıcıdır**: 2448×2047, origin (0,1) tanı doğrulandı; ürün geometri/kalibrasyon
   entegrasyonu açık. FrameBurstStart sessiz FrameStart alias'ı olmaz.
   [Timestamp karşı örneği](archive/2026-10-17-icm-04d-timestamp.md): latch çalışıyor,
@@ -48,7 +50,6 @@ Başlangıç AGENTS + bu özet + [README](../README.md). Ardından
 [ana plan](architecture/industrial-camera-plan.md), seçili görev kartı ve ilgili
 sözleşme/kabul bölümleri; büyük belgelerde önce başlık/ID arayın. Belirsizlikte
 [bulgulara](architecture/industrial-camera-integration-assessment.md) genişletin.
-Tarihsel “sıradaki” ifadeleri güncel sıra değildir.
 [Devir şablonu](architecture/industrial-camera-handoff.md).
 
 ## Uygulanan durum ve korunacak sınırlar
@@ -91,13 +92,12 @@ Tarihsel “sıradaki” ifadeleri güncel sıra değildir.
 
 ## Son doğrulama ve çalışma ortamı
 
-- **Yeni ICM-04d bariyer tanısı**: opt-in diagnostic Release build exit 0;
-  12 senaryo/36 command/27 kare; 3 Clear-only eski kare ve 6 restart reseti.
-  Dokuz sessiz pencere 362–379 ms; quiescence garantisi değil. Restore/cleanup,
-  bağımsız readback ve JSON/layout/hash assertions geçti. `build/icm/04d-barrier/`.
-  Mevcut SDK build'inde ilgili CTest **2/2 yeni koşum**. Ürün/UI değişmedi;
-  ürün rebuild, tam suite/görsel/stress koşulmadı. Ön denemeler final kanıt değil.
-  Önceki timestamp/ilk satır kanıtı `build/icm/04d-timestamp/` altında korunur.
+- **Yeni ICM-04d pending tanısı**: ayrı opt-in Release build exit 0;
+  12 senaryo/36 command/32 kare, restart sonrası 8 gecikmiş eski kare.
+  Exposure/delay dahil restore/cleanup, bağımsız readback ve JSON/layout/hash
+  assertions geçti. `build/icm/04d-pending/`. İlgili mevcut SDK CTest **2/2 yeni koşum**.
+  Ürün/UI değişmedi; ürün rebuild, tam suite/görsel/stress koşulmadı.
+  Önceki kanıtlar `build/icm/04d-barrier/` ve `build/icm/04d-timestamp/` altında.
 - Eski test/build sonuçları arşivdedir; yeni koşum değildir.
   `plc_socket_runtime` aralıklı başarısızlığı/kök neden açık kalır.
 - Güncel UI `build/reference-ui/visionflow.exe`, core `build/kmc9-core-off`.
@@ -107,9 +107,10 @@ Tarihsel “sıradaki” ifadeleri güncel sıra değildir.
 
 ## Kapanış ve sonraki adım
 
-Sıradaki **ICM-04d stop completion/epoch semantiği**: exact firmware için belgeli
-Clear→Stop→Start garantisi, gecikmiş command/USB teslimi ve sayaç reset noktası.
-Gerekirse uzun exposure karşı deneyi; kısa sessizlik yeterli değil. Taslak gönderilmedi.
-İlk satır kararı kalıcı; ürün geometri/kalibrasyon invalidation açık. Native Unavailable,
-04e bundan sonra. ICM-01b için OECS sahne görüntüsü/release ve G1 için 04e/stress açık.
+Sıradaki **ICM-04d pending-command cancel/completion sınırı**: exact firmware için
+belgeli cancel veya teslim/drain/reset prosedürü. Delay'ı sonradan 0 yapmak,
+close/open veya sessiz beklemek kanıt değil. Üretici taslağı 8/8 karşı örnekle hazır,
+gönderilmedi. Aynı kısa sessizlik deneylerini tekrarlamayın. Native Unavailable;
+04e bundan sonra. İlk satır ürün geometri/kalibrasyon invalidation açık.
+ICM-01b için OECS sahne/release, G1 için 04e/stress açık.
 [Bağlam bakımı](archive/2026-10-17-context-maintenance.md).
