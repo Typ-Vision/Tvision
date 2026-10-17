@@ -156,6 +156,29 @@ başlangıç konfigürasyonunda sabitlenir. Mevcut 512 MiB retained/30000 ms cyc
 SDK buffer/RSS hard sınırı olarak sunulmaz. SDK pool varsayılanı 4 buffer, uygulama
 kuyruğu 2 frame önerisidir; device minimumu ve byte bütçesiyle doğrulanıp kayda alınır.
 
+**ICM-04c OECS buffer sınırı:** `IndustrialFrameProbe` owner worker'da tanı amaçlı
+tek kare alır; production admission veya tazelik kanıtı üretmez. Actual PayloadSize,
+Width/Height ve Mono8 okunur; `payload × bufferCount` bütçesi bölme ile allocation
+öncesi doğrulanır (varsayılan 4 node/128 MiB, en fazla 64 node/512 MiB; wait 1–30000 ms).
+Bu advertised payload bütçesidir; vendor iç bookkeeping/USB transfer belleği ve RSS
+hard sınırı değildir. Retained owned ImageFrame bütçesinden ayrıdır.
+
+C API kendi pool allocate/queue/revoke işlemlerini yönetir: SetImageNodeNum →
+StartGrabbing → GetImageBuffer → owned copy → FreeImageBuffer → StopGrabbing →
+ClearImageBuffer; oturum sonunda CloseDevice/DestroyHandle/unload. Bu SDK başlığında
+stride ve ayrı completion status yoktur: native yol yalnız `nFrameLen == width × height`,
+kayıp paketsiz Mono8 kabul eder. Belirsiz padding/truncation/overflow, packed/renk ve
+unparsed chunk reddedilir; stride açıkça bildiren backend fixture'ı padded rows sınar.
+Ham frame numarası ve birleşik 64-bit tick ayrı actual evidence'dır; tick UTC exposure
+sayılmaz, tanı karesine source/frame/cycle admission ID atanmaz.
+
+Start hatasında da stop/flush denenir; copy/validation/wait hatasında eldeki buffer
+iade edilir. Cleanup hatasında owned kare yayımlanmaz, Faulted olur; close/destroy ile
+owner thread üzerinde sonlandırılır. Stop sonrasında belirsiz borrowed pointer'a tekrar
+Free çağrısı yapılmaz. Destroy/unload başarısızsa mevcut library-pin kuralı korunur.
+Yeniden edinim otomatik recovery yapmaz; hatalı probe açık close/reopen gerektirir.
+Gerçek cihaz stream ABI/pool davranışı ve G1 kabulü cihaz kanıtı ister.
+
 ## 5. Session, lease ve failure
 
 Bir fiziksel cihazın bir owner session'ı bulunur. Calibration, Editor preview ve

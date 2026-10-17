@@ -45,6 +45,12 @@ public:
         if(!bind(getBool_,"MV_CC_GetBoolValue"))return fail("MV_CC_GetBoolValue");
         if(!bind(setBool_,"MV_CC_SetBoolValue"))return fail("MV_CC_SetBoolValue");
         if(!bind(getString_,"MV_CC_GetStringValue"))return fail("MV_CC_GetStringValue");
+        if(!bind(setNodes_,"MV_CC_SetImageNodeNum"))return fail("MV_CC_SetImageNodeNum");
+        if(!bind(start_,"MV_CC_StartGrabbing"))return fail("MV_CC_StartGrabbing");
+        if(!bind(wait_,"MV_CC_GetImageBuffer"))return fail("MV_CC_GetImageBuffer");
+        if(!bind(free_,"MV_CC_FreeImageBuffer"))return fail("MV_CC_FreeImageBuffer");
+        if(!bind(stop_,"MV_CC_StopGrabbing"))return fail("MV_CC_StopGrabbing");
+        if(!bind(clear_,"MV_CC_ClearImageBuffer"))return fail("MV_CC_ClearImageBuffer");
         return true;
     }
     bool unload() override {
@@ -86,7 +92,7 @@ public:
     int destroyHandle(void* handle) override {
         if(!destroy_)return oecs::errorLoadLibrary;
         const int status=destroy_(handle);
-        if(status==MV_OK){xmlCache_.remove(handle);if(liveHandles_>0)--liveHandles_;}
+        if(status==MV_OK){held_.remove(handle);xmlCache_.remove(handle);if(liveHandles_>0)--liveHandles_;}
         return status;
     }
     int readFeature(void* h,const QString& name,CameraFeature& out) override {
@@ -130,6 +136,33 @@ public:
         const auto key=name.toLatin1();
         switch(f.type){case FeatureType::Integer:return setInt_(h,key.constData(),std::get<qint64>(value));case FeatureType::Float:return setFloat_(h,key.constData(),float(std::get<double>(value)));case FeatureType::Boolean:return setBool_(h,key.constData(),std::get<bool>(value));case FeatureType::Enumeration:return setEnum_(h,key.constData(),f.entries.value(std::get<QString>(value)));default:return oecs::errorParameter;}
     }
+    int setBufferCount(void* h,quint32 count) override {return setNodes_?setNodes_(h,count):oecs::errorLoadLibrary;}
+    int startStream(void* h) override {return start_?start_(h):oecs::errorLoadLibrary;}
+    int stopStream(void* h) override {return stop_?stop_(h):oecs::errorLoadLibrary;}
+    int flushStream(void* h) override {return clear_?clear_(h):oecs::errorLoadLibrary;}
+    int waitBuffer(void* h,int timeout,OecsBuffer& out) override {
+        out={};if(!wait_)return oecs::errorLoadLibrary;
+        if(held_.contains(h))return oecs::errorParameter;
+        // Tracking storage is allocated before borrowing a vendor buffer.
+        auto it=held_.insert(h,MV_FRAME_OUT{});
+        const int rc=wait_(h,&it.value(),timeout);
+        if(rc!=0){held_.erase(it);return rc;}
+        const auto& native=it.value();const auto& f=native.stFrameInfo;
+        out.data=native.pBufAddr;out.bytes=f.nFrameLen;out.width=f.nWidth;out.height=f.nHeight;
+        out.pixelFormat=quint32(f.enPixelType);out.stride=f.nWidth;
+        out.hardwareFrameId=f.nFrameNum;out.deviceTicks=(quint64(f.nDevTimeStampHigh)<<32)|f.nDevTimeStampLow;
+        out.chunks=f.nUnparsedChunkNum!=0;
+        // This ABI has no stride/completion flag. Reject ambiguous lengths;
+        // never infer row padding or reinterpret chunk bytes as image pixels.
+        out.complete=f.nLostPacket==0&&quint64(f.nFrameLen)==quint64(f.nWidth)*f.nHeight;
+        return 0;
+    }
+    int releaseBuffer(void* h) override {
+        if(!free_)return oecs::errorLoadLibrary;
+        auto it=held_.find(h);if(it==held_.end())return oecs::errorParameter;
+        const int rc=free_(h,&it.value());if(rc==0)held_.erase(it);return rc;
+    }
+
 private:
     int xmlMetadata(void* h,QMap<QString,QMap<QString,QString>>& result){
         if(xmlCache_.contains(h)){result=xmlCache_.value(h);return 0;}
@@ -151,7 +184,7 @@ private:
         xmlCache_.insert(h,result);return 0;
     }
     template<class F> bool bind(F& pointer,const char* name){pointer=reinterpret_cast<F>(library_.resolve(name));return pointer!=nullptr;}
-    void unbind(){version_=nullptr;enum_=nullptr;create_=nullptr;open_=nullptr;close_=nullptr;destroy_=nullptr;accessMode_=nullptr;interfaceType_=nullptr;getXml_=nullptr;getInt_=nullptr;setInt_=nullptr;getFloat_=nullptr;setFloat_=nullptr;getEnum_=nullptr;setEnum_=nullptr;getBool_=nullptr;setBool_=nullptr;getString_=nullptr;}
+    void unbind(){setNodes_=nullptr;start_=nullptr;wait_=nullptr;free_=nullptr;stop_=nullptr;clear_=nullptr;version_=nullptr;enum_=nullptr;create_=nullptr;open_=nullptr;close_=nullptr;destroy_=nullptr;accessMode_=nullptr;interfaceType_=nullptr;getXml_=nullptr;getInt_=nullptr;setInt_=nullptr;getFloat_=nullptr;setFloat_=nullptr;getEnum_=nullptr;setEnum_=nullptr;getBool_=nullptr;setBool_=nullptr;getString_=nullptr;}
     decltype(&::MV_XML_GetNodeAccessMode) accessMode_=nullptr;
     decltype(&::MV_XML_GetNodeInterfaceType) interfaceType_=nullptr;
     decltype(&::MV_XML_GetGenICamXML) getXml_=nullptr;
@@ -165,6 +198,13 @@ private:
     decltype(&::MV_CC_SetBoolValue) setBool_=nullptr;
     decltype(&::MV_CC_GetStringValue) getString_=nullptr;
     QMap<void*,QMap<QString,QMap<QString,QString>>> xmlCache_;
+    QMap<void*,MV_FRAME_OUT> held_;
+    decltype(&::MV_CC_SetImageNodeNum) setNodes_=nullptr;
+    decltype(&::MV_CC_StartGrabbing) start_=nullptr;
+    decltype(&::MV_CC_GetImageBuffer) wait_=nullptr;
+    decltype(&::MV_CC_FreeImageBuffer) free_=nullptr;
+    decltype(&::MV_CC_StopGrabbing) stop_=nullptr;
+    decltype(&::MV_CC_ClearImageBuffer) clear_=nullptr;
     QLibrary library_;
     decltype(&::MV_CC_GetSDKVersion) version_=nullptr;
     decltype(&::MV_CC_EnumDevices) enum_=nullptr;

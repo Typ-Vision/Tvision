@@ -4,6 +4,7 @@
 #include <memory>
 #include <stdexcept>
 #include <thread>
+#include <functional>
 
 namespace visionflow {
 enum class OecsFailure {Unavailable,WrongThread,InvalidState,InvalidSelector,NotFound,Ambiguous,Busy,ApiError,CleanupFailed,ConfigurationFailed};
@@ -35,6 +36,8 @@ public:
     void writeFeature(const QString& name,const FeatureValue& value);
     void configurationFault(); // retains handle for owner-thread close; prevents further configure
     OecsDeviceInfo deviceInfo() const;
+    // Bounded diagnostic acquisition. Consumer must copy; no trigger/freshness admission.
+    void probeFrame(const OecsStreamLimits&,const std::function<void(const OecsBuffer&)>& copy);
 
     OecsSessionStage stage() const;
     // A handle or library cleanup failed: the DLL is never unloaded by this session again.
@@ -51,6 +54,8 @@ private:
     QString claimKey_;
     OecsDeviceInfo deviceInfo_;
     bool configurationFault_=false;
+    bool streaming_=false,bufferHeld_=false,streamDirty_=false,probing_=false;
+    QString cleanupStream();
     void requireOpen() const;
 };
 }

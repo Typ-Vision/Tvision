@@ -3,6 +3,7 @@
 #include <QFileInfo>
 #include <QSet>
 #include <mutex>
+#include <exception>
 
 namespace visionflow {
 namespace {
@@ -80,6 +81,7 @@ OecsDeviceInfo OecsSession::open(const OecsDeviceSelector& selector) {
 
 void OecsSession::close() {
     if(std::this_thread::get_id()!=owner_)throw OecsSessionError(OecsFailure::WrongThread,"thread",0,"OECS oturumu yalnız sahibi olan iş parçacığından kapatılabilir");
+    if(probing_)throw OecsSessionError(OecsFailure::InvalidState,"stream",0,"OECS probe is in flight");
     if(stage_!=OecsSessionStage::Open && !configurationFault_)return;
     configurationFault_=false;
     QString firstStage;
@@ -94,6 +96,7 @@ void OecsSession::close() {
         stage_=OecsSessionStage::Faulted;
     } else {
         handle_=nullptr;
+        streaming_=bufferHeld_=streamDirty_=false;
         release(claimKey_);
         claimKey_.clear();
         if(api_->unload())stage_=OecsSessionStage::Unloaded;
@@ -106,7 +109,7 @@ void OecsSession::close() {
 namespace visionflow {
 void OecsSession::requireOpen() const {
     if(std::this_thread::get_id()!=owner_)throw OecsSessionError(OecsFailure::WrongThread,"thread",0,"OECS feature access requires owner worker");
-    if(stage_!=OecsSessionStage::Open)throw OecsSessionError(OecsFailure::InvalidState,"feature",0,"OECS session is not idle/open");
+    if(stage_!=OecsSessionStage::Open||streamDirty_)throw OecsSessionError(OecsFailure::InvalidState,"feature",0,"OECS session is not idle/open");
 }
 CameraFeature OecsSession::feature(const QString& name){
     requireOpen();CameraFeature f;f.name=name;
@@ -124,4 +127,54 @@ void OecsSession::writeFeature(const QString& name,const FeatureValue& value){
 }
 void OecsSession::configurationFault(){requireOpen();configurationFault_=true;stage_=OecsSessionStage::Faulted;}
 OecsDeviceInfo OecsSession::deviceInfo() const {requireOpen();return deviceInfo_;}
+
+QString OecsSession::cleanupStream(){
+    QStringList failures;
+    if(bufferHeld_){const int rc=api_->releaseBuffer(handle_);if(rc==0)bufferHeld_=false;else failures<<"release:"+hex(rc);}
+    if(streaming_){const int rc=api_->stopStream(handle_);if(rc==0)streaming_=false;else failures<<"stop:"+hex(rc);}
+    if(streamDirty_){const int rc=api_->flushStream(handle_);if(rc!=0)failures<<"flush:"+hex(rc);}
+    if(failures.isEmpty())streamDirty_=false;
+    return failures.join(", ");
+}
+void OecsSession::probeFrame(const OecsStreamLimits& limits,const std::function<void(const OecsBuffer&)>& copy){
+    requireOpen();
+    const auto invalid=[](const char* message){throw OecsSessionError(OecsFailure::ConfigurationFailed,"stream-validation",0,message);};
+    if(!copy||limits.buffers<1||limits.buffers>64||limits.poolBytes==0||limits.poolBytes>512ULL*1024*1024||limits.timeoutMs<1||limits.timeoutMs>30000)invalid("Invalid stream limits");
+    // Read actual payload before the SDK can allocate its internal pool.
+    const auto payload=feature("PayloadSize"),width=feature("Width"),height=feature("Height"),format=feature("PixelFormat");
+    const auto integer=[&](const CameraFeature& f)->quint64 {
+        if(f.type!=FeatureType::Integer||!std::holds_alternative<qint64>(f.value)||std::get<qint64>(f.value)<=0)invalid("Invalid actual stream dimensions/payload");
+        if(f.access!=FeatureAccess::ReadOnly&&f.access!=FeatureAccess::ReadWrite)invalid("Unreadable stream feature");
+        return quint64(std::get<qint64>(f.value));
+    };
+    const quint64 bytes=integer(payload),w=integer(width),h=integer(height);
+    if(w>100000000||h>100000000||w*h>100000000||bytes<w*h||bytes>limits.poolBytes/limits.buffers)invalid("Stream pool budget or raster size exceeded");
+    if(format.type!=FeatureType::Enumeration||!std::holds_alternative<QString>(format.value)||std::get<QString>(format.value)!="Mono8"||(format.access!=FeatureAccess::ReadOnly&&format.access!=FeatureAccess::ReadWrite))invalid("Only actual Mono8 is supported");
+    const auto call=[](int rc,const char* stage){if(rc!=0)throw OecsSessionError(OecsFailure::ApiError,stage,rc,"OECS stream operation failed");};
+    std::exception_ptr failure;
+    probing_=true;
+    try {
+        call(api_->setBufferCount(handle_,limits.buffers),"pool");
+        // Start may partially succeed. Always attempt stop/flush after entering it.
+        streaming_=streamDirty_=true;
+        call(api_->startStream(handle_),"start");
+        OecsBuffer frame;
+        call(api_->waitBuffer(handle_,limits.timeoutMs,frame),"wait");
+        bufferHeld_=true;
+        if(!frame.data||!frame.complete||frame.overflow||frame.chunks||frame.pixelFormat!=0x01080001||frame.width!=w||frame.height!=h||frame.stride<w||frame.stride>bytes/h||frame.bytes!=frame.stride*h||frame.bytes>bytes)invalid("Invalid/incomplete/unsupported Mono8 buffer");
+        copy(frame); // Owned copy finishes before release, including exception paths.
+    }catch(...){failure=std::current_exception();}
+    const auto cleanup=cleanupStream();
+    probing_=false;
+    if(!cleanup.isEmpty()){
+        configurationFault_=true;stage_=OecsSessionStage::Faulted;
+        QString message="OECS stream cleanup failed: "+cleanup;
+        if(failure)try{std::rethrow_exception(failure);}catch(const std::exception& e){message+="; acquisition: "+QString::fromUtf8(e.what());}catch(...){message+="; acquisition failed";}
+        throw OecsSessionError(OecsFailure::CleanupFailed,"stream-cleanup",0,message);
+    }
+    if(failure){
+        configurationFault_=true;stage_=OecsSessionStage::Faulted;
+        std::rethrow_exception(failure);
+    }
+}
 }

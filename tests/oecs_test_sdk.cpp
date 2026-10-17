@@ -12,6 +12,8 @@
 namespace {
 MV_CC_DEVICE_INFO sharedInfo{};
 std::mutex bufferMutex;
+unsigned char raster[6]={1,2,3,4,5,6};
+int streamMode=0,borrowed=0,running=0;
 std::atomic<int> active{0},overlap{0},sequence{0};
 }
 extern "C" {
@@ -57,6 +59,28 @@ MV_CAMCTRL_API int __stdcall MV_CC_SetEnumValue(void*,const char*,unsigned int){
 MV_CAMCTRL_API int __stdcall MV_CC_GetBoolValue(void*,const char*,bool* v){*v=false;return 0;}
 MV_CAMCTRL_API int __stdcall MV_CC_SetBoolValue(void*,const char*,bool v){return v?0:int(0x80000004u);}
 MV_CAMCTRL_API int __stdcall MV_CC_GetStringValue(void*,const char*,MVCC_STRINGVALUE* v){*v={};std::strcpy(v->chCurValue,"CAM");return 0;}
+MV_CAMCTRL_API int __stdcall MV_CC_SetImageNodeNum(void*,unsigned int n){return n==4?0:MV_E_PARAMETER;}
+MV_CAMCTRL_API int __stdcall MV_CC_StartGrabbing(void*){running=1;return 0;}
+MV_CAMCTRL_API int __stdcall MV_CC_StopGrabbing(void*){running=0;return 0;}
+MV_CAMCTRL_API int __stdcall MV_CC_ClearImageBuffer(void*){return borrowed?MV_E_PARAMETER:0;}
+MV_CAMCTRL_API int __stdcall MV_CC_GetImageBuffer(void*,MV_FRAME_OUT* frame,unsigned int timeout){
+    if(!running||borrowed||timeout!=37)return MV_E_PARAMETER;
+    *frame={};frame->pBufAddr=raster;auto& f=frame->stFrameInfo;
+    f.nWidth=3;f.nHeight=2;f.nFrameLen=6;f.enPixelType=PixelType_Gvsp_Mono8;
+    f.nFrameNum=0xFFFFFFFFu;f.nDevTimeStampHigh=0x12345678;f.nDevTimeStampLow=0xABCDEF01;
+    if(streamMode==1)f.nFrameLen=5;
+    if(streamMode==2)f.nLostPacket=1;
+    if(streamMode==3)f.nUnparsedChunkNum=1;
+    if(streamMode==4)f.enPixelType=PixelType_Gvsp_Mono12_Packed;
+    if(streamMode==5)f.nFrameLen=8; // No stride field: never guess padding.
+    borrowed=1;return 0;
+}
+MV_CAMCTRL_API int __stdcall MV_CC_FreeImageBuffer(void*,MV_FRAME_OUT* frame){
+    if(!borrowed||frame->pBufAddr!=raster||frame->stFrameInfo.nFrameNum!=0xFFFFFFFFu)return MV_E_PARAMETER;
+    borrowed=0;std::memset(raster,99,sizeof(raster));return 0;
+}
+__declspec(dllexport) void testStreamMode(int mode){streamMode=mode;}
+__declspec(dllexport) int testStreamResources(){return borrowed+running;}
 __declspec(dllexport) const char* testHandleSerial(void* handle){return reinterpret_cast<const char*>(static_cast<MV_CC_DEVICE_INFO*>(handle)->SpecialInfo.stUsb3VInfo.chSerialNumber);}
 __declspec(dllexport) unsigned int testHandleMarker(void* handle){return static_cast<MV_CC_DEVICE_INFO*>(handle)->nMacAddrHigh;}
 __declspec(dllexport) int testEnumerationOverlap(){return overlap.load();}

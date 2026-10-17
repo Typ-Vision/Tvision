@@ -1,6 +1,6 @@
 # Endüstriyel kamera entegrasyonu — ICM ana planı
 
-17 Ekim 2026. **ICM-00 envanteri tamamlandı; endüstriyel acquisition başlamadı.** Uygulayıcı hedefi:
+17 Ekim 2026. **ICM-04c backend tek-kare probe mevcut; ürün acquisition bağlantısı henüz yok.** Uygulayıcı hedefi:
 **GPT-6.1-sol / medium** (kullanıcının Sol6.1 medium tercihi). Bu belge model
 ayarını değiştirmez veya başka bir chat başlatmaz. Yeni kullanıcı yönlendirmesi,
 KMC-10e sonrasında fiziksel kalibrasyon kabulünden önce gerçek kamera entegrasyonudur.
@@ -76,7 +76,7 @@ izni olarak sunulmaz. Production capability, ICM-08b trusted terminal kapısı b
 
 ## Görev envanteri ve bağımlılıklar
 
-**ICM-00, ICM-01a, ICM-03a, ICM-03b ve ICM-04a tamamlandı; ICM-01b açık; ICM-02 offline/koşullu tamamlandı.**
+**ICM-00, ICM-01a, ICM-03a, ICM-03b ve ICM-04a–c yazılımı tamamlandı; ICM-01b açık; ICM-02 offline/koşullu tamamlandı.**
 [Backend kararı](industrial-camera-backend-decision.md): OECS C API;
 gerçek cihaz readback/grab açık. Diğer satırlar PLANLANDI.
 [ICM-01a tanı kabulü](../archive/2026-10-17-icm-01a.md) fiziksel kapıları kapatmaz.

@@ -16,7 +16,8 @@ Bu README giriş ve kullanım rehberidir; teslim günlüğü değildir.
 - Çok kaynaklı Editor ve immutable Runtime hazırlığı; gerçek çevrim, kalıcı terminal
   kayıtları, restart geçmişi, Logs/CSV ve vf.socket2 scalar mapping.
 - Image File/Webcam edinimi ve GenTL keşif/salt okunur kontrolü. Endüstriyel
-  stream/grab ve bunun kalibrasyon/Editor/Runtime bağlantısı henüz uygulanmadı.
+  backend’de sınırlı tek-kare Mono8 probe mevcut; kalibrasyon/Editor/Runtime
+  edinim bağlantısı henüz uygulanmadı.
 
 Hazırlık veya keşif sonucu üretim kabulü değildir. Gerçek sonuç olmadan PASS, skor
 veya robot pose gösterilmez. Robot hazırlık ekranları çalışan robot entegrasyonu

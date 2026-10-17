@@ -36,6 +36,21 @@ int main(int argc,char** argv){QCoreApplication app(argc,argv);try{
     check(a->readFeature(handle,"DeviceModelName",feature)==0&&std::get<QString>(feature.value)=="CAM","string ABI");
     check(a->readFeature(handle,"Missing",feature)==0&&feature.access==FeatureAccess::Missing,"missing node ABI");
     check(a->writeFeature(handle,"UserSetSave",qint64(1))==oecs::errorParameter,"no EEPROM commands");
+    const auto mode=reinterpret_cast<void(*)(int)>(fixture.resolve("testStreamMode"));
+    const auto resources=reinterpret_cast<int(*)()>(fixture.resolve("testStreamResources"));
+    check(mode&&resources,"stream inspection exports");
+    for(int scenario=0;scenario<6;++scenario){
+        mode(scenario);OecsBuffer frame;
+        check(a->setBufferCount(handle,4)==0&&a->startStream(handle)==0&&a->waitBuffer(handle,37,frame)==0,"stream ABI calls");
+        check(frame.width==3&&frame.height==2&&frame.stride==3&&frame.hardwareFrameId==0xFFFFFFFFu&&frame.deviceTicks==0x12345678ABCDEF01ULL,"native actual frame metadata ABI");
+        if(scenario==0)check(frame.complete&&frame.bytes==6&&frame.pixelFormat==0x01080001&&!frame.chunks&&static_cast<const unsigned char*>(frame.data)[5]==6,"tight native Mono8");
+        if(scenario==1||scenario==2||scenario==5)check(!frame.complete,"native truncation/lost packet/ambiguous padding rejected");
+        if(scenario==3)check(frame.chunks,"native chunk flag");
+        if(scenario==4)check(frame.pixelFormat!=0x01080001,"native packed format preserved");
+        OecsBuffer duplicate;check(a->waitBuffer(handle,37,duplicate)==oecs::errorParameter,"one outstanding native buffer");
+        check(a->releaseBuffer(handle)==0&&a->stopStream(handle)==0&&a->flushStream(handle)==0&&resources()==0,"native release stop flush balances resources");
+        check(a->releaseBuffer(handle)==oecs::errorParameter,"no duplicate native release");
+    }
     check(!a->unload() && a->destroyHandle(handle)==0,"live handle pins binding until destroy");
     check(a->createHandle(1,&handle)==oecs::errorParameter,"filtered index cannot select absent entry");
     check(a->unload() && b->unload(),"unload both bindings");

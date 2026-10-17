@@ -10,6 +10,18 @@ struct OecsDeviceInfo {
     quint16 usbVendorId=0,usbProductId=0;
     quint32 deviceNumber=0;
 };
+// Borrowed until releaseBuffer. No vendor struct escapes this boundary.
+struct OecsBuffer {
+    const void* data=nullptr;
+    quint64 bytes=0,stride=0,hardwareFrameId=0,deviceTicks=0;
+    quint32 width=0,height=0,pixelFormat=0;
+    bool complete=true,overflow=false,chunks=false;
+};
+struct OecsStreamLimits {
+    quint32 buffers=4;
+    quint64 poolBytes=128ULL*1024*1024;
+    int timeoutMs=1000;
+};
 // MV_* status values the session interprets; copied by value, no SDK header needed.
 namespace oecs {
 constexpr int ok=0;
@@ -33,6 +45,12 @@ public:
     virtual int destroyHandle(void* handle)=0;
     virtual int readFeature(void*,const QString&,CameraFeature&) {return oecs::errorLoadLibrary;}
     virtual int writeFeature(void*,const QString&,const FeatureValue&) {return oecs::errorLoadLibrary;}
+    virtual int setBufferCount(void*,quint32) {return oecs::errorLoadLibrary;}
+    virtual int startStream(void*) {return oecs::errorLoadLibrary;}
+    virtual int waitBuffer(void*,int,OecsBuffer&) {return oecs::errorLoadLibrary;}
+    virtual int releaseBuffer(void*) {return oecs::errorLoadLibrary;}
+    virtual int stopStream(void*) {return oecs::errorLoadLibrary;}
+    virtual int flushStream(void*) {return oecs::errorLoadLibrary;}
 };
 // Dynamic MvCameraControl binding when built with VISIONFLOW_OECS_INCLUDE_DIR, otherwise an
 // implementation whose load() always fails with an explicit reason.
