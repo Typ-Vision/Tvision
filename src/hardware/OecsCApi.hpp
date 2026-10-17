@@ -26,6 +26,9 @@ struct OecsTriggerArm {
     quint64 generation=0;
     quint32 frameCounter=0,triggerCounter=0;
 };
+// Backend implementation capability, not per-request ready/arm evidence. An SDK
+// command export or a successful diagnostic does not establish correlation.
+enum class OecsTriggerCorrelation {Unavailable,ActualCounterEpoch};
 struct OecsStreamLimits {
     quint32 buffers=4;
     quint64 poolBytes=128ULL*1024*1024;
@@ -55,6 +58,8 @@ public:
     virtual int destroyHandle(void* handle)=0;
     virtual int readFeature(void*,const QString&,CameraFeature&) {return oecs::errorLoadLibrary;}
     virtual int writeFeature(void*,const QString&,const FeatureValue&) {return oecs::errorLoadLibrary;}
+    // No SDK effects. Opt-in only when prepare/wait implement the full contract.
+    virtual OecsTriggerCorrelation softwareTriggerCorrelation() const {return OecsTriggerCorrelation::Unavailable;}
     // prepare must drain/quiesce old exposures, verify stream-ready and establish an
     // actual counter epoch. waitBuffer may tag generation ONLY from that epoch's
     // hardware event evidence. Echoing the caller generation on any next frame is invalid.

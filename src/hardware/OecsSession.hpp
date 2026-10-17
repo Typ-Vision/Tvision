@@ -36,6 +36,8 @@ public:
     void writeFeature(const QString& name,const FeatureValue& value);
     void configurationFault(); // retains handle for owner-thread close; prevents further configure
     OecsDeviceInfo deviceInfo() const;
+    // Owner worker, idle/open session; no device/stream operations.
+    OecsTriggerCorrelation softwareTriggerCorrelation() const;
     // Bounded diagnostic acquisition. Consumer must copy; no trigger/freshness admission.
     void probeFrame(const OecsStreamLimits&,const std::function<void(const OecsBuffer&)>& copy);
 

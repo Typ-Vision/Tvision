@@ -9,6 +9,7 @@
 #include <QJsonObject>
 #include <QLibrary>
 #include <MvCameraControl.h>
+#include <algorithm>
 #include <iostream>
 #include <stdexcept>
 #include <vector>
@@ -31,8 +32,10 @@ int main(int argc,char** argv) {
         {"commandsAttempted",0},{"framesReceived",0}};
     int exitCode=0;
     try {
-        if(argc!=5 || !QFileInfo(QString::fromLocal8Bit(argv[1])).isAbsolute())
-            throw std::runtime_error("usage: oecs_trigger_diagnostic absolute-dll exact-vendor exact-model exact-serial");
+        const bool frameSpec=argc==6 && QString::fromLocal8Bit(argv[5])=="--frame-spec";
+        if((argc!=5 && !frameSpec) || !QFileInfo(QString::fromLocal8Bit(argv[1])).isAbsolute())
+            throw std::runtime_error("usage: oecs_trigger_diagnostic absolute-dll exact-vendor exact-model exact-serial [--frame-spec]");
+        out["frameSpecExperiment"]=frameSpec;
         QLibrary lib(QString::fromLocal8Bit(argv[1]));
         if(!lib.load())throw std::runtime_error(lib.errorString().toStdString());
 #define API(name) const auto name=resolve<decltype(&::name)>(lib,#name)
@@ -58,6 +61,9 @@ int main(int argc,char** argv) {
         out["serial"]=QString::fromLocal8Bit(argv[4]);
         void* handle=nullptr;bool opened=false,stream=false,held=false,modified=false,snapshot=false;
         unsigned originalMode=0,originalSource=0;int64_t originalBurst=0;bool originalCache=false;
+        unsigned originalSpecSelector=0;
+        bool specSelectorSaved=false,specTouched=false;
+        std::vector<std::pair<unsigned,bool>> specSnapshot;
         MV_FRAME_OUT frame{}; // One borrowed slot survives every exceptional path.
         QJsonArray samples,cleanup;
         const auto enumValue=[&](const char* name){MVCC_ENUMVALUE v{};check(MV_CC_GetEnumValue(handle,name,&v),name);return v;};
@@ -80,6 +86,35 @@ int main(int argc,char** argv) {
             const auto width=intValue("Width"),height=intValue("Height"),payload=intValue("PayloadSize");
             if(width<=0 || height<=0 || width>2448 || height>2048 || payload!=width*height)
                 throw std::runtime_error("requires bounded tight Mono8 payload");
+            if(frameSpec) {
+                const auto selector=enumValue("FrameSpecInfoSelector");
+                originalSpecSelector=selector.nCurValue;specSelectorSaved=true;
+                for(unsigned bank:{0u,5u,6u}) {
+                    bool supported=false;
+                    for(unsigned n=0;n<selector.nSupportedNum && n<MV_MAX_XML_SYMBOLIC_NUM;++n)
+                        supported|=selector.nSupportValue[n]==bank;
+                    if(!supported)throw std::runtime_error("required frame spec bank unsupported");
+                }
+                // Snapshot every target bank before changing its enable value.
+                for(unsigned bank:{0u,5u,6u}) {
+                    check(MV_CC_SetEnumValue(handle,"FrameSpecInfoSelector",bank),"select frame spec snapshot");
+                    if(enumValue("FrameSpecInfoSelector").nCurValue!=bank)throw std::runtime_error("frame spec selector mismatch");
+                    specSnapshot.emplace_back(bank,boolValue("FrameSpecInfo"));
+                }
+                QJsonArray saved;
+                for(const auto& [bank,enabled]:specSnapshot) {
+                    saved.append(QJsonObject{{"bank",double(bank)},{"enabled",enabled}});
+                    check(MV_CC_SetEnumValue(handle,"FrameSpecInfoSelector",bank),"select frame spec enable");
+                    if(enumValue("FrameSpecInfoSelector").nCurValue!=bank)throw std::runtime_error("frame spec enable selector mismatch");
+                    specTouched=true;
+                    check(MV_CC_SetBoolValue(handle,"FrameSpecInfo",true),"enable frame spec");
+                    if(!boolValue("FrameSpecInfo"))throw std::runtime_error("frame spec enable mismatch");
+                }
+                out["frameSpecSnapshot"]=saved;
+                check(MV_CC_SetEnumValue(handle,"FrameSpecInfoSelector",originalSpecSelector),"restore active frame spec selector");
+                if(enumValue("FrameSpecInfoSelector").nCurValue!=originalSpecSelector)throw std::runtime_error("active frame spec selector mismatch");
+                if(intValue("PayloadSize")!=payload)throw std::runtime_error("frame spec changed payload; raster contract unsupported");
+            }
             snapshot=true;modified=true;
             check(MV_CC_SetEnumValue(handle,"TriggerSource",7),"set Software");
             check(MV_CC_SetIntValueEx(handle,"AcquisitionBurstFrameCount",1),"set burst 1");
@@ -123,6 +158,12 @@ int main(int argc,char** argv) {
                     {"unparsedChunks",double(f.nUnparsedChunkNum)},{"elapsedMs",double(timer.elapsed())},
                     {"sha256",QString::fromLatin1(QCryptographicHash::hash(
                         QByteArrayView(reinterpret_cast<const char*>(frame.pBufAddr),f.nFrameLen),QCryptographicHash::Sha256).toHex())}});
+                if(frameSpec) {
+                    auto sample=samples.last().toObject();
+                    sample["rasterPrefixHex"]=QString::fromLatin1(QByteArray(
+                        reinterpret_cast<const char*>(frame.pBufAddr),int(std::min(f.nFrameLen,64u))).toHex());
+                    samples.replace(samples.size()-1,sample);
+                }
                 check(MV_CC_FreeImageBuffer(handle,&frame),"free");held=false;
                 out["framesReceived"]=n+1;requireQuiet();
             }
@@ -133,6 +174,25 @@ int main(int argc,char** argv) {
         const auto record=[&](const char* stage,int rc){cleanup.append(QJsonObject{{"stage",stage},{"code",code(rc)}});if(rc!=MV_OK){cleanupOk=false;exitCode=1;}};
         if(held)record("free outstanding",MV_CC_FreeImageBuffer(handle,&frame));
         if(stream){record("clear",MV_CC_ClearImageBuffer(handle));record("stop",MV_CC_StopGrabbing(handle));}
+        if(opened && specSelectorSaved) {
+            bool specRestored=true;
+            if(specTouched)for(const auto& [bank,enabled]:specSnapshot) {
+                const int selected=MV_CC_SetEnumValue(handle,"FrameSpecInfoSelector",bank);
+                record("restore spec select",selected);
+                if(selected!=MV_OK){specRestored=false;continue;}
+                // Never write a bank if selector readback could not be confirmed.
+                try {
+                    if(enumValue("FrameSpecInfoSelector").nCurValue!=bank)throw std::runtime_error("restore selector mismatch");
+                    const int rc=MV_CC_SetBoolValue(handle,"FrameSpecInfo",enabled);record("restore spec enable",rc);
+                    if(rc!=MV_OK || boolValue("FrameSpecInfo")!=enabled)specRestored=false;
+                }catch(const std::exception& e){out["frameSpecRestoreError"]=e.what();specRestored=false;}
+            }
+            record("restore spec selector",MV_CC_SetEnumValue(handle,"FrameSpecInfoSelector",originalSpecSelector));
+            try{specRestored=enumValue("FrameSpecInfoSelector").nCurValue==originalSpecSelector && specRestored;}
+            catch(const std::exception& e){out["frameSpecRestoreError"]=e.what();specRestored=false;}
+            out["frameSpecRestored"]=specRestored;
+            if(!specRestored){cleanupOk=false;exitCode=1;}
+        }
         if(opened && modified && snapshot) {
             record("restore Off",MV_CC_SetEnumValue(handle,"TriggerMode",0));
             record("restore source",MV_CC_SetEnumValue(handle,"TriggerSource",originalSource));

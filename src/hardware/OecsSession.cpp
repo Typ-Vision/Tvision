@@ -129,6 +129,9 @@ void OecsSession::writeFeature(const QString& name,const FeatureValue& value){
 }
 void OecsSession::configurationFault(){requireOpen();configurationFault_=true;stage_=OecsSessionStage::Faulted;}
 OecsDeviceInfo OecsSession::deviceInfo() const {requireOpen();return deviceInfo_;}
+OecsTriggerCorrelation OecsSession::softwareTriggerCorrelation() const {
+    requireOpen();return api_->softwareTriggerCorrelation();
+}
 
 QString OecsSession::cleanupStream(){
     QStringList failures;
@@ -147,6 +150,9 @@ OecsTriggerArm OecsSession::softwareFrame(const OecsStreamLimits& limits,const s
                                         const std::function<void(const OecsBuffer&)>& copy){
     requireOpen();
     if(!remaining)throw OecsSessionError(OecsFailure::ConfigurationFailed,"deadline",0,"Monotonic budget required");
+    if(softwareTriggerCorrelation()!=OecsTriggerCorrelation::ActualCounterEpoch)
+        throw OecsSessionError(OecsFailure::Unavailable,"trigger-correlation",oecs::errorUnsupported,
+            "Backend cannot prove trigger-ready state and actual frame/trigger counter epoch");
     // Process-wide generations survive close/reopen and different session instances.
     static std::atomic<quint64> next{1};
     quint64 generation=next.load();

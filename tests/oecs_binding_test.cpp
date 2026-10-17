@@ -20,6 +20,11 @@ int main(int argc,char** argv){QCoreApplication app(argc,argv);try{
     check(serial && marker && overlap,"inspection exports available");
     auto a=makeOecsCApi(),b=makeOecsCApi();QString reason;
     check(a->load(path,reason) && b->load(path,reason),"load two actual dynamic bindings");
+    check(a->softwareTriggerCorrelation()==OecsTriggerCorrelation::Unavailable,
+        "SDK exports do not imply an implemented trigger correlation path");
+    OecsTriggerArm unproven;
+    check(a->prepareSoftwareTrigger(nullptr,1,100,unproven)==oecs::errorUnsupported &&
+        a->executeSoftwareTrigger(nullptr)==oecs::errorUnsupported,"native unproven trigger methods remain unsupported");
     QVector<OecsDeviceInfo> selected,other;
     check(a->enumerateUsb(selected)==0 && selected.size()==1,"enumerate A with null entries filtered");
     check(b->enumerateUsb(other)==0 && other.size()==1 && other[0].serial!=selected[0].serial,"B overwrites SDK enumeration storage");

@@ -5,7 +5,10 @@ namespace {
 class TriggerAdapter final: public AcquisitionAdapter {
 public:
     TriggerAdapter(OecsSession& session,OecsStreamLimits limits):session_(session),limits_(limits){}
-    AcquisitionCapabilities capabilities() const override {return {"industrial",true,false,false,false,false};}
+    AcquisitionCapabilities capabilities() const override {
+        return {"industrial",session_.softwareTriggerCorrelation()==OecsTriggerCorrelation::ActualCounterEpoch,
+            false,false,false,false};
+    }
     ImageFrame acquire(const AcquisitionRequest& request) const override {
         std::optional<ImageFrame> owned;
         const auto remaining=[&]{

@@ -112,7 +112,8 @@ int main(int argc, char** argv) {
                             "CounterSelector", "CounterEventSource", "CounterResetSource", "CounterValue",
                             "CounterCurrentValue", "CounterValueAtReset", "ChunkModeActive", "ChunkSelector",
                             "ChunkEnable", "EventSelector", "EventNotification", "DeviceTimestamp",
-                            "DeviceTimestampFrequency", "DeviceTimestampIncrement"}) {
+                            "DeviceTimestampFrequency", "DeviceTimestampIncrement",
+                            "FrameSpecInfoSelector", "FrameSpecInfo"}) {
                             QJsonObject node{{"name",name}};
                             MV_XML_AccessMode access=AM_Undefined;
                             const int accessCode=MV_XML_GetNodeAccessMode(handle,name,&access);

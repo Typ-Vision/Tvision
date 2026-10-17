@@ -279,6 +279,17 @@ command, artan tick/frame number ve değişen hash actual counter epoch yerine
 kullanılamaz. CounterEventSource yalnız Off/Line0/Line2 destekliyor; bu sayaç
 software-trigger oracle'ı değildir. H02 sahne/tazelik ve production kabulü açık kalır.
 
+Sonraki [korelasyon kararı](industrial-camera-trigger-correlation.md) önceki sıfır
+metadata bulgusunu daraltır: FrameSpecInfo'nun Framecounter/ExtTriggerCount bankaları
+açılınca actual sayaçlar ilerliyor. Önceki kayıt kapalı metadata denemesidir.
+Backend implementation capability `OecsTriggerCorrelation` ile ayrı bildirilir;
+default Unavailable. Application adapter bunu destek diye ilan etmez; doğrudan
+softwareFrame da feature/pool/start/command öncesi unsupported verir ve idle
+session'ı Faulted yapmaz. ActualCounterEpoch ilanı tek başına frame kanıtı değildir:
+mevcut prepare/arm/generation/modulo sayaç kontrolleri her istekte zorunludur.
+FrameSpecInfo desteği native capability'yi açmaz; baseline/quiescence ve raster
+etkisi henüz doğrulanmadı. FrameStart şartı ve 04e bağımlılığı korunur.
+
 Gerçek nested EnumEntry çocukları enumeration kapsamında ayrıştırılır; On/Off gibi
 local isimler başka enum'u ezmez. ClearImageBuffer Stop'tan sonra CALLORDER verdiği
 için cleanup sırası Free → Clear (stream çalışırken) → Stop'tur; flush hatasında da

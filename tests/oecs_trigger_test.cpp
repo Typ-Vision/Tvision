@@ -31,6 +31,9 @@ public:
     int openExclusive(void*) override{return 0;}
     int closeDevice(void*) override{return 0;}
     int destroyHandle(void*) override{h->held=h->running=false;return 0;}
+    OecsTriggerCorrelation softwareTriggerCorrelation() const override {
+        return h->scenario=="no-correlation"?OecsTriggerCorrelation::Unavailable:OecsTriggerCorrelation::ActualCounterEpoch;
+    }
     int readFeature(void*,const QString& n,CameraFeature& f) override{
         h->call("read:"+n);f={};f.name=n;f.access=FeatureAccess::ReadOnly;
         if(n=="Width"||n=="Height"||n=="PayloadSize"){
@@ -89,6 +92,26 @@ std::unique_ptr<OecsSession> open(std::shared_ptr<Hardware> h){
 void noResult(const IndustrialTriggerResult& r){check(r.acquisition.state!=AcquisitionState::Done&&!r.acquisition.frame&&!r.evidence,"false DONE/evidence");}
 }
 int main(int argc,char** argv){QCoreApplication app(argc,argv);try{
+    {
+        // Both the SDK build and the SDK-less implementation fail closed by default.
+        auto native=makeOecsCApi();
+        check(native->softwareTriggerCorrelation()==OecsTriggerCorrelation::Unavailable,"native does not advertise diagnostic trigger as admission");
+        auto h=std::make_shared<Hardware>();h->scenario="no-correlation";auto s=open(h);
+        check(s->softwareTriggerCorrelation()==OecsTriggerCorrelation::Unavailable,"session preserves unavailable capability");
+        for(int n=0;n<2;++n) {
+            auto r=IndustrialSoftwareCapture::capture(*s,"source");noResult(r);
+            check(r.acquisition.state==AcquisitionState::Error&&!r.acquisition.error.isEmpty(),"explicit unsupported acquisition error");
+        }
+        bool copied=false,rejected=false;
+        try{s->softwareFrame({},[]{return 1000;},[&](const OecsBuffer&){copied=true;});}
+        catch(const OecsSessionError& e){rejected=e.failure()==OecsFailure::Unavailable&&e.stage()=="trigger-correlation"&&e.code()==oecs::errorUnsupported;}
+        check(rejected&&!copied&&h->calls.isEmpty()&&h->commands==0,"direct and application rejection precede feature/pool/start/flush/command/wait");
+        check(s->stage()==OecsSessionStage::Open,"unsupported preflight leaves idle session usable");
+        s->close();
+        bool closedRejected=false;
+        try{s->softwareTriggerCorrelation();}catch(const OecsSessionError& e){closedRejected=e.failure()==OecsFailure::InvalidState;}
+        check(closedRejected,"capability query respects session lifetime");
+    }
     {
         auto h=std::make_shared<Hardware>();auto s=open(h);
         h->events.push_back({0,1,1}); // preview residue must be drained

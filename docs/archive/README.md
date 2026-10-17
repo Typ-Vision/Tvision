@@ -6,6 +6,7 @@ görev” ifadeleri yazıldıkları tarihe aittir.
 
 | Dönem / görev | Kayıt |
 | --- | --- |
+| 17 Ekim 2026 — ICM-04d korelasyon | [FrameSpecInfo sayaç keşfi, sözleşme kararı ve erken capability reddi](2026-10-17-icm-04d-correlation.md) |
 | 17 Ekim 2026 — ICM-04d native tanı | [2×100 gerçek trigger/kare, ayar geri yükleme ve sayaç/ready engeli](2026-10-17-icm-04d-native-diagnostic.md) |
 | 17 Ekim 2026 — ICM-04d kısmi | [Tetik eşleştirme çekirdeği, gerçek bağlantı/kare ve native engeller](2026-10-17-icm-04d.md) |
 | 17 Ekim 2026 — ICM-04c | [Bounded stream probe, owned Mono8 frame ve cleanup kabulü](2026-10-17-icm-04c.md) |
