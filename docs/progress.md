@@ -5,11 +5,11 @@ Son yönlendirme önceliklidir. Ayrıntılar [arşivde](archive/README.md); topl
 
 ## Devam noktası
 
-- **Üç sıralı hazırlık:** [04e-b](archive/2026-10-18-icm-04e-b.md) stress ve
-  [05a-a](archive/2026-10-18-icm-05a-a.md) exact keşif/resolve tamam; sırada 07a-a.
+- **Üç sıralı hazırlık tamam:** [04e-b](archive/2026-10-18-icm-04e-b.md) stress,
+  [05a-a](archive/2026-10-18-icm-05a-a.md) keşif/resolve,
+  [07a-a](archive/2026-10-18-icm-07a-a.md) kaynak referans codec; ürün bağlantısı yok.
 - **Kullanıcı: destek beklemeden ilerle.** [ICM-04e-a](archive/2026-10-18-icm-04e-a.md)
-  tamam: exact fiziksel lease, kalıcı worker, owner polling/JobSession shutdown,
-  geç kare bastırma ve cleanup-failure karantinası; native/ürün bağlantısı yok.
+  tamam: exact lease/worker, owner polling/shutdown, geç kare ret ve cleanup karantinası.
   [ICM-03c](archive/2026-10-18-icm-03c.md) owned ölçüm rasteri/geometri adayı da hazır;
   provider/persistence/UI bağlantısı yok. Native 04e/G1 hâlâ 04d'ye bağlı.
 - **ICM-04d kısmi: gecikmiş command Stop/Start'ı aşıyor; native Unavailable**.
@@ -71,8 +71,7 @@ sözleşme/kabul bölümleri; büyük belgelerde önce başlık/ID arayın. Beli
 ## Açık bağımlılıklar ve kabul
 
 - ICM-01a/02 offline karar tamamlandı. ICM-01b ve G0–G4/H01–H08 açık.
-  **Reboot yapıldı** (kullanıcı + CIM: 17 Ekim 22:42:38 +03). Kullanıcı reboot sonrası
-  OECS'yi açmadı; süreç taramasında OECS/MVS/Opto eşleşmesi yoktu.
+  **Reboot yapıldı** (kullanıcı + CIM: 17 Ekim 22:42:38 +03); sonrasında OECS açılmadı.
 - Sandbox içi C API/GenTL 0; **sandbox dışı C API 1 cihaz, exact open/readback/grab/
   close başarılı**. Kısıtlı ortamın 0 sonucunu cihaz yokluğu diye yorumlamayın.
   PnP: OE USB3 Machine Vision Camera, Status OK. Actual vendor/model/seri:
@@ -85,7 +84,7 @@ sözleşme/kabul bölümleri; büyük belgelerde önce başlık/ID arayın. Beli
   yalnız Off/Line0/Line2; ayrı FrameSpecInfo metadata sayacı var. On/Software aktifken de
   AcquisitionStatusSelector missing, AcquisitionStatus unavailable. Native ready/epoch açık. ClearImageBuffer
   **stream çalışırken**, sonra Stop gerekir; ters sıra gerçek CALLORDER verdi.
-- Gerçek seri/open/grab ve metadata kapalı/açık 100'lük tanılar var; H02 sahne/tazelik, 1000 cycle/teardown stress,
+- Gerçek seri/open/grab ve metadata kapalı/açık 100'lük tanılar var; H02 sahne/tazelik, fiziksel 1000 cycle/teardown stress,
   viewer/release sahne kabulü, vendor redistributable ve temiz makine dağıtımı yok.
   Pool advertised payload bütçesidir, SDK/RSS hard sınırı değil.
 - Fiziksel seri sürekliliği/ölçüm/PLC/robot/lens, native DPI/çoklu monitör,
@@ -93,8 +92,8 @@ sözleşme/kabul bölümleri; büyük belgelerde önce başlık/ID arayın. Beli
 
 ## Son doğrulama ve çalışma ortamı
 
-- **ICM-05a-a yeni koşum**: core OFF Release build, ilgili CTest **4/4**;
-  `build/icm/05a-a/`. 04e-b stress de bu oturumda 4/4 geçti.
+- **Bu oturumda yeni koşumlar:** 04e-b **4/4**, 05a-a **4/4**, 07a-a **4/4**;
+  core OFF/ZXing OFF Release; `build/icm/{04e-b,05a-a,07a-a}/`. Tam suite/UI/donanım yok.
 - Eski sonuçlar arşivdedir; yeni koşum değildir.
   `plc_socket_runtime` aralıklı başarısızlığı/kök neden açık kalır.
 - Güncel UI `build/reference-ui/visionflow.exe`, core `build/kmc9-core-off`.
@@ -104,11 +103,11 @@ sözleşme/kabul bölümleri; büyük belgelerde önce başlık/ID arayın. Beli
 
 ## Kapanış ve sonraki adım
 
-**04e-a/b yazılım hazırlığı tamam**; sıradaki native ICM-04e, 04d belgeli cancel/drain/reset bariyerine
-bağlı. Bağımsız alt görevde native kapı korunur. 03c helper'ını çalışan
+**04e-a/b, 05a-a, 07a-a hazırlığı tamam**; sıradaki native 04e, 04d belgeli
+cancel/drain/reset bariyerine bağlı; ana 05a/07a ürün kabulü açık. 03c helper'ını çalışan
 kalibrasyon/Editor özelliği diye sunmayın. Ölçüm adayı kamera configure girdisi değildir.
 [04d cancel incelemesi](archive/2026-10-18-icm-04d-cancel-audit.md): AcquisitionAbort
 yok; DeviceReset garantisiz, çalıştırılmadı. Üretici taslağı gönderilmedi.
 Delay=0, close/open/sessizlik kanıt değil; aynı deneyi tekrarlamayın. Native Unavailable.
-ICM-01b için OECS sahne/release, G1 için 04e/stress açık.
+ICM-01b sahne/release, G1 native 04e/fiziksel stress açık.
 [Bağlam bakımı](archive/2026-10-17-context-maintenance.md).

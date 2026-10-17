@@ -64,6 +64,10 @@ yok. Ana 05a kabulü ve 04e önkoşulu korunur.
 
 ## ICM-07a — industrial source tool ve migration
 
+**07a-a bağımsız hazırlığı tamam:** standalone IndustrialSourceReference1 codec,
+versioned kamera/setup/profile ve requested acquisition hash kontrolü. ToolRegistry,
+Editor/project codec, migration ve execution bağlantısı yok; ana 07a ve 05a önkoşulu açık.
+
 - Önkoşul: 05a.
 - Dosyalar: ToolRegistry/ToolDefinition/ToolGraph, ProjectService, source/profile codec.
 - İş: ICM-00'da sabitlenen industrial tool kind/version, Image/px port, CameraId/setup/profile

@@ -249,6 +249,18 @@ Yeni industrial source tool kind'i [ICM-00 envanteriyle](industrial-camera-basel
 ekleme/binding profile değişikliği dışında eski codec/hash/no-op Save değişmez.
 Kamera tek sefer kaydedilir; recipe source ilgili CameraId/setup/profile sürümüne bağlanır.
 
+**ICM-07a-a bağımsız değer hazırlığı:** `domain/IndustrialSourceReference` ayrı
+`visionflow.industrial-source-reference`/1 formatıdır; mevcut recipe/editor/tool codec'e
+eklenmedi. Kamera/setup/profile ID ve revizyonları, exact fiziksel kimlik, requested
+acquisition hash ve 1–600000 ms timeout taşır; yerel backend/producer veya izin içermez.
+`bind` yalnız explicit referans üretir, environment değiştirmez. `validateAgainst`
+güncel contract ile dangling/stale binding, aynı revizyonda ayar/geometri değişimi,
+eksik geometri ve desteklenmeyen tetik tanımını reddeder. Kaynak tek software capture
+ister: Software + açık FrameStart veya FrameBurstStart, birbirine alias değildir.
+Timeout exposure süresini aşmalıdır; bu alt sınır transfer bütçesinin yeterli olduğunu
+kanıtlamaz. Hash requested değeridir; actual readback, completion veya tazelik kanıtı
+değildir. Industrial tool hâlâ registry'de yok; ürün ve native kabulü kapalıdır.
+
 Editor/Runtime aynı acquisition provider'ı kullanır. TargetOnly aynı doğru frame'de
 acquisition0'dır; profile/model değişimi ilgili source cache'ini invalid eder.
 Runtime Run preparation'dır, üretim trigger'ı veya sonuç üretmez; gerekirse cihazı
