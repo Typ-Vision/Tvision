@@ -6,30 +6,32 @@ başlangıçta arşivin tamamını okumayın.
 
 ## Devam noktası
 
-- **ICM-04d kısmi: raster dışı/ready araştırması tamam; dış teknik kanıt gerekli**
-  (Codex). Yeni salt okunur exact cihaz sorgusu ve XML/SDK incelemesi alternatif
-  Chunk/Event yolu bulamadı. TriggerSoftware erişimi yalnız On/Software ayarıdır;
-  hazır kanıtı değildir. Firmware `V1.4.8 190411,19012902`.
-  [Yeni kayıt](archive/2026-10-17-icm-04d-semantics.md),
+- **ICM-04d kısmi: yeni timestamp deneyi; güvenli native yol hâlâ açık** (Codex).
+  Latch çalışıyor; metadata kapalı 24 kare alındı. Ancak latch ve SDK frame timestamp
+  farklı hız/başlangıçta: 12 eski-command karesi ham `frameTicks > latch` testini
+  yanlış geçti. Deneyden ölçek fit ederek admission yapılmaz.
+  [Yeni kayıt](archive/2026-10-17-icm-04d-timestamp.md),
   [karar](architecture/industrial-camera-trigger-correlation.md),
   [üretici soru taslağı](architecture/industrial-camera-vendor-questions.md) (gönderilmedi).
-  Önceki [2×100 metadata tanısı](archive/2026-10-17-icm-04d-correlation.md): sayaçlar
-  1–100, raster byte 4–11 metadata; ayarlar restore edildi. Ürün için temiz raster,
-  ready/quiescence ve baseline/epoch hâlâ açık; native capability Unavailable.
-  **Devam: üreticiden belgeli raster dışı metadata + ready/epoch yolu veya eşdeğer
-  yeni teknik kanıt**. Aynı tanıyı tekrarlamak engeli kapatmaz; 04e başlamaz.
+  İki sayaç + ready düğümü tek olası strateji değildir: belgeli eski-frame bariyeri
+  + exclusive tek bekleyen tetik de adaydır; yeterli koşulları kararda. Exact bariyer
+  henüz kanıtlanmadı. Native Unavailable; 04e başlamaz. Önceki
+  [semantik araştırma](archive/2026-10-17-icm-04d-semantics.md) Chunk/Event bulamadı;
+  transport metadata yokluğu çıkarılamaz. [2×100 metadata](archive/2026-10-17-icm-04d-correlation.md)
+  sayaçları 1–100, raster byte 4–11 metadata. **Kullanıcı ilk satırı ölçüm dışında
+  bırakmayı onayladı**: yeni 12 metadata karesi ve 2448×2047 PGM, sensör origin (0,1)
+  doğrulandı. Bu yalnız tanı; ürün geometri/kalibrasyon entegrasyonu ve epoch açık.
   FrameBurstStart sessiz FrameStart alias'ı olmaz.
 - [ICM-04c](archive/2026-10-17-icm-04c.md): bounded owned Mono8 probe/pool kabulü.
   Nested GenApi enum parser ve ClearImageBuffer sırası önceki kayıtta düzeltildi.
   **Exact cihazdan 2448×2048 Mono8 tanı karesi ve temiz close alındı.**
   Native stride/completion alanı yok: yalnız exact tight Mono8 kabul edilir.
-- Önceki [ICM-04b](archive/2026-10-17-icm-04b.md): SFNC feature erişimi,
-  transactional configure/readback, exact int/binary32 ve doğrulanan rollback.
-  [04a](archive/2026-10-17-icm-04a.md): session/handle ömrü (Claude Code).
-  [03b](archive/2026-10-17-icm-03b.md): profile/geometri;
+- Tamamlanan [04b](archive/2026-10-17-icm-04b.md): SFNC/transaction/rollback;
+  [04a](archive/2026-10-17-icm-04a.md): session/handle (Claude Code);
+  [03b](archive/2026-10-17-icm-03b.md): profil/geometri;
   [03a](archive/2026-10-17-icm-03a.md): kimlik/rota.
-  Backend kararı OECS C API ([ICM-02](archive/2026-10-17-icm-02.md)); şema/hash
-  haritası [ICM-00 baseline](architecture/industrial-camera-baseline.md).
+  [02](archive/2026-10-17-icm-02.md): OECS C API;
+  [baseline](architecture/industrial-camera-baseline.md): şema/hash.
 - **ICM-REVIEW-01 kapalı**: SDK enumerate/owned kopya kilitli; create owned kayıtla.
   Setup revision karşılaştırılır; A→B→A eski kalibrasyonu açmaz; rename/no-op/legacy
   hash korunur. [Düzeltme](archive/2026-10-17-icm-review-01-fix.md),
@@ -43,14 +45,12 @@ başlangıçta arşivin tamamını okumayın.
 
 ## Göreve göre oku
 
-1. AGENTS + bu özet + [README](../README.md) başlangıç paketidir.
-2. ICM çalışmasında [ana planın](architecture/industrial-camera-plan.md) ortak
-   kurallarını ve seçili görev kartını okuyun. Büyük belgelerde önce başlık/ID arayın.
-3. Kartın gerektirdiği sözleşme/kabul/gereksinim bölümlerini açın. Gerektiğinde
-   [bulgular](architecture/industrial-camera-integration-assessment.md) ve baseline'ın
-   ilgili COE-U/OECS, probe veya CLI bölümüne genişletin; belgeleri topluca okumayın.
-4. Tarihsel “sıradaki” ifadeleri güncel sıra değildir.
-   [ICM devir şablonu](architecture/industrial-camera-handoff.md).
+Başlangıç AGENTS + bu özet + [README](../README.md). Ardından
+[ana plan](architecture/industrial-camera-plan.md), seçili görev kartı ve ilgili
+sözleşme/kabul bölümleri; büyük belgelerde önce başlık/ID arayın. Belirsizlikte
+[bulgulara](architecture/industrial-camera-integration-assessment.md) genişletin.
+Tarihsel “sıradaki” ifadeleri güncel sıra değildir.
+[Devir şablonu](architecture/industrial-camera-handoff.md).
 
 ## Uygulanan durum ve korunacak sınırlar
 
@@ -92,14 +92,15 @@ başlangıçta arşivin tamamını okumayın.
 
 ## Son doğrulama ve çalışma ortamı
 
-- **Yeni ICM-04d semantics**: opt-in read-only probe Release build exit 0;
-  exact cihaz open/readback/XML/close/destroy başarılı; JSON/XML assertion kontrolü
-  geçti. `build/icm/04d-semantics/`. Ayar/tetik/grab yok; ürün/UI değişmedi,
-  yeni CTest veya görsel kontrol koşulmadı.
-- Önceki correlation Release core/UI/SDK + probe başarılı; ilgili CTest core/UI
-  **9/9**, SDK **10/10**: [kayıt](archive/2026-10-17-icm-04d-correlation.md).
-  04a/04b/03b/KMC test ayrıntıları bağlı arşivlerdedir; tarihsel sonuçlar yeni koşum
-  değildir. `plc_socket_runtime` aralıklı başarısızlığı/kök neden açık kalır.
+- **Yeni ICM-04d timestamp/ilk satır**: opt-in diagnostic Release build exit 0;
+  12 ön deney + 24 saat karesi/12 eski-command örneği + 12 geçerli-alan karesi;
+  restore/cleanup başarılı.
+  Bağımsız readback ve JSON assertion geçti. `build/icm/04d-timestamp/`.
+  Mevcut SDK build'i trigger/binding CTest **2/2 yeni koşum**. Ürün/UI değişmedi;
+  ürün rebuild, tam suite/görsel/stress koşulmadı. Önceki read-only semantics
+  kanıtı `build/icm/04d-semantics/` altında korunur.
+- Önceki test/build sonuçları bağlı arşivlerdedir; yeni koşum değildir.
+  `plc_socket_runtime` aralıklı başarısızlığı/kök neden açık kalır.
 - Güncel UI `build/reference-ui/visionflow.exe`, core `build/kmc9-core-off`.
   Başlatma `.\scripts\run-local.ps1`; build/PATH komutları README'dedir.
 - ICM-02 baseline `53bb972`; sonrası görev ID'li tek commit. Push kullanıcı
@@ -107,9 +108,9 @@ başlangıçta arşivin tamamını okumayın.
 
 ## Kapanış ve sonraki adım
 
-Sıradaki **ICM-04d dış teknik kanıt**: üretici soru taslağındaki temiz Mono8 metadata,
-ready/accepted-command, Stop/Clear bariyeri ve counter/timestamp epoch sorularına
-belgeli yanıt. Taslak gönderilmedi. Koşullar sağlanmadan native capability açılmaz;
-04e bundan sonradır.
+Sıradaki **ICM-04d epoch/bariyer kanıtı**. İlk satır dışlama kararı kalıcıdır;
+ürün geometri kimliği ve kalibrasyon invalidation'a işlenmeden kullanılamaz.
+Taslaktaki beş konu aynı anda zorunlu değildir; alan daraltmak epoch'u çözmez.
+Taslak gönderilmedi; native Unavailable, 04e bundan sonradır.
 ICM-01b için reboot sonrası OECS sahne görüntüsü/release ve G1 için 04e/stress açık.
 [Bağlam bakımı](archive/2026-10-17-context-maintenance.md).

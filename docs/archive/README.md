@@ -6,6 +6,7 @@ görev” ifadeleri yazıldıkları tarihe aittir.
 
 | Dönem / görev | Kayıt |
 | --- | --- |
+| 17 Ekim 2026 — ICM-04d timestamp | [Çalışan latch, iki saat ölçeği, yanlış tazelik karşı örneği ve alternatif strateji](2026-10-17-icm-04d-timestamp.md) |
 | 17 Ekim 2026 — ICM-04d semantik | [Raster dışı/ready araştırması, firmware ve üretici soru taslağı](2026-10-17-icm-04d-semantics.md) |
 | 17 Ekim 2026 — ICM-04d korelasyon | [FrameSpecInfo sayaç keşfi, sözleşme kararı ve erken capability reddi](2026-10-17-icm-04d-correlation.md) |
 | 17 Ekim 2026 — ICM-04d native tanı | [2×100 gerçek trigger/kare, ayar geri yükleme ve sayaç/ready engeli](2026-10-17-icm-04d-native-diagnostic.md) |

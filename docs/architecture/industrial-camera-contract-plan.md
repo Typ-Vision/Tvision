@@ -290,6 +290,14 @@ mevcut prepare/arm/generation/modulo sayaç kontrolleri her istekte zorunludur.
 FrameSpecInfo desteği native capability'yi açmaz; baseline/quiescence ve raster
 etkisi henüz doğrulanmadı. FrameStart şartı ve 04e bağımlılığı korunur.
 
+**Yeni kullanıcı kararı (17 Ekim):** ilk sensör satırı ölçüm dışında bırakılabilir.
+Onaylanan yön tam sensör 2448×2048 ediniminden, sensör başlangıcı (0,1) olan
+2448×2047 ölçüm rasteri üretmektir; donanım OffsetY değiştirilmez. Yeni geometri
+kimliği/kalibrasyon invalidation ve typed raster politikası ürün entegrasyonunda
+zorunludur. Bu aşamada yalnız [opt-in fiziksel tanı](industrial-camera-trigger-correlation.md)
+uygulandı; native adapter/schema/UI henüz bu çıktıyı kullanmaz. Bu izin counter
+epoch'u kanıtlamaz; mevcut ActualCounterEpoch ve erken Unavailable reddi korunur.
+
 Gerçek nested EnumEntry çocukları enumeration kapsamında ayrıştırılır; On/Off gibi
 local isimler başka enum'u ezmez. ClearImageBuffer Stop'tan sonra CALLORDER verdiği
 için cleanup sırası Free → Clear (stream çalışırken) → Stop'tur; flush hatasında da

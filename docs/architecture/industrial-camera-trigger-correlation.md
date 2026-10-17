@@ -1,7 +1,8 @@
 # ICM-04d — tetik korelasyonu kararı
 
-17 Ekim 2026. **Karar: mevcut actual counter epoch sözleşmesini koru; native
-backend capability Unavailable. FrameSpecInfo araştırma yolu açık.**
+17 Ekim 2026. **Uygulanan yol ActualCounterEpoch; native capability Unavailable.
+Bu strateji tek olası çözüm değildir. Yeni timestamp deneyi doğrudan saat
+kıyaslamasını çürüttü; alternatif stratejilerin kanıt koşulları aşağıdadır.**
 
 ## Kanıt ve kararın sınırı
 
@@ -45,7 +46,8 @@ Adapter ve doğrudan session çağrısı unsupported'ı feature/pool/start/flush
 
 ## FrameSpecInfo yolunu açmadan gerekenler
 
-1. Raster dışında actual metadata yolu veya üretici tarafından doğrulanmış temiz
+1. **Önceki full-sensor şartı; aşağıdaki yeni kullanıcı kararıyla daraltıldı.**
+   Raster dışında actual metadata yolu veya üretici tarafından doğrulanmış temiz
    sensör rasteri bulunmalı. Gösterilmiş metadata byte'larını sessizce kabul etme,
    sıfırlama veya kırpma yok. Maskeli görüntü farklı bir geometri/kalibrasyon ürün
    sözleşmesi ister; bu görev bunu açmaz. FrameSpecInfo enabled bankaları/selector
@@ -108,3 +110,88 @@ Sonraki bağımlılık [hazır üretici soru taslağına](industrial-camera-vend
 yanıt veya bu koşulları sağlayan yeni teknik kanıttır. Taslak gönderilmedi.
 Yeni kanıt gelmeden aynı 100-trigger koşumunu veya latch/tick karşılaştırmasını
 tekrarlamak admission engelini kapatmaz; 04e hâlâ başlamaz.
+
+## Yeniden değerlendirme ve timestamp karşı örneği — 17 Ekim 2026
+
+[Yeni fiziksel deney](../archive/2026-10-17-icm-04d-timestamp.md) önceki sıfır latch
+okumasını daralttı: DeviceTimestampLatch çalışıyor, değer pozitif ve artıyor.
+Metadata'nın desteklenen sekiz bankası false iken 24 tam Mono8 buffer alındı.
+Ancak latch ile SDK nDevTimeStampHigh/Low aynı sayısal ölçek/başlangıç değildir:
+bu koşumda host monoton saniyesine yaklaşık 148.502 milyon ve 1.250014 milyar
+birim ilerlediler. DeviceTimestampIncrement hâlâ 0. Bu oranlar gözlemdir;
+dönüşüm sabiti, saat senkronizasyonu veya firmware hatası kanıtı değildir.
+
+12 karede command sonrası 150 ms beklenip, **yeni command göndermeden** latch
+alındı ve önceki command'ın buffer'ı okundu. 12/12 eski-command buffer'ı için
+`frameTicks > latchBeforeReceive` doğru çıktı; 24/24 frameTicks, alımdan SONRAKİ
+latch'ten de büyüktü. Dolayısıyla ham sayısal `>` testi yanlış tazelik üretir.
+Başlangıç offset'i çıkarmak veya ölçülen oranla düzeltmek de belgeli olay/clock
+domain/reset ilişkisi sağlamaz. Rapor timestamp yoluna admission vermez.
+
+### Güvenlik hedefi ile uygulama stratejisini ayır
+
+Zorunlu hedef: döndürülen temiz kareyi tam olarak bu isteğin tek tetiğine bağlamak;
+belirsizlikte ERROR. İki sayaç ve ayrı bir ready düğümü bu hedefin tek ispatı
+değildir. Mevcut ActualCounterEpoch kodu ve fixture sözleşmesi değiştirilmedi.
+Başka bir strateji ayrı typed capability/arm/evidence ve kabul testleri ister.
+
+Alternatif **bariyer + tek bekleyen tetik** için yeterli koşullar:
+
+1. Belgeli ve sınanmış başlangıç bariyeri eski exposure, gecikmiş command ve
+   device/transport/SDK kuyruklarından sonraki epoch'a kare geçmesini engeller.
+   Sadece host flush veya sessiz bekleme bu koşul değildir.
+2. Exclusive sahiplik, On/Software, explicit FrameBurstStart/burst=1/cache=false,
+   diğer tetik yollarının kapalı olması ve trigger delay politikası doğrulanır.
+   Etkin epoch'ta tek command bekler; kaynaksız/duplicate teslim reddedilir.
+3. Device/transport tesliminin bir command'dan en fazla bir tamamlanmış frame
+   verdiği ve eski buffer'ı yeniden vermediği belgelenir ve sınanır.
+4. Yeni istek ancak öncekinin tamamlanmış frame'i tüketilince açılır. Timeout,
+   cancel, command failure veya bağlantı belirsizliği epoch'u zehirler; yeni
+   başlangıç bariyeri kurulmadan retry/reopen ile admission yapılmaz.
+
+Bu koşullarda ready olmadığı için **düşürülen** command timeout üretir, başka
+çevrime ait kare üretmez. Ready sinyali kullanılabilirliği iyileştirir; tek başına
+bir güvenlik şartı değildir. Tersine, ertelenmiş command veya eski exposure
+kalabiliyorsa bu çıkarım geçersizdir. Exact firmware için bariyer ve teslim
+semantiği henüz kanıtlanmadı; bu bir uygulanmış ürün yolu değildir.
+
+Alternatif timestamp stratejisi ise belgeli ortak clock, exposure olayı, wrap/reset
+ve sıralama gerektirir; bu koşumdaki iki ham alan bu stratejiyi sağlamaz.
+FrameSpecInfo + açık geçerli alan seçeneği aşağıdaki kullanıcı kararıyla açıldı;
+tek başına epoch sorununu çözmez. Sessiz crop/mask yoktur.
+
+USB3 görüntü lideri chunk olmadan timestamp/frame ID taşıyabilir; örneğin
+[Aravis'in U3V kaynak tanımı](https://raw.githubusercontent.com/AravisProject/aravis/main/src/arvuvspprivate.h)
+bunu gösterir. **Chunk node yokluğu, transport metadata yokluğu değildir.** Bu
+kaynak exact OECS alan mapping'ini veya exposure semantiğini kanıtlamaz.
+[2023 üretici kılavuzu](https://www.opto-e.cn/repository/_shared/COE-U-series-USB3.0-Camera-User-Manual_1.2.0_20230428.pdf)
+§3.6/3.11.2 tek/burst tetik ve embedded bilgiyi açıklar; tüm fonksiyonların her
+cihazda mevcut olduğunu garanti etmez. Başka kamera belgeleri exact kanıt sayılmaz.
+
+Sıradaki karar tek bir doğrulanabilir stratejidir: eski beş sorunun tamamının
+aynı anda sağlanması gerekmez. [Soru taslağı](industrial-camera-vendor-questions.md)
+bu ayrımı ve yeni sayısal karşı örneği içerir. Native capability ve 04e kapısı
+kanıt sağlanana kadar değişmez.
+
+### Kullanıcı kararı: ilk sensör satırını ölçümden çıkar
+
+Kullanıcı bu incelemede **ilk satırın ölçüm dışında bırakılmasına izin verdi**.
+Bu karar önceki her full-sensor pikselini koruma şartını bu profil için değiştirir;
+counter/epoch garantisini gevşetmez. Yeni exact-device tanıda metadata açık 12
+karenin byte 4–7/8–11 alanları SDK sayaçlarıyla eşleşti. İlk kareden row 0 açıkça
+çıkarılarak 2448×2047 owned Mono8 PGM üretildi; image hash ve origin kaydedildi.
+
+- Sensör edinimi hâlâ 2448×2048, OffsetX/Y=0; donanım ROI yazılmaz.
+- Ölçüm rasteri 2448×2047, sensör başlangıcı `(0,1)`; dönüşüm
+  `sensorX=imageX`, `sensorY=imageY+1`. Metadata satırı doldurulmaz/interpole edilmez.
+- Yalnız Timestamp/Framecounter/ExtTriggerCount açık, diğer desteklenen bankalar
+  kapalı ve layout doğrulanmış olmalı; değişen layout açık ret verir.
+- Ürün entegrasyonunda bu çıktı politikası geometri/kalibrasyon kimliğine dahil
+  edilmeli; 2448×2048 için hazırlanmış model/kalibrasyon sessizce yeniden kullanılamaz.
+  Sensör offset'i ile yazılım raster başlangıcı ayrı alanlardır.
+- **Şu an yalnız opt-in tanı çıktısıdır.** Native adapter, persistent geometri
+  şeması, kalibrasyon ve UI henüz bu politikayı uygulamaz; capability Unavailable.
+
+Dolayısıyla raster engeli için yetkilendirilmiş ve fiziksel örneği alınmış yol var;
+kalan öncelik ready/epoch başlangıcı ve hata sonrası recovery bariyeridir. Üretici
+soru taslağında raster dışı metadata artık zorunlu değil, alternatif olarak geçer.
