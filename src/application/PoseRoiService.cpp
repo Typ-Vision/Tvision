@@ -67,7 +67,7 @@ ToolDefinition PoseRoiService::teachTool(const ToolDefinition& consumer,const Co
 ToolDefinition PoseRoiService::teachWorldTool(const ToolDefinition& consumer,const ToolRoi& nominal,double unit,
     const ToolDefinition& source,const ToolResult& result,const ImageFrame& image,const MeasurementExecutionContext& ctx,
     const std::shared_ptr<std::atomic_bool>& cancel){
-    require(ctx.calibration && ctx.current && ctx.calibration->validated(),"World teaching requires validated current calibration");
+    require(ctx.calibration && ctx.current && ctx.calibration->measurementReady(),"World teaching requires current active or accepted legacy calibration");
     auto taught=consumer;taught.parameters.remove("poseTracking");
     taught.parameters["scanRoi"]=nominal.toJson();
     if(taught.kind!="edge_point")taught.parameters["mode"]="calibrated";
@@ -108,7 +108,7 @@ WorldTrackingMap PoseRoiService::worldMap(const WorldPoseTracking& binding,const
     binding.validate();
     require(binding.sourceTool==source.id && binding.geometryId==geometryIdentity(source),"World tracking teaching stale; model/anchor changed");
     require(binding.imageSource==image.metadata().sourceId && binding.rawSize==image.size(),"World tracking acquisition source/resolution changed");
-    require(ctx.current && ctx.calibration && ctx.calibration->validated(),"World tracking requires bound validated calibration");
+    require(ctx.current && ctx.calibration && ctx.calibration->measurementReady(),"World tracking requires bound active or accepted legacy calibration");
     binding.calibration.requireCurrent(*ctx.current);binding.calibration.requireCurrent(ctx.calibration->dependency());
     require(ctx.rawSize==image.size() && binding.calibration.resolution==image.size(),"World tracking actual resolution mismatch");
     require(!binding.calibration.cameraId.startsWith("calibration-test:"),"File-test calibration cannot track production ROI");
@@ -119,7 +119,7 @@ WorldTrackingMap PoseRoiService::worldMap(const WorldPoseTracking& binding,const
 WorldTrackingMap PoseRoiService::calibratedMap(const CalibrationDependency& dependency,const Transform2D& delta,const ImageFrame& image,
     const MeasurementExecutionContext& ctx,const std::shared_ptr<std::atomic_bool>& cancel){
     require(!cancel || !cancel->load(),"World tracking cancelled");delta.validate();
-    require(ctx.current && ctx.calibration && ctx.calibration->validated(),"World tracking requires validated calibration");
+    require(ctx.current && ctx.calibration && ctx.calibration->measurementReady(),"World tracking requires active or accepted legacy calibration");
     dependency.requireCurrent(*ctx.current);dependency.requireCurrent(ctx.calibration->dependency());
     require(ctx.rawSize==image.size() && dependency.resolution==image.size(),"World tracking actual resolution mismatch");
     require(!dependency.cameraId.startsWith("calibration-test:"),"File-test calibration cannot track production ROI");

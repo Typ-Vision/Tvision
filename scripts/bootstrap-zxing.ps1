@@ -28,7 +28,12 @@ try {
         $source = Join-Path $dependencyRoot "src/$($dependency.sourceDirectory)"
         $license = Join-Path $source 'LICENSE'
         $recordedLicense = Join-Path $projectRoot "third_party/$($dependency.licenseFile)"
-        if ((Get-FileHash -LiteralPath $license).Hash -ne (Get-FileHash -LiteralPath $recordedLicense).Hash) {
+        # Git may check out the recorded text with CRLF on Windows. Compare
+        # exact license text after only CRLF normalization; archive SHA-256
+        # above still verifies every downloaded source byte.
+        $upstreamLicenseText = [IO.File]::ReadAllText($license).Replace("`r`n", "`n")
+        $recordedLicenseText = [IO.File]::ReadAllText($recordedLicense).Replace("`r`n", "`n")
+        if ($upstreamLicenseText -cne $recordedLicenseText) {
             throw "Recorded license differs from pinned source: $($dependency.id)"
         }
         if ($dependency.id -eq 'zxing') {

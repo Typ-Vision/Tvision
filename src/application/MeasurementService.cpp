@@ -68,6 +68,7 @@ PlanarCalibration MeasurementService::validate(const PlanarCalibration& candidat
     require(std::isfinite(squareSum),"Residual overflow");c.rms_=std::sqrt(squareSum/holdout.size());c.holdout_=holdout;c.maxError_=maxError;c.validated_=true;identify(c);return c;
 }
 QJsonObject MeasurementService::encode(const PlanarCalibration& c) const {
+    require(c.readyRecordContentId_.isEmpty(),"Transient system binding must be persisted with its model-ready record, not legacy model codec");
     QJsonArray evidence;for(const auto& s:c.holdout_)evidence.append(sampleJson(s));
     if(c.manualProvenance_){const auto& p=*c.manualProvenance_;return {{"schemaVersion",3},{"model","manual_planar_scale/1"},{"dependency",c.dependency_.toJson()},{"pixelsPerMillimetre",c.pixelsPerMillimetre_},{"millimetresPerPixel",c.scale_},{"provenance",QJsonObject{{"origin",p.origin},{"sourceId",p.sourceId},{"frameId",p.frameId},{"width",p.resolution.width()},{"height",p.resolution.height()}}},{"holdout",evidence},{"validated",c.validated_},{"maxErrorMm",c.maxError_},{"rmsMm",c.rms_},{"maxResidualMm",c.maxResidual_}};}
     if(c.mapping_)return {{"schemaVersion",2},{"model","raw_planar_homography/1"},{"dependency",c.dependency_.toJson()},{"mapping",PlaneMappingService::encode(*c.mapping_)},{"lensPolicy","raw_assumed_negligible"},{"evidenceOrigin",c.dependency_.cameraId.startsWith("calibration-test:") ? "file_test" : "acquisition"},{"holdout",evidence},{"validated",c.validated_},{"maxErrorMm",c.maxError_},{"rmsMm",c.rms_},{"maxResidualMm",c.maxResidual_}};
@@ -108,8 +109,8 @@ PlanarCalibration MeasurementService::decode(const QJsonObject& o) const {
 MeasurementResult MeasurementService::distance(const ToolResult& first,const QString& firstPort,const ToolResult& second,const QString& secondPort,const PlanarCalibration& c,const CalibrationDependency& current,const QSize& size,double lower,double upper) const {
     MeasurementResult r;QString code="CALIBRATION_INVALID";
     try {
-        require(c.validated(),"Calibration has no accepted independent validation");
-        require(!c.manualProvenance_ || c.manualProvenance_->origin=="acquired","File test calibration is not a production measurement");c.dependency().requireCurrent(current);
+        require(c.measurementReady(),"Calibration has neither active model readiness nor accepted independent validation");
+        require(!c.manualProvenance_ || c.manualProvenance_->origin=="acquired" || !c.readyRecordContentId_.isEmpty(),"File test calibration is not a production measurement");c.dependency().requireCurrent(current);
         require(size==current.resolution,"Camera raw resolution changed");
         code="TOLERANCE_INVALID";require(std::isfinite(lower) && std::isfinite(upper) && lower>=0 && lower<=upper,"Invalid millimetre tolerance interval");
         code="MEASUREMENT_INPUT_INVALID";

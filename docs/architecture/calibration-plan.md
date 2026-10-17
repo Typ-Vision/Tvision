@@ -1,5 +1,16 @@
 # Kamera ve robot kalibrasyonu — revize ürün planı
 
+15 Ekim — **KUI-5 tamamlandı**; [ortak resolver/Editor/Runtime/Logs ve açık legacy aktarımı](system-calibration.md). KUI-4 üç kart/iki sihirbaz akışı bütün metrik tüketicilere bağlandı; pixel tanısı korunur, eski world ilişkiler yeniden öğretim ister. Sıradaki KUI-6 tam Release kabulü. Fiziksel K4/lens/robot/CUDA/kurulum/dağıtım ayrı açık işlerdir. Alttaki kayıtlar tarihseldir.
+
+
+15 Ekim — KUI-4 ana sayfa/iki sihirbaz/dosya-kurulum/robot şablonu tamamlandı; [UI kabulü](calibration-ui-acceptance.md). KUI-1–KUI-3 tekrar edilmedi. Sıradaki KUI-5 ortak resolver/Editor/immutable Runtime/Logs, ardından KUI-6. Fiziksel K4/robot/lens kabulü açık. Alttaki kayıtlar tarihseldir.
+
+
+15 Ekim — **KUI-2/KUI-3 tamamlandı**: [servis kabulü](calibration-wizard-services.md). Bilinen ölçüde gerçek Edge/Caliper noktaları ve tek çift; chessboard/simetrik circle grid için ortak session, confirm ve raw H/strict replay mevcut. Circle ayrı tipli yeni kayıt yolundadır; legacy katalog/study ekranı circle kaydını reddeder. Yeni ana sayfa/sihirbazlar **KUI-4**; ortak Editor/Runtime davranışı KUI-5. Aşağıdaki ekran tarifleri tarihsel/mevcut eski UI'dır; lens/robot/fiziksel doğruluk kabulü değildir.
+
+
+15 Ekim 2026 — [Kalibrasyon sihirbaz planının](calibration-wizard-plan.md) **KUI-1 application sözleşmesi uygulandı**; [kayıt/kurulum/etkinlik ve migration envanteri](active-calibration-contract.md). Yeni serviste tek çiftle hesaplama, optional bağımsız kontrol ve tek etkin seçim ayrıdır. Mevcut ekran ve recipe-scoped üretim resolver'ı henüz yeni politikaya geçmedi. Sıradaki KUI-2 gerçek nokta/session; yöntem kartları/sihirbazlar KUI-4, ortak metrik/Runtime KUI-5. Aşağıdaki eski yöntem/beş bölüm halen çalışan ekranı tarif eder; circle grid/lens/robot uygulanmış sayılmaz.
+
 9 Ekim son kullanıcı kararı: lens bozulması düzeltmesi [reçete tool planının T15 aşamasına](recipe-tools-plan.md#t15--lens-bozulması-düzeltmesi-en-son), bütün tool paketlerinden sonraya ertelendi. T4–T9 ölçümleri mevcut manuel/uniform/raw-H modelleriyle geliştirilir; lens düzeltmesi zorunlu başlangıç işi değildir. Perspective circle/line fit world noktalarda, geçerli kalibrasyon alanında yapılacak; mm² için ayrı alan hesabı gerekir. Yeni metrologi ve lens modeli henüz uygulanmadı. K4 fiziksel doğruluk kabulü açık; sentetik kabul lens doğruluğu kanıtı değildir. Eski “gerektiğinde lens” sırası bu kararla daraltıldı.
 
 9 Ekim güncel durum: **C1–C5 tamamlandı**. Setup → Calibration üç yöntem ve beş bölüm sunar: Manuel ölçek (px/mm), Bilinen uzunluktan ölçek ve Kalibrasyon plakası (perspektif). Manuel girdi boş başlar; px/mm ve salt okunur tersi, üretim sonucundan ayrı deneme, en az iki bağımsız doğrulama, katalog/recipe Save/reopen, gerçek Edge → Measurement → Runtime ve CSV bağlıdır. Güncel Release binary `build/manual-calibration-ui/visionflow.exe`; Measurement tool 2, execution/6. Sonraki P7/6D.2; K4 fiziksel kabul ertelenmiştir.

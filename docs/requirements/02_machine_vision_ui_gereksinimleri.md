@@ -1,5 +1,34 @@
 # Endüstriyel Machine Vision Yazılımı — UI Sayfa ve Ekran Gereksinimleri
 
+17 Ekim KMC-10c2/10d uygulandı: editor9 bütün-set Runtime preparation, terminal7/restart/Logs/CSV ve vf.socket2 scalar mapping; N kaynak hazırlık tablosu, seçili gerçek frame/overlay ve immutable model gösterimi. [Kalıcı Runtime sözleşmesi](../architecture/multi-source-runtime-terminal.md). **KMC-10e B yazılım kabulü ve fiziksel devir dokümanı tamamlandı: tam Release UI/ZXing ON 87/87; Widgets OFF/ZXing OFF 73/73**; [B kabul ve fiziksel devir](../architecture/multi-source-release-acceptance.md). Aşağıdaki tarihli teslim kayıtları kendi kapanış durumlarını anlatır; güncel durum bu paragraftır. Fiziksel/native/lens/industrial/PLC/robot/CUDA/kurulum/dağıtım kabulü açık.
+
+17 Ekim KMC-10c1: tek tutarlı source/model snapshot seti, yalnız bellekte immutable admission, ortak Runtime worker ve N-frame trusted completion/replay uygulandı. Kullanıcının kalıcı editor9 production kapısı KMC-10c2 kabulüne kadar kapalıdır. [Programatik kapsam ve sınırlar](../architecture/multi-source-production-contract.md). Sıradaki KMC-10c2.
+
+16 Ekim KMC-10b: explicit editor9 ile çok kaynaklı Editor/execution, kaynak başına kare/cache/model, sıralı acquisition ve toplam süre/retained bellek bütçesi uygulandı. Viewer kaynak seçici ve TargetOnly acquisition0 bağlıdır. Production editor9 kapısı KMC-10c2 kabulüne kadar kapalıdır; sıradaki KMC-10c1. [Kullanım, sözleşme ve sınırlar](../architecture/multi-source-execution-editor.md).
+
+
+16 Ekim KMC-10a: explicit editor9 çok-source opt-in, dal/port source kimliği ve bounded source-frame indeksi; cross-source bağlantılar reddedilir. Root/recipe1–2 ve legacy codec korunur. Schema9 Editor/execution KMC-10b ile açıldı; production kapısı kapalıdır. [Sözleşme ve sınırlar](../architecture/multi-source-graph-contract.md).
+
+16 Ekim uygulama durumu — **KMC-0–9 tamamlandı (7a/7b ayrı)**. Reçetesiz iki sihirbaz/dosya denemesi, raster denetimli ayrı association, kurulum başına aktivasyon incelemesi, tek-source Editor/Runtime exact sourceSetup ve terminal6 Logs/CSV uygulandı. Legacy geçmiş açık beyanla bütün sürümleri koruyarak aktarılır; no-op/özgün hash ve eksik raster korunur. Bağımlılık import/export ve saved proje/history Save As bağlıdır; görüntüler otomatik paketlenmez. [Entegrasyon](../architecture/scoped-calibration-integration.md), [migration/taşıma](../architecture/measurement-setup-migration.md). **KMC-9 birleşik A yazılım kabulü: UI/ZXing ON 80/80, Widgets OFF/ZXing OFF 68/68; [kabul matrisi](../architecture/independent-calibration-acceptance.md). N kalibrasyon yönetimi tamamlandı, reçetede tek source sınırı sürüyor. KMC-10a programatik DAG/frame sözleşmesi uygulandı; sıradaki KMC-10c1**; aynı reçetede çok-source B, native/fiziksel/seri numarası/lens/robot/CUDA/dağıtım kabulü açıktır.
+
+
+16 Ekim 2026 — **KMC-5–8 Sistem özeti ve entegrasyon uygulandı:** Kalibrasyon ana sayfasında
+Sistem özeti seçildi. Kamera sayısı sabit değildir: sıfır kaynakta boş durum,
+tek kamerada sade görünüm, birden çok kamerada sarılan N kart (8–10 dahil).
+Reçetesiz kamera/dosya sihirbazı ve kurulum başına etkinlik ile çok-source
+Recipe Editor/Runtime ayrı teslimlerdir. [E1–E7 şartnamesi ve KMC kabul planı](../architecture/independent-calibration-implementation-plan.md).
+
+15 Ekim — **KUI-5 tamamlandı**: ana sayfa Etki incelemesi ve açık legacy aktarımı, bütün metrik araçlarda ortak etkin model, yeni araçta mm varsayılanı, raw/pointMm ayrımı, cache/TargetOnly/Runtime/Logs/CSV bağlıdır. Eski px tolerans/world ROI sayıları sessizce dönüştürülmez. Çalışan Runtime/worker/pending record/ACK değiştirmeyi engeller; Stop sonrasında açık değişim mümkündür. [Akış ve sınırlar](../architecture/system-calibration.md). Sıradaki KUI-6 tam Release/görsel kabulü. Alttaki kayıtlar tarihseldir.
+
+
+15 Ekim — **KUI-4 tamamlandı**: üç kart, iki ayrı yeniden boyutlandırılan sihirbaz, görüntü üstünde gerçek Edge/Caliper noktaları, chessboard/circle grid, açık dosya/kurulum beyanı, adlandırılmış kayıt/tek etkin seçim ve yalnız robot şablonu. [1400×900/850×600 kabul ve sınırlar](../architecture/calibration-ui-acceptance.md). Bütün ölçüm tüketicileri henüz yeni etkin modele bağlı değildir; sıradaki KUI-5 ve KUI-6. Eski kayıt/kanıt ekranı uyumluluk için korunur. Alttaki kayıtlar tarihseldir.
+
+
+15 Ekim — **KUI-2/KUI-3 application servisleri tamamlandı**; [gerçek nokta/plaka, confirm ve kayıt sözleşmesi](../architecture/calibration-wizard-services.md). UI henüz yeni session'ı kullanmaz. Sıradaki **KUI-4** üç kart, iki ayrı wizard, açık dosya/kurulum beyanı ve yalnız robot şablonu; mevcut eski Calibration ekranı henüz bu akış değildir. Ortak metrik/Runtime KUI-5'te bağlanacaktır.
+
+
+15 Ekim — Kalibrasyon sihirbaz planında **KUI-1 application sözleşmesi tamamlandı**; [hazırlık/bağımsız kontrol/tek etkin seçim ve migration](../architecture/active-calibration-contract.md). Yeni servis mevcut UI/Editor/Runtime'a henüz bağlı değildir. Sıradaki KUI-2 gerçek Edge/Caliper session; ekranlar KUI-4, ortak metrik davranış KUI-5 kapsamındadır.
+
 12 Ekim güncel durum — **R1–R8 tamamlandı.** Yeni ortak Referans binding’leri immutable snapshot ve Runtime’ın süreç içi trusted completion kanıtıyla production yoluna bağlandı; tam kaynak/port/ofset/calibration kimliği terminal schema4, restart, Logs ve CSV’de korunur. Runtime Viewer aynı current resolver’ı kullanır; Stop/missing nominal fallback üretmez. Engine **execution/22**, editor8/raw1/world2/vf.socket2 korunur. Standalone Pattern/Shape ve eski poseTracking production kapısı T8.4.2b.3c corpus kabulüne kadar kapalıdır. **R8 tam Release kabulü: OFF/core 57/57, ON/UI 64/64. Sonraki T8.4.2b.3c** eksik corpus ve bütün production yollarının kapanışıdır. Güncel binary build/reference-ui/visionflow.exe. Alttaki teslim ve sıra kayıtları tarihseldir. [R7 sözleşmesi ve kabul eşlemesi](../architecture/reference-production-acceptance.md). [R8 paket ve devir kanıtı](../architecture/reference-release-acceptance.md).
 
 
@@ -341,6 +370,8 @@ Error alanı birimi ve türüyle gösterilir: örneğin düzlemsel holdout RMS =
 
 ## 25. Camera / Pixel Calibration
 
+14 Ekim 2026 kullanıcı yönlendirmesi: [Kalibrasyon ana sayfası ve sihirbaz planı](../architecture/calibration-wizard-plan.md) bu ekranın yeni hedefidir. **15 Ekim KUI-1 altyapısı tamamlandı; ekran/consumer entegrasyonu henüz uygulanmadı.** Ana sayfada Bilinen ölçü, Kalibrasyon plakası ve yalnız şablon Robot kartları; ayrı adım adım görüntü/gerçek nokta tespiti/mesafe veya plaka/hesaplama/kayıt pencereleri bulunacak. Chessboard ve simetrik circle grid hedeflenir. Hesaplama, tek aktif model seçimi ve bağımsız kontrol ayrı tutulacak; etkinleştirme yalnız ana sayfadan yapılacak, uyumlu tüm metrik araçlar aynı modeli varsayılan kullanacak. Ham X/Y/ID girişi ve tool başına kalibrasyon seçimi varsayılan akıştan kaldırılacak. Sabit 0,05 mm hedefi yoktur; lens ve robot hesabı bu teslimde uygulanmış sayılmaz. Aşağıdaki geniş ürün hedefleri korunur.
+
 Calibration Target, Camera, Resolution, Lens, target ölçüleri, Acquire, Calculate ve Validate bulunur.
 
 Sonuçlar: Pixel Size / planar scale, lens distortion model/coefficients, reprojection error, Camera Calibration Matrix ve Valid status. Tek “Distortion %” alanı model/ölçüm tanımı olmadan yeterli sayılmaz.
@@ -575,3 +606,5 @@ Sonraki geliştirme önerisi (henüz uygulanmadı): önce manuel px/mm ve kalibr
 ## 8 Ekim — Manuel ölçek uygulama planı hazır
 
 [Manuel px/mm ve sade Calibration planı](../architecture/manual-scale-calibration-plan.md) önceki kısa kapsam notunun ayrıntılı devamıdır. C1 matematik/codec → C2 katalog/Measurement/Runtime → C3 sade ekran → C4 UI kabul → C5 birleşik test/belgeler. C1–C5 tamamlandı: matematik/codec, katalog/reçete/Runtime/CSV, sade üç yöntem ekranı ve birleşik yazılım kabulü mevcut. Yeni manual_planar_scale/1, record/dependency schema 3, eski hash/encode koruması, beş bölümlü üç yöntem UI ve doğrulamasız deneme/üretim ayrımı tanımlandı. Belgenin 7. bölümü GPT-6.1 Sol medium için kopyalanabilir başlangıç talimatıdır. P7 bu kapsamdan sonra; K4 ertelenmiş kalır.
+
+16 Ekim KMC-6/7a: reçetesiz bilinen ölçü/plaka/dosya sihirbazları ve raster denetimli ayrı deneme türetimi; kaynak properties’de açık source→exact kurulum bağı uygulanmıştır. Bağlama scoped-source/1 politikasına geçer, bağı kaldırmak legacy fallback sağlamaz. Editor yalnız ilgili immutable kurulum modelini kullanır; raw cache/TargetOnly acquisition0 korunur. Tek-source sınırı sürer. [Sözleşme](../architecture/scoped-calibration-integration.md).

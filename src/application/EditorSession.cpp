@@ -1,4 +1,5 @@
 #include "EditorSession.hpp"
+#include "MeasurementService.hpp"
 #include <QJsonDocument>
 #include <QFile>
 #include <QJsonArray>
@@ -39,7 +40,8 @@ quint64 JobSession::begin(SessionJob job) {
 void JobSession::finish(quint64 ticket) {active_.remove(ticket);}
 QByteArray EditorSession::signature(const EditorContext& c) const {
     if(c.recipeId.isEmpty())return {};
-    return QCryptographicHash::hash(c.projectId.toUtf8()+c.path.toUtf8()+c.recipeId.toUtf8()+QByteArray::number(generation)+QJsonDocument(c.definition).toJson(QJsonDocument::Compact)+QJsonDocument(c.calibrationBinding).toJson(QJsonDocument::Compact),QCryptographicHash::Sha256);
+    auto bytes=c.projectId.toUtf8()+c.path.toUtf8()+c.recipeId.toUtf8()+QByteArray::number(generation)+QJsonDocument(c.definition).toJson(QJsonDocument::Compact)+QJsonDocument(c.calibrationBinding).toJson(QJsonDocument::Compact);
+    if(!c.systemCalibration.isEmpty())bytes+=QJsonDocument(c.systemCalibration).toJson(QJsonDocument::Compact);return QCryptographicHash::hash(bytes,QCryptographicHash::Sha256);
 }
 QByteArray EditorSession::referenceSignature(const EditorContext& c,const QString& tool) const {
     if(c.recipeId.isEmpty() || !frame)return {};
@@ -56,39 +58,58 @@ std::optional<QPointF> EditorSession::referencePoint(const EditorContext& c,cons
         auto roi=MatchService::rectangle(t.parameters["modelRoi"].toObject());if(!roi.isEmpty())return QPointF(roi.x()+(roi.width()-1)/2.0,roi.y()+(roi.height()-1)/2.0);
     }return {};
 }
-QByteArray EditorSession::evaluationScope(const EditorContext& c) const {
-    if(!frame)return {};
-    const auto& m=frame->metadata();
+QString EditorSession::sourceForTool(const EditorContext& c,const QString& tool) const {
+    const auto graph=validateSourceGraph(editorTools(c.definition),editorConnections(c.definition));
+    return graph.toolSources.value(tool);
+}
+bool EditorSession::selectSource(const QString& source) {
+    const auto it=sourceFrames.constFind(source);if(it==sourceFrames.cend()){frame.reset();return false;}frame=*it;return true;
+}
+QByteArray EditorSession::evaluationScope(const EditorContext& c,const QString& source) const {
+    const bool multi=c.definition["editor"].toObject()["schemaVersion"].toInt()==9;
+    const auto selected=multi && !source.isEmpty() ? (sourceFrames.contains(source) ? std::optional<ImageFrame>(sourceFrames[source]):std::nullopt):frame;
+    if(!selected)return {};
+    const auto& m=selected->metadata();
     QCryptographicHash hash(QCryptographicHash::Sha256);
-    hash.addData(QJsonDocument(QJsonArray{c.projectId,c.path,c.recipeId,QString::number(generation),m.sourceId,m.frameId,m.cycleId,m.coordinateSystemId}).toJson(QJsonDocument::Compact));
-    hash.addData(frame->contentId());hash.addData(frame->processingId());hash.addData(QJsonDocument(c.calibrationBinding).toJson(QJsonDocument::Compact));
-    QFile catalog(c.path+".calibrations.json");if(catalog.open(QIODevice::ReadOnly))hash.addData(QCryptographicHash::hash(catalog.readAll(),QCryptographicHash::Sha256));
+    hash.addData(QJsonDocument(QJsonArray{c.projectId,c.path,c.recipeId,QString::number(multi ? 0:generation),m.sourceId,m.frameId,m.cycleId,m.coordinateSystemId}).toJson(QJsonDocument::Compact));
+    hash.addData(selected->contentId());hash.addData(selected->processingId());hash.addData(QJsonDocument(c.calibrationBinding).toJson(QJsonDocument::Compact));
+    if(!c.systemCalibration.isEmpty())hash.addData(QJsonDocument(multi ? c.systemCalibration[m.sourceId].toObject():c.systemCalibration).toJson(QJsonDocument::Compact));
+    QFile catalog(c.path+".calibrations.json");if(!multi && catalog.open(QIODevice::ReadOnly))hash.addData(QCryptographicHash::hash(catalog.readAll(),QCryptographicHash::Sha256));
     return hash.result();
 }
 void EditorSession::cacheResult(const EditorContext& c,const ToolResult& r) {
-    cache_[r.toolId]={ExecutionService::toolSignature(c.definition,QFileInfo(c.path).absolutePath(),r.toolId,evaluationScope(c)),r};
+    cacheContext_=c;
+    cache_[r.toolId]={ExecutionService::toolSignature(c.definition,QFileInfo(c.path).absolutePath(),r.toolId,evaluationScope(c,sourceForTool(c,r.toolId))),r};
 }
 void EditorSession::adoptFrame(const EditorContext& c) {
-    cache_.clear();if(!frame)return;
+    const bool multi=c.definition["editor"].toObject()["schemaVersion"].toInt()==9;
+    if(!multi){cache_.clear();sourceFrames.clear();}if(!frame)return;
     for(const auto& t:editorTools(c.definition))if(ToolRegistry::get(t.kind).acquisitionSource && t.enabled) {
-        auto m=frame->metadata();if(!m.sourceId.isEmpty() && m.sourceId!=t.id)return;
+        auto m=frame->metadata();if(!m.sourceId.isEmpty() && m.sourceId!=t.id){if(multi)continue;return;}
         m.sourceId=t.id;if(m.frameId.isEmpty())m.frameId=QUuid::createUuid().toString(QUuid::WithoutBraces);
         if(m.cycleId.isEmpty())m.cycleId=QUuid::createUuid().toString(QUuid::WithoutBraces);
         if(m.coordinateSystemId.isEmpty())m.coordinateSystemId=t.id+"/image";
         if(!m.completedAtUtc.isValid())m.completedAtUtc=QDateTime::currentDateTimeUtc();
-        frame=frame->withMetadata(m);ToolResult r;r.toolId=t.id;r.state=ExecutionState::Done;
+        frame=frame->withMetadata(m);if(multi){invalidateTool(c,t.id);sourceFrames[t.id]=*frame;}ToolResult r;r.toolId=t.id;r.state=ExecutionState::Done;
         r.outputs["image"]={outputPorts(t.kind).first(),*frame,true,m.frameId,m.cycleId,m};cacheResult(c,r);return;
     }
 }
-TargetEvaluation EditorSession::evaluation(const EditorContext& c) const {
-    if(!frame)throw std::runtime_error("Önce görüntü al.");
-    TargetEvaluation e{*frame,evaluationScope(c),{}};
-    for(auto it=cache_.cbegin();it!=cache_.cend();++it)if(it->signature==ExecutionService::toolSignature(c.definition,QFileInfo(c.path).absolutePath(),it.key(),e.scope))e.cache[it.key()]=*it;
+TargetEvaluation EditorSession::evaluation(const EditorContext& c,const QString& tool) const {
+    const auto source=tool.isEmpty() ? (frame ? frame->metadata().sourceId:QString{}):sourceForTool(c,tool);
+    const bool multi=c.definition["editor"].toObject()["schemaVersion"].toInt()==9;
+    const auto selected=multi && !source.isEmpty() ? (sourceFrames.contains(source) ? std::optional<ImageFrame>(sourceFrames[source]):std::nullopt):frame;
+    if(!selected)throw std::runtime_error("Acquire this source first");
+    TargetEvaluation e{*selected,evaluationScope(c,source),{}};
+    for(auto it=cache_.cbegin();it!=cache_.cend();++it)if(it->signature==ExecutionService::toolSignature(c.definition,QFileInfo(c.path).absolutePath(),it.key(),evaluationScope(c,sourceForTool(c,it.key()))))e.cache[it.key()]=*it;
     return e;
 }
 void EditorSession::reconcile(const EditorContext& c) {
-    if(!frame){cache_.clear();if(cycle && cycle->state==ExecutionState::Done)cycle.reset();return;}
-    const auto e=evaluation(c);cache_=e.cache;
+    if(!frame && sourceFrames.isEmpty()){cache_.clear();if(cycle && cycle->state==ExecutionState::Done)cycle.reset();return;}
+    if(c.definition["editor"].toObject()["schemaVersion"].toInt()==9) {
+        for(auto it=cache_.begin();it!=cache_.end();)if(it->signature!=ExecutionService::toolSignature(c.definition,QFileInfo(c.path).absolutePath(),it.key(),evaluationScope(c,sourceForTool(c,it.key()))))it=cache_.erase(it);else ++it;
+        for(auto it=sourceFrames.begin();it!=sourceFrames.end();)if(!cache_.contains(it.key()))it=sourceFrames.erase(it);else ++it;
+        if(frame && !sourceFrames.contains(frame->metadata().sourceId))frame.reset();
+    }else {const auto e=evaluation(c);cache_=e.cache;}
     if(cycle) {
         cycle->tools.erase(std::remove_if(cycle->tools.begin(),cycle->tools.end(),[&](const auto& r){return !cache_.contains(r.toolId);}),cycle->tools.end());
         if(cycle->tools.isEmpty())cycle.reset();else cycle->configId=signature(c);
@@ -102,7 +123,8 @@ void EditorSession::invalidateTool(const EditorContext& c,const QString& tool) {
 }
 bool EditorSession::acceptTool(CycleResult result,const QByteArray& captured,const EditorContext& current) {
     if(!accepts(captured,current))return false;
-    if(result.targetToolId.isEmpty() || result.configId!=ExecutionService::toolSignature(current.definition,QFileInfo(current.path).absolutePath(),result.targetToolId,evaluationScope(current)))return false;
+    if(result.targetToolId.isEmpty() || result.configId!=ExecutionService::toolSignature(current.definition,QFileInfo(current.path).absolutePath(),result.targetToolId,evaluationScope(current,sourceForTool(current,result.targetToolId))))return false;
+    if(current.definition["editor"].toObject()["schemaVersion"]==9 && token(SessionJob::Execution) && token(SessionJob::Execution)->load()){suppressCancelled(result);sourceFrames.clear();cache_.clear();frame.reset();cycle=std::move(result);return true;}
     reconcile(current);invalidateTool(current,result.targetToolId);
     if(token(SessionJob::Execution) && token(SessionJob::Execution)->load())suppressCancelled(result);
     for(const auto& r:result.tools)cacheResult(current,r);
@@ -111,12 +133,35 @@ bool EditorSession::acceptTool(CycleResult result,const QByteArray& captured,con
     presentation.configId=signature(current);cycle=std::move(presentation);return true;
 }
 void EditorSession::invalidateResults() {cycle.reset();matchOutcome.reset();resultSignature.clear();}
+void EditorSession::calibrationChanged(const EditorContext& c,const QString& source) {
+    if(busy())throw std::runtime_error("Calibration cache change while worker running");
+    if(c.definition["editor"].toObject()["schemaVersion"]==9){
+        for(auto i=cache_.begin();i!=cache_.end();){const auto oldScope=evaluationScope(cacheContext_,sourceForTool(cacheContext_,i.key()));if(i->signature!=ExecutionService::toolSignature(c.definition,QFileInfo(c.path).absolutePath(),i.key(),oldScope))i=cache_.erase(i);else ++i;}
+        const auto tools=editorTools(c.definition);for(const auto& t:tools)if(source.isEmpty() || sourceForTool(c,t.id)==source){if(ToolRegistry::get(t.kind).usesCalibration || t.parameters["mode"]=="calibrated" || (t.parameters.contains("referenceBinding") && toolReferenceBinding(t).world) || isWorldPoseTracking(t))invalidateTool(c,t.id);else if(t.kind=="edge_point" && cache_.contains(t.id)){cache_[t.id].result.outputs.remove("pointMm");cache_[t.id].result.calibration.reset();}}
+        for(auto i=cache_.begin();i!=cache_.end();++i)i->signature=ExecutionService::toolSignature(c.definition,QFileInfo(c.path).absolutePath(),i.key(),evaluationScope(c,sourceForTool(c,i.key())));
+        cacheContext_=c;matchOutcome.reset();resultSignature.clear();if(cycle){cycle->configId=signature(c);for(auto& r:cycle->tools)r=cache_.value(r.toolId).result;}return;
+    }
+    if(!frame || cacheContext_.projectId!=c.projectId || cacheContext_.path!=c.path || cacheContext_.recipeId!=c.recipeId || cacheContext_.definition!=c.definition){cache_.clear();invalidateResults();return;}
+    cache_=evaluation(cacheContext_).cache;const auto tools=editorTools(c.definition);
+    for(const auto& t:tools)if((source.isEmpty() || sourceForTool(c,t.id)==source) && (ToolRegistry::get(t.kind).usesCalibration || t.parameters["mode"]=="calibrated" || (t.parameters.contains("referenceBinding") && toolReferenceBinding(t).world) || isWorldPoseTracking(t)))invalidateTool(cacheContext_,t.id);
+    for(const auto& t:tools)if((source.isEmpty() || sourceForTool(c,t.id)==source) && t.kind=="edge_point" && cache_.contains(t.id)){auto& r=cache_[t.id].result;r.outputs.remove("pointMm");r.calibration.reset();}
+    for(auto i=cache_.begin();i!=cache_.end();++i)i->signature=ExecutionService::toolSignature(c.definition,QFileInfo(c.path).absolutePath(),i.key(),evaluationScope(c,sourceForTool(c,i.key())));
+    cacheContext_=c;references.clear();matchOutcome.reset();resultSignature.clear();if(cycle){cycle->configId=signature(c);cycle->tools.erase(std::remove_if(cycle->tools.begin(),cycle->tools.end(),[&](const auto& r){return !cache_.contains(r.toolId);}),cycle->tools.end());for(auto& r:cycle->tools)r=cache_.value(r.toolId).result;}
+}
 bool EditorSession::acceptCycle(CycleResult result,const QByteArray& captured,const EditorContext& current) {
     if(token(SessionJob::Execution) && token(SessionJob::Execution)->load())suppressCancelled(result);
     if(!accepts(captured,current)){invalidateResults();return false;}
+    const bool multi=current.definition["editor"].toObject()["schemaVersion"].toInt()==9;
+    if(multi && token(SessionJob::Execution) && token(SessionJob::Execution)->load()){sourceFrames.clear();cache_.clear();}
+    if(multi && !result.targetToolId.isEmpty()){invalidateTool(current,result.targetToolId);sourceFrames.remove(result.targetToolId);}
+    else {sourceFrames.clear();cache_.clear();}
     cycle=std::move(result);frame.reset();references.clear();
-    if(cycle->state!=ExecutionState::Skipped)for(const auto& r:cycle->tools)for(const auto& t:editorTools(current.definition))if(t.id==r.toolId && ToolRegistry::get(t.kind).acquisitionSource)for(const auto& v:r.outputs)if(v.valid)if(auto* image=std::get_if<ImageFrame>(&v.data))frame=*image;
-    cache_.clear();if(frame)for(const auto& r:cycle->tools)cacheResult(current,r);
+    if(cycle->state!=ExecutionState::Skipped)for(const auto& r:cycle->tools)for(const auto& t:editorTools(current.definition))if(t.id==r.toolId && ToolRegistry::get(t.kind).acquisitionSource)for(const auto& v:r.outputs)if(v.valid)if(auto* image=std::get_if<ImageFrame>(&v.data)){frame=*image;if(multi)sourceFrames[t.id]=*image;}
+    if(!multi)cache_.clear();if(frame)for(const auto& r:cycle->tools)cacheResult(current,r);
+    if(multi && !cycle->targetToolId.isEmpty()) {
+        cycle->tools.clear();
+        for(const auto& t:editorTools(current.definition))if(cache_.contains(t.id))cycle->tools.append(cache_[t.id].result);
+    }
     if(frame)for(const auto& r:cycle->tools) {
         auto point=r.outputs.value("point");if(!point.valid || !std::holds_alternative<QPointF>(point.data))continue;
         for(const auto& t:editorTools(current.definition))if(t.id==r.toolId && t.kind=="template_match")references[t.id]={referenceSignature(current,t.id),std::get<QPointF>(point.data)};
@@ -131,7 +176,7 @@ PoseTeaching EditorSession::teachPose(const ToolDefinition& tool,const ImageFram
     }catch(const std::exception& e){return {{},QString::fromUtf8(e.what())};}
 }
 ImageFrame EditorSession::toolImage(const EditorContext& c,const QString& tool) const {
-    const auto e=evaluation(c);
+    const auto e=evaluation(c,tool);
     for(const auto& link:editorConnections(c.definition))if(link.targetTool==tool && link.targetPort=="image") {
         const auto cached=e.cache.constFind(link.sourceTool);
         if(cached==e.cache.cend() || cached->result.state!=ExecutionState::Done)break;
@@ -143,14 +188,14 @@ ImageFrame EditorSession::toolImage(const EditorContext& c,const QString& tool) 
 }
 ToolDefinition EditorSession::taughtReference(const EditorContext& c,const ToolDefinition& consumer,const QString& producer,const QString& port,QPointF offset,double angle) const {
     if(token(SessionJob::Execution) && token(SessionJob::Execution)->load())throw std::runtime_error("Reference teaching cancelled");
-    const auto e=evaluation(c);const auto cached=e.cache.constFind(producer);
+    const auto e=evaluation(c,consumer.id);const auto cached=e.cache.constFind(producer);
     if(cached==e.cache.cend())throw std::runtime_error("Run current reference source first");
     for(const auto& source:editorTools(c.definition))if(source.id==producer)
         return ReferenceService::teach(consumer,source,port,cached->result,toolImage(c,consumer.id),offset,angle);
     throw std::runtime_error("Reference producer missing");
 }
 TrackingTeachingInput EditorSession::trackingTeachingInput(const EditorContext& c,const ToolDefinition& consumer,const QString& producer,double mmPerSample,const MeasurementExecutionContext& calibration) const {
-    const auto e=evaluation(c);const auto image=toolImage(c,consumer.id);
+    const auto e=evaluation(c,consumer.id);const auto image=toolImage(c,consumer.id);
     for(const auto& source:editorTools(c.definition))if(source.id==producer) {
         const auto cached=e.cache.constFind(producer);
         if(cached==e.cache.cend())throw std::runtime_error("Güncel pose sonucu yok. Önce referans aracını Run Tool ile çalıştırın.");
@@ -174,6 +219,7 @@ TrackingTeaching EditorSession::teachReference(const TrackingTeachingInput& inpu
         const bool world=!json.isEmpty() && ToolRoi::fromJson(json).frame.unit==LengthUnit::Millimetre;
         auto taught=world ? ReferenceService::teachWorld(input.consumer,ToolRoi::fromJson(json),input.mmPerSample,input.source,port,input.reference,input.image,input.calibration,offset,angle,cancel)
             :ReferenceService::teach(input.consumer,input.source,port,input.reference,input.image,offset,angle);
+        if(taught.kind=="circle_fit" && input.calibration.calibration && input.calibration.calibration->systemBound() && input.calibration.current)taught.parameters["worldCalibration"]=input.calibration.current->toJson();
         if(cancel && cancel->load())throw std::runtime_error("Teaching cancelled");return {taught,{}};
     }catch(const std::exception& e){return {{},QString::fromUtf8(e.what())};}
 }

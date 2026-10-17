@@ -1,5 +1,33 @@
 # C++ / Qt / OpenCV geliştirme gereksinimleri
 
+17 Ekim KMC-10c2/10d uygulandı: editor9 bütün-set Runtime preparation, terminal7/restart/Logs/CSV ve vf.socket2 scalar mapping; N kaynak hazırlık tablosu, seçili gerçek frame/overlay ve immutable model gösterimi. [Kalıcı Runtime sözleşmesi](../architecture/multi-source-runtime-terminal.md). **KMC-10e B yazılım kabulü ve fiziksel devir dokümanı tamamlandı: tam Release UI/ZXing ON 87/87; Widgets OFF/ZXing OFF 73/73**; [B kabul ve fiziksel devir](../architecture/multi-source-release-acceptance.md). Aşağıdaki tarihli teslim kayıtları kendi kapanış durumlarını anlatır; güncel durum bu paragraftır. Fiziksel/native/lens/industrial/PLC/robot/CUDA/kurulum/dağıtım kabulü açık.
+
+17 Ekim KMC-10c1: tek tutarlı source/model snapshot seti, yalnız bellekte immutable admission, ortak Runtime worker ve N-frame trusted completion/replay uygulandı. Kullanıcının kalıcı editor9 production kapısı KMC-10c2 kabulüne kadar kapalıdır. [Programatik kapsam ve sınırlar](../architecture/multi-source-production-contract.md). Sıradaki KMC-10c2.
+
+16 Ekim KMC-10b: explicit editor9 ile çok kaynaklı Editor/execution, kaynak başına kare/cache/model, sıralı acquisition ve toplam süre/retained bellek bütçesi uygulandı. Viewer kaynak seçici ve TargetOnly acquisition0 bağlıdır. Production editor9 kapısı KMC-10c2 kabulüne kadar kapalıdır; sıradaki KMC-10c1. [Kullanım, sözleşme ve sınırlar](../architecture/multi-source-execution-editor.md).
+
+
+16 Ekim KMC-10a: explicit editor9 çok-source opt-in, dal/port source kimliği ve bounded source-frame indeksi; cross-source bağlantılar reddedilir. Root/recipe1–2 ve legacy codec korunur. Schema9 Editor/execution KMC-10b ile açıldı; production kapısı kapalıdır. [Sözleşme ve sınırlar](../architecture/multi-source-graph-contract.md).
+
+16 Ekim uygulama durumu — **KMC-0–9 tamamlandı (7a/7b ayrı)**. Reçetesiz iki sihirbaz/dosya denemesi, raster denetimli ayrı association, kurulum başına aktivasyon incelemesi, tek-source Editor/Runtime exact sourceSetup ve terminal6 Logs/CSV uygulandı. Legacy geçmiş açık beyanla bütün sürümleri koruyarak aktarılır; no-op/özgün hash ve eksik raster korunur. Bağımlılık import/export ve saved proje/history Save As bağlıdır; görüntüler otomatik paketlenmez. [Entegrasyon](../architecture/scoped-calibration-integration.md), [migration/taşıma](../architecture/measurement-setup-migration.md). **KMC-9 birleşik A yazılım kabulü: UI/ZXing ON 80/80, Widgets OFF/ZXing OFF 68/68; [kabul matrisi](../architecture/independent-calibration-acceptance.md). N kalibrasyon yönetimi tamamlandı, reçetede tek source sınırı sürüyor. KMC-10a programatik DAG/frame sözleşmesi uygulandı; sıradaki KMC-10c1**; aynı reçetede çok-source B, native/fiziksel/seri numarası/lens/robot/CUDA/dağıtım kabulü açıktır.
+
+
+16 Ekim — **KMC-0–9 A yazılım kabulü tamamlandı; B teslimi açık:** [KMC sözleşmesi](../architecture/independent-calibration-implementation-plan.md)
+kalıcı camera/setup kimliğini recipe tool kimliğinden ayırır; application-owned
+registry, dosya kökeni, kurulum başına immutable snapshot ve B tesliminde
+source/frame bazlı çoklu completion doğrulaması öngörür. Tek-source scoped completion KMC-7b ile uygulandı. Sabit 5 kamera sınırı yoktur;
+N=0/1/2/5/8/10 ve kapasite retleri test edilir. Legacy schema/hash ve gerçek
+kabul kapıları korunur; Qt UI algoritma/SDK çağırmaz.
+
+15 Ekim — **KUI-5 tamamlandı**: SystemCalibration immutable owner snapshot/typed execution binding ve sealed readiness; source tool ile shared setup ayrımı, gerçek pointwise H/geometri, selective raw cache/TargetOnly0 ve trusted Runtime completion. Execution23, Edge Point3, Circle3, terminal5; root/legacy codec/no-op korunur. Legacy wrapper3 accepted model-only kanıtını korur, raster hash/frame uydurmaz. [Sözleşme](../architecture/system-calibration.md). Sıradaki KUI-6 birleşik Release. Alttaki kayıtlar tarihseldir.
+
+
+15 Ekim — **KUI-4 tamamlandı**: Qt Widgets yalnız presentation/session komutları; acquisition/algoritma application servislerinde worker snapshotlarıyla yürür. Named record wrapper schema2 ve strict bounded target library schema1 eklendi; legacy codec/engine execution/22 korunur. [Release ve UI kabulü](../architecture/calibration-ui-acceptance.md). KUI-5 ortak resolver/immutable Runtime henüz açıktır; ardından KUI-6. Alttaki kayıtlar tarihseldir.
+
+
+15 Ekim — **KUI-2/KUI-3 tamamlandı**: [application-owned calibration session](../architecture/calibration-wizard-services.md), immutable worker girdileri ve opaque tek kullanımlık completion, gerçek Edge/Caliper ve OpenCV 5 features/objdetect circle adapter. Yeni target descriptor schema1 ve circle nested PlaneMapping schema2; legacy chessboard codec/hash korunur. UI algoritma/SDK çağırmaz; UI KUI-4, ortak metrik/immutable Runtime KUI-5 kapsamındadır. Engine execution/22 ve mevcut production izinleri değişmedi.
+
+
 12 Ekim güncel durum — **R1–R8 tamamlandı.** Yeni ortak Referans binding’leri immutable snapshot ve Runtime’ın süreç içi trusted completion kanıtıyla production yoluna bağlandı; tam kaynak/port/ofset/calibration kimliği terminal schema4, restart, Logs ve CSV’de korunur. Runtime Viewer aynı current resolver’ı kullanır; Stop/missing nominal fallback üretmez. Engine **execution/22**, editor8/raw1/world2/vf.socket2 korunur. Standalone Pattern/Shape ve eski poseTracking production kapısı T8.4.2b.3c corpus kabulüne kadar kapalıdır. **R8 tam Release kabulü: OFF/core 57/57, ON/UI 64/64. Sonraki T8.4.2b.3c** eksik corpus ve bütün production yollarının kapanışıdır. Güncel binary build/reference-ui/visionflow.exe. Alttaki teslim ve sıra kayıtları tarihseldir. [R7 sözleşmesi ve kabul eşlemesi](../architecture/reference-production-acceptance.md). [R8 paket ve devir kanıtı](../architecture/reference-release-acceptance.md).
 
 
@@ -109,3 +137,5 @@ CPU başlangıç adapter: `cv::matchTemplate` + `TM_CCOEFF_NORMED` + `cv::minMax
 4. Kalibrasyon, kamera/robot/PLC adapter'ları, Runtime, diagnostics, yetki, audit/retention.
 
 Her aşama derlenir. Kabul kontrolleri ilk iki dokümandaki kriterleri kapsar: tek editor, türün kayıtta korunması, seçim/overlay senkronizasyonu, invalidation, tutarlı cycle/frame/birim ve çalışmamış reçetede sahte PASS olmaması. Matching için gerçek pozitif/negatif veriyle yanlış kabul, konum hatası ve latency birlikte ölçülür.
+
+16 Ekim KMC-6/7a: reçetesiz bilinen ölçü/plaka/dosya sihirbazları ve raster denetimli ayrı deneme türetimi; kaynak properties’de açık source→exact kurulum bağı uygulanmıştır. Bağlama scoped-source/1 politikasına geçer, bağı kaldırmak legacy fallback sağlamaz. Editor yalnız ilgili immutable kurulum modelini kullanır; raw cache/TargetOnly acquisition0 korunur. Tek-source sınırı sürer. [Sözleşme](../architecture/scoped-calibration-integration.md).

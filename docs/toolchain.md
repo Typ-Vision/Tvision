@@ -1,5 +1,10 @@
 # Yerel araç kontrolü
 
+15 Ekim 2026 iş bilgisayarı: Qt/MinGW/OpenCV/ZXing kurulum yolları, yeniden
+derleme komutları ve güncel doğrulama kanıtları
+[Windows geliştirme ortamı](windows-workstation.md) belgesindedir.
+Aşağıdaki kayıtlar önceki bilgisayarda yapılan geliştirme kabulünün tarihçesidir.
+
 10 Ekim güncel kapsam: **T8.4.2b.3b — Nominal world ROI authoring ve mm metric/tolerans tamamlandı.** Edge Point/Caliper/Line/Circle için **Nominal mm ROI öğret…** ekranı geometriyi, güncel pose teaching kaydını ve DAG bağlantısını atomik kaydeder; pending/iptal/geçersiz geometri reçeteyi değiştirmez. Caliper gerçek mm genişliğini, Line current mm span/açısını dahil tool toleranslarıyla değerlendirir. Circle tüm gerçek gözlemlerden (fit outlier dahil) radyal sapma, current world açı/gap/observed arc ve kaliteye bağlı tolerans üretir. Raw line/circle fit ve synthetic derivative strength unavailable; genel parça kararı NOT_EVALUATED. Engine **execution/19**, registry16/editor7/terminal3/vf.socket/2 korunur. Production pose whitelist reddi sürer. Sonraki **T8.4.2b.3c — Trusted completion/immutable production Runtime/Logs/restart/CSV ve corpus kabulü**; T8.4 açık. Güncel Release binary: `build/tracking-ui/visionflow.exe`.
 
 Doğrulama: Release core **50/50**, UI **56/56** tam CTest; world sampler/metric **2213**, world DAG **830**, pose/world authoring UI **829 kontrol** geçti. Normal/850×600 ve world ROI dialog görselleri incelendi. Kanıtlar `build/shape-core/t8-4g-final-ctest.log`, `build/tracking-ui/t8-4g-final-ctest.log` ve ilerleme kaydındadır.

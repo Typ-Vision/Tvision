@@ -1,5 +1,63 @@
 # VisionFlow Industrial Vision Suite
 
+17 Ekim kamera incelemesi: GenTL keşif/read-only kontrolü mevcut; gerçek endüstriyel stream/grab ve kalibrasyon/Editor/Runtime bağlantısı henüz uygulanmadı. Opto kamera için mevcut sınırlar ve önerilen GenICam/vendor SDK yolu [entegrasyon değerlendirmesinde](docs/architecture/industrial-camera-integration-assessment.md).
+
+17 Ekim KMC-10c2/10d uygulandı: editor9 bütün-set Runtime preparation, terminal7/restart/Logs/CSV ve vf.socket2 scalar mapping; N kaynak hazırlık tablosu, seçili gerçek frame/overlay ve immutable model gösterimi. [Kalıcı Runtime sözleşmesi](docs/architecture/multi-source-runtime-terminal.md). **KMC-10e B yazılım kabulü ve fiziksel devir dokümanı tamamlandı: tam Release UI/ZXing ON 87/87; Widgets OFF/ZXing OFF 73/73**; [B kabul ve fiziksel devir](docs/architecture/multi-source-release-acceptance.md). Aşağıdaki tarihli teslim kayıtları kendi kapanış durumlarını anlatır; güncel durum bu paragraftır. Fiziksel/native/lens/industrial/PLC/robot/CUDA/kurulum/dağıtım kabulü açık.
+
+17 Ekim KMC-10c1: tek tutarlı source/model snapshot seti, yalnız bellekte immutable admission, ortak Runtime worker ve N-frame trusted completion/replay uygulandı. Kullanıcının kalıcı editor9 production kapısı KMC-10c2 kabulüne kadar kapalıdır. [Programatik kapsam ve sınırlar](docs/architecture/multi-source-production-contract.md). Sıradaki KMC-10c2.
+
+16 Ekim KMC-10b: explicit editor9 ile çok kaynaklı Editor/execution, kaynak başına kare/cache/model, sıralı acquisition ve toplam süre/retained bellek bütçesi uygulandı. Viewer kaynak seçici ve TargetOnly acquisition0 bağlıdır. Production editor9 kapısı KMC-10c2 kabulüne kadar kapalıdır; sıradaki KMC-10c1. [Kullanım, sözleşme ve sınırlar](docs/architecture/multi-source-execution-editor.md).
+
+
+16 Ekim — **KMC-0–9 tamamlandı (KMC-7a/7b ayrı paketler).** Setup → Calibration [Sistem özetini](docs/architecture/calibration-overview.md) açar. Kaydedilmiş proje yeterli, reçete gerekmez. 0/1/N kamera, metadata keşfi, kamera/kurulum yönetimi ve reçetesiz bilinen ölçü/plaka/dosya denemesi çalışır. Kamera sayısı sabit beşle sınırlı değildir; 8–10 dahil kartlar sarılır.
+
+Kaydet aday oluşturur; [aktivasyon incelemesi](docs/architecture/measurement-setup-migration.md) ayrı gerçek kamera karesi denetler. Deneme ilişkilendirmesi özgün rasterı yeniden hash kontrol ederek ayrı türetim oluşturur. Eski geçmiş açık kurulum beyanıyla bütün sürümleri koruyarak aktarılır; eksik raster kanıtı üretilmez. Önceki akış/kanıt ekranları korunur.
+
+[Editor/Runtime](docs/architecture/scoped-calibration-integration.md) açık kaynak→kurulum bağıyla yalnız ilgili immutable modeli kullanır; terminal6 kamera/kurulum/replay kanıtı Logs/CSV’de kalır. Bağ kaldırmak legacy fallback sağlamaz. Yeni serviste restart seçimleri hatırlar, kullanım izni vermez. Editor çok kaynaklı editor9 çalıştırır; Runtime tek-source kalır, çok-source üretim KMC-10c1/c2 teslimidir.
+
+Kalibrasyon bağımlılık paketi import/export ve kaydedilmiş projenin registry/katalog/legacy/üretim geçmişiyle Save As komutu bağlıdır. Görüntüler otomatik paketlenmez; hedef varlıklar denetlenir, eksik/çatışan hedef reddedilir. Ayrıntılar [taşıma sözleşmesindedir](docs/architecture/measurement-setup-migration.md).
+
+**KMC-9 birleşik A yazılım kabulü tamamlandı:** Release UI/ZXing ON tam CTest **80/80**, Widgets OFF/ZXing OFF **68/68** geçti. N kalibrasyon yönetimi tamamlandı; Runtime tek kaynaklıdır; Editor KMC-10b ile çok-source çalıştırır. Normal/küçük ekran akışları offscreen incelendi; fiziksel/native kabul açık. [Kabul matrisi ve kanıtlar](docs/architecture/independent-calibration-acceptance.md). **KMC-10a çok kaynaklı DAG/frame sözleşmesi** explicit editor9, dal/port kökeni ve bounded frame indeksi sunar; schema9 production kapısı kapalıdır. [Programatik sözleşme ve sınırlar](docs/architecture/multi-source-graph-contract.md). **KMC-10b uygulandı; sıradaki KMC-10c1.** Güncel doğrulama ve fiziksel kabul sınırları [ilerleme kaydında](docs/progress.md), sonraki işler [KMC planındadır](docs/architecture/independent-calibration-implementation-plan.md).
+
+## İş bilgisayarında geliştirme ortamı
+
+15 Ekim 2026: `C:/Projects/Tvision` için Qt 6.12.0 / MinGW 13.1.0 ve
+kaynak koddan derlenen OpenCV 5.0.0 kurulumu için
+[Windows ortamı ve tekrar kurulum komutları](docs/windows-workstation.md).
+Güncel derleme dizini `build/reference-ui`; çalıştırma: `./scripts/run-local.ps1`.
+Bu betik DLL yollarını yalnız başlattığı sürece ekler. Eski `build/visionflow.exe`
+hedefi için `./scripts/run-local.ps1 -BuildDirectory build` kullanılabilir.
+Kurulum/test kanıtı bağlantıdaki belgede tutulur; aşağıdaki tarihsel test sayıları
+bu bilgisayarda yeniden alınmış sonuçlar olarak yorumlanmamalıdır.
+OpenCV ve ZXing probe'ları geçti, güncel uygulama Release derlendi. 15 Ekim tarihsel kurulum testi ve
+başarısız testlerin erişimli tekrarı birlikte **66/70 farklı test** için başarılı
+kanıt vermişti; o dört UI testi KMC-0'da kapandı ve tek tam UI koşumu 70/70 geçti. Ayrıntılar bağlantıdaki doğrulama bölümündedir.
+
+15 Ekim — **KUI-5 tamamlandı**: tek etkin kalibrasyon Measurement/Caliper/Line/Circle/Geometry, ayrı Edge Point pointMm, Editor cache/TargetOnly ve immutable Runtime/Logs/CSV yoluna bağlandı. Calculate px kalır; eski px tolerans ve exact world ROI otomatik dönüştürülmez. Legacy kayıt aktarımı açık kurulum beyanı ister, eksik raster kanıtı üretmez. Execution23 / terminal5; [sözleşme ve kabul](docs/architecture/system-calibration.md). Sıradaki **KUI-6 tam Release kabulü**. Güncel binary build/reference-ui/visionflow.exe. Alttaki teslim kayıtları tarihseldir.
+## Yeni kalibrasyon akışı — KUI-4/KUI-5
+
+1. Projeyi kaydedin ve hedef reçetenin Image File/Webcam kaynağını açın. Setup → Calibration → Bilinen ölçü veya Kalibrasyon plakası → Başlat.
+2. Kaynaktan kare alın veya dosya açın. Ortak kurulum adı, lens/kamera ve düzlem beyanını verin. Dosya için açık aynı-kurulum beyanı yoksa kayıt yalnız denemedir.
+3. Bilinen ölçüde tarama oku → gerçek kenar/kaliper çifti → gerçek mm → Hesapla. Plakada chessboard iç köşe veya daire merkez sayısı/gerçek aralık → bul/onayla/hesapla. İsteğe bağlı bağımsız kontrol ayrı kalır; varsayılan fiziksel hata/kabul uydurulmaz.
+4. Kaydet ve bitir yalnız aday kaydeder. Ana sayfada Etki incelemesi → Etkinleştir. Uyumlu mm araçlar aynı modeli kullanır; Calculate px kalır. Eski px toleransları açık düzenleme, exact world ROI/referanslar yeniden öğretim ister.
+5. Runtime için normal Save → Load Recipe → Run → Tek çevrim. Run yalnız hazırlanır; gerçek sonuç çevrimden ve kalıcı kayıttan gelir. Değişiklik için Stop ve bekleyen kayıt/ACK tamamlanmalıdır. Logs/CSV geçmiş model kanıtını korur.
+
+Eski kayıtları incele / aktar, legacy ID'nin bütün sürümlerini açık kurulum beyanıyla yeni kataloğa kopyalar; eksik raster hash/frame üretmez ve etkinleştirme yapmaz. Eski kayıt / kanıt ekranı eski akışın uyumluluk yoludur. Robot kartı yalnız şablondur. Restart/proje değişimi etkinliği geri yüklemez. [Ayrıntılar ve sınırlar](docs/architecture/system-calibration.md).
+
+## Önceki teslim kayıtları
+
+
+15 Ekim — **KUI-4 arayüzü tamamlandı**: Setup → Calibration üç kart, ayrı bilinen ölçü/plaka sihirbazları, gerçek Edge/Caliper ve chessboard/circle rasterları, açık dosya/kurulum beyanı, adlandırılmış kayıt ve ana sayfadan tek seçim sunar. Robot yalnız şablondur; eski kanıt ekranı korunur. Release core ilgili 20/20, UI ilgili 23/23; [akış ve sınırlar](docs/architecture/calibration-ui-acceptance.md). **Ortak metrik/Editor/Runtime bağlantısı henüz KUI-5 kapsamında açıktır**, ardından KUI-6 tam kabul. Güncel binary build/reference-ui/visionflow.exe. Alttaki teslim kayıtları tarihseldir.
+
+
+15 Ekim — **KUI-2 ve KUI-3 servisleri tamamlandı**. Release core/UI ilgili CTest **23/23**; plate **473**, wizard **55 kontrol**. Kapsam: gerçek Edge/Caliper noktalarıyla tek seçilmiş çift; ortak session içinde chessboard/simetrik circle grid, noktaları onaylama, raw H, tipli target ve strict replay. Circle yeni katalogda açık desen kimliğiyle tutulur; eski chessboard kayıt/hash yolları korunur. [Servisler ve kabul sınırları](docs/architecture/calibration-wizard-services.md). UI henüz yeni session'ı kullanmaz; sıradaki **KUI-4** ana sayfa/iki sihirbaz/dosya-kurulum/robot şablonu, sonra KUI-5 ortak metrik Runtime. Güncel Release binary build/reference-ui/visionflow.exe; fiziksel doğruluk/lens/robot/CUDA/kurulum/dağıtım ve T8.4.2b.3c açık. Alttaki teslimler tarihseldir.
+
+
+15 Ekim — **KUI-2 tamamlandı**: ortak CalibrationWizardSession, gerçek Edge/Caliper noktaları ve tek seçilmiş çift hesabı; frame/hash/setup invalidation ve iptal/geç sonuç koruması. Release core/UI ilgili CTest **12/12**, yeni test **52 kontrol**. [Servis sözleşmesi](docs/architecture/calibration-wizard-services.md). Yeni ekran henüz yok; sıradaki **KUI-3** plaka servisleri, UI KUI-4 ve ortak metrik Runtime KUI-5. Aşağıdaki KUI-1 teslimi korunur.
+
+
+15 Ekim — **KUI-1 application sözleşmesi tamamlandı**: ortak kurulum, model-ready/bağımsız kontrol ayrımı, atomik yeni katalog ve explicit tek etkin seçim servisi. Release OFF/core ve ON/UI ilgili CTest **11/11** geçti; yeni sözleşme 77 kontrolle sınandı. Mevcut ekran/Editor/Runtime henüz yeni servisi kullanmaz; sihirbazlar ve circle grid uygulanmadı. [Sözleşme ve migration envanteri](docs/architecture/active-calibration-contract.md). [Kalibrasyon sihirbaz planında](docs/architecture/calibration-wizard-plan.md) sıradaki **KUI-2** gerçek Edge/Caliper session'dır; T8.4.2b.3c açık kalır. Güncel yeniden derlenen UI binary build/reference-ui/visionflow.exe.
+
 12 Ekim güncel durum — **R1–R8 tamamlandı.** Yeni ortak Referans binding’leri immutable snapshot ve Runtime’ın süreç içi trusted completion kanıtıyla production yoluna bağlandı; tam kaynak/port/ofset/calibration kimliği terminal schema4, restart, Logs ve CSV’de korunur. Runtime Viewer aynı current resolver’ı kullanır; Stop/missing nominal fallback üretmez. Engine **execution/22**, editor8/raw1/world2/vf.socket2 korunur. Standalone Pattern/Shape ve eski poseTracking production kapısı T8.4.2b.3c corpus kabulüne kadar kapalıdır. **R8 tam Release kabulü: OFF/core 57/57, ON/UI 64/64. Sonraki T8.4.2b.3c** eksik corpus ve bütün production yollarının kapanışıdır. Güncel binary build/reference-ui/visionflow.exe. Alttaki teslim ve sıra kayıtları tarihseldir. [R7 sözleşmesi ve kabul eşlemesi](docs/architecture/reference-production-acceptance.md). [R8 paket ve devir kanıtı](docs/architecture/reference-release-acceptance.md).
 
 
@@ -150,11 +208,11 @@ Yollar bu makineye aittir. CMake/Ninja PATH üzerinde olmalı; başka makinede Q
 ## UI çalıştırma ve kullanım
 
 ```powershell
-.\scripts\run-local.ps1
-.\scripts\run-local.ps1 -SmokeTest
+.\scripts\run-local.ps1 -BuildDirectory build
+.\scripts\run-local.ps1 -BuildDirectory build -SmokeTest
 ```
 
-PS1 çift tıklamada Not Defteri ile açılıyorsa `powershell.exe -ExecutionPolicy Bypass -File "C:\OpenCode\TVision\scripts\run-local.ps1"` kullanın.
+PS1 çift tıklamada Not Defteri ile açılıyorsa proje klasöründe PowerShell açıp betiği çalıştırın. Yeni iş bilgisayarı derlemesi için varsayılan `build/reference-ui` hedefini kullanın.
 
 Project Manager → New Project ile adı ve mevcut klasörde yeni `.vfproject` yolunu seçin; Save Project ilk kaydı yapar. Recipe Manager → New Recipe ile tür, ad ve görüntü kaynağı referansı girin; ortak editor açılır. Kaydedilmiş reçete değişince DRAFT/dirty olur; revizyon yalnız başarılı kayıtta artar. No-op Save artırmaz. Save/Ctrl+S tüm projeyi atomik kaydeder; başarısız commit/conflict dirty ve önceki dosyayı korur. Kapatma/proje değişiminde Save/Discard/Cancel vardır. Open Project ve Recipe Manager ile yeniden açılır. Copy/Delete/import/export/version history henüz yoktur.
 

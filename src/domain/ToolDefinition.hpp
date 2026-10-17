@@ -21,4 +21,6 @@ bool referenceNeedsTeaching(const ToolDefinition& edge, const ToolDefinition& so
 QVector<ToolDefinition> editorTools(const QJsonObject& definition);
 QJsonObject withEditorTools(QJsonObject definition, const QVector<ToolDefinition>& tools);
 void validateEditorDefinition(const QJsonObject& definition);
+// Explicit opt-in; ordinary open/save and adding a second source never migrate.
+QJsonObject withMultiSourceSchema(QJsonObject definition);
 }

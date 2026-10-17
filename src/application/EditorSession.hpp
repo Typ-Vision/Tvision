@@ -51,6 +51,7 @@ struct EditorContext {
     QString projectId,path,recipeId;
     QJsonObject definition;
     QJsonObject calibrationBinding;
+    QJsonObject systemCalibration;
 };
 struct ImageLoad {std::optional<ImageFrame> frame;QString error;};
 struct ModelTeaching {QString model,error;};
@@ -66,6 +67,9 @@ struct TrackingTeaching {std::optional<ToolDefinition> tool;QString error;};
 class EditorSession : public JobSession {
 public:
     std::optional<ImageFrame> frame;
+    QMap<QString,ImageFrame> sourceFrames;
+    bool selectSource(const QString& source);
+    QString sourceForTool(const EditorContext&,const QString& tool) const;
     quint64 generation=0;
     QByteArray resultSignature;
     std::optional<MatchOutcome> matchOutcome;
@@ -74,13 +78,14 @@ public:
     QByteArray signature(const EditorContext& context) const;
     QByteArray referenceSignature(const EditorContext& context,const QString& tool) const;
     std::optional<QPointF> referencePoint(const EditorContext& context,const QString& tool) const;
-    QByteArray evaluationScope(const EditorContext&) const;
+    QByteArray evaluationScope(const EditorContext&,const QString& source={}) const;
     void adoptFrame(const EditorContext&);
-    TargetEvaluation evaluation(const EditorContext&) const;
+    TargetEvaluation evaluation(const EditorContext&,const QString& tool={}) const;
     void reconcile(const EditorContext&);
     void invalidateTool(const EditorContext&,const QString& tool);
     bool acceptTool(CycleResult result,const QByteArray& captured,const EditorContext& current);
     void invalidateResults();
+    void calibrationChanged(const EditorContext&,const QString& source={});
     bool acceptCycle(CycleResult result,const QByteArray& captured,const EditorContext& current);
     bool accepts(const QByteArray& captured,const EditorContext& current) const {return captured==signature(current);}
     static ImageLoad load(const QString& path);
@@ -99,6 +104,7 @@ public:
     static void suppressCancelled(CycleResult& cycle);
 private:
     QMap<QString,CachedToolResult> cache_;
+    EditorContext cacheContext_;
     void cacheResult(const EditorContext&,const ToolResult&);
 
 };

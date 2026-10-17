@@ -26,6 +26,7 @@ public:
     void save();
     void discardChanges();
     QVector<ToolDefinition> tools() const;
+    void enableMultiSource();
     QString addTool(const QString& kind);
     void updateTool(const ToolDefinition& tool);
     // Commit teaching and its reference connection as one validated edit.
@@ -34,9 +35,11 @@ public:
     void clearReference(const QString& target);
     void removeTool(const QString& id);
     bool moveTool(const QString& id,int direction);
-    QString setImageFile(const QString& absolutePath);
+    QString setImageFile(const QString& absolutePath,const QString& source={});
     QString imageFilePath() const;
     void setConnections(const QVector<ToolConnection>& connections);
+    void bindSourceSetup(const QString& sourceToolId,const QJsonObject& target);
+    void clearSourceSetup(const QString& source={});
     void bindCalibration(const CalibrationDependency&);
     void clearCalibrationBinding();
     void setRuntimeOptions(QString trigger,QString measurementToolId);

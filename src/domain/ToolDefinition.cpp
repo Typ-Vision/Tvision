@@ -1,6 +1,7 @@
 #include "ToolDefinition.hpp"
 #include "ToolGraph.hpp"
 #include "ToolRegistry.hpp"
+#include "MeasurementSetupContract.hpp"
 #include <QJsonArray>
 #include <QSet>
 #include <QUuid>
@@ -27,7 +28,7 @@ QVector<ToolDefinition> editorTools(const QJsonObject& definition) {
     if(!definition.contains("editor"))return {};
     require(definition["editor"].isObject(),"definition.editor nesne olmalı.");const auto editor=definition["editor"].toObject();
     keys(editor,{"schemaVersion","tools","connections"});const auto version=editor["schemaVersion"];
-    require(version.isDouble() && version.toDouble()==version.toInt() && version.toInt()>=1 && version.toInt()<=8,"Desteklenmeyen editor şeması.");
+    require(version.isDouble() && version.toDouble()==version.toInt() && version.toInt()>=1 && version.toInt()<=9,"Desteklenmeyen editor şeması.");
     require(editor["tools"].isArray(),"Editor tools dizi olmalı.");const auto array=editor["tools"].toArray();require(array.size()<=256,"En fazla 256 tool desteklenir.");
     QVector<ToolDefinition> tools;QSet<QString> ids,names;int sourceCount=0;
     for(const auto value:array) {
@@ -43,6 +44,7 @@ QVector<ToolDefinition> editorTools(const QJsonObject& definition) {
         for(auto c:t.name)require(c.isPrint(),"Tool adı yazdırılabilir karakterlerden oluşmalı.");
         require(!names.contains(t.name.toCaseFolded()),"Tool adı reçetede zaten var.");require(t.description.size()<=2048,"Tool açıklaması çok uzun.");
         const auto defaults=defaultParameters(t.kind);QSet<QString> allowed;for(auto it=defaults.begin();it!=defaults.end();++it)allowed.insert(it.key());
+        if(t.kind=="circle_fit" && version.toInt()>=8)allowed.insert("worldCalibration");
         if(version.toInt()==1 && t.kind=="template_match") {keys(t.parameters,{"minScore"});require(t.parameters.size()==1,"Tool parametreleri eksik.");}
         if((version.toInt()==1 && t.kind=="template_match") || (version.toInt()<3 && (t.kind=="blob" || t.kind=="edge")))
             for(auto it=defaults.begin();it!=defaults.end();++it)if(!t.parameters.contains(it.key()))t.parameters[it.key()]=it.value();
@@ -50,8 +52,9 @@ QVector<ToolDefinition> editorTools(const QJsonObject& definition) {
         if(version.toInt()<5 && t.kind=="edge" && !t.parameters.contains("referenceGeometry"))t.parameters["referenceGeometry"]="";
         if(version.toInt()<6 && t.kind=="blob")for(const auto key:{"polarity","connectivity","minArea","maxArea"})if(!t.parameters.contains(key))t.parameters[key]=defaults[key];
         require(!t.parameters.contains("referenceBinding") || version.toInt()>=8,"Reference binding requires editor schema 8");
+        require(!t.parameters.contains("worldCalibration") || (t.kind=="circle_fit" && version.toInt()>=8),"World calibration requires Circle/editor schema 8");
         ToolRegistry::validate(t);
-        if(ToolRegistry::get(t.kind).acquisitionSource)require(++sourceCount<=1,"Bu aşamada reçetede tek edinim kaynağı desteklenir; mevcut Image File/Webcam kaynağını önce kaldırın.");
+        if(ToolRegistry::get(t.kind).acquisitionSource)require(++sourceCount<=(version.toInt()==9 ? 256:1),"Bu aşamada reçetede tek edinim kaynağı desteklenir; mevcut Image File/Webcam kaynağını önce kaldırın.");
         ids.insert(id.toString());names.insert(t.name.toCaseFolded());tools.append(t);
     }
     // Schema 3 used the match rectangle as an edge region. Preserve the drawn box
@@ -89,23 +92,39 @@ QJsonObject withEditorTools(QJsonObject definition,const QVector<ToolDefinition>
     validateEditorDefinition(definition);return definition;
 }
 int requiredEditorSchema(const QVector<ToolDefinition>& tools,int previousSchema) {
-    require(previousSchema>=1 && previousSchema<=8,"Unsupported previous schema");int schema=std::max(6,previousSchema);
+    require(previousSchema>=1 && previousSchema<=9,"Unsupported previous schema");int schema=std::max(6,previousSchema);
     for(const auto& t:tools)if(!t.dependencies.isEmpty() || ToolRegistry::get(t.kind).minimumEditorSchema==7)schema=std::max(schema,7);
-    for(const auto& t:tools)if(t.parameters.contains("referenceBinding"))schema=8;
+    for(const auto& t:tools)if(t.parameters.contains("referenceBinding") || t.parameters.contains("worldCalibration"))schema=std::max(schema,8);
     return schema;
 }
 QJsonObject encodeEditorTool(const ToolDefinition& t,int schema) {
     QJsonObject o{{"id",t.id},{"kind",t.kind},{"name",t.name},{"description",t.description},{"enabled",t.enabled},{"parameters",t.parameters}};
-    require(schema==6 || schema==7 || schema==8,"Unsupported editor write schema");
+    require(schema>=6 && schema<=9,"Unsupported editor write schema");
     if(schema>=7)o["dependencies"]=encodeToolDependencies(t.dependencies);else require(t.dependencies.isEmpty(),"Cannot downgrade dependencies");return o;
 }
 void validateEditorDefinition(const QJsonObject& definition) {
-    editorTools(definition);editorConnections(definition);
+    const auto tools=editorTools(definition);editorConnections(definition);
+    if(definition.contains("sourceSetups")) {
+        require(definition["editor"].toObject()["schemaVersion"]==9 && definition["sourceSetups"].isObject(),"Source set requires editor9 object");
+        const auto bindings=definition["sourceSetups"].toObject();require(bindings.size()<=256,"Too many source bindings");
+        for(auto i=bindings.begin();i!=bindings.end();++i){require(i->isObject() && i->toObject()["sourceToolId"]==i.key(),"Source binding key mismatch");require(definition["sourceSetup"].toObject()["sourceToolId"]!=i.key(),"Duplicate legacy/source-set binding");auto single=definition;single.remove("sourceSetups");single["sourceSetup"]=*i;validateEditorDefinition(single);}
+    }
+    if(definition.contains("calibrationPolicy"))require(definition["calibrationPolicy"]=="scoped-source/1","Unknown calibration policy");
+    if(definition.contains("sourceSetup")){require(definition["sourceSetup"].isObject(),"Source setup must be an object");const auto b=definition["sourceSetup"].toObject();keys(b,{"schemaVersion","sourceToolId","target"});require(b.size()==3 && b["schemaVersion"]==1 && b["sourceToolId"].isString() && b["target"].isObject(),"Invalid source setup schema");const auto target=b["target"].toObject();keys(target,{"schemaVersion","cameraId","setupId","revision"});require(target.size()==4 && target["schemaVersion"]==1 && target["cameraId"].isString() && target["setupId"].isString() && target["revision"].isDouble() && target["revision"].toDouble()==target["revision"].toInt() && target["revision"].toInt()>0 && target["revision"].toInt()<=1000000000,"Invalid source setup target");CameraId{target["cameraId"].toString()}.validate();SetupId{target["setupId"].toString()}.validate();bool found=false;for(const auto& t:tools)if(t.id==b["sourceToolId"].toString() && ToolRegistry::get(t.kind).acquisitionSource)found=true;require(found,"Source setup references a missing acquisition tool");}
+
     if(definition.contains("runtime")) {
         require(definition["runtime"].isObject(),"Runtime options must be an object.");const auto r=definition["runtime"].toObject();
         keys(r,{"trigger","measurementToolId"});
         require(r["measurementToolId"].toString().isEmpty() || !QUuid(r["measurementToolId"].toString()).isNull(),"Measurement mapping must be a tool UUID.");
         require(r.size()==2 && r["measurementToolId"].isString() && (r["trigger"]=="Manual" || r["trigger"]=="SoftwareTrigger"),"Invalid Runtime mode/mapping.");
     }
+}
+QJsonObject withMultiSourceSchema(QJsonObject definition) {
+    validateEditorDefinition(definition);
+    const auto tools=editorTools(definition);const auto connections=editorConnections(definition);
+    auto editor=definition["editor"].toObject();QJsonArray array;
+    for(const auto& t:tools)array.append(encodeEditorTool(t,9));
+    editor["schemaVersion"]=9;editor["tools"]=array;definition["editor"]=editor;
+    definition=withEditorConnections(definition,connections);validateEditorDefinition(definition);return definition;
 }
 }

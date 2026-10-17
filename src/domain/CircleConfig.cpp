@@ -1,6 +1,7 @@
 #include "CircleConfig.hpp"
 #include "EdgePointConfig.hpp"
 #include "ToolRoi.hpp"
+#include "Coordinates.hpp"
 #include <cmath>
 #include <stdexcept>
 namespace visionflow {
@@ -15,7 +16,8 @@ QJsonObject circleDefaults(){
 }
 void validateCircle(const QJsonObject& p){
     auto require=[](bool ok){if(!ok)throw std::runtime_error("Invalid Circle configuration");};
-    const auto d=circleDefaults();require(p.size()==d.size());for(auto i=p.begin();i!=p.end();++i)require(d.contains(i.key()));
+    const auto d=circleDefaults();require(p.size()==d.size()+(p.contains("worldCalibration") ? 1:0));for(auto i=p.begin();i!=p.end();++i)require(d.contains(i.key()) || i.key()=="worldCalibration");
+    if(p.contains("worldCalibration")){require(p["worldCalibration"].isObject());CalibrationDependency::fromJson(p["worldCalibration"].toObject());require(p["mode"]=="calibrated");}
     auto n=[&](const char* k,double lo,double hi){require(p[k].isDouble() && std::isfinite(p[k].toDouble()) && p[k].toDouble()>=lo && p[k].toDouble()<=hi);};
     require(p["mode"]=="pixel" || p["mode"]=="calibrated");require(p["direction"]=="outward" || p["direction"]=="inward");
     require(p["selection"]=="first" || p["selection"]=="last" || p["selection"]=="strongest");require(p["polarity"]=="rising" || p["polarity"]=="falling" || p["polarity"]=="any");

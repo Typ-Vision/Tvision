@@ -81,7 +81,7 @@ WorldTrackingResolution ReferenceService::resolveWorld(const ReferenceBinding& b
 }
 ToolDefinition ReferenceService::teachWorld(const ToolDefinition& consumer,const ToolRoi& nominal,double unit,const ToolDefinition& source,const QString& port,
     const ToolResult& result,const ImageFrame& image,const MeasurementExecutionContext& ctx,QPointF offset,double angle,const std::shared_ptr<std::atomic_bool>& cancel){
-    require(ctx.current && ctx.calibration && ctx.calibration->validated(),"World teaching requires current validated calibration");
+    require(ctx.current && ctx.calibration && ctx.calibration->measurementReady(),"World teaching requires current active or accepted legacy calibration");
     const auto r=current(source,port,result,image);require(r.anchor.has_value(),r.reason.toUtf8().constData());
     auto tool=consumer;tool.parameters.remove("poseTracking");tool.parameters.remove("referenceBinding");tool.parameters["scanRoi"]=nominal.toJson();
     if(tool.kind!="edge_point")tool.parameters["mode"]="calibrated";if(tool.kind=="circle_fit")tool.parameters["unitsPerSample"]=unit;

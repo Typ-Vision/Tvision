@@ -13,6 +13,7 @@
 #include "application/PlaneMappingService.hpp"
 #include "application/RuntimeCoordinator.hpp"
 #include "application/PlcRuntimeSocket.hpp"
+#include "application/MeasurementWorkspace.hpp"
 class QVBoxLayout;
 class QTableWidget;
 class QComboBox;
@@ -28,9 +29,13 @@ class QFormLayout;
 namespace visionflow {
 class ImageViewer;
 class EdgeProfileView;
+class CalibrationHome;
+class CalibrationOverview;
 class MainWindow : public QMainWindow {
 public:
     explicit MainWindow(const QString& settingsFile);
+    bool verifyMultiSource(const QString& artifacts);
+    bool verifyMultiSourceRuntime(const QString& artifacts);
     bool verifyShell();
     bool verifyWorkspace(const QString& artifactDirectory);
     bool verifyEditor(const QString& artifactDirectory);
@@ -53,6 +58,7 @@ public:
     bool verifyHomography(const QString& artifacts);
     bool verifyManualCalibration(const QString& artifacts);
     bool verifyCommunication(const QString& artifacts);
+    bool verifySystemCalibration(const QString& artifacts);
 protected:
     void closeEvent(QCloseEvent* event) override;
 private:
@@ -162,6 +168,10 @@ private:
     EditorSession editorSession_;
     CameraSession cameraSession_;
     EditorContext editorContext() const;
+    std::optional<ActiveCalibrationSnapshot> systemCalibrationSnapshot(const Recipe* recipe=nullptr) const;
+    CalibrationResolver calibrationResolver(const Recipe&) const;
+    QJsonObject systemCalibrationIdentity() const;
+    QString calibrationSummary() const;
     QString imageBinding_;
     QString editorRecipeId_;
     QString selectedToolId_;
@@ -182,6 +192,11 @@ private:
     QTableWidget* cameraTable_{};
     QVector<CameraDevice> cameraDevices_;
     ImageViewer* calibrationViewer_{};
+    CalibrationHome* calibrationHome_{};
+    CalibrationOverview* calibrationOverview_{};
+    std::shared_ptr<MeasurementWorkspace> measurementWorkspace_;
+    QString measurementWorkspaceKey_;
+    QJsonObject editorCalibrationIdentity_;
     QLabel* calibrationFrameInfo_{};
     QLabel* calibrationPixelInfo_{};
     QWidget* calibrationControls_{};
@@ -218,6 +233,9 @@ private:
     QLabel* runtimeStatus_{};
     QLabel* runtimeSummary_{};
     QComboBox* runtimeTools_{};
+    QComboBox* runtimeSources_{};
+    QTableWidget* runtimePreparation_{};
+    void refreshRuntimeSources();
     QTableWidget* logTable_{};
     QLabel* logStatus_{};
 };

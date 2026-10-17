@@ -22,6 +22,8 @@ CalibrationTestImage ChessboardService::importImage(const QString& path) {
     return {frame.withMetadata(metadata),content};
 }
 ChessboardObservation ChessboardService::detect(const ImageFrame& frame,const ChessboardTarget& target) {
+    target.validate();
+    if(target.pattern!=CalibrationGridPattern::Chessboard)throw std::runtime_error("Chessboard detector requires a chessboard target");
     if(target.id.trimmed().isEmpty() || target.id.size()>128 || target.columns<3 || target.rows<3 ||
        target.columns>32 || target.rows>32 || target.columns*target.rows>512 ||
        !std::isfinite(target.squareMillimetres) || target.squareMillimetres<=0 || target.squareMillimetres>1000000)
@@ -42,7 +44,7 @@ ChessboardObservation ChessboardService::detect(const ImageFrame& frame,const Ch
     if(!cv::findChessboardCornersSB(gray,{target.columns,target.rows},corners,cv::CALIB_CB_NORMALIZE_IMAGE) ||
        corners.size()!=static_cast<size_t>(target.columns*target.rows))
         throw std::runtime_error("Chessboard bulunamadı. İç köşe sayısını ve görüntüyü kontrol edin.");
-    ChessboardObservation observation{target,frame.metadata(),frame.size(),{}, {}};
+    ChessboardObservation observation{target,frame.metadata(),frame.size(),{}, {},QString::fromLatin1(frame.contentId().toHex())};
     for(int i=0;i<int(corners.size());++i) {
         const auto p=corners[i];
         if(!std::isfinite(p.x) || !std::isfinite(p.y) || p.x<0 || p.y<0 || p.x>=gray.cols || p.y>=gray.rows)
