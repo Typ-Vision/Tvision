@@ -1,6 +1,6 @@
 # ICM-04d — tetik korelasyonu kararı
 
-17 Ekim 2026. **Uygulanan yol ActualCounterEpoch; native capability Unavailable.
+18 Ekim 2026. **Uygulanan yol ActualCounterEpoch; native capability Unavailable.
 Bu strateji tek olası çözüm değildir. Yeni timestamp deneyi doğrudan saat
 kıyaslamasını çürüttü; alternatif stratejilerin kanıt koşulları aşağıdadır.**
 
@@ -195,3 +195,36 @@ karenin byte 4–7/8–11 alanları SDK sayaçlarıyla eşleşti. İlk kareden r
 Dolayısıyla raster engeli için yetkilendirilmiş ve fiziksel örneği alınmış yol var;
 kalan öncelik ready/epoch başlangıcı ve hata sonrası recovery bariyeridir. Üretici
 soru taslağında raster dışı metadata artık zorunlu değil, alternatif olarak geçer.
+
+## Clear/Stop/Start karşı deneyi — 18 Ekim 2026
+
+[Yeni exact-device tanısı](../archive/2026-10-18-icm-04d-barrier.md), 5 ms exposure,
+TriggerDelay=0 ve üç metadata bankasıyla 12 senaryo/36 command çalıştırdı.
+Her senaryoda kontrol karesi tüketildi, sonra bir command'ın karesi tüketilmeden
+Clear uygulandı. Fence sonrasında yeni command verilmeden 350 ms gözlendi;
+ardından ayrı bir command gönderildi. Her ayar restore/readback ile doğrulandı.
+
+| Fence | Command sonrası Clear gecikmesi | Yeni command olmadan kare |
+| --- | --- | --- |
+| Clear | 0 ms | 3/3, önceki command'ın artan frame/trigger sayacı |
+| Clear | 150 ms | 0/3 |
+| Clear → Stop → Start | 0 ms | 0/3 |
+| Clear → Stop → Start | 150 ms | 0/3 |
+
+**Clear tek başına eski exposure bariyeri değildir:** üç doğrudan karşı örnek var.
+150 ms bekleme veya Stop/Start sonrası gözlenen sessizlik garantinin yerine geçmez.
+Altı restart'ın tamamında sonraki command'ın frameCounter/triggerIndex değeri 1,
+SDK frameNumber değeri 0 oldu. Dolayısıyla aynı fiziksel handle açıkken de stream
+restart sayaç dönemini değiştirebilir; reopen'a kadar sayaç sürekliliği varsayılmaz.
+
+SDK Clear sonrasında NODATA'yı bazen hemen döndürdü. Son tanı monoton toplam
+bütçeyi kullanıp NODATA'dan sonra kalan süreyle yeniden bekler; kare gelmeyen dokuz
+pencerenin actual süresi 350 ms üzerindedir. Bu süreler SDK çağrısının kesin deadline
+garantisi değildir. İlk ön koşum tek NODATA'yı pencere sonu sayıyordu; kanıt tablosu
+yalnız düzeltilmiş son binary'ye aittir. SDK/header üretici semantiğini genişletmez.
+
+Stop/Start adayı elenmedi, ancak uzun exposure, gecikmiş command, USB kopması ve
+transport teslim/duplicate semantiği hâlâ açık. Öncelik exact firmware için belgeli
+barrier/completion/reset garantisidir; bunu sağlamadan başka bir kısa sessizlik
+koşumu admission açmaz. Üretici taslağı bu bulgularla güncellendi, gönderilmedi.
+Native Unavailable ve ICM-04e önkoşulu korunur.

@@ -1,6 +1,6 @@
 # COE-U / OECS — technical clarification draft
 
-17 October 2026. Prepared by Codex for ICM-04d. **Draft only; not sent.**
+18 October 2026. Prepared by Codex for ICM-04d. **Draft only; not sent.**
 Internal decision: [trigger correlation](industrial-camera-trigger-correlation.md).
 
 Subject: COE-050-M-USB-050-IR-C — clean Mono8 metadata and software trigger readiness
@@ -57,11 +57,19 @@ the counter strategy; it is not a requirement imposed by the camera standard.
    unsolicited frame? If a command is ignored while busy, can it execute later?
    We can fault the session on any timeout/cancel/command error and require a new
    barrier before another request. A ready node is optional for this strategy.
+   New exact-device observations at 5 ms exposure / zero TriggerDelay: clearing
+   immediately after a software command still delivered that command's frame
+   without another command in 3/3 trials. Clear/Stop/Start delivered none in six
+   350 ms observation windows (three immediate, three after 150 ms). This does
+   not prove quiescence. Which documented completion condition closes this gap?
 4. **Counter epoch.** What resets nFrameCounter and nTriggerIndex: acquisition
    start/stop, ClearImageBuffer, close/open, device reset or power cycle? How can we
    read a baseline before the first accepted trigger without modifying image pixels?
    Are counts modulo 2^32? Does nTriggerIndex count software commands, accepted
    triggers or external edges? Explain rejected commands, burst=1 and cache=false.
+   In all six Clear/Stop/Start trials on the same open handle, the first subsequent
+   command returned nFrameCounter=1, nTriggerIndex=1 and nFrameNum=0. Please confirm
+   the reset point and whether any delayed pre-stop command/frame can survive it.
 5. **Timestamp alternative.** DeviceTimestamp is described in ns; the embedded
    timestamp in manual §3.10.2 uses second/cycle/offset fields. What event, units,
    rollover and reset rules apply to nDevTimeStampHigh/Low? Is DeviceTimestampLatch

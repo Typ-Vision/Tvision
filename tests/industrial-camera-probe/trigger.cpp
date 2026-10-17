@@ -39,10 +39,11 @@ int main(int argc,char** argv) {
     int measurementWidth=0,measurementHeight=0;
     try {
         const bool validRow=argc==7 && QString::fromLocal8Bit(argv[5])=="--frame-spec-valid-row";
-        const bool frameSpec=(argc==6 && QString::fromLocal8Bit(argv[5])=="--frame-spec") || validRow;
+        const bool streamBarrier=argc==6 && QString::fromLocal8Bit(argv[5])=="--stream-barrier";
+        const bool frameSpec=(argc==6 && QString::fromLocal8Bit(argv[5])=="--frame-spec") || validRow || streamBarrier;
         const bool timestampFence=argc==6 && QString::fromLocal8Bit(argv[5])=="--timestamp-fence";
         if((argc!=5 && !frameSpec && !timestampFence) || !QFileInfo(QString::fromLocal8Bit(argv[1])).isAbsolute())
-            throw std::runtime_error("usage: oecs_trigger_diagnostic absolute-dll exact-vendor exact-model exact-serial [--frame-spec|--timestamp-fence|--frame-spec-valid-row absolute-output.pgm]");
+            throw std::runtime_error("usage: oecs_trigger_diagnostic absolute-dll exact-vendor exact-model exact-serial [--frame-spec|--timestamp-fence|--stream-barrier|--frame-spec-valid-row absolute-output.pgm]");
         if(validRow) {
             measurementPath=QString::fromLocal8Bit(argv[6]);
             if(!QFileInfo(measurementPath).isAbsolute())throw std::runtime_error("absolute measurement output path required");
@@ -50,6 +51,8 @@ int main(int argc,char** argv) {
         out["frameSpecExperiment"]=frameSpec;
         out["timestampFenceExperiment"]=timestampFence;
         out["validRowExperiment"]=validRow;
+        out["streamBarrierExperiment"]=streamBarrier;
+        out["streamBarrierProven"]=false;
         QLibrary lib(QString::fromLocal8Bit(argv[1]));
         if(!lib.load())throw std::runtime_error(lib.errorString().toStdString());
 #define API(name) const auto name=resolve<decltype(&::name)>(lib,#name)
@@ -60,6 +63,7 @@ int main(int argc,char** argv) {
         API(MV_CC_SetImageNodeNum);API(MV_CC_StartGrabbing);API(MV_CC_StopGrabbing);
         API(MV_CC_GetImageBuffer);API(MV_CC_FreeImageBuffer);API(MV_CC_ClearImageBuffer);
         API(MV_XML_GetNodeAccessMode);
+        API(MV_CC_GetFloatValue);
         MV_CC_DEVICE_INFO_LIST list{};check(MV_CC_EnumDevices(MV_USB_DEVICE,&list),"enumerate");
         if(list.nDeviceNum>MV_MAX_DEVICE_NUM)throw std::runtime_error("invalid device count");
         std::vector<MV_CC_DEVICE_INFO> matches;
@@ -115,7 +119,7 @@ int main(int argc,char** argv) {
                 // Snapshot every target bank before changing its enable value.
                 // Fence experiment requires every supported embedded bank disabled.
                 std::vector<unsigned> banks;
-                if(timestampFence || validRow) {
+                if(timestampFence || validRow || streamBarrier) {
                     if(selector.nSupportedNum>MV_MAX_XML_SYMBOLIC_NUM)throw std::runtime_error("invalid frame spec bank count");
                     for(unsigned n=0;n<selector.nSupportedNum;++n)banks.push_back(selector.nSupportValue[n]);
                 }else banks={0u,5u,6u};
@@ -124,12 +128,12 @@ int main(int argc,char** argv) {
                     if(enumValue("FrameSpecInfoSelector").nCurValue!=bank)throw std::runtime_error("frame spec selector mismatch");
                     specSnapshot.emplace_back(bank,boolValue("FrameSpecInfo"));
                 }
-                if(timestampFence || validRow)for(const auto& [bank,enabled]:specSnapshot)
-                    if(enabled)throw std::runtime_error("timestamp experiment requires all embedded metadata disabled");
+                if(timestampFence || validRow || streamBarrier)for(const auto& [bank,enabled]:specSnapshot)
+                    if(enabled)throw std::runtime_error("experiment requires all embedded metadata initially disabled");
                 QJsonArray saved;
                 for(const auto& [bank,enabled]:specSnapshot) {
                     saved.append(QJsonObject{{"bank",double(bank)},{"enabled",enabled}});
-                    if(timestampFence || (validRow && bank!=0 && bank!=5 && bank!=6))continue;
+                    if(timestampFence || ((validRow || streamBarrier) && bank!=0 && bank!=5 && bank!=6))continue;
                     check(MV_CC_SetEnumValue(handle,"FrameSpecInfoSelector",bank),"select frame spec enable");
                     if(enumValue("FrameSpecInfoSelector").nCurValue!=bank)throw std::runtime_error("frame spec enable selector mismatch");
                     specTouched=true;
@@ -184,7 +188,93 @@ int main(int argc,char** argv) {
                 out["initialLatchPair"]=QJsonArray{QString::number(first),QString::number(second)};
                 if(first<=0 || second<=first)throw std::runtime_error("device latch is not positive and advancing; no timestamp fence available");
             }
-            for(int n=0;n<(timestampFence?24:(validRow?12:100));++n) {
+            if(streamBarrier) {
+                // Deliberately abandon one command, then observe WITHOUT a new
+                // command. A returned frame is direct evidence against that fence.
+                // Silence is only an observation; it never proves a hardware epoch.
+                for(const char* name:{"ExposureTime","TriggerDelay"}) {
+                    MVCC_FLOATVALUE value{};check(MV_CC_GetFloatValue(handle,name,&value),name);
+                    out[name]=double(value.fCurValue);
+                }
+                MV_XML_AccessMode autoAccess=AM_Undefined;
+                check(MV_XML_GetNodeAccessMode(handle,"ExposureAuto",&autoAccess),"ExposureAuto access");
+                out["exposureAutoAccess"]=int(autoAccess);
+                if(autoAccess!=AM_NI && autoAccess!=AM_NA) {
+                    out["exposureAuto"]=double(enumValue("ExposureAuto").nCurValue);
+                    if(out["exposureAuto"].toInt()!=0)throw std::runtime_error("disable auto exposure before diagnostic");
+                }
+                if(out["TriggerDelay"].toDouble()!=0 || out["ExposureTime"].toDouble()<=0 ||
+                   out["ExposureTime"].toDouble()>100000)
+                    throw std::runtime_error("barrier diagnostic requires manual exposure <=100ms and zero trigger delay; no settings written");
+                const auto command=[&] {
+                    out["commandsAttempted"]=out["commandsAttempted"].toInt()+1;
+                    check(MV_CC_SetCommandValue(handle,"TriggerSoftware"),"barrier command");
+                };
+                const auto receive=[&](unsigned timeout,const char* phase) {
+                    QJsonObject observation{{"phase",phase},{"hostBeforeNs",QString::number(experimentTimer.nsecsElapsed())}};
+                    QElapsedTimer budget;budget.start();
+                    int rc=int(MV_E_NODATA),attempts=0;
+                    // Clear can make this SDK return NODATA immediately. Observe
+                    // the whole bounded window instead of treating that as a wait.
+                    while(budget.elapsed()<timeout) {
+                        frame={};++attempts;
+                        rc=MV_CC_GetImageBuffer(handle,&frame,unsigned(std::max<qint64>(1,qint64(timeout)-budget.elapsed())));
+                        if(rc!=int(MV_E_NODATA))break;
+                        QThread::msleep(1);
+                    }
+                    observation["code"]=code(rc);
+                    observation["waitAttempts"]=attempts;
+                    observation["requestedWindowMs"]=int(timeout);
+                    observation["elapsedMs"]=double(budget.elapsed());
+                    observation["hostAfterNs"]=QString::number(experimentTimer.nsecsElapsed());
+                    if(rc==int(MV_E_NODATA)){observation["received"]=false;return observation;}
+                    check(rc,"barrier receive");held=true;
+                    const auto& f=frame.stFrameInfo;
+                    if(!frame.pBufAddr || f.nFrameLen!=payload || f.nWidth!=width || f.nHeight!=height ||
+                       unsigned(f.enPixelType)!=0x01080001 || f.nFrameLen<12 ||
+                       qFromLittleEndian<quint32>(frame.pBufAddr+4)!=f.nFrameCounter ||
+                       qFromLittleEndian<quint32>(frame.pBufAddr+8)!=f.nTriggerIndex)
+                        throw std::runtime_error("barrier frame/layout mismatch");
+                    observation["received"]=true;
+                    observation["frameNumber"]=double(f.nFrameNum);
+                    observation["frameCounter"]=double(f.nFrameCounter);
+                    observation["triggerIndex"]=double(f.nTriggerIndex);
+                    observation["deviceTicks"]=QString::number((quint64(f.nDevTimeStampHigh)<<32)|f.nDevTimeStampLow);
+                    observation["rasterPrefixHex"]=QString::fromLatin1(QByteArray(reinterpret_cast<const char*>(frame.pBufAddr),12).toHex());
+                    check(MV_CC_FreeImageBuffer(handle,&frame),"barrier free");held=false;
+                    out["framesReceived"]=out["framesReceived"].toInt()+1;
+                    return observation;
+                };
+                QJsonArray episodes;
+                out["episodes"]=episodes;
+                for(int round=0;round<3;++round)for(bool restart:{false,true})for(unsigned delay:{0u,150u}) {
+                    QJsonObject episode{{"round",round+1},{"restart",restart},{"abandonedDelayMs",int(delay)}};
+                    QJsonArray events;
+                    command();auto control=receive(1000,"control");events.append(control);
+                    if(!control["received"].toBool())throw std::runtime_error("control frame missing");
+                    requireQuiet();
+                    command();episode["abandonedCommandAfterNs"]=QString::number(experimentTimer.nsecsElapsed());
+                    if(delay)QThread::msleep(delay);
+                    episode["clearBeforeNs"]=QString::number(experimentTimer.nsecsElapsed());
+                    check(MV_CC_ClearImageBuffer(handle),"barrier clear while streaming");
+                    episode["clearAfterNs"]=QString::number(experimentTimer.nsecsElapsed());
+                    if(restart) {
+                        episode["stopBeforeNs"]=QString::number(experimentTimer.nsecsElapsed());
+                        check(MV_CC_StopGrabbing(handle),"barrier stop");stream=false;
+                        episode["stopAfterNs"]=QString::number(experimentTimer.nsecsElapsed());
+                        check(MV_CC_StartGrabbing(handle),"barrier restart");stream=true;
+                        episode["restartAfterNs"]=QString::number(experimentTimer.nsecsElapsed());
+                        // No post-start Clear: it could hide a leaked old frame.
+                    }
+                    auto after=receive(350,"afterFenceWithoutNewCommand");events.append(after);
+                    if(after["received"].toBool())requireQuiet();
+                    command();auto fresh=receive(1000,"afterNewCommand");events.append(fresh);
+                    if(!fresh["received"].toBool())throw std::runtime_error("post-fence command frame missing");
+                    requireQuiet();
+                    episode["events"]=events;episodes.append(episode);out["episodes"]=episodes;
+                }
+            }
+            for(int n=0;!streamBarrier && n<(timestampFence?24:(validRow?12:100));++n) {
                 const auto before=timestampFence?latch():0;
                 QElapsedTimer timer;timer.start();out["commandsAttempted"]=n+1;
                 const auto commandBeforeNs=experimentTimer.nsecsElapsed();
@@ -247,8 +337,8 @@ int main(int argc,char** argv) {
                 check(MV_CC_FreeImageBuffer(handle,&frame),"free");held=false;
                 out["framesReceived"]=n+1;requireQuiet();
             }
-            out["status"]=timestampFence?"OBSERVED_TIMESTAMP_FENCES_NOT_ADMISSION":
-                (validRow?"OBSERVED_VALID_ROW_RASTER_NOT_ADMISSION":"OBSERVED_100_COMMAND_FRAME_PAIRS_NOT_ADMISSION");
+            out["status"]=streamBarrier?"OBSERVED_STREAM_FENCES_NOT_ADMISSION":(timestampFence?"OBSERVED_TIMESTAMP_FENCES_NOT_ADMISSION":
+                (validRow?"OBSERVED_VALID_ROW_RASTER_NOT_ADMISSION":"OBSERVED_100_COMMAND_FRAME_PAIRS_NOT_ADMISSION"));
         } catch(const std::exception& e){out["error"]=e.what();out["status"]="ERROR";exitCode=1;}
         // Attempt every cleanup/restore operation even if an earlier operation failed.
         bool cleanupOk=true;

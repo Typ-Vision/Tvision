@@ -1,37 +1,36 @@
 # VisionFlow — güncel devir
 
-Güncelleme: 17 Ekim 2026. Güncel durum özetidir.
+Güncelleme: 18 Ekim 2026.
 Kullanıcının son yönlendirmesi önceliklidir. Ayrıntılar [arşiv dizininde](archive/README.md);
-başlangıçta arşivin tamamını okumayın.
+Arşivi topluca okumayın.
 
 ## Devam noktası
 
-- **ICM-04d kısmi: yeni timestamp deneyi; güvenli native yol hâlâ açık** (Codex).
-  Latch çalışıyor; metadata kapalı 24 kare alındı. Ancak latch ve SDK frame timestamp
-  farklı hız/başlangıçta: 12 eski-command karesi ham `frameTicks > latch` testini
-  yanlış geçti. Deneyden ölçek fit ederek admission yapılmaz.
-  [Yeni kayıt](archive/2026-10-17-icm-04d-timestamp.md),
-  [karar](architecture/industrial-camera-trigger-correlation.md),
+- **ICM-04d kısmi: Clear-only bariyeri çürütüldü; native hâlâ Unavailable**.
+  [Yeni karşı deney](archive/2026-10-18-icm-04d-barrier.md): 12 senaryo/36 command,
+  27 kare. Hemen Clear sonrası yeni command olmadan 3/3 eski kare geldi.
+  Clear→Stop→Start sonrası 0/6; fakat sessizlik garanti değil. Altı restart'ta
+  aynı açık handle'ın sonraki frame/trigger sayacı 1/1'e döndü. Exact firmware
+  stop completion/gecikmiş command/teslim semantiği açık; 04e başlamaz.
+  [Karar](architecture/industrial-camera-trigger-correlation.md),
   [üretici soru taslağı](architecture/industrial-camera-vendor-questions.md) (gönderilmedi).
-  İki sayaç + ready düğümü tek olası strateji değildir: belgeli eski-frame bariyeri
-  + exclusive tek bekleyen tetik de adaydır; yeterli koşulları kararda. Exact bariyer
-  henüz kanıtlanmadı. Native Unavailable; 04e başlamaz. Önceki
-  [semantik araştırma](archive/2026-10-17-icm-04d-semantics.md) Chunk/Event bulamadı;
-  transport metadata yokluğu çıkarılamaz. [2×100 metadata](archive/2026-10-17-icm-04d-correlation.md)
-  sayaçları 1–100, raster byte 4–11 metadata. **Kullanıcı ilk satırı ölçüm dışında
-  bırakmayı onayladı**: yeni 12 metadata karesi ve 2448×2047 PGM, sensör origin (0,1)
-  doğrulandı. Bu yalnız tanı; ürün geometri/kalibrasyon entegrasyonu ve epoch açık.
-  FrameBurstStart sessiz FrameStart alias'ı olmaz.
-- [ICM-04c](archive/2026-10-17-icm-04c.md): bounded owned Mono8 probe/pool kabulü.
-  Nested GenApi enum parser ve ClearImageBuffer sırası önceki kayıtta düzeltildi.
-  **Exact cihazdan 2448×2048 Mono8 tanı karesi ve temiz close alındı.**
-  Native stride/completion alanı yok: yalnız exact tight Mono8 kabul edilir.
-- Tamamlanan [04b](archive/2026-10-17-icm-04b.md): SFNC/transaction/rollback;
-  [04a](archive/2026-10-17-icm-04a.md): session/handle (Claude Code);
-  [03b](archive/2026-10-17-icm-03b.md): profil/geometri;
-  [03a](archive/2026-10-17-icm-03a.md): kimlik/rota.
-  [02](archive/2026-10-17-icm-02.md): OECS C API;
-  [baseline](architecture/industrial-camera-baseline.md): şema/hash.
+  Belgeli eski-frame bariyeri + exclusive tek bekleyen tetik adaydır; iki sayaç ve
+  ready düğümü aynı anda zorunlu değil. **İlk sensör satırını ölçümden çıkarma izni
+  kalıcıdır**: 2448×2047, origin (0,1) tanı doğrulandı; ürün geometri/kalibrasyon
+  entegrasyonu açık. FrameBurstStart sessiz FrameStart alias'ı olmaz.
+  [Timestamp karşı örneği](archive/2026-10-17-icm-04d-timestamp.md): latch çalışıyor,
+  ham frameTicks>latch 12 eski kareyi yanlış geçirdi; fit ölçeğiyle admission yok.
+  [2×100 metadata](archive/2026-10-17-icm-04d-correlation.md): sayaç 1–100,
+  raster byte 4–11 metadata. [Semantik](archive/2026-10-17-icm-04d-semantics.md)
+  Chunk/Event bulmadı; transport metadata yokluğu çıkarılamaz.
+- [ICM-04c](archive/2026-10-17-icm-04c.md) tamam: bounded owned Mono8 probe/pool,
+  exact 2448×2048 kare/close. Native stride/completion yok; exact tight Mono8 kabul.
+  Önceki teslimler: [04b](archive/2026-10-17-icm-04b.md) transaction/rollback,
+  [04a](archive/2026-10-17-icm-04a.md) session (Claude Code),
+  [03b](archive/2026-10-17-icm-03b.md) geometri,
+  [03a](archive/2026-10-17-icm-03a.md) kimlik,
+  [02](archive/2026-10-17-icm-02.md) C API;
+  [baseline](architecture/industrial-camera-baseline.md) şema/hash.
 - **ICM-REVIEW-01 kapalı**: SDK enumerate/owned kopya kilitli; create owned kayıtla.
   Setup revision karşılaştırılır; A→B→A eski kalibrasyonu açmaz; rename/no-op/legacy
   hash korunur. [Düzeltme](archive/2026-10-17-icm-review-01-fix.md),
@@ -92,14 +91,14 @@ Tarihsel “sıradaki” ifadeleri güncel sıra değildir.
 
 ## Son doğrulama ve çalışma ortamı
 
-- **Yeni ICM-04d timestamp/ilk satır**: opt-in diagnostic Release build exit 0;
-  12 ön deney + 24 saat karesi/12 eski-command örneği + 12 geçerli-alan karesi;
-  restore/cleanup başarılı.
-  Bağımsız readback ve JSON assertion geçti. `build/icm/04d-timestamp/`.
-  Mevcut SDK build'i trigger/binding CTest **2/2 yeni koşum**. Ürün/UI değişmedi;
-  ürün rebuild, tam suite/görsel/stress koşulmadı. Önceki read-only semantics
-  kanıtı `build/icm/04d-semantics/` altında korunur.
-- Önceki test/build sonuçları bağlı arşivlerdedir; yeni koşum değildir.
+- **Yeni ICM-04d bariyer tanısı**: opt-in diagnostic Release build exit 0;
+  12 senaryo/36 command/27 kare; 3 Clear-only eski kare ve 6 restart reseti.
+  Dokuz sessiz pencere 362–379 ms; quiescence garantisi değil. Restore/cleanup,
+  bağımsız readback ve JSON/layout/hash assertions geçti. `build/icm/04d-barrier/`.
+  Mevcut SDK build'inde ilgili CTest **2/2 yeni koşum**. Ürün/UI değişmedi;
+  ürün rebuild, tam suite/görsel/stress koşulmadı. Ön denemeler final kanıt değil.
+  Önceki timestamp/ilk satır kanıtı `build/icm/04d-timestamp/` altında korunur.
+- Eski test/build sonuçları arşivdedir; yeni koşum değildir.
   `plc_socket_runtime` aralıklı başarısızlığı/kök neden açık kalır.
 - Güncel UI `build/reference-ui/visionflow.exe`, core `build/kmc9-core-off`.
   Başlatma `.\scripts\run-local.ps1`; build/PATH komutları README'dedir.
@@ -108,9 +107,9 @@ Tarihsel “sıradaki” ifadeleri güncel sıra değildir.
 
 ## Kapanış ve sonraki adım
 
-Sıradaki **ICM-04d epoch/bariyer kanıtı**. İlk satır dışlama kararı kalıcıdır;
-ürün geometri kimliği ve kalibrasyon invalidation'a işlenmeden kullanılamaz.
-Taslaktaki beş konu aynı anda zorunlu değildir; alan daraltmak epoch'u çözmez.
-Taslak gönderilmedi; native Unavailable, 04e bundan sonradır.
-ICM-01b için reboot sonrası OECS sahne görüntüsü/release ve G1 için 04e/stress açık.
+Sıradaki **ICM-04d stop completion/epoch semantiği**: exact firmware için belgeli
+Clear→Stop→Start garantisi, gecikmiş command/USB teslimi ve sayaç reset noktası.
+Gerekirse uzun exposure karşı deneyi; kısa sessizlik yeterli değil. Taslak gönderilmedi.
+İlk satır kararı kalıcı; ürün geometri/kalibrasyon invalidation açık. Native Unavailable,
+04e bundan sonra. ICM-01b için OECS sahne görüntüsü/release ve G1 için 04e/stress açık.
 [Bağlam bakımı](archive/2026-10-17-context-maintenance.md).
