@@ -2,8 +2,9 @@
 
 18 Ekim 2026 tarihli plan; planlama kaydı EUI-PLAN-01'dir.
 **EUI-01 uygulandı ve bağımsız kabul edildi** ([kapanış](../archive/2026-10-18-eui-01.md)).
-EUI-02–08 henüz uygulanmadı. **EUI-01 bitiminde durulur; EUI-02 için kullanıcı
-devam talimatı beklenir.** Canlı devam noktası [progress](../progress.md)'tir.
+**EUI-02 tamamlandı** ([kapanış](../archive/2026-10-18-eui-02.md)).
+EUI-03–08 henüz uygulanmadı. Sıradaki EUI-03; bu görevde başlatılmadı.
+Canlı devam noktası [progress](../progress.md)'tir.
 Kullanıcının beş talebi, ICM fiziksel kabulünden önce önceliklidir.
 [Devir mesajı](editor-refinement-handoff.md), [güncel durum](../progress.md).
 
@@ -60,8 +61,8 @@ Planlama sırasındaki kaynak incelemesi (uygulama öncesi):
 ## Görev sırası
 
 Tek ajan, sıralı çalışma; her ID bağımsız kabul ve tek commit. Bir kart tamamlanmadan
-sonrakine geçilmez. Güncel kullanıcı yönlendirmesi: EUI-01 sonunda durulur;
-EUI-02 kullanıcı devam talimatı olmadan başlamaz.
+sonrakine geçilmez. Kullanıcı EUI-02 için devam talimatı verdi; EUI-02 tamamlandı.
+Sıradaki EUI-03 ayrı görevdir; bu kapanışta başlanmaz.
 
 | ID | Paket | Önkoşul | Talep |
 | --- | --- | --- | --- |

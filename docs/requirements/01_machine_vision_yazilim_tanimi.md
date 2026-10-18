@@ -150,6 +150,11 @@ White Blob, Black Blob.
 
 Parametreler: threshold aralığı, Min Area, Max Area, Circularity, Width, Height ve ROI.
 
+“ROI sınırına temas edenleri reddet” seçeneği varsayılan kapalıdır. Açıkken etkili
+arama maskesinin 8-komşuluk sınırına değen bağlı bileşenin tamamı aday sayısı
+korunarak sayım, alan, merkez ve sonuç maskesinden çıkarılır. Bileşen bağlantısı
+4/8 ayarı ayrıdır; [ayrıntılı sözleşme](../architecture/editor-refinement-plan.md).
+
 Çıktılar: True/False karar, blob sayısı, alan, merkez ve blob listesi. Alan birimi varsayılan olarak px²'dir; mm² gösterimi kalibrasyon gerektirir.
 
 Blob adaylarını seçen filtreler ile PASS/FAIL kabul kriterleri ayrı alanlarda gösterilir. Örneğin aday alan filtresi 100–100000 px², kabul kriteri “en büyük kusur alanı ≤ 500 px²” olabilir.

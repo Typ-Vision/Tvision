@@ -335,6 +335,8 @@ void MainWindow::showToolProperties() {
         auto* polarity=new QComboBox;polarity->setObjectName("blobPolarity");polarity->addItem("Açık (> eşik)","bright");polarity->addItem("Koyu (≤ eşik)","dark");polarity->setCurrentIndex(polarity->findData(tool.parameters["polarity"].toString()));form->addRow("Nesne",polarity);
         auto* connectivity=new QComboBox;connectivity->setObjectName("blobConnectivity");connectivity->addItem("4",4);connectivity->addItem("8",8);connectivity->setCurrentIndex(connectivity->findData(tool.parameters["connectivity"].toInt()));form->addRow("Komşuluk",connectivity);
         for(const auto key:{"minArea","maxArea"}){auto* area=new QSpinBox;area->setObjectName(key);area->setRange(1,2147483647);area->setSuffix(" px²");area->setValue(tool.parameters[key].isNull() ? tool.parameters["minArea"].toInt() : tool.parameters[key].toInt());area->setEnabled(QString(key)!="maxArea" || !tool.parameters["maxArea"].isNull());form->addRow(QString(key)=="minArea" ? "Min Area (dahil)" : "Max Area (dahil)",area);connect(area,&QSpinBox::editingFinished,this,[this]{applyToolProperties();});}
+        auto* rejectBorder=new QCheckBox("ROI sınırına temas\nedenleri reddet");rejectBorder->setAccessibleName("ROI sınırına temas edenleri reddet");rejectBorder->setObjectName("rejectBorderTouching");rejectBorder->setChecked(tool.parameters["rejectBorderTouching"].toBool());rejectBorder->setToolTip("Arama alanının sınırına değen bağlı bölgeler sayım ve ölçümden çıkarılır.");form->addRow(rejectBorder);
+        connect(rejectBorder,&QCheckBox::toggled,this,[this]{applyToolProperties();});
         auto* unlimited=new QCheckBox("Max Area: Sınırsız");unlimited->setObjectName("blobUnlimited");unlimited->setChecked(tool.parameters["maxArea"].isNull());form->addRow(unlimited);
         connect(unlimited,&QCheckBox::toggled,this,[this]{applyToolProperties();});
         connect(polarity,&QComboBox::currentIndexChanged,this,[this]{applyToolProperties();});connect(connectivity,&QComboBox::currentIndexChanged,this,[this]{applyToolProperties();});
@@ -497,6 +499,7 @@ bool MainWindow::applyToolProperties() {
             if(tool.kind=="code_read")if(auto* settings=dynamic_cast<CodeReadEditor*>(propertiesBody_->findChild<QWidget*>("codeReadSettings")))tool.parameters=settings->parameters();
             if(tool.kind=="preprocess")if(auto* settings=dynamic_cast<PreprocessEditor*>(propertiesBody_->findChild<QWidget*>("preprocessSettings")))tool.parameters=settings->parameters();
             if(tool.kind=="blob") {
+                tool.parameters["rejectBorderTouching"]=propertiesBody_->findChild<QCheckBox*>("rejectBorderTouching")->isChecked();
                 tool.parameters["polarity"]=propertiesBody_->findChild<QComboBox*>("blobPolarity")->currentData().toString();
                 tool.parameters["connectivity"]=propertiesBody_->findChild<QComboBox*>("blobConnectivity")->currentData().toInt();
                 tool.parameters["minArea"]=propertiesBody_->findChild<QSpinBox*>("minArea")->value();

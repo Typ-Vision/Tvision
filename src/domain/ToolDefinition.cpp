@@ -44,6 +44,7 @@ QVector<ToolDefinition> editorTools(const QJsonObject& definition) {
         require(!t.name.isEmpty() && t.name.size()<=64 && t.name==t.name.trimmed(),"Tool adı 1–64 karakter olmalı.");
         for(auto c:t.name)require(c.isPrint(),"Tool adı yazdırılabilir karakterlerden oluşmalı.");
         require(!names.contains(t.name.toCaseFolded()),"Tool adı reçetede zaten var.");require(t.description.size()<=2048,"Tool açıklaması çok uzun.");
+        if(t.kind=="blob" && !t.parameters.contains("rejectBorderTouching"))t.parameters["rejectBorderTouching"]=false;
         const auto defaults=defaultParameters(t.kind);QSet<QString> allowed;for(auto it=defaults.begin();it!=defaults.end();++it)allowed.insert(it.key());
         if(t.kind=="circle_fit" && version.toInt()>=8)allowed.insert("worldCalibration");
         if(version.toInt()==1 && t.kind=="template_match") {keys(t.parameters,{"minScore"});require(t.parameters.size()==1,"Tool parametreleri eksik.");}

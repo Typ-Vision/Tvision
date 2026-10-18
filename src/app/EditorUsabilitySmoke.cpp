@@ -2,6 +2,7 @@
 #include "ImageViewer.hpp"
 #include <QApplication>
 #include <QComboBox>
+#include <QCheckBox>
 #include <QDir>
 #include <QDoubleSpinBox>
 #include <QElapsedTimer>
@@ -23,6 +24,7 @@
 #include <QTabWidget>
 #include <QUuid>
 #include <stdexcept>
+#include <algorithm>
 
 namespace visionflow {
 bool MainWindow::verifyEditorUsability(const QString& artifacts) {
@@ -130,6 +132,19 @@ bool MainWindow::verifyEditorUsability(const QString& artifacts) {
     service_.setConnections({{blobSourceB,"image",blobPre,"image"},{blobPre,"image",blob,"image"}});refreshWorkspace();selectTool(blob);runExecution(blobPre);wait();
     bool blobProcessed=false;for(auto* item:imageViewer_->scene()->items())if(auto* pixels=dynamic_cast<QGraphicsPixmapItem*>(item))blobProcessed=blobProcessed || pixels->pixmap().toImage().pixelColor(0,0).red()==0;check(blobProcessed && imageInfo_->text().contains("İşlenmiş görüntü") && imageInfo_->text().contains("bağlı kaynak:"),"Blob edit workspace displays and labels actual bound processed raster");
     imageViewer_->fitImage();drag({100.5,100.5},{105.5,105.5});check(blobRect()!=savedBlob,"Blob editing remains available on processed input");
+    // EUI-02: the checkbox edits recipe state and clears stale results.
+    runExecution(blob);wait();service_.save();
+    auto* border=propertiesBody_->findChild<QCheckBox*>("rejectBorderTouching");
+    check(border && !border->isChecked(),"border rejection defaults off");
+    const auto offSignature=flowSignature();border->setChecked(true);QApplication::processEvents();
+    check(service_.dirty() && flowSignature()!=offSignature,"border edit changes recipe identity");
+    check(!editorSession_.cycle || std::none_of(editorSession_.cycle->tools.cbegin(),editorSession_.cycle->tools.cend(),[&](const auto& t){return t.toolId==blob && (!t.outputs.isEmpty() || !t.mask.pixels.isEmpty());}),"border edit removes stale target outputs and mask");
+    findChild<QPushButton*>("runTool")->click();wait();
+    check(editorSession_.cycle && editorSession_.cycle->partial && editorSession_.cycle->executedTools==QStringList{blob},"border filter uses common target-only executor");
+    const auto filtered=std::find_if(editorSession_.cycle->tools.cbegin(),editorSession_.cycle->tools.cend(),[&](const auto& t){return t.toolId==blob;});check(filtered!=editorSession_.cycle->tools.cend() && std::get<double>(filtered->outputs["candidateCount"].data)==1 && std::get<double>(filtered->outputs["count"].data)==0 && !filtered->outputs["point"].valid,"border stripe rejected with no stale point");
+    service_.save();const auto borderRecipe=service_.activeRecipe()->id,borderPath=service_.path();service_.openProject(borderPath);service_.selectRecipe(borderRecipe);refreshWorkspace();selectTool(blob);
+    check(propertiesBody_->findChild<QCheckBox*>("rejectBorderTouching")->isChecked() && !service_.dirty(),"border checkbox Save/reopen");
+    for(const auto size:{QSize(1400,900),QSize(850,600)}){resize(size);QApplication::processEvents();auto* scroll=findChild<QScrollArea*>("propertiesScroll");scroll->ensureWidgetVisible(propertiesBody_->findChild<QCheckBox*>("rejectBorderTouching"));QApplication::processEvents();check(grab().save(QDir(artifacts).filePath(QString("eui02-blob-editor-%1.png").arg(size.width()))),"border filter screenshot");}
     for(const auto size:{QSize(1400,900),QSize(850,600)}){resize(size);vertical_->setSizes(size.width()==850 ? QList<int>{360,90}:QList<int>{600,180});QApplication::processEvents();imageViewer_->fitImage();QApplication::processEvents();check(grab().save(QDir(artifacts).filePath(QString("eui01-blob-editor-%1.png").arg(size.width()))),"Blob Editor screenshot");}
     const auto beforeRecipeSwitch=service_.activeRecipe()->definition;mouse(QEvent::MouseButtonPress,{100.5,100.5},Qt::LeftButton,Qt::LeftButton);mouse(QEvent::MouseMove,{110.5,110.5},Qt::NoButton,Qt::LeftButton);service_.createRecipe("Cancel Blob gesture","",ApplicationType::Measurement,"file");refreshWorkspace();mouse(QEvent::MouseButtonRelease,{110.5,110.5},Qt::LeftButton,Qt::NoButton);service_.selectRecipe(savedRecipe);refreshWorkspace();check(service_.activeRecipe()->definition==beforeRecipeSwitch,"recipe switch retires Blob preview without commit");
 

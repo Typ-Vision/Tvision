@@ -97,6 +97,8 @@ geçici ayarları geri yükler.
 Blob Search ROI'yi gövdeden taşıyın, sekiz tutamaçla boyutlandırın. Escape iptal,
 Ctrl+Z geri alır; ROI dışı sol veya orta tuş pan yapar. Referans/region bağı düzenlemeyi kilitler.
 
+Sınır filtresi kapalı başlar.
+
 Panel düzeni ve son seçimler `config/local.ui.ini` içindedir; bu proje autosave'i
 değildir. Test INI, fixture, görüntü ve raporlar `build/` altında tutulur.
 Görünümü sıfırlamak için **View → Panel düzenini sıfırla** kullanılır.
