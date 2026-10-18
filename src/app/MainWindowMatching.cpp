@@ -78,7 +78,8 @@ void MainWindow::refreshMatchOverlay() {
         };
     }
     if(!bound && !geometryWorkspace){imageViewer_->setRoiMapping({editorSession_.frame ? editorSession_.frame->metadata().coordinateSystemId:QString("viewer/raw")});imageViewer_->setRoi({},false);}imageViewer_->setRoiRecipeBound(bound);
-    QRect model,search,result; bool enabled=false;
+    QRect model,search,result; bool enabled=false;QString searchIdentity;bool searchEditable=false;
+    imageViewer_->onSearchRegionEdited={};
     if (service_.activeRecipe()) for (const auto& t : service_.tools()) if (t.id==selectedToolId_ && (t.kind=="template_match" || t.kind=="pattern_pose" || t.kind=="shape_pose" || t.kind=="blob" || t.kind=="edge" || t.kind=="code_read")) {
         model=MatchService::rectangle(t.parameters["modelRoi"].toObject()); search=MatchService::rectangle(t.parameters["searchRoi"].toObject()); enabled=t.enabled && bool(editorSession_.frame);
         if(t.parameters.contains("poseTracking") || t.parameters.contains("referenceBinding")){search={};enabled=false;}
@@ -88,14 +89,42 @@ void MainWindow::refreshMatchOverlay() {
             if(point && !origin.isEmpty() && !search.isEmpty())search.translate(qRound(point->x()-origin["x"].toDouble()),qRound(point->y()-origin["y"].toDouble()));
         }
         if(!t.parameters.contains("poseTracking") && !t.parameters.contains("referenceBinding") && editorSession_.cycle && editorSession_.cycle->configId==flowSignature())for(const auto& r:editorSession_.cycle->tools)if(r.toolId==t.id && !r.searchRegion.isEmpty())search=r.searchRegion;
+        if(t.kind=="blob"){
+            bool externallyBound=t.parameters.contains("poseTracking") || t.parameters.contains("referenceBinding");
+            for(const auto& c:editorConnections(service_.activeRecipe()->definition))if(c.targetTool==t.id && (c.targetPort=="region" || c.targetPort=="reference" || c.targetPort=="poseReference"))externallyBound=true;
+            if(externallyBound)enabled=false;
+            try{
+                const auto image=editorSession_.toolImage(editorContext(),t.id);
+                searchIdentity=service_.project().id+"/"+service_.activeRecipe()->id+"/"+t.id+"/"+image.contentId().toHex()+"/"+image.processingId().toHex()+"/"+image.metadata().sourceId+"/"+image.metadata().frameId+"/"+image.metadata().coordinateSystemId;
+                searchEditable=enabled && !externallyBound && !editorSession_.busy() && !geometryWorkspace;
+                if(searchEditable){
+                    // A full-frame execution searchRegion is not a saved searchRoi.
+                    search=MatchService::rectangle(t.parameters["searchRoi"].toObject());
+                    imageViewer_->onSearchRegionEdited=[this,id=t.id,identity=searchIdentity](QRect roi){
+                        if(editorSession_.busy() || selectedToolId_!=id || !service_.activeRecipe())return;
+                        try{
+                            const auto current=editorSession_.toolImage(editorContext(),id);
+                            if(identity!=service_.project().id+"/"+service_.activeRecipe()->id+"/"+id+"/"+current.contentId().toHex()+"/"+current.processingId().toHex()+"/"+current.metadata().sourceId+"/"+current.metadata().frameId+"/"+current.metadata().coordinateSystemId)return;
+                            for(auto tool:service_.tools())if(tool.id==id){
+                                tool.parameters=roi.isEmpty() ? tool.parameters:editorSession_.taughtSearch(editorContext(),tool,roi);
+                                if(roi.isEmpty())tool.parameters["searchRoi"]=QJsonObject{};
+                                service_.updateTool(tool);invalidateMatch();refreshWorkspace();break;
+                            }
+                        }catch(const std::exception& e){displayError(QString::fromUtf8(e.what()));refreshMatchOverlay();}
+                    };
+                }
+            }catch(const std::exception&){searchEditable=false;}
+        }
     }
     if (editorSession_.matchOutcome) result=editorSession_.matchOutcome->rectangle;
+    imageViewer_->setSearchRegionEditing(searchIdentity,search,searchEditable);
     imageViewer_->setRegions(model,search,result,!editorSession_.matchOutcome || editorSession_.matchOutcome->accepted);
     for (const auto name : {"modelRoi","searchRoi","clearSearch","runMatch"}) if (auto* b=findChild<QPushButton*>(name)) b->setEnabled(enabled && !editorSession_.busy(SessionJob::Teaching) && !editorSession_.busy(SessionJob::Execution) && !editorSession_.busy(SessionJob::Image));
 }
 void MainWindow::beginRoi(bool model) {
     if (editorSession_.busy(SessionJob::Execution) || editorSession_.busy(SessionJob::Image) || editorSession_.busy(SessionJob::Teaching) || !applyToolProperties() || !editorSession_.frame) return;
     for(const auto& t:service_.tools())if(t.id==selectedToolId_ && (t.parameters.contains("poseTracking") || t.parameters.contains("referenceBinding")))return;
+    for(const auto& t:service_.tools())if(t.id==selectedToolId_ && t.kind=="blob")for(const auto& c:editorConnections(service_.activeRecipe()->definition))if(c.targetTool==t.id && (c.targetPort=="region" || c.targetPort=="reference" || c.targetPort=="poseReference"))return;
     if(!setDrawingImage())return;
     modelDrawing_=model; drawingTool_=selectedToolId_; imageViewer_->drawRegion(true);
     matchInfo_->setText(model ? "Model ROI: görüntü üzerinde sürükleyin (sarı)." : "Search ROI: görüntü üzerinde sürükleyin (mavi).");

@@ -6,6 +6,7 @@ görev” ifadeleri yazıldıkları tarihe aittir.
 
 | Dönem / görev | Kayıt |
 | --- | --- |
+| 18 Ekim 2026 — EUI-01 | [Blob ROI taşıma/boyutlandırma ve bağımsız kabul](2026-10-18-eui-01.md) |
 | 18 Ekim 2026 — EUI-PLAN-01 | [Beş Editor talebi, EUI-01–08 görevleri ve Sol 6.1 medium devri](2026-10-18-eui-plan-01.md) |
 | 18 Ekim 2026 — ICM-09b başlangıç | [Fiziksel H01–H08 önkoşul incelemesi; G0/G1 açık](2026-10-18-icm-09b-start.md) |
 | 18 Ekim 2026 — ICM-09a | [Birleşik Release yazılım kabulü; G2 kapalı](2026-10-18-icm-09a.md) |

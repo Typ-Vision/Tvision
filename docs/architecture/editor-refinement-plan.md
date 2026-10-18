@@ -1,8 +1,10 @@
 # Recipe Editor iyileştirme planı — EUI
 
-18 Ekim 2026. Durum: **planlandı; uygulama başlamadı**.
+18 Ekim 2026 tarihli plan; planlama kaydı EUI-PLAN-01'dir.
+**EUI-01 uygulandı ve bağımsız kabul edildi** ([kapanış](../archive/2026-10-18-eui-01.md)).
+EUI-02–08 henüz uygulanmadı. **EUI-01 bitiminde durulur; EUI-02 için kullanıcı
+devam talimatı beklenir.** Canlı devam noktası [progress](../progress.md)'tir.
 Kullanıcının beş talebi, ICM fiziksel kabulünden önce önceliklidir.
-İlk uygulama görevi **EUI-01**; planlama kaydı EUI-PLAN-01'dir.
 [Devir mesajı](editor-refinement-handoff.md), [güncel durum](../progress.md).
 
 ## Başlangıç ve kapsam
@@ -10,14 +12,15 @@ Kullanıcının beş talebi, ICM fiziksel kabulünden önce önceliklidir.
 Kullanıcı önceki manuel deneme listesi için “testler ok” bildirdi. Bu kullanıcı
 beyanıdır; adım bazlı kayıt, görüntü, ölçüm veya yeni otomatik koşum yoktur.
 ICM-09a yazılım kabulü mevcut; ICM-09b/G0/G1 ve fiziksel ölçüm engelleri açık kalır.
-Bu plan yalnız belge teslimidir; aşağıdaki davranışlar henüz ürün özelliği değildir.
+İlk plan teslimi yalnız belgeydi. Aşağıdaki kartlar hedef kapsamdır; gerçekleşen
+teslim ve doğrulama için güncel progress ve ID kapanış kayıtları esas alınır.
 
 18 Ekim isteği, 7 Ekim GUI'yi koruma kararını Editor görünümü, Toolbox ve ortak sol
 Workspace paneli için değiştirir. Diğer ekranların işlevleri ve genel ürün kimliği
 korunur. Üç applicationType tek Editor/Runtime kullanır. Yeni node canvas,
 otomatik Edge dönüşümü, yeni algoritma ailesi veya kamera capability açma kapsam dışıdır.
 
-Kaynak incelemesi:
+Planlama sırasındaki kaynak incelemesi (uygulama öncesi):
 
 - `src/app/ImageViewer.cpp`: Blob `searchRoi` yolu `drawRegion/onRegion` ile tek
   çizimdir; `setRegions` statik dikdörtgenler çizer. `ImageViewerRoi.cpp` içindeki
@@ -57,7 +60,8 @@ Kaynak incelemesi:
 ## Görev sırası
 
 Tek ajan, sıralı çalışma; her ID bağımsız kabul ve tek commit. Bir kart tamamlanmadan
-sonrakine geçilmez. EUI-03–08 için kullanıcıdan yeniden kapsam izni gerekmez.
+sonrakine geçilmez. Güncel kullanıcı yönlendirmesi: EUI-01 sonunda durulur;
+EUI-02 kullanıcı devam talimatı olmadan başlamaz.
 
 | ID | Paket | Önkoşul | Talep |
 | --- | --- | --- | --- |

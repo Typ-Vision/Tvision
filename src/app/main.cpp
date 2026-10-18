@@ -24,7 +24,8 @@ int main(int argc, char* argv[]) {
     const bool poseOnly=app.arguments().contains("--pose-tracking-smoke");
     const bool usabilityOnly=app.arguments().contains("--usability-smoke");
     const bool smoke = app.arguments().contains("--smoke-test") || circleOnly || geometryOnly || poseOnly || usabilityOnly || systemOnly || multiOnly || multiRuntimeOnly;
-    const QDir buildDir(QCoreApplication::applicationDirPath());
+    const QDir buildDir(smoke ? qEnvironmentVariable("VISIONFLOW_TEST_ARTIFACTS",QCoreApplication::applicationDirPath()):QCoreApplication::applicationDirPath());
+    if(smoke)QDir().mkpath(buildDir.absolutePath());
     visionflow::MainWindow window(buildDir.filePath(smoke ? "ui-smoke.ini" : "../config/local.ui.ini"));
     window.show();
     if (smoke) QTimer::singleShot(100, &app, [&]{

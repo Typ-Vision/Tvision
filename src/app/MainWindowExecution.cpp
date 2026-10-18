@@ -54,6 +54,7 @@ EditorContext MainWindow::editorContext() const {
 }
 QByteArray MainWindow::flowSignature() const {return editorSession_.signature(editorContext());}
 void MainWindow::refreshFlow() {
+    if(editorSession_.busy()){imageViewer_->cancelRoi();imageViewer_->drawRegion(false);imageViewer_->setSearchRegionEditing({}, {},false);}
     const auto identity=systemCalibrationIdentity();if(identity!=editorCalibrationIdentity_ && !editorSession_.busy()){if(service_.activeRecipe() && service_.activeRecipe()->definition["editor"].toObject()["schemaVersion"]==9){for(auto i=identity.begin();i!=identity.end();++i)if(editorCalibrationIdentity_[i.key()]!=i.value())editorSession_.calibrationChanged(editorContext(),i.key());}else editorSession_.calibrationChanged(editorContext());editorCalibrationIdentity_=identity;}
     if(!editorSession_.busy() && measurementWorkspace_ && service_.activeRecipe()){
         const auto tools=service_.tools();
@@ -115,6 +116,11 @@ void MainWindow::showExecutionResult() {
     imageViewer_->setToolOverlay({},{});
     if(editorSession_.frame){imageViewer_->setPreviewPixels(drawingImage_ ? drawingImage_->preview():editorSession_.frame->preview());imageInfo_->setText(QString("Ham g\u00f6r\u00fcnt\u00fc - %1 x %2 px - Frame %3").arg(editorSession_.frame->size().width()).arg(editorSession_.frame->size().height()).arg(editorSession_.frame->metadata().frameId));}
     if(drawingImage_)imageInfo_->setText(drawingImage_->processing().isEmpty() ? "Ham görüntü · bağlı kaynak":"İşlenmiş görüntü · bağlı Preprocess");
+    if(!drawingImage_ && service_.activeRecipe())for(const auto& tool:service_.tools())if(tool.id==selectedToolId_ && tool.kind=="blob")try{
+        const auto image=editorSession_.toolImage(editorContext(),tool.id);imageViewer_->setPreviewPixels(image.preview());
+        QString source=image.metadata().sourceId;for(const auto& candidate:service_.tools())if(candidate.id==source){source=candidate.name;break;}
+        imageInfo_->setText(QString("%1 · bağlı kaynak: %2 · %3 × %4 px · Frame %5").arg(image.processing().isEmpty() ? "Ham görüntü":"İşlenmiş görüntü",source).arg(image.size().width()).arg(image.size().height()).arg(image.metadata().frameId));
+    }catch(const std::exception&){}
     if(!editorSession_.frame && !drawingImage_){imageViewer_->clearImage("Bu kaynak için güncel kare yok.");imageInfo_->setText("Görüntü yok.");}
     if(!editorSession_.cycle){matchInfo_->clear();return;}
     if(editorSession_.frame){const auto evidence=editorSession_.cycle->industrialEvidence.value(editorSession_.frame->metadata().sourceId);

@@ -9,7 +9,68 @@
 #include <numbers>
 #include <stdexcept>
 #include <type_traits>
+#include <algorithm>
 namespace visionflow {
+void ImageViewer::setSearchRegionEditing(const QString& identity,const QRect& region,bool editable){
+    if(searchEditable_ && !editable){cancelRoi();drawRegion(false);}
+    const bool valid=region.isEmpty() || (imageItem_ && region.width()>=2 && region.height()>=2 && QRect(QPoint{},imageItem_->pixmap().size()).contains(region));
+    if(identity!=searchIdentity_ || region!=searchValue_){cancelRoi();searchUndo_.clear();searchIdentity_=identity;searchValue_=region;}
+    if(!editable || !valid){searchDragging_=false;searchDraft_={};}
+    searchEditable_=editable && valid && imageItem_;renderSearchRegion();
+}
+QVector<QPointF> ImageViewer::searchHandles(const QRect& r) const {
+    const QRectF f(r);const auto c=f.center();
+    return {f.topLeft(),{c.x(),f.top()},f.topRight(),{f.right(),c.y()},f.bottomRight(),{c.x(),f.bottom()},f.bottomLeft(),{f.left(),c.y()}};
+}
+void ImageViewer::renderSearchRegion(){
+    for(auto* item:searchHandles_){scene_->removeItem(item);delete item;}searchHandles_.clear();
+    if(!searchEditable_ || !imageItem_ || !searchRegion_)return;
+    const auto r=searchDragging_ ? searchDraft_:searchValue_;
+    searchRegion_->setRect(QRectF(r));searchRegion_->setVisible(!r.isEmpty());
+    if(r.isEmpty() || drawing_)return;
+    QPen pen(QColor("#56b4ff"),2);pen.setCosmetic(true);
+    for(auto p:searchHandles(r)){auto* h=scene_->addRect(-4,-4,8,8,pen,QBrush(QColor("#101923")));h->setPos(p);h->setFlag(QGraphicsItem::ItemIgnoresTransformations);h->setZValue(15);searchHandles_<<h;}
+}
+int ImageViewer::searchHit(const QPoint& p) const {
+    if(!searchEditable_ || searchValue_.isEmpty() || drawing_)return -1;
+    const auto handles=searchHandles(searchValue_);double best=9;int hit=-1;
+    for(int i=0;i<handles.size();++i){const auto d=QLineF(QPointF(p),QPointF(mapFromScene(handles[i]))).length();if(d<best){best=d;hit=i;}}
+    if(hit>=0)return hit;
+    return QRectF(searchValue_).contains(mapToScene(p)) ? 8:-1;
+}
+bool ImageViewer::searchPress(QMouseEvent* e){
+    if(e->button()!=Qt::LeftButton)return false;
+    const auto hit=searchHit(e->position().toPoint());if(hit<0)return false;
+    const auto starting=onSearchRegionStarting;if(starting && !starting()){e->accept();return true;}
+    if(searchHit(e->position().toPoint())!=hit){e->accept();return true;}
+    searchHandle_=hit;searchBefore_=searchValue_;searchDraft_=searchValue_;searchDragging_=true;
+    const auto p=mapToScene(e->position().toPoint());searchStart_={int(std::floor(p.x())),int(std::floor(p.y()))};
+    setFocus();setDragMode(NoDrag);if(onSearchRegionActivityChanged)onSearchRegionActivityChanged();e->accept();return true;
+}
+bool ImageViewer::searchMove(QMouseEvent* e){
+    static const Qt::CursorShape cursors[]{Qt::SizeFDiagCursor,Qt::SizeVerCursor,Qt::SizeBDiagCursor,Qt::SizeHorCursor,Qt::SizeFDiagCursor,Qt::SizeVerCursor,Qt::SizeBDiagCursor,Qt::SizeHorCursor,Qt::SizeAllCursor};
+    if(!searchDragging_){if(!drawing_ && roiDrawing_<0 && !roiDragging_){const int hit=searchHit(e->position().toPoint());viewport()->setCursor(hit>=0 ? cursors[hit]:Qt::OpenHandCursor);}return false;}
+    const auto p=mapToScene(e->position().toPoint());const QPoint delta=QPoint(int(std::floor(p.x())),int(std::floor(p.y())))-searchStart_;
+    const auto size=imageItem_->pixmap().size();auto r=searchBefore_;
+    if(searchHandle_==8)r.translate(std::clamp(delta.x(),-r.left(),size.width()-1-r.right()),std::clamp(delta.y(),-r.top(),size.height()-1-r.bottom()));
+    else {
+        const int h=searchHandle_;
+        if(h==0 || h==6 || h==7)r.setLeft(std::clamp(searchBefore_.left()+delta.x(),0,searchBefore_.right()-1));
+        if(h==0 || h==1 || h==2)r.setTop(std::clamp(searchBefore_.top()+delta.y(),0,searchBefore_.bottom()-1));
+        if(h==2 || h==3 || h==4)r.setRight(std::clamp(searchBefore_.right()+delta.x(),searchBefore_.left()+1,size.width()-1));
+        if(h==4 || h==5 || h==6)r.setBottom(std::clamp(searchBefore_.bottom()+delta.y(),searchBefore_.top()+1,size.height()-1));
+    }
+    searchDraft_=r;renderSearchRegion();e->accept();return true;
+}
+void ImageViewer::finishSearchRegion(const QRect& value){
+    if(value==searchValue_){renderSearchRegion();return;}
+    searchUndo_<<searchValue_;if(searchUndo_.size()>64)searchUndo_.removeFirst();searchValue_=value;renderSearchRegion();
+    const auto edited=onSearchRegionEdited;if(edited)edited(value);
+}
+bool ImageViewer::searchRelease(QMouseEvent* e){
+    if(!searchDragging_ || e->button()!=Qt::LeftButton)return false;
+    searchMove(e);const auto value=searchDraft_;cancelRoi();finishSearchRegion(value);e->accept();return true;
+}
 namespace {
 QPointF polar(QPointF c,double r,double degrees){const auto a=degrees*std::numbers::pi/180;return c+QPointF(r*std::cos(a),r*std::sin(a));}
 double angle(QPointF c,QPointF p){return std::atan2(p.y()-c.y(),p.x()-c.x())*180/std::numbers::pi;}
@@ -36,6 +97,8 @@ void ImageViewer::setRoi(const std::optional<ToolRoi>& value,bool remember){
     renderRoi();if(onRoiChanged)onRoiChanged();if(onRoiStatus)onRoiStatus();if(remember && onRoiEdited)onRoiEdited();
 }
 void ImageViewer::cancelRoi(){
+    const bool searchWasDragging=searchDragging_;searchDragging_=false;searchDraft_={};renderSearchRegion();
+    if(searchWasDragging && onSearchRegionActivityChanged)onSearchRegionActivityChanged();
     roiDraft_.reset();roiBeforeDrag_.reset();roiVertices_.clear();roiDrawing_=-1;roiHandle_=-1;roiDragging_=false;
     setDragMode(drawing_ ? NoDrag:ScrollHandDrag);viewport()->setCursor(drawing_ ? Qt::CrossCursor:Qt::OpenHandCursor);renderRoi();
 }
@@ -121,6 +184,8 @@ bool ImageViewer::roiRelease(QMouseEvent* e){
     if(roiDragging_){roiMove(e);finishRoi();}e->accept();return true;
 }
 void ImageViewer::keyPressEvent(QKeyEvent* e){
+    if(e->key()==Qt::Key_Escape && (searchDragging_ || drawing_)){cancelRoi();drawRegion(false);e->accept();return;}
+    if(e->matches(QKeySequence::Undo) && searchEditable_){cancelRoi();drawRegion(false);if(!searchUndo_.isEmpty()){searchValue_=searchUndo_.takeLast();renderSearchRegion();const auto edited=onSearchRegionEdited;if(edited)edited(searchValue_);}e->accept();return;}
     if(e->key()==Qt::Key_Escape && (roiDrawing_>=0 || roiDragging_)){cancelRoi();roiStatus_="Çizim iptal edildi; önceki geometri korundu.";if(onRoiStatus)onRoiStatus();e->accept();return;}
     if(e->matches(QKeySequence::Undo) && roiEditing_){undoRoi();e->accept();return;}
     if((e->key()==Qt::Key_Enter || e->key()==Qt::Key_Return) && roiDrawing_>=4){finishRoi();e->accept();return;}

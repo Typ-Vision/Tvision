@@ -5,13 +5,13 @@
 
 ## Devam noktası
 
-- **EUI-PLAN-01 tamam; sıradaki EUI-01.** Kullanıcı manuel testler için “OK”
-  bildirdi; ayrıntılı test kanıtı yok. Beş Editor isteği fiziksel kabulden önce:
-  Blob ROI/kenar filtresi, açıklamalar, tarama okları/yay, gruplu Toolbox/eski Edge,
-  Workspace pin ve kompakt görünüm. **Yalnız plan hazır, kod uygulanmadı.**
-  [Görevler EUI-01–08](architecture/editor-refinement-plan.md),
-  [Sol 6.1 medium devri](architecture/editor-refinement-handoff.md),
-  [kapanış](archive/2026-10-18-eui-plan-01.md). Ajanlar sıralı; aşağıdaki ICM engelleri korunur.
+- **EUI-01 tamam; bağımsız kabul edildi. DUR.** Blob ROI gövde
+  taşıma, sekiz tutamaç, Undo/iptal, kaynak/ref kilitleri ve stale temizliği uygulandı.
+  [Kapanış/ayrı koşumlar](archive/2026-10-18-eui-01.md): Release, ilgili **5/5**;
+  son düzeltmeler **2/2**, yönetici bağımsız **2/2**; normal/küçük görseller incelendi.
+  **Sıradaki EUI-02; kullanıcı devam talimatı bekleniyor,
+  otomatik başlamaz.** [Kartlar](architecture/editor-refinement-plan.md).
+  EUI-02–08 uygulanmadı; [eski plan](archive/2026-10-18-eui-plan-01.md). ICM engelleri korunur.
 - [ICM-PLAN-02](archive/2026-10-18-icm-plan-02.md): ortak yazılım/donanım kabulü ayrı.
   [06a](archive/2026-10-18-icm-06a.md)/[06b](archive/2026-10-18-icm-06b.md)
   kalibrasyon/profil/aktivasyon tamam; 04f–05b kapanışları [arşivde](archive/README.md).
@@ -104,7 +104,8 @@ Görevler: [ana plan](architecture/industrial-camera-plan.md), seçili kart ve s
 
 ## Kapanış ve sonraki adım
 
-**Önce EUI-01→08**, kullanıcı testi/düzeltme; sonra kamera önkoşulları.
+**EUI-01 tamam; DUR. EUI-02 için kullanıcı devam talimatı bekleniyor.**
+Plan 02→08, kullanıcı testi/düzeltme ve kamera önkoşullarıdır.
 [ICM-09b](archive/2026-10-18-icm-09b-start.md) G0/G1 bekliyor; H01–H08 açık.
 Basler/Daheng model/SDK 01→02 veya OECS belgeli pending-command bariyeri gerekir.
 Tamamlanan hazırlıklar tekrarlanmaz; ölçüm adayı configure girdisi değildir.

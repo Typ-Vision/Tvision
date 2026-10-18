@@ -94,6 +94,9 @@ geçici ayarları geri yükler.
    aynı sonucu kaydeder; yeni acquisition yapmaz. Restart geçmişi korur, aktif
    üretim iznini geri yüklemez.
 
+Blob Search ROI'yi gövdeden taşıyın, sekiz tutamaçla boyutlandırın. Escape iptal,
+Ctrl+Z geri alır; ROI dışı sol veya orta tuş pan yapar. Referans/region bağı düzenlemeyi kilitler.
+
 Panel düzeni ve son seçimler `config/local.ui.ini` içindedir; bu proje autosave'i
 değildir. Test INI, fixture, görüntü ve raporlar `build/` altında tutulur.
 Görünümü sıfırlamak için **View → Panel düzenini sıfırla** kullanılır.
@@ -114,9 +117,7 @@ okumayın. Önce başlık veya görev ID'si arayın; belirsizlikte bağımlılı
 | Runtime ve kabul | [Runtime/terminal](docs/architecture/multi-source-runtime-terminal.md), [B kabulü](docs/architecture/multi-source-release-acceptance.md), [PLC socket](docs/architecture/plc-socket.md) |
 | Geçmiş karar ve teslim | [Arşiv dizini](docs/archive/README.md), [önceki README](docs/archive/2026-10-17/README.md) |
 
-Gereksinim/mimari belgelerindeki tarihli teslimler geçmiş kapsamı anlatabilir;
-güncel devam noktası progress'tir. Teknik sözleşme değişiminde ilgili belge ve
-kaynak kod birlikte doğrulanır. Günlük ayrıntılarını README'ye eklemeyin.
+Güncel sıra progress'tedir.
 
 Belge boyutu ve başlangıç bağlantılarını kontrol etmek için:
 

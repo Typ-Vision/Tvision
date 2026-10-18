@@ -6,6 +6,7 @@
 #include <QMouseEvent>
 #include <QWheelEvent>
 #include <QPainter>
+#include <QScrollBar>
 #include <cmath>
 #include <algorithm>
 namespace visionflow {
@@ -23,6 +24,7 @@ void ImageViewer::setPreviewPixels(const QImage& image) {
     imageItem_->setPixmap(QPixmap::fromImage(image));
 }
 void ImageViewer::setImage(const QImage& image) {
+    searchHandles_.clear();searchIdentity_.clear();searchUndo_.clear();searchEditable_=searchDragging_=middlePanning_=false;searchValue_={};
     roiItems_.clear();roi_.reset();roiDraft_.reset();roiBeforeDrag_.reset();roiStatus_="Geometri yok.";roiUndo_.clear();roiVertices_.clear();validDomain_.clear();roiDrawing_=-1;roiHandle_=-1;roiDragging_=roiEditing_=false;
     toolOverlay_.clear();
     scene_->clear(); imageItem_=nullptr; selection_=nullptr;
@@ -37,6 +39,7 @@ void ImageViewer::setImage(const QImage& image) {
     fitImage();if(onRoiChanged)onRoiChanged();
 }
 void ImageViewer::clearImage(const QString& message) {
+    searchHandles_.clear();searchIdentity_.clear();searchUndo_.clear();searchEditable_=searchDragging_=middlePanning_=false;searchValue_={};
     roiItems_.clear();roi_.reset();roiDraft_.reset();roiBeforeDrag_.reset();roiStatus_="Geometri yok.";roiUndo_.clear();roiVertices_.clear();validDomain_.clear();roiDrawing_=-1;roiHandle_=-1;roiDragging_=roiEditing_=false;
     toolOverlay_.clear();
     scene_->clear(); scene_->setSceneRect({}); imageItem_=nullptr; selection_=nullptr;
@@ -69,11 +72,13 @@ void ImageViewer::drawRegion(bool enabled) {
     drawing_=enabled; regionStart_={-1,-1}; setDragMode(enabled ? NoDrag : ScrollHandDrag);
     viewport()->setCursor(enabled ? Qt::CrossCursor : Qt::OpenHandCursor);
     if (draftRegion_) draftRegion_->hide();
+    renderSearchRegion();
 }
 void ImageViewer::setRegions(const QRect& model,const QRect& search,const QRect& result,bool accepted) {
     auto set=[](QGraphicsRectItem* item,const QRect& rect){if (item) {item->setRect(QRectF(rect)); item->setVisible(!rect.isEmpty());}};
     set(modelRegion_,model); set(searchRegion_,search); set(resultRegion_,result);
     if (resultRegion_) {auto pen=resultRegion_->pen(); pen.setColor(accepted ? QColor("#66e3c4") : QColor("#ff8585")); resultRegion_->setPen(pen);}
+    renderSearchRegion();
 }
 void ImageViewer::setToolOverlay(const QVector<QRect>& regions,const QVector<QPointF>& points,const QVector<QLineF>& lines,const QString& annotation,const QByteArray& mask,const QSize& maskSize,const QPoint& maskOrigin,const QVector<QPointF>& rejected,bool densePoints) {
     for(auto* item:toolOverlay_) {scene_->removeItem(item);delete item;}toolOverlay_.clear();
@@ -133,11 +138,15 @@ void ImageViewer::setChessboardOverlay(const QVector<QPointF>& points,int column
     }
 }
 void ImageViewer::mousePressEvent(QMouseEvent* event) {
+    if(event->button()==Qt::MiddleButton && imageItem_){cancelRoi();middlePanning_=true;panStart_=event->position().toPoint();viewport()->setCursor(Qt::ClosedHandCursor);event->accept();return;}
+    if(searchPress(event))return;
     if(roiPress(event))return;
     pressed_=event->position().toPoint(); QGraphicsView::mousePressEvent(event);
     if (drawing_ && event->button()==Qt::LeftButton) {regionStart_=imagePixelAt(pressed_); event->accept();}
 }
 void ImageViewer::mouseMoveEvent(QMouseEvent* event) {
+    if(middlePanning_){const auto p=event->position().toPoint();const auto d=p-panStart_;horizontalScrollBar()->setValue(horizontalScrollBar()->value()-d.x());verticalScrollBar()->setValue(verticalScrollBar()->value()-d.y());panStart_=p;event->accept();return;}
+    if(searchMove(event))return;
     if(roiMove(event))return;
     QGraphicsView::mouseMoveEvent(event);
     if (onPixel) onPixel(imagePixelAt(event->position().toPoint()));
@@ -148,13 +157,15 @@ void ImageViewer::mouseMoveEvent(QMouseEvent* event) {
     }
 }
 void ImageViewer::mouseReleaseEvent(QMouseEvent* event) {
+    if(event->button()==Qt::MiddleButton && middlePanning_){middlePanning_=false;viewport()->setCursor(drawing_ ? Qt::CrossCursor:Qt::OpenHandCursor);event->accept();return;}
+    if(searchRelease(event))return;
     if(roiRelease(event))return;
     if (drawing_ && event->button()==Qt::LeftButton) {
         if (regionStart_.x()>=0 && imageItem_) {
             auto point=mapToScene(event->position().toPoint());
             QPoint end(std::clamp(int(std::floor(point.x())),0,imageItem_->pixmap().width()-1),std::clamp(int(std::floor(point.y())),0,imageItem_->pixmap().height()-1));
             const QRect roi=pixelRectangle(regionStart_,end); drawRegion(false);
-            if (roi.width()>=2 && roi.height()>=2 && onRegion) onRegion(roi);
+            if (roi.width()>=2 && roi.height()>=2){if(searchEditable_)finishSearchRegion(roi);else if(onRegion)onRegion(roi);}
         } else drawRegion(false);
         event->accept(); return;
     }

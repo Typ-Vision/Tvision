@@ -23,6 +23,11 @@ public:
     void setSourceSelected(bool selected);
     void drawRegion(bool enabled);
     void setRegions(const QRect& model,const QRect& search,const QRect& result={},bool accepted=true);
+    // Integer Blob search ROI; presentation refreshes do not create recipe edits.
+    void setSearchRegionEditing(const QString& identity,const QRect& region,bool editable);
+    std::function<void(QRect)> onSearchRegionEdited;
+    std::function<void()> onSearchRegionActivityChanged;
+    std::function<bool()> onSearchRegionStarting;
     void setToolOverlay(const QVector<QRect>& regions,const QVector<QPointF>& points,const QVector<QLineF>& lines={},const QString& annotation={},const QByteArray& mask={},const QSize& maskSize={},const QPoint& maskOrigin={},const QVector<QPointF>& rejected={},bool densePoints=false);
     void setCodeOverlay(const CodeResults& codes);
     void setChessboardOverlay(const QVector<QPointF>& points,int columns);
@@ -35,10 +40,10 @@ public:
     void setRoiFrame(const QString& id);
     void setRoiMapping(const CoordinateFrame&,std::function<QPointF(QPointF)> toRaw={},std::function<QPointF(QPointF)> fromRaw={});
     void cancelRoi();
-    bool roiGestureActive() const {return roiDrawing_>=0 || roiDragging_;}
+    bool roiGestureActive() const {return roiDrawing_>=0 || roiDragging_ || searchDragging_;}
     bool drawingActive() const {return drawing_ || roiGestureActive();}
     void undoRoi();
-    void resetRoiHistory() {roiUndo_.clear();}
+    void resetRoiHistory() {roiUndo_.clear();searchUndo_.clear();}
     void setValidDomain(const QVector<QPointF>& polygon);
     QString roiStatus() const {return roiStatus_;}
     std::function<void()> onRoiChanged;
@@ -60,6 +65,20 @@ protected:
     void paintEvent(QPaintEvent* event) override;
     void keyPressEvent(QKeyEvent* event) override;
 private:
+    bool searchPress(QMouseEvent*);
+    bool searchMove(QMouseEvent*);
+    bool searchRelease(QMouseEvent*);
+    void renderSearchRegion();
+    int searchHit(const QPoint&) const;
+    QVector<QPointF> searchHandles(const QRect&) const;
+    void finishSearchRegion(const QRect&);
+    QRect searchValue_,searchDraft_,searchBefore_;
+    QString searchIdentity_;
+    QVector<QRect> searchUndo_;
+    QList<QGraphicsItem*> searchHandles_;
+    QPoint searchStart_,panStart_;
+    int searchHandle_=-1;
+    bool searchEditable_=false,searchDragging_=false,middlePanning_=false;
     bool roiPress(QMouseEvent*);
     bool roiMove(QMouseEvent*);
     bool roiRelease(QMouseEvent*);

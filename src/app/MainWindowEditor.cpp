@@ -114,6 +114,8 @@ QWidget* MainWindow::makeEditor() {
     matchInfo_=note("Eşleştirme sonucu yok.");matchInfo_->setAlignment(Qt::AlignTop | Qt::AlignLeft);auto* results=new QScrollArea;results->setObjectName("resultsScroll");results->setWidgetResizable(true);results->setWidget(matchInfo_);tabs->addTab(results,"Results");
     edgeProfile_=new EdgeProfileView;edgeProfile_->setObjectName("edgeProfile");auto* profileScroll=new QScrollArea;profileScroll->setWidgetResizable(true);profileScroll->setWidget(edgeProfile_);tabs->addTab(profileScroll,"Kenar profili");
     imageViewer_->onRegion=[this](QRect roi){commitRoi(roi);};
+    imageViewer_->onSearchRegionStarting=[this]{return !editorSession_.busy() && applyToolProperties();};
+    imageViewer_->onSearchRegionActivityChanged=[this]{findChild<QPushButton*>("stopFlow")->setEnabled(editorSession_.busy() || !pendingDrawTool_.isEmpty() || imageViewer_->drawingActive());};
     for (const auto name : {"Log","Variables","Communication","Diagnostics"}) tabs->addTab(note(QString(name)+" — henüz veri yok."),name);
     vertical_=new QSplitter(Qt::Vertical); vertical_->setObjectName("editorVertical"); vertical_->setChildrenCollapsible(false);
     vertical_->addWidget(horizontal_); vertical_->addWidget(tabs); vertical_->setStretchFactor(0,1); layout->addWidget(vertical_,1);
@@ -337,6 +339,9 @@ void MainWindow::showToolProperties() {
         connect(unlimited,&QCheckBox::toggled,this,[this]{applyToolProperties();});
         connect(polarity,&QComboBox::currentIndexChanged,this,[this]{applyToolProperties();});connect(connectivity,&QComboBox::currentIndexChanged,this,[this]{applyToolProperties();});
         form->addRow(note("Alan filtresi adayları seçer; PASS/FAIL üretmez. Kırmızı maske gerçek kabul edilen piksellerdir. Delikler korunur. Bbox: en çok 2048; ROI: en çok 16 Mi piksel."));
+        bool bound=tool.parameters.contains("poseTracking") || tool.parameters.contains("referenceBinding");
+        for(const auto& c:editorConnections(service_.activeRecipe()->definition))if(c.targetTool==tool.id && (c.targetPort=="region" || c.targetPort=="reference" || c.targetPort=="poseReference"))bound=true;
+        form->addRow(note(bound ? "Arama alanı region / referans / tracking girdisi tarafından belirlenir. Tutamaçla düzenleme kilitli; bağı kaldırın veya yeniden öğretin.":"Arama alanını gövdeden taşıyın veya sekiz tutamaçla boyutlandırın. Dışarıdan / orta tuşla pan. Escape iptal, Ctrl+Z son ROI değişimini geri alır."));
     } else if (tool.kind=="edge") {
         auto* value=new QComboBox; value->setObjectName("edgeDirection");
         value->setSizeAdjustPolicy(QComboBox::AdjustToMinimumContentsLengthWithIcon);value->setMinimumContentsLength(10);
