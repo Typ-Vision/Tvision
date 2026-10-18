@@ -205,8 +205,8 @@ bool MainWindow::verifyEditor(const QString& artifacts) {
     saveProject(); if (!service_.dirty()) return false;
     name->setText("Match_Part"); if (!applyToolProperties()) return false;
     if (!service_.dirty() || service_.activeRecipe()->status!=RecipeStatus::Draft) return false;
-    findChild<QPushButton*>("zoomIn")->click(); const auto zoom=imageViewer_->zoomFactor();
-    findChild<QPushButton*>("zoomOut")->click(); if (imageViewer_->zoomFactor()>=zoom) return false;
+    findChild<QAction*>("zoomIn")->trigger(); const auto zoom=imageViewer_->zoomFactor();
+    findChild<QAction*>("zoomOut")->trigger(); if (imageViewer_->zoomFactor()>=zoom) return false;
     selectTool(sourceId); if (!propertiesBody_->findChild<QPushButton*>("removeTool")) return false;
     imageViewer_->actualSize(); imageViewer_->centerOn(1000,900);
     const auto viewPoint=imageViewer_->mapFromScene(QPointF(1000,900));
@@ -228,9 +228,9 @@ bool MainWindow::verifyEditor(const QString& artifacts) {
     enabled->setChecked(true); if (!imageViewer_->hasImage()) return false;
     service_.save(); refreshWorkspace(); selectTool(matchId);
     {QFile file(fixture); if (!file.open(QIODevice::WriteOnly)) return false; file.write("broken after save");}
-    findChild<QPushButton*>("reloadImage")->click(); if (editorSession_.frame || imageViewer_->hasImage() || service_.dirty()) return false;
+    findChild<QAction*>("reloadImage")->trigger(); if (editorSession_.frame || imageViewer_->hasImage() || service_.dirty()) return false;
     if (!image.save(fixture)) return false;
-    findChild<QPushButton*>("reloadImage")->click();
+    findChild<QAction*>("reloadImage")->trigger();
     if (!imageViewer_->hasImage() || !workspaceError_->isHidden() || service_.dirty()) return false;
     QApplication::processEvents(); grab().save(QDir(artifacts).filePath("step3-editor.png")); return true;
 }
@@ -352,7 +352,7 @@ bool MainWindow::verifyExecution(const QString& artifacts) {
     for(const auto& result:editorSession_.cycle->tools)if(result.toolId==trackingEdge)check(result.searchRegion==QRect(220,160,30,100),"UI re-taught anchor keeps requested box");
     QApplication::processEvents();grab().save(QDir(artifacts).filePath("a2-reference-restored.png"));service_.save();
     const auto definitionBeforeGeometry=service_.activeRecipe()->definition;
-    findChild<QPushButton*>("roiGeometry")->click();QApplication::processEvents();
+    findChild<QAction*>("roiGeometry")->trigger();QApplication::processEvents();
     auto* geometryDialog=findChild<QDialog*>("roiGeometryDialog");check(geometryDialog,"ROI geometry entry opens numeric editor");
     geometryDialog->findChild<QComboBox*>("roiShape")->setCurrentIndex(3);geometryDialog->findChild<QPushButton*>("roiApply")->click();
     if(!imageViewer_->roi() || !std::holds_alternative<ArcRoi>(imageViewer_->roi()->geometry))throw std::runtime_error(("numeric arc: "+geometryDialog->findChild<QLabel*>("roiStatus")->text()).toStdString());
@@ -561,7 +561,7 @@ bool MainWindow::verifyEdgePoint(const QString& artifacts) {
     numeric(left);
     const auto beforeHandle=imageViewer_->roi();check(beforeHandle.has_value(),"bound numeric scan exists");const auto beforeScan=std::get<ScanSegment>(beforeHandle->geometry);drag(beforeScan.start,beforeScan.start+QPointF(15,5));wait();check(imageViewer_->roi()!=beforeHandle,"bound handle edits scan");imageViewer_->undoRoi();wait();check(imageViewer_->roi()==beforeHandle,"bound geometry undo persists exact scan");
     findChild<QPushButton*>("edgeDraw")->click();imageViewer_->cancelRoi();check(imageViewer_->roi()==beforeHandle,"cancel drawing preserves taught arrow");
-    findChild<QPushButton*>("roiGeometry")->click();QApplication::processEvents();auto* temporary=findChild<QDialog*>("roiGeometryDialog");check(temporary,"temporary geometry dialog");imageViewer_->setRoi(ToolRoi{{source+"/image"},ScanSegment{{100,240},{800,240},8}});refreshMatchOverlay();bool kept=false;for(const auto& t:service_.tools())if(t.id==left)kept=t.parameters["scanRoi"].toObject()==beforeHandle->toJson();check(kept,"temporary geometry never changes bound recipe scan");temporary->close();wait();check(imageViewer_->roi()==beforeHandle,"closing temporary workspace restores recipe arrow");
+    findChild<QAction*>("roiGeometry")->trigger();QApplication::processEvents();auto* temporary=findChild<QDialog*>("roiGeometryDialog");check(temporary,"temporary geometry dialog");imageViewer_->setRoi(ToolRoi{{source+"/image"},ScanSegment{{100,240},{800,240},8}});refreshMatchOverlay();bool kept=false;for(const auto& t:service_.tools())if(t.id==left)kept=t.parameters["scanRoi"].toObject()==beforeHandle->toJson();check(kept,"temporary geometry never changes bound recipe scan");temporary->close();wait();check(imageViewer_->roi()==beforeHandle,"closing temporary workspace restores recipe arrow");
     numeric(right);selectTool(left);propertiesBody_->findChild<QComboBox*>("ep_polarity")->setCurrentIndex(0);selectTool(right);propertiesBody_->findChild<QComboBox*>("ep_polarity")->setCurrentIndex(1);selectTool(measurement);propertiesBody_->findChild<QDoubleSpinBox*>("lowerMm")->setValue(9.999);propertiesBody_->findChild<QDoubleSpinBox*>("upperMm")->setValue(10.001);check(applyToolProperties(),"edge measurement limits");
     auto result=[&](const QString& id)->ToolResult{check(editorSession_.cycle.has_value(),"edge UI cycle exists");for(const auto& r:editorSession_.cycle->tools)if(r.toolId==id)return r;throw std::runtime_error((QString("edge UI result missing: ")+id+"; selected="+selectedToolId_+"; "+matchInfo_->text()).toStdString());};
     selectTool(left);runFlow();wait();check(result(left).state==ExecutionState::Done && result(left).edgeDiagnostics && result(left).edgeDiagnostics->candidates.size()==2 && edgeProfile_->hasDiagnostics(),"real profile and accepted/rejected candidates");check(result(measurement).errorCode=="CALIBRATION_INVALID","unbound mm no invented result");

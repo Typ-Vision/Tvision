@@ -78,20 +78,10 @@ OECS / GenTL probe komutları, sandbox sınırları ve kanıt bağlantıları
    aynı sonucu kaydeder; yeni acquisition yapmaz. Restart geçmişi korur, aktif
    üretim iznini geri yüklemez.
 
-Blob Search ROI'yi gövdeden taşıyın, sekiz tutamaçla boyutlandırın. Escape iptal,
-Ctrl+Z geri alır; ROI dışı sol veya orta tuş pan yapar. Referans/region bağı düzenlemeyi kilitler.
-
-Sınır filtresi kapalı başlar. Editor komutlarının hemen altındaki **Açıklamaları göster**
-kapalı başlar ve yerel olarak hatırlanır. Sonuç yazıları zoom ile küçülür; büyütme
-1,5× ile sınırlıdır. Geometri, maskeler ve Results bilgisi görünür kalır.
-
-Toolbox başlıklarını tıklayarak veya Enter/Space ve sağ/sol oklarla açıp kapatın.
-Arama eşleşen grubu geçici açar; temizlenince yerel grup tercihi geri gelir.
-Başlık araç eklemez. Yeni kenar aracı Edge Point'tir; eski Edge reçeteleri korunur.
-
-Line Fit ve Circle/Arc seçildiğinde Run öncesinde de tarama sayısı kadar nominal ok
-çizilir. Circle Basic'teki Start/Sweep geçerli değişimde yayı önizler; düzenleme
-bitince ROI kaydedilir. Yeni fit sonucu için Run gerekir.
+Editor'de reçete adı ve draft/dirty durumu üst satırdadır. **...** reçete bilgilerini
+ve çok kaynaklı geçişi açar. Viewer **...** menüsünde Reload, zoom ve ROI geometrisi
+bulunur. Ayrıntılı [Editor kullanım rehberi](docs/editor-usage.md): ROI, açıklamalar,
+Toolbox, nominal tarama kılavuzları ve küçük ekran komutları.
 
 Panel düzeni ve son seçimler `config/local.ui.ini` içindedir; bu proje autosave'i
 değildir. Test INI, fixture, görüntü ve raporlar `build/` altında tutulur.

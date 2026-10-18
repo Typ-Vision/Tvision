@@ -11,7 +11,7 @@ int main(int argc, char* argv[]) {
     QApplication app(argc, argv);
     app.setOrganizationName("VisionFlow"); app.setApplicationName("VisionFlow"); app.setStyle("Fusion");
     // The offscreen Windows platform may not enumerate system fonts.
-    if (app.arguments().contains("--smoke-test") || (app.arguments().contains("--circle-smoke") || app.arguments().contains("--geometry-smoke")))
+    if (QApplication::platformName()=="offscreen" || app.arguments().contains("--smoke-test") || (app.arguments().contains("--circle-smoke") || app.arguments().contains("--geometry-smoke")))
         QFontDatabase::addApplicationFont(QDir(qEnvironmentVariable("WINDIR", "C:/Windows")).filePath("Fonts/segoeui.ttf"));
     QFile theme(":/resources/theme.qss");
     if (!theme.open(QIODevice::ReadOnly)) return 2;

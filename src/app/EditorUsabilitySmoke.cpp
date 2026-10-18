@@ -30,6 +30,8 @@
 #include <QStackedWidget>
 #include <QThread>
 #include <QTabWidget>
+#include <QToolButton>
+#include <QTimer>
 #include <QUuid>
 #include <stdexcept>
 #include <algorithm>
@@ -68,7 +70,9 @@ bool MainWindow::verifyEditorUsability(const QString& artifacts) {
         {MainWindow reopened(settingsFile_);check(!reopened.workspacePanel_->pinned(),"restart restores local auto-hide preference");}
         QFile metrics(QDir(artifacts).filePath("workspace-viewports.txt"));check(metrics.open(QIODevice::WriteOnly),"viewport metrics file");
         for(const auto size:{QSize(1400,900),QSize(850,600)})for(bool pinned:{true,false}){
-            resize(size);workspacePanel_->setPinned(pinned);horizontal_->setSizes({180,680,300});vertical_->setSizes({540,220});QApplication::processEvents();imageViewer_->fitImage();
+            resize(size);workspacePanel_->setPinned(pinned);horizontal_->setSizes({180,680,300});vertical_->setSizes({540,220});for(int i=0;i<3;++i)QApplication::processEvents();imageViewer_->fitImage();
+            auto* editorPage=findChild<QWidget*>("editorPage");
+            if(editorPage)check(editorPage->rect().contains(QRect(editorContext_->mapTo(editorPage,QPoint()),editorContext_->size())),"header status fits pinned and auto-hide layouts");
             const auto v=imageViewer_->viewport()->size();metrics.write(QString("%1 %2 %3x%4\n").arg(size.width()).arg(pinned ? "pinned":"auto").arg(v.width()).arg(v.height()).toUtf8());
             grab().save(QDir(artifacts).filePath(QString("workspace-%1-%2.png").arg(size.width()).arg(pinned ? "pinned":"auto")));
             if(!pinned){workspacePanel_->reveal();QApplication::processEvents();check(imageViewer_->viewport()->size()==v,"overlay maintains viewport at each size");grab().save(QDir(artifacts).filePath(QString("workspace-%1-overlay.png").arg(size.width())));}
@@ -77,6 +81,55 @@ bool MainWindow::verifyEditorUsability(const QString& artifacts) {
         findChild<QAction*>("resetPanels")->trigger();QApplication::processEvents();check(workspacePanel_->pinned(),"Reset restores pinned mode");
         check(service_.activeRecipe()->definition==definition && flowSignature()==signature && editorSession_.generation==generation && pages_->currentIndex()==page && selectedToolId_==selected,"navigation presentation preserves recipe execution and selection");
         resize(1400,900);
+    }
+    // EUI-07: long names, secondary commands and constrained layouts.
+    {
+        const auto recipe=*service_.activeRecipe();
+        service_.editRecipe(recipe.id,QString(64,'W'),recipe.description,recipe.cameraReference,recipe.calibrationReference);refreshWorkspace();wait();
+        const auto definition=service_.activeRecipe()->definition;const auto signature=flowSignature();
+        auto* more=findChild<QPushButton*>("editorMore");auto* viewerMore=findChild<QToolButton*>("viewerMore");
+        auto keyClick=[](QWidget* w){w->setFocus();QKeyEvent press(QEvent::KeyPress,Qt::Key_Space,Qt::NoModifier),release(QEvent::KeyRelease,Qt::Key_Space,Qt::NoModifier);QApplication::sendEvent(w,&press);QApplication::sendEvent(w,&release);};
+        for(const auto size:{QSize(1400,900),QSize(850,600)}) {
+            resize(size);QApplication::processEvents();
+            check(width()==size.width() && height()==size.height() && !pageTitle_->isVisible() && !context_->isVisible(),"compact Editor fits exact window and hides duplicate shell heading");
+            auto* editorPage=findChild<QWidget*>("editorPage");
+            for(const auto name:{"saveWorkspace","runFlow","runTool","stopFlow","showResultAnnotations","editorMore"}) {
+                auto* command=editorPage->findChild<QWidget*>(name);const QRect bounds(command->mapTo(editorPage,QPoint()),command->size());
+                const auto* button=qobject_cast<QPushButton*>(command);
+                const int readable=button ? button->fontMetrics().horizontalAdvance(button->text())+14:command->sizeHint().width();
+                if(!command->isVisible() || !editorPage->rect().contains(bounds) || command->width()<readable)throw std::runtime_error(QString("command %1 width %2 readable %3 x %4 page %5 at %6").arg(name).arg(command->width()).arg(readable).arg(bounds.x()).arg(editorPage->width()).arg(size.width()).toStdString());
+            }
+            check(editorContext_->text().contains("DRAFT") && editorContext_->text().contains("Kaydedilmedi"),"long recipe name cannot hide draft/dirty status");
+            keyClick(more);QApplication::processEvents();check(findChild<QPushButton*>("editActiveRecipe")->isVisible() && findChild<QPushButton*>("enableMultiSource")->isVisible(),"keyboard reveals secondary recipe controls");
+            grab().save(QDir(artifacts).filePath(QString("compact-details-%1.png").arg(size.width())));keyClick(more);
+            auto* menu=viewerMore->findChild<QMenu*>();bool opened=false;
+            QTimer::singleShot(50,this,[&]{auto* reload=findChild<QAction*>("reloadImage");opened=menu->isVisible() && menu->activeAction()==reload && findChild<QAction*>("roiGeometry")->isVisible();
+                QKeyEvent down(QEvent::KeyPress,Qt::Key_Down,Qt::NoModifier);QApplication::sendEvent(menu,&down);opened=opened && menu->activeAction()==findChild<QAction*>("zoomOut");
+                menu->grab().save(QDir(artifacts).filePath(QString("compact-viewer-menu-%1.png").arg(size.width())));
+                const auto zoom=imageViewer_->zoomFactor();QKeyEvent enter(QEvent::KeyPress,Qt::Key_Return,Qt::NoModifier);QApplication::sendEvent(menu,&enter);opened=opened && imageViewer_->zoomFactor()<zoom;menu->close();});
+            keyClick(viewerMore);QElapsedTimer menuWait;menuWait.start();while(menuWait.elapsed()<100){QApplication::processEvents();QThread::msleep(1);}
+            check(opened,"keyboard opens viewer overflow commands");
+            grab().save(QDir(artifacts).filePath(QString("compact-long-name-%1.png").arg(size.width())));
+        }
+        check(service_.activeRecipe()->definition==definition && flowSignature()==signature,"layout and menus preserve recipe and execution identity");
+        service_.editRecipe(recipe.id,recipe.name,recipe.description,recipe.cameraReference,recipe.calibrationReference);
+        // Different application types still use this exact Editor page.
+        for(const auto type:{ApplicationType::RobotGuidance,ApplicationType::DefectInspection,ApplicationType::Measurement}) {
+            service_.createRecipe("Compact type fixture "+QString::number(int(type)),"",type,"file");refreshWorkspace();selectPage("editor");QApplication::processEvents();
+            check(pages_->currentWidget()==findChild<QWidget*>("editorPage") && editorContext_->text().contains(typeLabel(type)),"three application types share compact Editor");
+            grab().save(QDir(artifacts).filePath(QString("compact-empty-%1.png").arg(int(type))));
+        }
+        service_.selectRecipe(recipe.id);refreshWorkspace();wait();resize(1400,900);
+        runFlow();check(editorSession_.busy() && findChild<QTabWidget*>("editorTabs")->currentWidget()==findChild<QScrollArea*>("resultsScroll"),"actual worker busy state remains visible in Results");
+        grab().save(QDir(artifacts).filePath("compact-busy.png"));wait();check(editorSession_.cycle && editorSession_.cycle->state==ExecutionState::Done,"compact fixture execution produces real DONE");
+        // Reopen an extreme older splitter state using a dedicated test INI.
+        horizontal_->setSizes({9000,1,9000});vertical_->setSizes({1,9000});
+        const auto legacyIni=QDir(artifacts).filePath("compact-old-layout.ini");
+        {QSettings old(legacyIni,QSettings::IniFormat);old.setValue("editor/horizontal",horizontal_->saveState());old.setValue("editor/vertical",vertical_->saveState());}
+        {MainWindow old(legacyIni);old.resize(850,600);old.selectPage("editor");old.show();QApplication::processEvents();
+            check(old.size()==QSize(850,600) && old.imageViewer_->height()>=80 && old.findChild<QScrollArea*>("propertiesScroll")->width()>=210,"old splitter preferences constrained to usable minimums");
+            old.grab().save(QDir(artifacts).filePath("compact-old-layout.png"));}
+        findChild<QAction*>("resetPanels")->trigger();QApplication::processEvents();
     }
     // EUI-05: group headers are presentation, never tool kinds.
     {QSet<QString> kinds;QListWidgetItem *measurementGroup=nullptr,*lineEntry=nullptr;int groups=0;

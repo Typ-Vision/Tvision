@@ -12,6 +12,7 @@
 #include "PropertySections.hpp"
 #include "MetrologyEditor.hpp"
 #include "Toolbox.hpp"
+#include "ElidedLabel.hpp"
 #include "domain/GeometryMeasurementConfig.hpp"
 #include "EdgeProfileView.hpp"
 #include "application/BackendCapabilities.hpp"
@@ -39,6 +40,8 @@
 #include <QShortcut>
 #include <QSettings>
 #include <QTimer>
+#include <QToolButton>
+#include <QAction>
 #include <QJsonDocument>
 #include <exception>
 namespace visionflow {
@@ -46,13 +49,28 @@ namespace {
 QLabel* note(const QString& value) { auto* result=new QLabel(value); result->setWordWrap(true); result->setTextFormat(Qt::PlainText); result->setObjectName("muted"); return result; }
 }
 QWidget* MainWindow::makeEditor() {
-    auto* page=new QWidget; auto* layout=new QVBoxLayout(page); layout->setContentsMargins(0,0,0,0);
+    auto* page=new QWidget;page->setObjectName("editorPage");
+    page->setStyleSheet(
+        "QWidget#editorPage QPushButton {padding: 4px 6px; border-radius: 4px;}"
+        "QWidget#editorPage QToolButton {background: #151d27; border: 1px solid #2b394a; padding: 4px 6px; border-radius: 4px;}"
+        "QWidget#editorPage QLineEdit, QWidget#editorPage QComboBox {padding: 4px;}"
+        "QWidget#editorPage QListWidget::item {padding: 5px 3px; margin: 1px; border-radius: 3px;}"
+        "QWidget#editorPage QTabBar::tab {padding: 5px 9px;}"
+        "QWidget#editorPage QCheckBox::indicator {width: 12px; height: 12px; border: 1px solid #62768f; border-radius: 2px; background: #111720;}"
+        "QWidget#editorPage QCheckBox::indicator:checked {background: #66e3c4; border-color: #66e3c4;}");
+    auto* layout=new QVBoxLayout(page); layout->setContentsMargins(0,0,0,0);layout->setSpacing(4);
+    auto* heading=new QHBoxLayout;heading->setSpacing(8);
+    auto* recipeName=new ElidedLabel;recipeName->setObjectName("editorRecipeName");
+    recipeName->setStyleSheet("font-weight: 600; color: #edf4fb; font-size: 14px;");heading->addWidget(recipeName,1);
+    editorContext_=note("");editorContext_->setWordWrap(false);heading->addWidget(editorContext_);layout->addLayout(heading);
     auto* commands=new QHBoxLayout;
-    auto* back=new QPushButton("← Recipes"); commands->addWidget(back); connect(back,&QPushButton::clicked,this,[this]{selectPage("recipes");});
-    auto* edit=new QPushButton("Reçete bilgileri"); edit->setObjectName("editActiveRecipe"); commands->addWidget(edit);
+    commands->setSpacing(4);
+    auto* back=new QPushButton("Recipes");back->setToolTip("Recipe Manager'a dön");commands->addWidget(back); connect(back,&QPushButton::clicked,this,[this]{selectPage("recipes");});
+    auto* details=new QWidget;details->setObjectName("editorDetails");auto* detailLayout=new QHBoxLayout(details);detailLayout->setContentsMargins(0,0,0,0);
+    auto* edit=new QPushButton("Reçete bilgileri"); edit->setObjectName("editActiveRecipe"); detailLayout->addWidget(edit);
     connect(edit,&QPushButton::clicked,this,[this]{showRecipeDialog(true);});
     auto* save=new QPushButton("Save"); save->setObjectName("saveWorkspace"); commands->addWidget(save); connect(save,&QPushButton::clicked,this,&MainWindow::saveProject);
-    auto* multi=new QPushButton("Çok kaynaklı Editor");multi->setObjectName("enableMultiSource");multi->setToolTip("Reçeteyi açıkça editor9 şemasına geçirir. Çok kaynaklı Production henüz kapalıdır.");
+    auto* multi=new QPushButton("Çok kaynaklı Editor");multi->setObjectName("enableMultiSource");multi->setToolTip("Reçeteyi açıkça editor9 şemasına geçirir; mevcut bağlantılar korunur.");detailLayout->addWidget(multi);detailLayout->addStretch();
     connect(multi,&QPushButton::clicked,this,[this]{if(editorSession_.busy() || !applyToolProperties())return;try{service_.enableMultiSource();editorSession_.sourceFrames.clear();editorSession_.frame.reset();editorSession_.invalidateResults();refreshWorkspace();}catch(const std::exception& e){displayError(QString::fromUtf8(e.what()));}});
     auto* runFlowButton=new QPushButton("Run Flow"); runFlowButton->setObjectName("runFlow"); commands->addWidget(runFlowButton); connect(runFlowButton,&QPushButton::clicked,this,&MainWindow::runFlow);
     runFlowButton->setToolTip("Yeni görüntü edin ve tam akışı çalıştır.");
@@ -63,13 +81,20 @@ QWidget* MainWindow::makeEditor() {
     annotations->setChecked(QSettings(settingsFile_,QSettings::IniFormat).value("editor/showResultAnnotations",false).toBool());
     connect(annotations,&QCheckBox::toggled,this,[this](bool visible){imageViewer_->setResultAnnotationsVisible(visible);QSettings(settingsFile_,QSettings::IniFormat).setValue("editor/showResultAnnotations",visible);});
     auto* stop=new QPushButton("Stop");stop->setObjectName("stopFlow");commands->addWidget(stop);connect(stop,&QPushButton::clicked,this,[this]{pendingDrawTool_.clear();imageViewer_->cancelRoi();imageViewer_->drawRegion(false);editorSession_.stop(SessionJob::Execution);editorSession_.stop(SessionJob::Teaching);});
-    commands->addStretch(); layout->addLayout(commands); layout->addWidget(annotations,0,Qt::AlignLeft); editorContext_=note(""); layout->addWidget(editorContext_);
+    commands->addWidget(annotations);commands->addStretch();
+    auto* more=new QPushButton("...");more->setObjectName("editorMore");more->setCheckable(true);more->setAccessibleName("Reçete ayrıntıları");more->setToolTip("Reçete bilgileri ve çok kaynaklı Editor");commands->addWidget(more);
+    connect(more,&QPushButton::toggled,details,&QWidget::setVisible);layout->addLayout(commands);layout->addWidget(details);details->hide();
+    for(auto* button:{back,save,runFlowButton,runTool,stop}){button->ensurePolished();button->setFixedWidth(button->fontMetrics().horizontalAdvance(button->text())+20);}
+    runTool->setFixedWidth(qMax(runTool->width(),runTool->fontMetrics().horizontalAdvance("Görüntü al")+20));
+    more->setFixedWidth(28);annotations->ensurePolished();annotations->setMinimumWidth(annotations->sizeHint().width());
     horizontal_=new QSplitter(Qt::Horizontal); horizontal_->setObjectName("editorHorizontal"); horizontal_->setChildrenCollapsible(false);
-    auto* toolsPanel=new QWidget; toolsPanel->setMinimumWidth(150); auto* toolsLayout=new QVBoxLayout(toolsPanel);
+    auto* toolsPanel=new QWidget; toolsPanel->setMinimumWidth(150); auto* toolsLayout=new QVBoxLayout(toolsPanel);toolsLayout->setContentsMargins(4,4,4,4);toolsLayout->setSpacing(4);
     toolsLayout->addWidget(note("TOOLBOX")); auto* search=new QLineEdit; search->setPlaceholderText("Tool ara…"); toolsLayout->addWidget(search);
     auto* catalog=new Toolbox(settingsFile_);toolbox_=catalog;toolsLayout->addWidget(toolbox_,1);
+    toolbox_->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);toolbox_->setTextElideMode(Qt::ElideRight);
+    for(int i=0;i<toolbox_->count();++i)if(!toolbox_->item(i)->data(Toolbox::HeaderRole).toBool())toolbox_->item(i)->setToolTip(toolbox_->item(i)->text()+"\n"+toolbox_->item(i)->toolTip());
     search->setObjectName("toolboxSearch");
-    auto* add=new QPushButton("Add Tool");add->setObjectName("addTool");toolsLayout->addWidget(add);toolsLayout->addWidget(multi);
+    auto* add=new QPushButton("Add Tool");add->setObjectName("addTool");toolsLayout->addWidget(add);
     auto updateAdd=[this,add]{const auto* item=toolbox_->currentItem();add->setEnabled(item && !item->isHidden() && (item->flags() & Qt::ItemIsEnabled) && ToolCatalog::canAdd(item->data(Qt::UserRole).toString()));};
     catalog->onAvailabilityChanged=updateAdd;catalog->onAddRequested=[this]{addSelectedTool();};
     connect(toolbox_,&QListWidget::currentItemChanged,this,[updateAdd]{updateAdd();});
@@ -77,23 +102,25 @@ QWidget* MainWindow::makeEditor() {
     connect(search,&QLineEdit::textChanged,this,[catalog](const QString& query){catalog->filter(query);});updateAdd();
     horizontal_->addWidget(toolsPanel);
     auto* imagePanel=new QWidget; auto* imageLayout=new QVBoxLayout(imagePanel); imageLayout->setContentsMargins(0,0,0,0);
-    auto* toolbar=new QHBoxLayout;
-    auto* open=new QPushButton("Open Image"); open->setObjectName("openImage"); toolbar->addWidget(open); connect(open,&QPushButton::clicked,this,&MainWindow::openImageDialog);
-    auto* sourcePicker=new QComboBox;sourcePicker->setObjectName("editorSourceSelector");sourcePicker->setAccessibleName("Görüntü kaynağı");sourcePicker->setMinimumWidth(100);auto* sourceRow=new QHBoxLayout;sourceRow->addWidget(sourcePicker);imageLayout->addLayout(sourceRow);
+    imageLayout->setSpacing(3);auto* toolbar=new QHBoxLayout;toolbar->setSpacing(3);
+    auto* open=new QPushButton("Open");open->setToolTip("Open Image — görüntü dosyası seç"); open->setObjectName("openImage"); toolbar->addWidget(open); connect(open,&QPushButton::clicked,this,&MainWindow::openImageDialog);
+    auto* sourcePicker=new QComboBox;sourcePicker->setObjectName("editorSourceSelector");sourcePicker->setAccessibleName("Görüntü kaynağı");sourcePicker->setMinimumWidth(70);sourcePicker->setMinimumContentsLength(4);sourcePicker->setSizeAdjustPolicy(QComboBox::AdjustToMinimumContentsLengthWithIcon);toolbar->addWidget(sourcePicker,1);
     connect(sourcePicker,&QComboBox::activated,this,[this,sourcePicker](int){selectTool(sourcePicker->currentData().toString());});
-    auto* reload=new QPushButton("Reload"); reload->setObjectName("reloadImage"); toolbar->addWidget(reload);
-    connect(reload,&QPushButton::clicked,this,[this]{if(service_.activeRecipe() && service_.activeRecipe()->definition["editor"].toObject()["schemaVersion"]==9){const auto source=editorSession_.sourceForTool(editorContext(),selectedToolId_);if(!source.isEmpty())runExecution(source);}else {imageBinding_.clear();refreshWorkspace();}});
+    auto* viewerMore=new QToolButton;viewerMore->setText("...");viewerMore->setObjectName("viewerMore");viewerMore->setToolTip("Görüntü: Reload, zoom ve ROI geometrisi");viewerMore->setAccessibleName("Görüntü komutları");viewerMore->setPopupMode(QToolButton::InstantPopup);
+    auto* viewerMenu=new QMenu(viewerMore);viewerMore->setMenu(viewerMenu);
+    auto* reload=viewerMenu->addAction("Reload"); reload->setObjectName("reloadImage");
+    connect(viewerMenu,&QMenu::aboutToShow,this,[this,viewerMenu,reload]{QTimer::singleShot(0,this,[viewerMenu,reload]{viewerMenu->setActiveAction(reload);});});
+    connect(reload,&QAction::triggered,this,[this]{if(service_.activeRecipe() && service_.activeRecipe()->definition["editor"].toObject()["schemaVersion"]==9){const auto source=editorSession_.sourceForTool(editorContext(),selectedToolId_);if(!source.isEmpty())runExecution(source);}else {imageBinding_.clear();refreshWorkspace();}});
     imageViewer_=new ImageViewer; imageViewer_->setObjectName("imageViewer");imageViewer_->setMinimumHeight(80);
     imageViewer_->setResultAnnotationsVisible(annotations->isChecked());
     auto* fit=new QPushButton("Fit"); fit->setObjectName("fitImage"); toolbar->addWidget(fit); connect(fit,&QPushButton::clicked,this,[this]{imageViewer_->fitImage();});
-    auto* minus=new QPushButton("−"); minus->setObjectName("zoomOut"); toolbar->addWidget(minus); connect(minus,&QPushButton::clicked,this,[this]{imageViewer_->zoomBy(1.0/1.25);});
-    auto* plus=new QPushButton("+"); plus->setObjectName("zoomIn"); toolbar->addWidget(plus); connect(plus,&QPushButton::clicked,this,[this]{imageViewer_->zoomBy(1.25);});
-    auto* actual=new QPushButton("1:1"); toolbar->addWidget(actual); connect(actual,&QPushButton::clicked,this,[this]{imageViewer_->actualSize();});
-    auto* geometry=new QPushButton("ROI geometrisi…");geometry->setObjectName("roiGeometry");geometry->setToolTip("Geçici subpixel geometri; reçeteye bağlı değildir.");toolbar->addWidget(geometry);
-    connect(geometry,&QPushButton::clicked,this,[this]{if(editorSession_.frame){showRoiEditor(imageViewer_,this,editorSession_.frame->metadata().coordinateSystemId.isEmpty() ? "viewer/raw":editorSession_.frame->metadata().coordinateSystemId);if(auto* dialog=findChild<QDialog*>("roiGeometryDialog"))if(!dialog->property("restoreRecipeRoi").toBool()){dialog->setProperty("restoreRecipeRoi",true);connect(dialog,&QDialog::finished,this,[this]{refreshMatchOverlay();});}}});
-    toolbar->addStretch();auto* toolbarBody=new QWidget;toolbarBody->setLayout(toolbar);toolbar->setSizeConstraint(QLayout::SetMinimumSize);
-    auto* toolbarScroll=new QScrollArea;toolbarScroll->setWidgetResizable(true);toolbarScroll->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);toolbarScroll->setFixedHeight(60);toolbarScroll->setWidget(toolbarBody);imageLayout->addWidget(toolbarScroll);
-    imageInfo_=note("Görüntü yok."); imageLayout->addWidget(imageInfo_); imageLayout->addWidget(imageViewer_,1);
+    auto* minus=viewerMenu->addAction("Zoom −"); minus->setObjectName("zoomOut");connect(minus,&QAction::triggered,this,[this]{imageViewer_->zoomBy(1.0/1.25);});
+    auto* plus=viewerMenu->addAction("Zoom +"); plus->setObjectName("zoomIn");connect(plus,&QAction::triggered,this,[this]{imageViewer_->zoomBy(1.25);});
+    auto* actual=viewerMenu->addAction("1:1");connect(actual,&QAction::triggered,this,[this]{imageViewer_->actualSize();});
+    auto* geometry=viewerMenu->addAction("ROI geometrisi…");geometry->setObjectName("roiGeometry");geometry->setToolTip("Geçici subpixel geometri; reçeteye bağlı değildir.");
+    connect(geometry,&QAction::triggered,this,[this]{if(editorSession_.frame){showRoiEditor(imageViewer_,this,editorSession_.frame->metadata().coordinateSystemId.isEmpty() ? "viewer/raw":editorSession_.frame->metadata().coordinateSystemId);if(auto* dialog=findChild<QDialog*>("roiGeometryDialog"))if(!dialog->property("restoreRecipeRoi").toBool()){dialog->setProperty("restoreRecipeRoi",true);connect(dialog,&QDialog::finished,this,[this]{refreshMatchOverlay();});}}});
+    toolbar->addWidget(viewerMore);imageLayout->addLayout(toolbar);
+    imageInfo_=new ElidedLabel;imageInfo_->setObjectName("muted");imageInfo_->setText("Görüntü yok."); imageLayout->addWidget(imageInfo_); imageLayout->addWidget(imageViewer_,1);
     auto* footer=new QHBoxLayout; pixelInfo_=note("Piksel: —"); zoomInfo_=note("Zoom: —"); footer->addWidget(pixelInfo_,1); footer->addWidget(zoomInfo_); imageLayout->addLayout(footer);
     imageViewer_->onZoom=[this](double zoom){zoomInfo_->setText(QString("Zoom: %1%").arg(zoom*100,0,'f',1)); pixelInfo_->setText("Piksel: —");};
     imageViewer_->onPixel=[this](QPoint pixel){const ImageFrame* displayed=drawingImage_ ? &*drawingImage_:editorSession_.frame ? &*editorSession_.frame:nullptr;if(editorSession_.cycle)for(const auto& r:editorSession_.cycle->tools)if(r.toolId==selectedToolId_){auto it=r.outputs.constFind("image");if(it!=r.outputs.cend() && it->valid)if(const auto* image=std::get_if<ImageFrame>(&it->data))displayed=image;}pixelInfo_->setText(displayed && pixel.x()>=0 ? QString("X:%1 Y:%2 px  |  %3").arg(pixel.x()).arg(pixel.y()).arg(displayed->pixelText(pixel.x(),pixel.y())) : "Piksel: —");};
@@ -102,7 +129,7 @@ QWidget* MainWindow::makeEditor() {
     auto* scroll=new QScrollArea; scroll->setObjectName("propertiesScroll"); scroll->setWidgetResizable(true); scroll->setMinimumWidth(210);
     propertiesBody_=new QWidget; new QVBoxLayout(propertiesBody_); scroll->setWidget(propertiesBody_); horizontal_->addWidget(scroll);
     horizontal_->setStretchFactor(1,1);
-    auto* tabs=new QTabWidget; tabs->setObjectName("editorTabs"); tabs->setMinimumHeight(120);
+    auto* tabs=new QTabWidget; tabs->setObjectName("editorTabs"); tabs->setMinimumHeight(100);
     auto* flowPage=new QWidget; auto* flowLayout=new QHBoxLayout(flowPage); flowLayout->setContentsMargins(4,4,4,4);
     auto* graphPanel=new QWidget;auto* graphLayout=new QVBoxLayout(graphPanel);graphLayout->setContentsMargins(0,0,0,0);flowLayout->addWidget(graphPanel,1);
     graphInfo_=note("READY");auto* graphScroll=new QScrollArea;graphScroll->setWidgetResizable(true);graphScroll->setWidget(graphInfo_);graphLayout->addWidget(graphScroll,1);
@@ -121,7 +148,7 @@ QWidget* MainWindow::makeEditor() {
     for (const auto name : {"Log","Variables","Communication","Diagnostics"}) tabs->addTab(note(QString(name)+" — henüz veri yok."),name);
     vertical_=new QSplitter(Qt::Vertical); vertical_->setObjectName("editorVertical"); vertical_->setChildrenCollapsible(false);
     vertical_->addWidget(horizontal_); vertical_->addWidget(tabs); vertical_->setStretchFactor(0,1); layout->addWidget(vertical_,1);
-    horizontal_->setSizes({180,680,300}); vertical_->setSizes({540,220});
+    horizontal_->setSizes({170,780,280}); vertical_->setSizes({640,160});
     auto* escape=new QShortcut(QKeySequence(Qt::Key_Escape),page); escape->setContext(Qt::WidgetWithChildrenShortcut);
     connect(escape,&QShortcut::activated,this,[this]{pendingDrawTool_.clear();if(imageViewer_->roiGestureActive()){imageViewer_->cancelRoi();return;}imageViewer_->drawRegion(false);}); return page;
 }
@@ -174,7 +201,8 @@ void MainWindow::refreshEditor() {
             loadImageAsync(path,false);
         }
     }
-    for (const auto name : {"openImage","reloadImage","addTool"}) if (auto* button=findChild<QPushButton*>(name)) button->setEnabled(recipe!=nullptr);
+    for (const auto name : {"openImage","addTool"}) if (auto* button=findChild<QPushButton*>(name)) button->setEnabled(recipe!=nullptr);
+    findChild<QAction*>("reloadImage")->setEnabled(recipe!=nullptr);
     if (!propertiesEditing_) showToolProperties();
     bool sourceSelected=false; for (const auto& t : tools) if (t.id==selectedToolId_ && t.kind=="image_file") sourceSelected=true;
     imageViewer_->setSourceSelected(sourceSelected);

@@ -29,7 +29,8 @@ bool MainWindow::verifyMultiSource(const QString& artifacts){
     service_.createProject("Multi-source Editor","",dir.filePath("project.vfproject"),"file");service_.save();
     for(int n:{1,2,8,10})for(const auto type:{ApplicationType::Measurement,ApplicationType::DefectInspection,ApplicationType::RobotGuidance}){
         service_.createRecipe(QString("%1 sources %2").arg(n).arg(typeKey(type)),"",type,"file");refreshWorkspace();selectPage("editor");wait();
-        auto* opt=findChild<QPushButton*>("enableMultiSource");check(opt && opt->isVisible(),"Explicit migration command");opt->click();check(service_.activeRecipe()->definition["editor"].toObject()["schemaVersion"]==9,"UI explicit opt-in");
+        auto* more=findChild<QPushButton*>("editorMore");if(!more->isChecked())more->click();
+        auto* opt=findChild<QPushButton*>("enableMultiSource");check(opt && opt->isVisible(),"Explicit migration command in recipe details");opt->click();check(service_.activeRecipe()->definition["editor"].toObject()["schemaVersion"]==9,"UI explicit opt-in");more->click();
         QVector<QString> sources,edges;QVector<ToolConnection> links;
         for(int i=0;i<n;++i){QImage image(256+i,160,QImage::Format_Grayscale8);image.fill(10+i);for(int y=0;y<160;++y)for(int x=80+i;x<180+i;++x)image.scanLine(y)[x]=220;
             const auto path=dir.filePath(QString("source-%1.png").arg(i));check(image.save(path),"Actual distinct PNG");const auto source=service_.addTool("image_file");service_.setImageFile(path,source);const auto edge=service_.addTool("edge_point");sources<<source;edges<<edge;

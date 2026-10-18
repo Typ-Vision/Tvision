@@ -5,15 +5,16 @@
 
 ## Devam noktası
 
-- **EUI-06 tamam.** Workspace pin/28 px şerit, gecikmeli yüzer açılma ve yerel tercih.
-  [Kapanış/testler/görseller](archive/2026-10-18-eui-06.md).
+- **EUI-07 tamam.** Kompakt Editor ve geniş viewer.
+  [Kapanış](archive/2026-10-18-eui-07.md).
+  [EUI-06](archive/2026-10-18-eui-06.md): Workspace pin/28 px şerit ve yüzer açılma.
   [EUI-05](archive/2026-10-18-eui-05.md): gruplu Toolbox/arama ve eski Edge korunur.
   Önceki [04](archive/2026-10-18-eui-04.md) N ok/canlı yay,
   [03](archive/2026-10-18-eui-03.md) zoom,
   [02](archive/2026-10-18-eui-02.md) sınır filtresi ve
   [01](archive/2026-10-18-eui-01.md) ROI kabulü korunur.
-  Blob4 / engine28 / editor1–9 no-op korunur. **Sıradaki EUI-07.**
-  EUI-07–08 açık. [Kartlar](architecture/editor-refinement-plan.md).
+  Blob4 / engine28 / editor1–9 no-op korunur. **Sıradaki EUI-08.**
+  [Kartlar](architecture/editor-refinement-plan.md).
 - [ICM-PLAN-02](archive/2026-10-18-icm-plan-02.md): ortak yazılım/donanım kabulü ayrı.
   [06a](archive/2026-10-18-icm-06a.md)/[06b](archive/2026-10-18-icm-06b.md)
   kalibrasyon/profil/aktivasyon tamam; 04f–05b kapanışları [arşivde](archive/README.md).
@@ -106,8 +107,8 @@ Görevler: [ana plan](architecture/industrial-camera-plan.md), seçili kart ve s
 
 ## Kapanış ve sonraki adım
 
-**EUI-06 tamam. Kullanıcı talimatındaki ikinci görev EUI-07.**
-Plan 07→08, kullanıcı testi/düzeltme ve kamera önkoşullarıdır.
+**EUI-06 ve EUI-07 sıralı tamam. Sıradaki EUI-08 birleşik kabul.**
+Sonra kullanıcı testi/düzeltme ve kamera önkoşulları.
 [ICM-09b](archive/2026-10-18-icm-09b-start.md) G0/G1 bekliyor; H01–H08 açık.
 Basler/Daheng model/SDK 01→02 veya OECS belgeli pending-command bariyeri gerekir.
 Tamamlanan hazırlıklar tekrarlanmaz; ölçüm adayı configure girdisi değildir.

@@ -285,9 +285,10 @@ void MainWindow::refreshWorkspace() {
         new QTreeWidgetItem(projectTree_,{"Variables","Henüz yok"}); new QTreeWidgetItem(projectTree_,{"Logs","Henüz yok"});
         projectTree_->expandAll();
     } else projectSummary_->setText("Proje yok. New Project veya Open Project ile başlayın.");
-    editorContext_->setText(active ? QString("%1  |  %2  |  Kaynak: %3  |  v%4  |  %5%6\nTool yürütmesi: Run Flow / Results.")
-        .arg(active->name,typeLabel(active->applicationType),active->cameraReference,QString::number(active->recipeVersion),statusKey(active->status),
-             service_.recipeDirty(active->id) ? " • Kaydedilmedi" : "") : "Yerleşim önizlemesi — aktif reçete yok.");
+    if(auto* name=findChild<QLabel*>("editorRecipeName"))name->setText(active ? active->name:"Recipe Editor");
+    editorContext_->setText(active ? QString("%1%2 · %3 · v%4")
+        .arg(statusKey(active->status),service_.recipeDirty(active->id) ? " • Kaydedilmedi":"",typeLabel(active->applicationType),QString::number(active->recipeVersion)) : "Aktif reçete yok");
+    editorContext_->setToolTip(context_->text()+(active ? "\nKaynak: "+active->cameraReference:QString{}));
     dashboardRecipe_->setText(active ? active->name+" / "+typeLabel(active->applicationType)+" / "+statusKey(active->status) : "Seçilmedi");
     for (const auto& id : {"newRecipe","saveProject","saveRecipes","editProject"})
         if (auto* button=findChild<QPushButton*>(id)) button->setEnabled(has);

@@ -155,6 +155,16 @@ Mevcut satır açıldığında uygulama türü otomatik yüklenir. Tür değişt
 
 Üst bölüm: Recipes'e geri dönüş, Recipe Name, Application Type, Camera, Version, Dirty/Draft durumu, Test/Run, Save, Export ve Runtime.
 
+Editor kompakt iki satır kullanır: üstte kısaltılabilir reçete adı ile ayrı görünür
+draft/dirty, tür ve sürüm; altta Recipes, Save, Run Flow, Run Tool/Görüntü al,
+Stop ve açıklama tercihi. İkincil reçete bilgileri/çok kaynak geçişi “...” altında
+katlanır. Viewer Open/kaynak/Fit satırını kullanır; Reload/zoom/ROI komutları ayrı
+“...” menüsündedir. Kaynak/frame kimliği tek satırda kısaltılır; tam metni tooltip
+ve erişilebilirlik korur. Hatalar kısaltılan bilgi alanına taşınmaz; Run Tool
+durum ve hatayı göstermek için Results'ı açar. Yerel tema diğer sayfaları değiştirmez.
+Viewer stretch önceliği, boyutlandırılabilir Toolbox/Properties/alt panel ve
+850×600 komut erişimi korunur. Ayrıntılı kullanım [Editor rehberindedir](../editor-usage.md).
+
 Ana bölümler Toolbox, Image Viewer, Properties ve alt Flow/Result/Log'dur. Uygulama türü toolbox önceliğini, başlangıç flow'unu ve sonuç kartlarını belirler. Ortak araçlar uyumlu oldukları sürece tüm türlerde kullanılabilir.
 
 Kaydedilmemiş değişiklikler görünür olmalıdır. Reçete değiştirme veya ekran kapatma durumunda değişiklikler kaybolmamalı; draft korunmalı veya açık Save/Discard seçimi sunulmalıdır.

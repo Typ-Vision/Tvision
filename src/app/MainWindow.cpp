@@ -50,7 +50,7 @@ MainWindow::MainWindow(const QString& settingsFile) : settingsFile_(settingsFile
     connect(editor,&QAction::triggered,this,[this]{selectPage("editor");});
     auto* reset = view->addAction("Panel düzenini sıfırla");
     reset->setObjectName("resetPanels");
-    connect(reset,&QAction::triggered,this,[this]{workspacePanel_->setPinned(true);horizontal_->setSizes({200,700,260}); vertical_->setSizes({550,210});});
+    connect(reset,&QAction::triggered,this,[this]{workspacePanel_->setPinned(true);horizontal_->setSizes({170,780,280}); vertical_->setSizes({640,160});});
     auto* pinWorkspace=view->addAction("Workspace sabit");pinWorkspace->setCheckable(true);pinWorkspace->setObjectName("pinWorkspace");
     connect(pinWorkspace,&QAction::triggered,this,[this](bool pinned){workspacePanel_->setPinned(pinned);});
     auto* setup = menuBar()->addMenu("Setup");
@@ -154,6 +154,11 @@ void MainWindow::selectPage(const QString& id) {
         }
     }
     pages_->setCurrentIndex(index);
+    pageTitle_->setVisible(id!="editor");context_->setVisible(id!="editor");
+    if(auto* contentLayout=qobject_cast<QVBoxLayout*>(pages_->parentWidget()->layout())) {
+        contentLayout->setContentsMargins(id=="editor" ? 8:20,id=="editor" ? 6:16,id=="editor" ? 8:20,id=="editor" ? 6:16);
+        contentLayout->setSpacing(id=="editor" ? 4:6);
+    }
     if(id=="calibration")refreshCalibration();
     if(id=="camera" && cameraManager_)cameraManager_->refresh();
     if(id=="runtime")refreshRuntime();
