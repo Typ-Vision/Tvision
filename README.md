@@ -14,10 +14,10 @@ UI algoritma veya donanım SDK'sını doğrudan çağırmaz.
   kalibrasyon sihirbazları; aday kaydı ile etkinleştirme ayrı işlemlerdir.
 - Çok kaynaklı Editor ve immutable Runtime hazırlığı; gerçek çevrim, kalıcı terminal
   kayıtları, restart geçmişi, Logs/CSV ve vf.socket2 scalar mapping.
-- Image File/Webcam edinimi; Camera Manager'da ortak keşif, kamera kaydı ve
-  çevrimdışı Mono8 profil taslağı. Native endüstriyel edinim kapalıdır;
-  Industrial Camera Editor kaynağına kayıtlı kamera/kurulum/profil bağlanabilir;
-  kare isteği ortak worker/provider yolundadır. Native edinim ve industrial Runtime üretimi kapalıdır.
+- Image File/Webcam edinimi; Camera Manager'da keşif, kamera kaydı ve Mono8 profil
+  taslağı. Industrial Editor kaynağına kayıtlı kamera/kurulum/profil bağlanır;
+  kare isteği ortak worker/provider yolundadır. Industrial Load çevrimdışı beyanı
+  gösterir; Run tam native kabul ister. Native industrial edinim/üretim kapalıdır.
 
 Hazırlık veya keşif sonucu üretim kabulü değildir. Gerçek sonuç olmadan PASS, skor
 veya robot pose gösterilmez. Robot hazırlık ekranları çalışan robot entegrasyonu

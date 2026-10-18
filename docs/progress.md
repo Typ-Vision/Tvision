@@ -11,7 +11,7 @@ Güncel yönlendirme önceliklidir. [Arşiv](archive/README.md).
   [06a](archive/2026-10-18-icm-06a.md), [06b kapanış](archive/2026-10-18-icm-06b.md).
   Önceki [04f](archive/2026-10-18-icm-04f.md), [05a](archive/2026-10-18-icm-05a.md),
   [05b](archive/2026-10-18-icm-05b.md) tamam.
-  Sıradaki **08c → 09a**.
+  Sıradaki **09a**.
   [04f kartı](architecture/industrial-camera-tasks-foundation.md),
   [Basler/Daheng paketleri](architecture/industrial-camera-tasks-backends.md).
   OECS native 04d/04e açık/ertelenmiş; ortak sıra için önkoşul değil. Test adaptörü
@@ -46,7 +46,7 @@ Güncel yönlendirme önceliklidir. [Arşiv](archive/README.md).
   [Görev kartları](architecture/industrial-camera-tasks-foundation.md).
   ICM-00 veya tamamlanmış KMC görevlerini yeniden başlatmayın.
 - Ana hedef Basler/Daheng PoE; deney cihazı COE-U USB3/OECS. Tanı probe'u üretim
-  admission/tazelik garantisi değildir. Application edinimi ve Editor seçim UI hazır; Runtime bağlantısı bekliyor. Native/production kapıları korunur.
+  admission/tazelik garantisi değildir. Editor/Runtime bağlantısı hazır; native edinim bekliyor. Native/production kapıları korunur.
 
 Görevler: [ana plan](architecture/industrial-camera-plan.md), seçili kart ve sözleşme.
 
@@ -89,11 +89,12 @@ Görevler: [ana plan](architecture/industrial-camera-plan.md), seçili kart ve s
 
 ## Son doğrulama ve çalışma ortamı
 
-- **ICM-08b tamam:** trusted industrial completion, terminal8/9, retry ve SDK'sız
-  history/CSV. [Kapanış](archive/2026-10-18-icm-08b.md). Engine **/27**.
-  Release core ilgili 6/8; HELLO hatalı iki socket testi sandbox dışı 2/2.
-  Release UI Runtime 1/1. Kanıt `build/icm-08b-*`; tam/fiziksel kabul yok.
-  [08a admission](archive/2026-10-18-icm-08a.md) tamam; native factory kapalı.
+- **ICM-08b/08c tamam:** trusted completion/terminal8–9 ve Runtime/Logs/CSV.
+  [08b](archive/2026-10-18-icm-08b.md), [08c](archive/2026-10-18-icm-08c.md).
+  Engine **/27**; [08a admission](archive/2026-10-18-icm-08a.md) hazır.
+  08c core 5/5, terminal corpus 1/1; UI 3/3, son Runtime 1/1.
+  Kanıt `build/icm-08c-*`, görseller `build/reference-ui/icm/08c/`.
+  Load beyandır; Run admission ister; native kapalı; tam kabul yok.
 - [07c](archive/2026-10-18-icm-07c.md) Editor profil seçimi/açık binding ve worker bağlantısı:
   Release UI ilgili CTest 5/5, normal/küçük görseller `build/reference-ui/icm/07c/`.
   [07b](archive/2026-10-18-icm-07b.md) execution/provider/TargetOnly tamam.
@@ -105,8 +106,8 @@ Görevler: [ana plan](architecture/industrial-camera-plan.md), seçili kart ve s
 
 ## Kapanış ve sonraki adım
 
-**ICM-08b tamam; sıradaki ICM-08c, ardından ICM-09a.** 04e-a/b, 05a-a, 07a-a yeniden yapılmaz;
-ölçüm adayı configure girdisi değildir. 07b/07c edinim/UI, 08a admission ve 08b terminal hazır; native G1 kapalı.
+**ICM-08b/08c tamam; sıradaki ICM-09a.** 04e-a/b, 05a-a, 07a-a yeniden yapılmaz;
+ölçüm adayı configure girdisi değildir. 07b/07c edinim/UI, 08a admission, 08b terminal ve 08c sunum hazır; native G1 kapalı.
 [04d cancel incelemesi](archive/2026-10-18-icm-04d-cancel-audit.md): AcquisitionAbort
 yok; DeviceReset garantisiz, çalıştırılmadı. Üretici taslağı gönderilmedi.
 Delay=0, close/open/sessizlik kanıt değil; aynı deneyi tekrarlamayın. Native Unavailable.

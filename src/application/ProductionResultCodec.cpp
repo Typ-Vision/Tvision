@@ -1,5 +1,6 @@
 #include "ProductionResultCodec.hpp"
 #include "IndustrialRuntime.hpp"
+#include "SourceStatusPresenter.hpp"
 #include "domain/ReferenceBinding.hpp"
 #include "SystemCalibration.hpp"
 #include "SourceFrameIndex.hpp"
@@ -128,6 +129,7 @@ void ProductionResultCodec::validate(const QJsonObject& record) {
 QString ProductionResultCodec::summary(const QJsonObject& record) {
     validate(record);QStringList lines;
     if((record["schemaVersion"]==7 || record["schemaVersion"]==9)){lines<<"Çok kaynaklı tarihsel kanıt • çalışma izni değildir";const auto branches=record["branches"].toObject();for(auto i=branches.begin();i!=branches.end();++i)lines<<"Kaynak: "+i.key()+"\n"+summary(i->toObject());return lines.join('\n');}
+    if(record["schemaVersion"]==8){const auto a=record["industrialAcquisition"].toObject();lines<<acquisitionStatus(a["status"]=="ACQUIRED" ? "DONE":record["state"].toString(),a["reason"].toString()+" "+a["errorCode"].toString());lines<<presentIndustrialSource({},record["industrialSource"].toObject(),record["industrialAcquisition"].toObject()).detail;lines<<(record.contains("systemCalibration") ? "Kaynağa bağlı ölçüm modeli • karar araç bazında":"Raw / px • ölçüm doğrulanmadı");}
     for(const auto& item:record["tools"].toArray()) {
         const auto t=item.toObject();lines<<t["name"].toString(t["toolId"].toString())+" • "+t["state"].toString()+" • "+t["decision"].toString();
         const auto outputs=t["outputs"].toObject();

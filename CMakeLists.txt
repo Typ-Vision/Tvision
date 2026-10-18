@@ -60,7 +60,8 @@ target_sources(visionflow_acquisition PRIVATE src/application/IndustrialMeasurem
 target_sources(visionflow_acquisition PRIVATE src/application/CameraWorkerSession.cpp)
 target_sources(visionflow_acquisition PRIVATE src/application/IndustrialCameraProvider.cpp)
 target_sources(visionflow_acquisition PRIVATE src/application/IndustrialExecution.cpp
-  src/application/IndustrialRuntime.cpp)
+  src/application/IndustrialRuntime.cpp
+  src/application/SourceStatusPresenter.cpp)
 target_sources(visionflow_acquisition PRIVATE src/application/CameraLocalConfiguration.cpp)
 target_sources(visionflow_acquisition PRIVATE src/application/WebcamAdapter.cpp src/vision/Preprocessing.cpp src/vision/codes/CodeReader.cpp src/application/CodeReadService.cpp)
 target_sources(visionflow_acquisition PRIVATE src/vision/metrology/ProfileSampler.cpp src/application/MetrologyService.cpp)
@@ -454,7 +455,7 @@ if(BUILD_TESTING)
     add_test(NAME roi_viewer_interaction COMMAND roi_viewer_test)
     set_tests_properties(roi_viewer_interaction PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen" LABELS "ui")
     add_test(NAME ui_multi_source_runtime COMMAND visionflow --multi-source-runtime-smoke)
-    set_tests_properties(ui_multi_source_runtime PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen" LABELS "ui")
+    set_tests_properties(ui_multi_source_runtime PROPERTIES TIMEOUT 120 ENVIRONMENT "QT_QPA_PLATFORM=offscreen" LABELS "ui")
     add_test(NAME ui_multi_source_editor COMMAND visionflow --multi-source-smoke)
     set_tests_properties(ui_multi_source_editor PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen" LABELS "ui")
     add_test(NAME ui_editor_usability COMMAND visionflow --usability-smoke)

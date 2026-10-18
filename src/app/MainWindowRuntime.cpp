@@ -5,6 +5,8 @@
 #include "EdgeProfileView.hpp"
 #include "application/ToolResultCodec.hpp"
 #include "application/ProductionResultCodec.hpp"
+#include "application/SourceStatusPresenter.hpp"
+#include "application/IndustrialRuntime.hpp"
 #include "application/ReferenceService.hpp"
 #include <QFileDialog>
 #include <QSaveFile>
@@ -32,14 +34,14 @@ QLabel* plain(const QString& value){auto* label=new QLabel(value);label->setWord
 }
 QWidget* MainWindow::makeRuntime() {
     auto* page=new QWidget;auto* layout=new QVBoxLayout(page);
-    layout->addWidget(plain("Load Recipe → Run. Run görüntü almaz; manuel test için Tek çevrim seçin. Üç uygulama türü aynı Runtime'ı kullanır. Fiziksel ölçüm kabulü ayrıdır."));
+    layout->addWidget(plain("Load Recipe → Run. Run hazırlıktır; Tek çevrim gerçek edinim ister. Fiziksel kabul ayrıdır."));
     runtimeStatus_=plain("Aktif sürüm yok; çevrim çalıştırılmadı.");runtimeStatus_->setObjectName("runtimeStatus");layout->addWidget(runtimeStatus_);
     auto* actions=new QHBoxLayout;
     const QVector<QPair<QString,QString>> commands{{"run","Run"},{"stop","Stop"},{"cycle","Tek çevrim"},{"retry","Kaydı tekrar yaz"}};
     for(const auto& command:commands){auto* b=new QPushButton(command.second);b->setObjectName("runtime_"+command.first);actions->addWidget(b);connect(b,&QPushButton::clicked,this,[this,action=command.first]{runtimeAction(action);});}
     layout->addLayout(actions);
     runtimeSources_=new QComboBox;runtimeSources_->setObjectName("runtimeSourceSelector");runtimeSources_->setAccessibleName("Runtime görüntü kaynağı");layout->addWidget(runtimeSources_);
-    runtimePreparation_=new QTableWidget;runtimePreparation_->setObjectName("runtimePreparation");runtimePreparation_->setColumnCount(4);runtimePreparation_->setHorizontalHeaderLabels({"Kaynak","Kurulum / model","Hazırlık","Gerçek kare"});runtimePreparation_->setEditTriggers(QAbstractItemView::NoEditTriggers);runtimePreparation_->setSelectionBehavior(QAbstractItemView::SelectRows);runtimePreparation_->setSelectionMode(QAbstractItemView::SingleSelection);runtimePreparation_->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);runtimePreparation_->setMaximumHeight(130);layout->addWidget(runtimePreparation_);
+    runtimePreparation_=new QTableWidget;runtimePreparation_->setObjectName("runtimePreparation");runtimePreparation_->setColumnCount(4);runtimePreparation_->setHorizontalHeaderLabels({"Kaynak","Kurulum / model","Hazırlık","Gerçek kare"});runtimePreparation_->setEditTriggers(QAbstractItemView::NoEditTriggers);runtimePreparation_->setSelectionBehavior(QAbstractItemView::SelectRows);runtimePreparation_->setSelectionMode(QAbstractItemView::SingleSelection);runtimePreparation_->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);runtimePreparation_->setMinimumHeight(130);runtimePreparation_->setMaximumHeight(150);layout->addWidget(runtimePreparation_);
     auto* history=new QPushButton("Logs / CSV");history->setObjectName("runtimeHistory");connect(history,&QPushButton::clicked,this,[this]{selectPage("logs");refreshLogs();});actions->addWidget(history);
     connect(runtimeSources_,&QComboBox::currentIndexChanged,this,[this]{showRuntimeResult();});
     connect(runtimePreparation_,&QTableWidget::currentCellChanged,this,[this](int row,int,int,int){if(row>=0 && row<runtimeSources_->count())runtimeSources_->setCurrentIndex(row);});
@@ -106,7 +108,7 @@ void MainWindow::refreshRuntime() {
     case RuntimeState::Starting:status="Hazırlanıyor";break;
     case RuntimeState::Running:status=working ? "Çalışıyor — çevrim sürüyor" : (runtimeCoordinator_->mode()==RuntimeTrigger::Manual ? "Çalışıyor — manuel çevrim bekleniyor" : "Çalışıyor — yazılım tetiği bekleniyor");break;
     case RuntimeState::Stopping:status="Durduruluyor — kayıt bekleniyor";break;
-    case RuntimeState::Fault:status="FAULT — "+runtimeCoordinator_->error();break;
+    case RuntimeState::Fault:status="FAULT — "+runtimeCoordinator_->error();if(runtimeCoordinator_->loaded())for(const auto& t:editorTools(runtimeCoordinator_->loaded()->definition))if(t.enabled && t.kind=="industrial_camera"){status="FAULT — "+acquisitionStatus("ERROR",runtimeCoordinator_->error());break;}break;
     }
     if(runtimeCoordinator_ && runtimeCoordinator_->loaded()){
         const auto& r=*runtimeCoordinator_->loaded();status+="\nYüklü: "+r.name+QString(" • v%1 • %2").arg(r.recipeVersion).arg(typeLabel(r.applicationType));
@@ -154,7 +156,7 @@ void MainWindow::runtimeAction(const QString& action) {
             runtimeJobs_.launch(watcher,[cycle,catalog,cancel]{return RuntimeService::execute(cycle,catalog,cancel);});
         }
         refreshRuntime();
-    }catch(const std::exception& e){runtimeSummary_->setText(QString::fromUtf8(e.what()));refreshRuntime();}
+    }catch(const std::exception& e){const auto diagnostic=QString::fromUtf8(e.what());runtimeSummary_->setText(diagnostic.contains("native",Qt::CaseInsensitive) ? "Endüstriyel kamera kullanılamıyor. Bu backend için edinim doğrulaması tamamlanmadı.":diagnostic);runtimeSummary_->setToolTip(diagnostic);refreshRuntime();}
 }
 void MainWindow::refreshRuntimeSources(){
     if(!runtimeSources_)return;
@@ -173,13 +175,30 @@ void MainWindow::refreshRuntimeSources(){
         if(runtimeResult_)for(const auto& result:runtimeResult_->tools)if(result.toolId==tool.id)readiness=executionStateName(result.state)+(result.errorCode.isEmpty() ? "":" / "+result.errorCode);
         QString sourceLabel=tool.name;const auto binding=deps["measurementSource"].toObject()["binding"].toObject();
         if(!binding.isEmpty()){const auto target=SetupReference::fromJson(binding["target"].toObject());sourceLabel+=" / "+target.camera.value;model+=QString(" / %1 r%2").arg(target.setup.value).arg(target.revision);}
-        const QStringList values{sourceLabel,model,readiness,actual};for(int col=0;col<values.size();++col){auto* item=new QTableWidgetItem(values[col]);item->setToolTip(values[col]+"\n"+tool.id);runtimePreparation_->setItem(row,col,item);}
+        QString industrialDetail;
+        if(tool.kind=="industrial_camera"){
+            const auto admission=deps["industrialSource"].toObject();QJsonObject acquisition;
+            if(runtimeResult_ && runtimeResult_->industrialEvidence.contains(tool.id))acquisition=industrialCompletionEvidence(*runtimeResult_->industrialEvidence[tool.id]);
+            const auto presentation=presentIndustrialSource(tool.parameters["sourceReference"].toObject(),admission,acquisition);
+            sourceLabel+="\n"+presentation.device;model+="\n"+presentation.configuration;industrialDetail=presentation.detail;
+            if(!deps.contains("systemCalibration"))model+="\nÖlçüm doğrulanmadı";
+            if(runtimeResult_){for(const auto& t:runtimeResult_->tools)if(t.toolId==tool.id){
+                if(runtimeResult_->state==ExecutionState::Skipped)readiness=acquisitionStatus("SKIPPED");
+                else if(t.state==ExecutionState::Skipped)readiness="Çalıştırılmadı • kare yok";
+                else readiness=acquisitionStatus(executionStateName(t.state),t.errorCode+" "+t.message);
+                if(t.state==ExecutionState::Done && actual=="Kare yok" && runtimeResult_->state!=ExecutionState::Skipped)readiness="Kare yok";
+                industrialDetail+="\n"+t.message;
+            }}
+            else if(runtimeCoordinator_ && runtimeCoordinator_->state()==RuntimeState::Fault){readiness=acquisitionStatus("ERROR",runtimeCoordinator_->error());industrialDetail+="\n"+runtimeCoordinator_->error();}
+        }
+        const QStringList values{sourceLabel,model,readiness,actual};for(int col=0;col<values.size();++col){auto* item=new QTableWidgetItem(values[col]);item->setToolTip(values[col]+"\n"+tool.id+"\n"+industrialDetail);runtimePreparation_->setItem(row,col,item);}
     }
+    runtimePreparation_->resizeRowsToContents();
     runtimeSources_->setCurrentIndex(std::max(0,runtimeSources_->findData(previous)));runtimePreparation_->selectRow(runtimeSources_->currentIndex());runtimeSources_->setVisible(runtimeSources_->count()>1);runtimePreparation_->setVisible(runtimeSources_->count()>0);
 }
 void MainWindow::showRuntimeResult() {
     if(!runtimeViewer_)return;
-    refreshRuntimeSources();
+    runtimeSummary_->setToolTip({});refreshRuntimeSources();
     runtimeEdgeProfile_->setDiagnostics({});runtimeViewer_->onRoiChanged={};runtimeViewer_->setRoi({},false);runtimeViewer_->setRoiRecipeBound(false);
     runtimeViewer_->setToolOverlay({},{});
     if(!runtimeResult_){runtimeViewer_->clearImage("Yeni çevrim sonucu yok.");runtimeSummary_->setText("READY — sonuç yok.");QSignalBlocker blocker(runtimeTools_);runtimeTools_->clear();return;}
@@ -187,6 +206,7 @@ void MainWindow::showRuntimeResult() {
     if(snapshot && snapshot->dependencies().contains("systemCalibration")){const auto s=SystemCalibration::decodeEvidence(snapshot->dependencies()["systemCalibration"].toObject());lines<<QString("Sistem kalibrasyonu: %1 v%2 • etkinleştirme %3").arg(s.record.name()).arg(s.selection.version).arg(s.selection.revision)<<(s.record.residualsMillimetres().isEmpty() ? "Bağımsız kontrol yapılmadı":"Bağımsız kontrol kanıtı mevcut");if(!s.scope.isEmpty()){const auto target=SetupReference::fromJson(s.scope["target"].toObject());lines<<QString("Kamera %1 • kurulum %2 r%3").arg(target.camera.value,target.setup.value).arg(target.revision);}}
     lines<<executionStateName(c.state)+QString(" • %1 ms").arg(c.milliseconds,0,'f',2)<<"Cycle: "+c.cycleId<<"Frame: "+c.frameId<<"Config: "+QString::fromLatin1(c.configId.left(12))<<(plc_ && plc_->listening() ? "Kalıcı kayıt tamamlandı • PLC durumu Communication ekranında" : "Kalıcı kayıt tamamlandı • İletişim: NOT_REQUESTED");
     if(snapshot && snapshot->dependencies().contains("sourceSet")){const auto evidence=snapshot->dependencies()["sourceSet"].toObject()[runtimeSources_->currentData().toString()].toObject()["systemCalibration"].toObject();if(!evidence.isEmpty()){const auto model=SystemCalibration::decodeEvidence(evidence);lines<<QString("Seçili kaynak modeli: %1 v%2").arg(model.record.name()).arg(model.selection.version);}}
+    if(snapshot){const auto source=runtimeSources_->currentData().toString();const auto admission=snapshot->dependencies()["sourceSet"].toObject()[source].toObject()["industrialSource"].toObject();if(!admission.isEmpty()){QJsonObject acquisition;if(c.industrialEvidence.contains(source))acquisition=industrialCompletionEvidence(*c.industrialEvidence[source]);lines<<presentIndustrialSource({},admission,acquisition).detail;}}
     if(!c.error.isEmpty())lines<<c.error;
     runtimeViewer_->setRoiMapping({"viewer/raw"});std::optional<ImageFrame> rawFrame;
     const auto selectedSource=runtimeSources_->currentData().toString();

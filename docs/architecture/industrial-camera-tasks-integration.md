@@ -178,6 +178,9 @@ Terminal8/9 ve engine/27; native G1 kapısı korunur.
 
 ## ICM-08c — Runtime ve Logs sunumu
 
+**Ortak yazılım sunumu tamam:** [kapanış](../archive/2026-10-18-icm-08c.md).
+Offline Load beyandır; Run/native kabul kapısı korunur.
+
 - Önkoşul: 08b, 07c.
 - Dosyalar: MainWindowRuntime, Logs/CSV UI, ortak source status presenter.
 - İş: N-source tablosunda device/model/seri/setup/profile ve actual frame; ayrıntıda

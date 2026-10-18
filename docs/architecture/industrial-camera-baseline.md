@@ -69,6 +69,9 @@ Kaynak yolları `src/` altındadır.
 | UI kaynakları | `app/CalibrationOverview.cpp`: webcam kaydı/düzenleme ve ROI/binning retleri; `MainWindowCalibration.cpp`: recipe source seçimi image_file/webcam; `MainWindowEditor.cpp`: webcam properties/preview caption; `MainWindowCamera.cpp`: ayrı discovery/read-only ekranı | 05b/07c/08c |
 | Backend capability | `application/BackendCapabilities.cpp`: yalnız zxing-reader kayıtlı; unknown backend unavailable. GenTL discovery bulunması acquisition backend capability değildir | 02/04a |
 
+ICM-08c: SourceStatusPresenter, Runtime/Logs actual kanıtı ve offline Load beyanı hazır.
+Run/begin native admission gerektirir; engine/27 ve terminal8/9 değişmedi.
+
 ## Şema ve sürüm tablosu
 
 Bu kart hiçbir yeni sürüm numarası ayırmaz. Sonraki kart, yeni zorunlu alanı explicit

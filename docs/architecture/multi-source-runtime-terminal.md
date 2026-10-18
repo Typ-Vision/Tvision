@@ -32,6 +32,26 @@ industrialEvidence kolonu ve edinilemeyen her industrial kaynak için boş scala
 satırı taşır. JSON raster saklamaz; hash dijital imza değildir. Normal ürün factory'si
 native G1 kanıtı olmadan açılmaz; test factory normal ürün yolundan seçilemez.
 
+## Industrial Runtime / Logs sunumu
+
+Industrial içeren editor9 reçetede Load, graph ve sourceReference yapısını kontrol
+eden çevrimdışı beyandır; aktif snapshot veya edinim yetkisi üretmez. Eksik/stale
+registry/model/backend ve bütün required set Run/prepare ile begin'de yeniden tam
+kontrol edilir. Diğer kaynakların Load kontrolleri değişmez. Run görüntü almaz.
+
+N-source tablosu beyan veya immutable snapshot'tan vendor/model/seri, kamera,
+setup/profile revision ve kaynağa bağlı modeli gösterir. Gerçek kare yalnız o
+çevrimin frame eşleşmesinden gelir. SourceStatusPresenter Runtime ve offline Logs
+aynı kimlik/actual/backend/producer kanıtını sunar; SDK veya registry çözmez.
+Unsupported, unavailable, busy ve timeout ayrı metinlerdir; özgün tanı detayda kalır.
+Stop ve çalıştırılmayan dal ayrıdır. Raw / px, ölçüm doğrulaması ve araç bazında
+parça kararı ayrı sunulur. Genel parça PASS üretilmez.
+
+Native admission sağlanmadığında offline Load görüntüsüz kalır ve Run açıkça
+kullanılamıyor döner. UI smoke 1/2/8/10 offline industrial kaynağı normal/küçük
+pencerede, mevcut gerçek file/scoped fixture'ları üç applicationType'ta sınar.
+Test fixture'ı normal uygulamaya industrial provider enjekte etmez.
+
 ## vf.socket/2
 
 Mevcut seçili `measurementToolId` scalar mapping'i bütün çevrim DONE ve ilgili gerçek Measurement sonucu olduğunda yayınlanır. Seçilen araç ikinci veya başka bir kaynağa ait olabilir. Çok output/aggregate karar eklenmedi. Terminal commit → PLC_RESULT event → ACK düzeni, timeout/retry/dedup ve süreç/oturum sınırları değişmedi. İletişim context'i aynı schema7 terminalde saklanır. Localhost fixture gerçek PLC kabulü değildir.

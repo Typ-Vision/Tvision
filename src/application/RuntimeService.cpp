@@ -99,7 +99,19 @@ ProductionDependencies RuntimeService::declaredCalibrationDependencies(const Rec
     return result;
 }
 void RuntimeService::checkConfiguration(const Recipe& r,const QString& directory) const {
-    if(r.definition["editor"].toObject()["schemaVersion"]==9){if(!multiProvider_)throw ProductionException(ProductionError::InvalidConfiguration,"Whole source-set provider required");MultiSourceRuntimeService checker(identity_,multiProvider_);checker.prepare(r,directory);return;}
+    if(r.definition["editor"].toObject()["schemaVersion"]==9){
+        if(!multiProvider_)throw ProductionException(ProductionError::InvalidConfiguration,"Whole source-set provider required");
+        const auto tools=editorTools(r.definition);bool industrial=false;for(const auto& t:tools)if(t.enabled && t.kind=="industrial_camera")industrial=true;
+        if(industrial){
+            // Load is a read-only declaration. Run/prepare and begin retain full
+            // immutable admission; offline presentation grants no backend authority.
+            validateEditorDefinition(r.definition);const auto graph=validateSourceGraph(tools,editorConnections(r.definition));
+            if(!graph.valid() || graph.requiredSources.isEmpty())throw ProductionException(ProductionError::InvalidConfiguration,"Invalid required source graph");
+            for(const auto& t:tools)if(t.enabled && t.kind=="industrial_camera")IndustrialSourceReference::fromJson(t.parameters["sourceReference"].toObject());
+            return;
+        }
+        MultiSourceRuntimeService checker(identity_,multiProvider_);checker.prepare(r,directory);return;
+    }
     ProductionRecipeService checker(identity_.authorize,[this](const Recipe& recipe){return declaredDependencies(recipe);});
     checker.validate(identity_.principal,systemRecipe(r,directory),directory);
     for(const auto& tool:editorTools(r.definition))if(tool.enabled && tool.kind=="image_file") {

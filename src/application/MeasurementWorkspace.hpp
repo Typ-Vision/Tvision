@@ -62,7 +62,7 @@ public:
         for(const auto& source:graph.requiredSources){const auto branch=SystemCalibration::branch(recipe,source);branches[source]=branch;if(SystemCalibration::requestsCalibration(branch,false)){const auto ref=SystemCalibration::setupReference(branch);if(!ref)throw std::runtime_error("Metric source requires exact setup binding");refs.append(*ref);}}
         const auto models=active_.snapshots(refs);MultiSourceDependencies set;
         for(const auto& source:graph.requiredSources)if(SystemCalibration::source(branches[source]).kind=="industrial_camera"){
-            if(!industrial)throw std::runtime_error("Industrial Runtime production pending ICM-08b/native acceptance");
+            if(!industrial)throw std::runtime_error("Industrial Runtime unavailable: admitted native backend composition required");
             auto frozen=*industrial;frozen.contract=before.current;frozen.admittedDevices.clear();frozen.leaseUse=CameraLeaseUse::Runtime;
             set.industrial=std::make_shared<const IndustrialExecutionInputs>(std::move(frozen));break;
         }

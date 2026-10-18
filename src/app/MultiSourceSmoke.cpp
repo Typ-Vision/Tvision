@@ -99,6 +99,23 @@ bool MainWindow::verifyMultiSourceRuntime(const QString& artifacts){
         runtimeAction("stop");check(!runtimeResult_ && !runtimeViewer_->hasImage(),"Stop clears current result");selectPage("logs");refreshLogs();check(logTable_->rowCount()>0 && !ProductionResultCodec::csv(runtime_->records()).isEmpty(),"Logs and CSV access");if(calibrated){bool versions=false;for(int row=0;row<logTable_->rowCount();++row){const auto text=logTable_->item(row,0)->data(Qt::UserRole).toString();versions=versions || (text.contains("Runtime scale 0") && text.contains("Runtime scale 1"));}check(versions,"Logs UI keeps per-source historical model versions");}
         runtimeAction("run");runtimeAction("cycle");runtimeAction("stop");wait();check(runtimeResult_ && runtimeResult_->state==ExecutionState::Skipped && runtimeResult_->frames.isEmpty() && !runtimeViewer_->hasImage(),"Busy Stop suppresses actual frames");runtimeAction("stop");
     }
+    // Offline industrial presentation fixture: never injects a backend into the app.
+    const auto output=QDir(artifacts).filePath("icm/08c");check(QDir().mkpath(output),"Industrial Runtime screenshot directory");
+    for(int n:{1,2,8,10}){
+        service_.createRecipe(QString("Offline industrial %1").arg(n),"",ApplicationType::Measurement,"industrial");MeasurementSetupContract contract;
+        for(int i=0;i<n;++i){const auto suffix=QString::number(n)+"-"+QString::number(i);MeasurementCamera camera{{"offline-camera-"+suffix},"Offline camera "+suffix,{"gentl",{},DeviceIdentityConfidence::Unavailable,1,{}},PhysicalDeviceIdentity{"VF","Offline model","SYNTHETIC-"+suffix,DeviceIdentityConfidence::SerialReported}};
+            GeometryDescriptor geometry;geometry.resolution={640,480};geometry.sensorRoi=QRect(0,0,640,480);geometry.binning=QSize(1,1);geometry.decimation=QSize(1,1);geometry.reverse=GeometryMirror{};geometry.complete=true;
+            MeasurementSetupDescriptor setup{{"offline-setup-"+suffix},camera.id,"Offline setup","lens","plane",1,1,geometry};AcquisitionProfile profile{{"offline-profile-"+suffix},camera.id,setup.id,"Mono8 software",1,{"Mono8",{true,"FrameStart","Software"},AutoMode::Off,100,AutoMode::Off,1,{}}};
+            contract.cameras<<camera;contract.setups<<setup;contract.profiles<<profile;
+        }
+        auto combined=measurementWorkspace_->environment().current;combined.cameras+=contract.cameras;combined.setups+=contract.setups;combined.profiles+=contract.profiles;measurementWorkspace_->replace(combined);for(const auto& profile:contract.profiles){const auto source=service_.addTool("industrial_camera");service_.bindIndustrialSource(source,contract,profile.id,1000);}service_.save();refreshWorkspace();ensureRuntime();runtimeCoordinator_->load(*service_.activeRecipe(),dir.path(),RuntimeTrigger::Manual);selectPage("runtime");refreshRuntime();
+        check(runtimePreparation_->rowCount()==n && !runtimeResult_ && !runtimeViewer_->hasImage(),"Industrial preparation has no fabricated result");
+        for(int i=0;i<n;++i)check(runtimePreparation_->item(i,0)->text().contains("SYNTHETIC-"+QString::number(n)+"-"+QString::number(i)) && runtimePreparation_->item(i,1)->text().contains("offline-profile-"+QString::number(n)+"-"+QString::number(i)) && runtimePreparation_->item(i,3)->text()=="Kare yok","Offline industrial serial/setup/profile without actual frame");
+        runtimeAction("run");check(runtimeCoordinator_->state()==RuntimeState::Fault && !runtimeResult_ && !runtimeViewer_->hasImage(),"Native admission stays unavailable");
+        check(runtimePreparation_->item(0,2)->text()=="Kullanılamıyor" && runtimePreparation_->item(0,1)->text().contains("Ölçüm doğrulanmadı"),"Unavailable differs from a raw-only result");
+        setWindowState(Qt::WindowNoState);resize(1400,900);QApplication::processEvents();check(grab().save(output+QString("/industrial-%1-normal.png").arg(n)),"Industrial normal screenshot");resize(850,600);QApplication::processEvents();check(grab().save(output+QString("/industrial-%1-small.png").arg(n)),"Industrial small screenshot");
+        check(runtimePreparation_->item(n-1,0)->toolTip().contains("SYNTHETIC-"+QString::number(n)+"-"+QString::number(n-1)),"All source details remain accessible");
+    }
     QTextStream(stdout)<<checks<<" multi-source Runtime UI checks passed\n";return true;
 }
 }

@@ -7,11 +7,13 @@
 #include "application/ProductionResultCodec.hpp"
 #include "application/ProductionStore.hpp"
 #include <QLockFile>
+#include "application/SourceStatusPresenter.hpp"
 using namespace industrial_provider_fixture;
 namespace {
 const RuntimeIdentity engineer{"engineer",[](const QString&,ProductionAction){return true;}};
 }
 int main(int argc,char** argv){QCoreApplication app(argc,argv);try{
+    check(acquisitionStatus("ERROR","unsupported")=="Desteklenmiyor" && acquisitionStatus("ERROR","native unavailable")=="Kullanılamıyor" && acquisitionStatus("ERROR","Camera busy: lease held")=="Meşgul" && acquisitionStatus("ERROR","deadline exceeded")=="Zaman aşımı","Distinct acquisition diagnostics");
     QTemporaryDir dir(QDir::currentPath()+"/icm08a-XXXXXX");check(dir.isValid(),"fixture directory");
     for(const auto type:{ApplicationType::Measurement,ApplicationType::DefectInspection,ApplicationType::RobotGuidance})for(bool mixed:{false,true}){
         const auto r=request();auto state=std::make_shared<State>();auto discovered=r.device;
@@ -63,7 +65,7 @@ int main(int argc,char** argv){QCoreApplication app(argc,argv);try{
         auto swapped=value;swapped.industrialEvidence.clear();reject([&]{product.finish(persistent.ticket,swapped);});lock.unlock();product.finish(persistent.ticket,value);check(state->hardware->commands==captures,"retry never captures");
         const auto records=store.recent("cycles");check(records.size()==1 && records.first()["schemaVersion"]==9,"terminal9 persisted");ProductionResultCodec::validate(records.first());
         auto disk=records.first();auto branches=disk["branches"].toObject();auto branch=branches[source].toObject();auto proof=branch["industrialAcquisition"].toObject();proof["pixelHash"]="bad";branch["industrialAcquisition"]=proof;branches[source]=branch;disk["branches"]=branches;reject([&]{ProductionResultCodec::validate(disk);});
-        check(ProductionResultCodec::csv(records).contains("industrialEvidence"),"industrial CSV offline");
+        check(ProductionResultCodec::csv(records).contains("industrialEvidence"),"industrial CSV offline");check(ProductionResultCodec::summary(records.first()).contains(r.device.identity.serial) && ProductionResultCodec::summary(records.first()).contains("Backend / SDK") && ProductionResultCodec::summary(records.first()).contains("Raw / px"),"History presents serial backend and raw-only evidence offline");
         for(const auto key:{"physical","profile","actual","execution","acquired","pixelHash","unexpected"}){auto changedRecord=records.first();auto all=changedRecord["branches"].toObject();auto b=all[source].toObject();auto e=b["industrialAcquisition"].toObject();e[key]=QJsonObject{};b["industrialAcquisition"]=e;all[source]=b;changedRecord["branches"]=all;reject([&]{ProductionResultCodec::validate(changedRecord);});}
         auto failedLease=product.begin();state->foreign=true;auto failed=RuntimeService::execute(failedLease,"",{});state->foreign=false;product.finish(failedLease.ticket,failed);
         auto stoppedLease2=product.begin();auto late=RuntimeService::execute(stoppedLease2,"",{});RuntimeService::suppressCancelled(stoppedLease2,late);product.finish(stoppedLease2.ticket,late);
@@ -71,6 +73,8 @@ int main(int argc,char** argv){QCoreApplication app(argc,argv);try{
         const auto archive=dir.filePath("archive"+QString::number(int(type))+QString::number(mixed));RuntimeService restarted(archive,dir.filePath("missing-catalog.json"),engineer);const auto captureCount=state->hardware->commands;
         check(!restarted.active() && restarted.records().size()==3 && ProductionResultCodec::csv(restarted.records()).contains("NOT_ACQUIRED") && state->hardware->commands==captureCount,"restart history has no SDK/registry/capture dependency or active permission");
         auto normal=inputs;normal.factory={};MultiSourceRuntimeService unavailable(engineer,[&](const Recipe& current){return workspace.productionSources(current,normal);});reject([&]{unavailable.prepare(recipe,dir.path());});
+        RuntimeService offline(dir.filePath("offline"+QString::number(int(type))+QString::number(mixed)),dir.filePath("absent.json"),engineer,{},{},{},[&](const Recipe& current){return workspace.productionSources(current);});
+        const auto declaredCount=state->hardware->commands;offline.checkConfiguration(recipe,dir.path());reject([&]{offline.prepare(recipe,dir.path());});check(!offline.active() && !offline.busy() && state->hardware->commands==declaredCount,"Offline Load declaration grants no Run/admission/capture authority");
         reject([&]{workspace.productionSources(recipe);});
         const auto duplicate=project.addTool("industrial_camera");project.bindIndustrialSource(duplicate,workspace.environment().current,r.profile.id,1000);reject([&]{runtime.prepare(*project.activeRecipe(),dir.path());});
         environment=workspace.environment();auto shifted=environment.current.setups[0];shifted.geometry.sensorRoi->translate(1,0);
