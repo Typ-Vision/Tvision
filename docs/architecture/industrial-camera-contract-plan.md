@@ -17,7 +17,13 @@ composition'ından enjekte edilir; kullanıcı config'i, recipe, producer yolu v
 caller metadata ile ürün backend'i olarak seçilemez. Sentetik kimlik/frame ve
 test sonuçları fiziksel acquisition/üretim kanıtına dönüştürülemez; normal ürün
 factory'si bunları reddeder. UI görsel fixture'ları açıkça sentetik etiketlenir.
-Bu ayrım henüz uygulanmış özellik değil, 04f/05a/08b kabul şartıdır.
+04f: `CameraProviderFactory` normal composition'da edinimi reddeder; `forTests`
+yalnız in-memory provider enjeksiyonudur. Test backend'i test executable'ında
+derlenir; ürün kütüphanesinde fixture yoktur. Config/recipe/producer provider yükleyemez.
+`IndustrialCameraRequest` camera/setup/profile/device/source snapshot'ını doğrular;
+worker actual identity, pre/post readback ve frame format/boyutunu denetler.
+Preview ayrı trigger-off profile/session ister; lease/Stop mevcut worker'dır.
+Provider sonuçları terminal completion veya production izni değildir.
 
 Discovery/open, preview ve doğrulanmış tetik edinimi ayrı yeteneklerdir. Gerçek
 production capability hem ilgili backend G1 kabulünü hem 08b güven zincirini ister.

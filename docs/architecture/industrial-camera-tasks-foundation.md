@@ -197,7 +197,7 @@ gerçek open/feature/unit/grab doğrulaması açık.
 
 ## ICM-04f — ortak test adaptörü ve ürün bağlantısı sözleşmesi
 
-- Durum: **PLANLANDI; sıradaki görev**. Önkoşul: tamamlanan 03b/03c, 04d
+- Durum: **yazılım kabulü tamam** ([kapanış](../archive/2026-10-18-icm-04f.md)). Önkoşul: tamamlanan 03b/03c, 04d
   çekirdek/fixture ve 04e-a/b. Native OECS 04d/04e veya fiziksel kamera gerekmez.
 - İş: mevcut capture/worker/lease tiplerini yeniden kullanarak SDK'sız, testlere
   enjekte edilen deterministik industrial adaptörü ve ortak provider sınırını kur.
