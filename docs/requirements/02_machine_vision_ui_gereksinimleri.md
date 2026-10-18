@@ -1,5 +1,18 @@
 # Endüstriyel Machine Vision Yazılımı — UI Sayfa ve Ekran Gereksinimleri
 
+## 18 Ekim 2026 — Editor iyileştirme talebi (plan)
+
+Kullanıcı beş talebi fiziksel kamera kabulünden önce önceliklendirdi:
+taşınabilir/boyutlandırılabilir Blob search ROI ve ROI sınırına temas edenleri eleme;
+kompakt, daha geniş ve modern Editor; pin ile sabit/otomatik gizlenen Workspace;
+gruplu Toolbox ve yeni araç kataloğunda Edge yerine Edge Point; açılıp kapatılan,
+zoom ile dengeli görüntü açıklamaları; tarama sayısı/yönüyle eşleşen oklar ve
+start/sweep değişiminde halka/yay önizlemesi.
+[EUI planı](../architecture/editor-refinement-plan.md) davranış, uyumluluk ve kabul
+ölçütlerini tanımlar. **Henüz uygulanmadı.** Bu talep, aşağıdaki 7 Ekim GUI koruma
+kararını Editor/Toolbox ve ortak Workspace için günceller. Eski Edge reçeteleri
+çalışır kalır; sessiz dönüşüm yoktur. Görünüm tercihleri reçete sonucunu değiştirmez.
+
 Güncel uygulama durumu ve görev sırası [devir özetindedir](../progress.md). Bu belge gereksinimleri taşır; aşağıdaki tarihli planlar tek başına uygulama kabulü değildir. Üç belgede birebir tekrarlanan teslim paragrafları [taşıma öncesi tam kayıtta](../archive/2026-10-17/02_machine_vision_ui_gereksinimleri.md) korunmuştur. Yalnız görevle ilgili bölümleri okuyun; yeni teslim günlüğü eklemeyin.
 
 17 Ekim plan güncellemesi: [ICM UI görevleri](../architecture/industrial-camera-tasks-integration.md) Camera Manager/kayıt, kalibrasyon, Editor ve Runtime için mevcut Qt ekranlarını genişletmeyi tanımlar. Kayıtlı/keşfedilmiş/offline cihaz, preview/production ve seçili model/fiziksel kabul durumları ayrı gösterilecek. Plan hazırdır; endüstriyel grab/UI entegrasyonu uygulanmadı.

@@ -5,24 +5,25 @@
 
 ## Devam noktası
 
-- **ICM-PLAN-02:** ortak yazılım ve donanım kabulü ayrıldı. [Kapanış](archive/2026-10-18-icm-plan-02.md).
-  **ICM-06a/06b tamam:** reçetesiz industrial kalibrasyon, actual profile probe,
-  tam geometriyle aktivasyon/invalidation ve scope2.
-  [06a](archive/2026-10-18-icm-06a.md), [06b kapanış](archive/2026-10-18-icm-06b.md).
-  [04f](archive/2026-10-18-icm-04f.md), [05a](archive/2026-10-18-icm-05a.md),
-  [05b](archive/2026-10-18-icm-05b.md) tamam.
-  **09a/G2 tamam; 09b başladı**, native G0/G1 bekliyor.
-  [04f kartı](architecture/industrial-camera-tasks-foundation.md),
-  [Basler/Daheng paketleri](architecture/industrial-camera-tasks-backends.md).
-  OECS native 04d/04e açık/ertelenmiş; ortak sıra için önkoşul değil. Test adaptörü
-  normal ürün yoluna açılamaz; G2 yazılım, G0/G1/G3 backend, G4 kurulum kabulüdür.
-- Hazırlıklar: [04e-b](archive/2026-10-18-icm-04e-b.md) stress,
-  [05a-a](archive/2026-10-18-icm-05a-a.md) resolve;
-  [07a](archive/2026-10-18-icm-07a.md) registry/codec tamam.
-- [ICM-04e-a](archive/2026-10-18-icm-04e-a.md) tamam: lease/worker, polling/shutdown,
-  geç kare ret ve cleanup karantinası.
-  [ICM-03c](archive/2026-10-18-icm-03c.md) owned ölçüm rasteri/geometri adayı da hazır;
-  provider/persistence/UI bağlantısı yok. Native 04e/G1 hâlâ 04d'ye bağlı.
+- **EUI-PLAN-01 tamam; sıradaki EUI-01.** Kullanıcı manuel testler için “OK”
+  bildirdi; ayrıntılı test kanıtı yok. Beş Editor isteği fiziksel kabulden önce:
+  Blob ROI/kenar filtresi, açıklamalar, tarama okları/yay, gruplu Toolbox/eski Edge,
+  Workspace pin ve kompakt görünüm. **Yalnız plan hazır, kod uygulanmadı.**
+  [Görevler EUI-01–08](architecture/editor-refinement-plan.md),
+  [Sol 6.1 medium devri](architecture/editor-refinement-handoff.md),
+  [kapanış](archive/2026-10-18-eui-plan-01.md). Ajanlar sıralı; aşağıdaki ICM engelleri korunur.
+- [ICM-PLAN-02](archive/2026-10-18-icm-plan-02.md): ortak yazılım/donanım kabulü ayrı.
+  [06a](archive/2026-10-18-icm-06a.md)/[06b](archive/2026-10-18-icm-06b.md)
+  kalibrasyon/profil/aktivasyon tamam; 04f–05b kapanışları [arşivde](archive/README.md).
+  09a/G2 tamam; 09b native G0/G1 bekliyor. [Backend kartları](architecture/industrial-camera-tasks-backends.md).
+  OECS native 04d/04e açık/ertelenmiş; ortak yazılımı engellemez. Test adaptörü normal
+  ürüne açılamaz; G2 yazılım, G0/G1/G3 backend, G4 kurulum kabulüdür.
+- Hazır: [04e-a lease/worker](archive/2026-10-18-icm-04e-a.md),
+  [04e-b stress](archive/2026-10-18-icm-04e-b.md),
+  [05a-a resolve](archive/2026-10-18-icm-05a-a.md),
+  [07a codec](archive/2026-10-18-icm-07a.md).
+  [03c ölçüm rasteri](archive/2026-10-18-icm-03c.md) canlı ürün yoluna bağlı değil;
+  native 04e/G1 hâlâ 04d'ye bağlı.
 - **ICM-04d kısmi: gecikmiş command Stop/Start'ı aşıyor; native Unavailable**.
   [Gecikme deneyi](archive/2026-10-18-icm-04d-pending.md): delay=500 ms iken
   Clear→Stop→Start sonrası yeni command olmadan **8/8 eski kare** geldi.
@@ -35,11 +36,10 @@
   açık. FrameBurstStart sessiz FrameStart alias'ı olmaz.
   [Timestamp](archive/2026-10-17-icm-04d-timestamp.md) admission yok;
   [metadata/semantik](archive/2026-10-17-icm-04d-semantics.md) sınırları korunur.
-- [ICM-04c](archive/2026-10-17-icm-04c.md): owned Mono8 probe/pool, exact tight
-  2448×2048; native stride/completion yok. 02–04b [arşivde](archive/README.md).
-  [Baseline](architecture/industrial-camera-baseline.md) şema/hash kaynağıdır.
-- [ICM-REVIEW-01 kapalı](archive/2026-10-17-icm-review-01-fix.md): SDK enumerate
-  kilidi, setup revision/A→B→A invalidation ve rename/no-op/hash korunur.
+- [04c](archive/2026-10-17-icm-04c.md): owned tight Mono8 2448×2048;
+  native stride/completion yok. [Baseline](architecture/industrial-camera-baseline.md)
+  şema/hash kaynağıdır. [REVIEW-01](archive/2026-10-17-icm-review-01-fix.md) kapalı;
+  enumerate kilidi, setup revision/A→B→A, rename/no-op/hash korunur.
 - **ICM-01b fiziksel başlangıç açık**; [deneme](archive/2026-10-17-icm-01b.md).
   [Görev kartları](architecture/industrial-camera-tasks-foundation.md).
   ICM-00 veya tamamlanmış KMC görevlerini yeniden başlatmayın.
@@ -54,7 +54,7 @@ Görevler: [ana plan](architecture/industrial-camera-plan.md), seçili kart ve s
   kaynak başına immutable model ve çok kaynaklı Editor/Runtime.
   [B kabulü](architecture/multi-source-release-acceptance.md),
   [Runtime/terminal sözleşmesi](architecture/multi-source-runtime-terminal.md).
-- editor9, execution/25, terminal7 ve vf.socket2 yolları mevcut. Kalıcı Runtime hazırlığı gerçek
+- editor9, engine/27, terminal8–9 ve vf.socket2 yolları mevcut. Kalıcı Runtime hazırlığı gerçek
   çevrim sonucu değildir; restart aktif kullanım iznini geri yüklemez. Şema/codec
   değişiminde numaraları baseline ve kaynakla doğrulayın.
 - UI application servislerini kullanır. Üç applicationType ortak Editor/Runtime'dır.
@@ -92,24 +92,22 @@ Görevler: [ana plan](architecture/industrial-camera-plan.md), seçili kart ve s
   [Kapanış](archive/2026-10-18-icm-09a.md).
   [Birleşik rapor](architecture/industrial-camera-release-acceptance.md),
   kanıt `build/icm/09a/`; native G1/G3/G4 ve dağıtım açık.
-- **ICM-08b/08c tamam:** trusted completion/terminal8–9 ve Runtime/Logs/CSV.
+- **08b/08c tamam:** trusted completion/terminal8–9 ve Runtime/Logs/CSV.
   [08b](archive/2026-10-18-icm-08b.md), [08c](archive/2026-10-18-icm-08c.md).
-  Engine **/27**; [08a admission](archive/2026-10-18-icm-08a.md) hazır.
-  Load beyandır; Run admission ister; native kapalı.
+  [08a admission](archive/2026-10-18-icm-08a.md): Load beyan, Run kabul ister; native kapalı.
 - [07c](archive/2026-10-18-icm-07c.md) Editor profil seçimi/açık binding ve worker bağlantısı.
   [07b](archive/2026-10-18-icm-07b.md) execution/provider/TargetOnly tamam.
   `plc_socket_runtime` aralıklı başarısızlığı/kök neden açık kalır.
 - UI `build/reference-ui/visionflow.exe`; core `build/kmc9-core-off`.
   Başlatma `.\scripts\run-local.ps1`; build/PATH komutları README'dedir.
-- ICM-02 baseline `53bb972`; görev ID'li tek commit, push kullanıcı isteğiyle.
-  Ajanlar sıralıdır. Yerel INI korunur; kanıtlar `build/` altındadır.
+- Baseline `53bb972`; ID'li tek commit, istekle push. Yerel INI korunur; kanıtlar `build/`.
 
 ## Kapanış ve sonraki adım
 
-**[ICM-09b başladı](archive/2026-10-18-icm-09b-start.md), G0/G1 önkoşulunda.**
-H01–H08 açık; yeni fiziksel istek/kare 0. Basler/Daheng exact model/SDK ile
-01→02 veya OECS belgeli pending-command bariyeri gerekiyor. 04e-a/b, 05a-a,
-07a-a yeniden yapılmaz; ölçüm adayı configure girdisi değildir. 07b–08c hazır.
+**Önce EUI-01→08**, kullanıcı testi/düzeltme; sonra kamera önkoşulları.
+[ICM-09b](archive/2026-10-18-icm-09b-start.md) G0/G1 bekliyor; H01–H08 açık.
+Basler/Daheng model/SDK 01→02 veya OECS belgeli pending-command bariyeri gerekir.
+Tamamlanan hazırlıklar tekrarlanmaz; ölçüm adayı configure girdisi değildir.
 [04d cancel incelemesi](archive/2026-10-18-icm-04d-cancel-audit.md): AcquisitionAbort
 yok; DeviceReset garantisiz, çalıştırılmadı. Üretici taslağı gönderilmedi.
 Delay=0, close/open/sessizlik kanıt değil; aynı deneyi tekrarlamayın. Native Unavailable.
