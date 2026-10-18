@@ -10,7 +10,8 @@ Son yönlendirme önceliklidir. Ayrıntılar [arşivde](archive/README.md).
   [Kapanış](archive/2026-10-18-icm-04f.md). **ICM-05a tamam:** ortak keşif/kayıt/factory ve yerel rota.
   [Kapanış](archive/2026-10-18-icm-05a.md). **ICM-05b tamam:** Camera Manager,
   profil taslağı ve capability kapılı readback/preview UI.
-  [Kapanış](archive/2026-10-18-icm-05b.md). Sıradaki **06a → 06b → 07a → 07b → 07c → 08a → 08b → 08c → 09a**.
+  [Kapanış](archive/2026-10-18-icm-05b.md). **ICM-06a tamam:** reçetesiz industrial kalibrasyon.
+  [Kapanış](archive/2026-10-18-icm-06a.md). Sıradaki **06b → 07a → 07b → 07c → 08a → 08b → 08c → 09a**.
   [04f kartı](architecture/industrial-camera-tasks-foundation.md),
   [Basler/Daheng paketleri](architecture/industrial-camera-tasks-backends.md).
   OECS native 04d/04e açık/ertelenmiş; ortak sıra için önkoşul değil. Test adaptörü
@@ -93,10 +94,9 @@ ve seçili kartın sözleşme/kabulü. Önce başlık/ID arayın.
 
 ## Son doğrulama ve çalışma ortamı
 
-- **ICM-05b:** Release UI/core build; ilgili UI **11/11**, core **7/7**.
-  Shell TCP testi sandbox'ta timeout, dışarıda **1/1** geçti. Normal/küçük görsel
-  kontrol: `build/icm/05b/`. Fiziksel kamera denenmedi.
-- Önceki 04e-b/05a-a/07a-a **4/4** core Release sonuçları arşivdedir; yeniden koşulmadı.
+- **ICM-06a:** core OFF Release ilgili build ve **5/5** test;
+  `build/icm-06a-{target-build,tests}.log`. Fixture; fiziksel kamera denenmedi.
+- Önceki 05b UI/core ve görsel kanıtları arşivdedir; yeniden koşulmadı.
   `plc_socket_runtime` aralıklı başarısızlığı/kök neden açık kalır.
 - Güncel UI `build/reference-ui/visionflow.exe`, core `build/kmc9-core-off`.
   Başlatma `.\scripts\run-local.ps1`; build/PATH komutları README'dedir.
@@ -105,7 +105,7 @@ ve seçili kartın sözleşme/kabulü. Önce başlık/ID arayın.
 
 ## Kapanış ve sonraki adım
 
-**ICM-04f/05a/05b tamam; sıradaki ICM-06a, ardından ICM-06b.** 04e-a/b, 05a-a, 07a-a yeniden yapılmaz;
+**ICM-06a tamam; sıradaki ICM-06b, ardından ICM-07a.** 04e-a/b, 05a-a, 07a-a yeniden yapılmaz;
 ölçüm adayı configure girdisi değildir. 05a/07a ürün kabulü açık.
 [04d cancel incelemesi](archive/2026-10-18-icm-04d-cancel-audit.md): AcquisitionAbort
 yok; DeviceReset garantisiz, çalıştırılmadı. Üretici taslağı gönderilmedi.

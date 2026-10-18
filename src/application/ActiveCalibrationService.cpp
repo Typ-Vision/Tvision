@@ -32,7 +32,7 @@ QVector<CalibrationModelRecord> decodeRecords(const QJsonObject& o){QVector<Cali
 }
 void MeasurementSetup::validate() const {
     for(const auto& s:{id,adapter,lensId,planeId})require(!s.trimmed().isEmpty() && s.size()<=512,"Missing measurement setup identity");
-    require(adapter=="image_file" || adapter=="webcam","Unsupported acquisition setup adapter");require(hash(configId),"Invalid acquisition configuration hash");
+    require(adapter=="image_file" || adapter=="webcam" || adapter=="gentl","Unsupported acquisition setup adapter");require(hash(configId),"Invalid acquisition configuration hash");
     source.validate();target.validate();require(resolution.width()>0 && resolution.height()>0 && source.unit==LengthUnit::Pixel && source.axes==AxisConvention::XRightYDown && target.unit==LengthUnit::Millimetre,"Invalid measurement setup geometry");
 }
 QJsonObject MeasurementSetup::toJson() const {validate();return {{"schemaVersion",1},{"id",id},{"adapter",adapter},{"configId",configId},{"lensId",lensId},{"planeId",planeId},{"width",resolution.width()},{"height",resolution.height()},{"source",frameJson(source)},{"target",frameJson(target)}};}

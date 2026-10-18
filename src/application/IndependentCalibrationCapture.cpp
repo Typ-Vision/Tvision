@@ -12,13 +12,24 @@ QString id(){return QUuid::createUuid().toString(QUuid::WithoutBraces);}
 void IndependentCaptureRequest::validate() const {
     require(timeoutMs>0 && timeoutMs<=60000,"Capture timeout must be 1–60000 ms");
     require(origin==SourceOrigin::CameraAcquired || origin==SourceOrigin::SetupFile || origin==SourceOrigin::TrialFile,"Unsupported acquisition origin");
-    if(origin==SourceOrigin::TrialFile)require(!camera && !setup,"Trial file cannot declare a physical target");
+    if(origin==SourceOrigin::TrialFile)require(!camera && !setup && !profile && !localRoute,"Trial file cannot declare a physical target");
     else {
-        require(camera.has_value() && setup.has_value(),"Capture requires exact camera/setup snapshot");MeasurementSetupContract{{*camera},{*setup}}.validate();require(setup->geometry.complete,"Critical geometry unknown");
-        require(camera->device.adapter=="webcam" && !setup->geometry.sensorRoi && !setup->geometry.binning,"Unsupported capture adapter/geometry");
+        require(camera.has_value() && setup.has_value(),"Capture requires exact camera/setup snapshot");MeasurementSetupContract{{*camera},{*setup},profile ? QVector<AcquisitionProfile>{*profile}:QVector<AcquisitionProfile>{}}.validate();require(setup->geometry.complete,"Critical geometry unknown");
+        installation(*camera,*setup);
+        if(camera->physical && origin==SourceOrigin::CameraAcquired)require(profile && profile->requested.trigger.enabled && profile->requested.trigger.source=="Software","Industrial capture requires exact software trigger profile");
+        if(!camera->physical)require(!profile && !localRoute,"Webcam cannot carry industrial configuration");
     }
-    if(origin==SourceOrigin::CameraAcquired)require(filePath.isEmpty() && camera->device.capabilities.softwareCapture,"Camera capture cannot be file-backed");
+    if(origin==SourceOrigin::CameraAcquired)require(filePath.isEmpty() && (camera->physical || camera->device.capabilities.softwareCapture),"Camera capture cannot be file-backed");
     else require(QFileInfo(filePath).isAbsolute() && filePath.size()<=32768 && !filePath.contains(QChar::Null),"Absolute capture file path required");
+}
+MeasurementSetup IndependentCaptureRequest::installation(const MeasurementCamera& camera,const MeasurementSetupDescriptor& setup){
+    MeasurementSetupContract{{camera},{setup}}.validate();
+    require(setup.geometry.complete,"Critical geometry unknown");
+    if(camera.physical)require(camera.physical->usable() && setup.geometry.critical(),"Exact industrial identity/geometry required");
+    else require(camera.device.adapter=="webcam" && !setup.geometry.sensorRoi && !setup.geometry.binning && camera.device.confidence!=DeviceIdentityConfidence::Unavailable,"Unsupported capture adapter/geometry");
+    QJsonObject config{{"geometryId",setup.geometryId()},{"device",camera.device.toJson()}};
+    if(camera.physical)config["physical"]=camera.physical->toJson();
+    return {setup.id.value+"/"+QString::number(setup.revision),camera.device.adapter,CalibrationWizardSession::configurationId(config),setup.opticalProfile,setup.workingPlane,setup.geometry.resolution,{"image",LengthUnit::Pixel,AxisConvention::XRightYDown},{setup.workingPlane+"/mm",LengthUnit::Millimetre,AxisConvention::XRightYDown}};
 }
 IndependentCalibrationSession::IndependentCalibrationSession():thread_(QThread::currentThread()),sourceId_("calibration-session:"+id()){}
 IndependentCalibrationSession::~IndependentCalibrationSession(){if(cancel_)cancel_->store(true);}
@@ -36,22 +47,51 @@ IndependentCaptureResult IndependentCalibrationSession::run(const IndependentCap
     try {
         const auto& r=job.request_;r.validate();require(!job.cancel_->load() && !job.deadline_.expired(),"Capture cancelled/expired before acquisition");
         std::unique_ptr<AcquisitionAdapter> adapter;
-        if(r.origin==SourceOrigin::CameraAcquired){
+        if(r.origin==SourceOrigin::CameraAcquired && !r.camera->physical){
             auto discovered=backend.discover ? backend.discover():WebcamAdapter::discover();const auto index=r.camera->device.resolve(discovered);const auto actual=discovered[index];
             if(backend.create)adapter=backend.create(actual,r.setup->geometry);
             else adapter=std::make_unique<WebcamAdapter>(WebcamSettings{0,"qt",actual.providerId,r.setup->geometry.resolution});
             require(adapter && adapter->capabilities().sourceKind=="webcam","Unsupported actual camera adapter");
-        }else adapter=std::make_unique<ImageFileAdapter>(r.filePath);
+        }else if(r.origin!=SourceOrigin::CameraAcquired)adapter=std::make_unique<ImageFileAdapter>(r.filePath);
         const auto source=r.origin==SourceOrigin::CameraAcquired ? job.sourceId_:"calibration-test:"+job.sourceId_;
-        AcquisitionRequest request{source,id(),id(),TriggerMode::Software,r.timeoutMs,job.cancel_,job.deadline_};auto acquired=AcquisitionService{}.acquire(*adapter,request);
-        require(acquired.state==AcquisitionState::Done && acquired.frame.has_value(),acquired.error.toUtf8().constData());auto image=acquired.frame->image;require(image.processing().isEmpty(),"Only raw acquisition accepted");
+        auto image=[&]() -> ImageFrame {
+            if(adapter){
+                AcquisitionRequest request{source,id(),id(),TriggerMode::Software,r.timeoutMs,job.cancel_,job.deadline_};
+                auto acquired=AcquisitionService{}.acquire(*adapter,request);
+                require(acquired.state==AcquisitionState::Done && acquired.frame.has_value(),acquired.error.toUtf8().constData());
+                return acquired.frame->image;
+            }
+            const auto discovery=backend.industrialDiscover ? backend.industrialDiscover():CameraService::industrialSnapshot(CameraService{}.discover(r.localRoute && !r.localRoute->producer.isEmpty() ? QStringList{r.localRoute->producer}:QStringList{},job.deadline_.remainingMs(),job.cancel_));
+            require(!job.cancel_->load() && !job.deadline_.expired(),"Industrial discovery cancelled/expired");
+            IndustrialCameraRequest request{*r.camera,*r.setup,*r.profile,{},source};
+            auto session=backend.factory.resolveOpen(request,discovery,r.localRoute,CameraLeaseUse::Calibration,FrameQueueMode::ProductionFifo,1);
+            auto command=[&](CameraOperation op,CameraState expected){
+                require(!job.cancel_->load() && !job.deadline_.expired(),"Industrial capture cancelled/expired");
+                session->submit(op,job.deadline_.remainingMs());
+                for(;;){
+                    session->poll();
+                    require(!job.cancel_->load() && !job.deadline_.expired(),"Industrial capture cancelled/expired");
+                    require(session->lifecycle().state()!=CameraState::Fault,session->lifecycle().error().toUtf8().constData());
+                    if(session->lifecycle().state()==expected)break;
+                    QThread::msleep(1);
+                }
+            };
+            command(CameraOperation::Connect,CameraState::Connected);
+            command(CameraOperation::Configure,CameraState::Configured);
+            command(CameraOperation::Start,CameraState::Streaming);
+            command(CameraOperation::Grab,CameraState::Streaming);
+            auto frame=session->take();require(frame.has_value(),"Industrial capture has no accepted frame");
+            require(frame->image.metadata().sourceId==source,"Industrial frame metadata source mismatch");
+            return frame->image; // owned raster survives worker shutdown and lease release
+        }();
+        require(image.processing().isEmpty(),"Only raw acquisition accepted");
         auto meta=image.metadata();meta.coordinateSystemId="image";image=image.withMetadata(meta);
         MeasurementSourceEvidence evidence{r.origin,meta.sourceId,meta.frameId,meta.cycleId,meta.coordinateSystemId,QString::fromLatin1(image.contentId().toHex()),r.filePath,job.generation_,{},SourceIdentityKind::CalibrationSession};
         MeasurementSetup mathSetup;
         if(r.setup){
             require(image.size()==r.setup->geometry.resolution,"Actual frame/setup geometry mismatch");evidence.target=SetupReference{r.camera->id,r.setup->id,r.setup->revision};
             // Path is evidence only. Replacing a setup file never changes physical identity.
-            mathSetup={r.setup->id.value+"/"+QString::number(r.setup->revision),r.camera->device.adapter,CalibrationWizardSession::configurationId({{"geometryId",r.setup->geometryId()},{"device",r.camera->device.toJson()}}),r.setup->opticalProfile,r.setup->workingPlane,image.size(),{"image",LengthUnit::Pixel,AxisConvention::XRightYDown},{r.setup->workingPlane+"/mm",LengthUnit::Millimetre,AxisConvention::XRightYDown}};
+            mathSetup=IndependentCaptureRequest::installation(*r.camera,*r.setup);
         }else mathSetup={job.sourceId_,"image_file",CalibrationWizardSession::configurationId({{"trialSession",job.sourceId_}}),"trial-lens","trial-plane",image.size(),{"image",LengthUnit::Pixel,AxisConvention::XRightYDown},{job.sourceId_+"/mm",LengthUnit::Millimetre,AxisConvention::XRightYDown}};
         evidence.validate();mathSetup.validate();require(!job.cancel_->load() && !job.deadline_.expired(),"Capture cancelled/expired after acquisition");result.frame_=image;result.evidence_=evidence;result.mathSetup_=mathSetup;
     }catch(const std::exception& e){result.error_=QString::fromUtf8(e.what());}

@@ -19,6 +19,8 @@ IndustrialCameraRequest request(){
 struct State {
     std::shared_ptr<Hardware> hardware=std::make_shared<Hardware>();
     bool foreign=false,geometry=false,settings=false,cleanup=false,triggerUnavailable=false;
+    QImage raster;
+    int delayMs=0;
 };
 class Backend final:public IndustrialCameraBackend {
     IndustrialCameraRequest r;
@@ -28,7 +30,8 @@ public:
     Backend(IndustrialCameraRequest request,std::shared_ptr<State> s):r(std::move(request)),state(std::move(s)){}
     PhysicalDeviceIdentity actualIdentity() const override {auto id=r.device.identity;if(state->foreign)id.serial="other";return id;}
     AcquisitionReadback readback() const override {
-        GeometryReadback g;g.resolution=state->geometry?QSize(2,3):QSize(3,2);g.offset={0,0};
+        GeometryReadback g;g.resolution=state->geometry?QSize(2,3):r.setup.geometry.resolution;g.offset=r.setup.geometry.sensorRoi->topLeft();
+        g.binning=*r.setup.geometry.binning;g.decimation=*r.setup.geometry.decimation;g.reverse=*r.setup.geometry.reverse;
         g.offsetEvidence=g.binningEvidence=g.decimationEvidence=g.reverseEvidence=GeometryEvidence::Reported;
         auto settings=r.profile.requested;if(state->settings)settings.gain=2;
         return {g,settings};
@@ -37,6 +40,7 @@ public:
         switch(t.operation){
         case CameraOperation::Connect:session=industrial_fixture::open(state->hardware);break;
         case CameraOperation::Grab:{
+            if(state->delayMs)QThread::msleep(state->delayMs);
             if(!r.profile.requested.trigger.enabled){
                 // Independent preview event, never a software command or cycle frame.
                 state->hardware->call("preview");
@@ -47,6 +51,10 @@ public:
                 return {true,{},AcquiredFrame{image,m.sourceId,m.cycleId,m.frameId,m.completedAtUtc}};
             }
             auto result=IndustrialSoftwareCapture::capture(*session,r.sourceId,t.deadline.remainingMs(),t.cancel,t.deadline);
+            if(result.acquisition.frame && !state->raster.isNull()){
+                const auto& im=state->raster;
+                result.acquisition.frame->image=ImageFrame::fromBuffer(im.constBits(),im.sizeInBytes(),im.width(),im.height(),im.bytesPerLine(),PixelFormat::Gray8,result.acquisition.frame->image.metadata());
+            }
             return {result.acquisition.state==AcquisitionState::Done,result.acquisition.error,result.acquisition.frame};
         }
         case CameraOperation::Disconnect:session->close();break;

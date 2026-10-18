@@ -2,6 +2,7 @@
 #include "AcquisitionService.hpp"
 #include "CalibrationWizardSession.hpp"
 #include "MeasurementSourceIdentity.hpp"
+#include "IndustrialCameraProvider.hpp"
 #include <QThread>
 #include <functional>
 
@@ -14,12 +15,17 @@ struct IndependentCaptureRequest {
     std::optional<MeasurementCamera> camera;
     std::optional<MeasurementSetupDescriptor> setup;
     int timeoutMs=5000;
+    std::optional<AcquisitionProfile> profile;
+    std::optional<TransportLocator> localRoute;
     void validate() const;
+    static MeasurementSetup installation(const MeasurementCamera&,const MeasurementSetupDescriptor&);
 };
 // Adapter seam for deterministic contract tests, not a user-editable source claim.
 struct IndependentCaptureBackend {
     std::function<QVector<DeviceBinding>()> discover;
     std::function<std::unique_ptr<AcquisitionAdapter>(const DeviceBinding&,const GeometryDescriptor&)> create;
+    CameraProviderFactory factory;
+    std::function<IndustrialDiscoverySnapshot()> industrialDiscover;
 };
 class IndependentCaptureJob {
     friend class IndependentCalibrationSession;

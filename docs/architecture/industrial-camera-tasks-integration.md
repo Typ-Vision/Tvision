@@ -50,6 +50,8 @@ Native capability yokken ayar uygulama/preview kapalıdır; offline taslak düze
 
 ## ICM-06a — reçetesiz kalibrasyon edinimi
 
+**Ortak yazılım kabulü tamam:** [kapanış](../archive/2026-10-18-icm-06a.md).
+
 - Önkoşul: 05a.
 - Dosyalar: IndependentCalibrationCapture, CalibrationWizardSession,
   CalibrationCapture, MeasurementWorkspace; ilgili wizard UI yalnız gerekirse.
