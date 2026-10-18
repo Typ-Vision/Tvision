@@ -218,7 +218,7 @@ void ToolExecutors::registerExecutor(const QString& kind,ToolExecutor executor) 
     extensions.insert(kind,std::move(executor));
 }
 ToolExecutor ToolExecutors::get(const QString& kind,const MeasurementExecutionContext& context,const std::optional<ToolRoi>& resolvedRoi) {
-    if(kind=="industrial_camera")throw std::runtime_error("Industrial Camera edinim bağlantısı henüz kullanılamıyor; kaynak yalnız çevrimdışı düzenlenebilir.");
+    if(kind=="industrial_camera")throw std::runtime_error("Industrial Camera edinimi immutable girdilerle ExecutionService provider yolunu gerektirir.");
     auto select=[&]()->ToolExecutor {
     if(kind=="edge" && resolvedRoi)return [resolvedRoi](const ToolDefinition& t,const QMap<QString,PortValue>& inputs,const QString&,const QString& frame,const QString& cycle,const std::shared_ptr<std::atomic_bool>& cancel){return referenceEdge(t,inputs,*resolvedRoi,frame,cycle,cancel);};
     if(kind=="blob")return [resolvedRoi](const ToolDefinition& t,const QMap<QString,PortValue>& inputs,const QString& dir,const QString& frame,const QString& cycle,const std::shared_ptr<std::atomic_bool>& cancel){return blob(t,inputs,dir,frame,cycle,cancel,resolvedRoi);};

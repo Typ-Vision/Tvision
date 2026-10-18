@@ -104,6 +104,10 @@ registry ve Editor/project codec'e bağladı. Eski webcam dönüştürülmez.
 
 ## ICM-07b — execution ve TargetOnly
 
+**Ortak yazılım kabulü tamam:** [kapanış](../archive/2026-10-18-icm-07b.md).
+Immutable application girdileriyle provider/lease edinimi ve scoped model/cache
+bağlantısı hazırdır; kullanıcı profil seçimi 07c'de, production 08a/b'de kalır.
+
 - Önkoşul: 07a, 06b.
 - Dosyalar: ToolExecutors, ExecutionService, SourceFrameIndex, EditorSession,
   MeasurementSourceIdentity ve source-scoped resolver.

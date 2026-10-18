@@ -78,7 +78,7 @@ yeni codec dalıyla ekler; mevcut schema'ya alan ekleyip exact-field kontrolün�
 | --- | --- |
 | Project / Recipe | root1; recipe1–2; `domain/Project.cpp`, `persistence/ProjectRepository.cpp`; calibrationBinding yalnız recipe2 |
 | Editor | reader1–9; dependency array7, reference/world opt-in8, explicit multi-source9; `domain/ToolDefinition.cpp`. Eski Save sırf yeni kod açıldı diye9 olmaz |
-| Engine | `visionflow.execution/24`; `application/ExecutionService.hpp` |
+| Engine | `visionflow.execution/25`; ICM-07b industrial execution ve TargetOnly raw eşleşmesi; `application/ExecutionService.hpp` |
 | Tool descriptor'ları | 17 built-in: image_file1, template_match1, blob3, edge1, calculate1, webcam1, measurement2, preprocess1, code_read2, edge_point3, geometry_measurement2, edge_pair2, line_fit3, circle_fit3, pattern_pose1, shape_pose1, industrial_camera1 (minimum editor9); `domain/ToolRegistry.cpp` |
 | Measurement contract | DeviceBinding1, GeometryDescriptor1, MeasurementCamera1, MeasurementSetupDescriptor1, MeasurementSetupContract1; DeviceCapabilities sürümsüz dört bool nested nesne; `domain/MeasurementSetupContract.cpp`. ICM-03a ekledi: MeasurementCamera2 (`physical` zorunlu; yoksa schema 1 bayt aynı), PhysicalDeviceIdentity1; TransportLocator1/BackendIdentity1 yalnız yerel, projeye yazılmaz. ICM-03b ekledi: GeometryDescriptor2 (decimation/reverse + açık ROI/binning; yalnız endüstriyel), MeasurementSetupContract2 (`profiles` boş değilse), AcquisitionProfile1/AcquisitionSettings1, AcquisitionReadback1/GeometryReadback1; eski yazımlar bayt/hash aynı |
 | Environment / transfer | measurement-environment1, measurement-bundle1; `application/MeasurementEnvironment.cpp`. Registry geçmişi/arşiv/selection alanları hash'e dahildir |
@@ -116,7 +116,9 @@ adapter etiketi olarak kalır. ICM-07a `industrial_camera`/1'i registry/default/
 Image port/migration ile explicit ekler (minimum editor9); Toolbox offline taslaktır.
 Webcam'in adı veya parametreleri industrial olarak yeniden yorumlanmaz.
 `sourceReference` null veya strict referans1 nesnesidir; backend seçimi yerel factory'dedir.
-Execution/24 ve terminal7 değişmedi; edinim 07b, profil seçim UI 07c'de kalır.
+ICM-07b engine'i execution/25'e yükseltir; terminal7 değişmez. Eski engine'e bağlı
+validation/preparation yeniden üretilir; proje/recipe codec ve içerik hash'i değişmez.
+Industrial edinim application provider yolundadır; profil seçim UI 07c'de kalır.
 
 ICM-03a fiziksel identity/confidence ile local TransportLocator ve BackendIdentity'yi
 ayırır. ICM-03b requested/applied profile ve tam geometri codec'lerini ekler. ICM-04c/d

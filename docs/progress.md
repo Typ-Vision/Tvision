@@ -11,7 +11,7 @@ Son yönlendirme önceliklidir. Ayrıntılar [arşivde](archive/README.md).
   [06a](archive/2026-10-18-icm-06a.md), [06b kapanış](archive/2026-10-18-icm-06b.md).
   Önceki [04f](archive/2026-10-18-icm-04f.md), [05a](archive/2026-10-18-icm-05a.md),
   [05b](archive/2026-10-18-icm-05b.md) tamam.
-  Sıradaki **07b → 07c → 08a → 08b → 08c → 09a**.
+  Sıradaki **07c → 08a → 08b → 08c → 09a**.
   [04f kartı](architecture/industrial-camera-tasks-foundation.md),
   [Basler/Daheng paketleri](architecture/industrial-camera-tasks-backends.md).
   OECS native 04d/04e açık/ertelenmiş; ortak sıra için önkoşul değil. Test adaptörü
@@ -45,15 +45,14 @@ Son yönlendirme önceliklidir. Ayrıntılar [arşivde](archive/README.md).
 - **ICM-01b fiziksel başlangıç açık**; [deneme](archive/2026-10-17-icm-01b.md).
   [Görev kartları](architecture/industrial-camera-tasks-foundation.md).
   ICM-00 veya tamamlanmış KMC görevlerini yeniden başlatmayın.
-- Ana hedef Basler/Daheng PoE; deney cihazı COE-U USB3/OECS. Tanı probe'u üretim admission/tazelik
-  garantisi değildir; native trigger/lifecycle ve Editor/Runtime bağlantısı
-  henüz uygulanmadı. Capture/production ret kapıları kabul yapılmadan kaldırılmaz.
+- Ana hedef Basler/Daheng PoE; deney cihazı COE-U USB3/OECS. Tanı probe'u üretim
+  admission/tazelik garantisi değildir. Application edinimi hazır; Editor seçim UI
+  ve Runtime bağlantısı bekliyor. Native/production kapıları korunur.
 
 ## Göreve göre oku
 
-AGENTS + bu özet + [README](../README.md), ardından [ana plan](architecture/industrial-camera-plan.md)
-ve seçili kartın sözleşme/kabulü. Önce başlık/ID arayın.
-[Devir](architecture/industrial-camera-handoff.md), [bulgular](architecture/industrial-camera-integration-assessment.md).
+Başlangıç: AGENTS + bu özet + [README](../README.md); sonra
+[ana plan](architecture/industrial-camera-plan.md) ve seçili kart.
 
 ## Uygulanan durum ve korunacak sınırlar
 
@@ -61,7 +60,7 @@ ve seçili kartın sözleşme/kabulü. Önce başlık/ID arayın.
   bağımsız kalibrasyon sihirbazları, kaynak başına immutable model ve çok kaynaklı
   Editor/Runtime yolu mevcut. [B kabulü](architecture/multi-source-release-acceptance.md),
   [Runtime/terminal sözleşmesi](architecture/multi-source-runtime-terminal.md).
-- editor9, terminal7 ve vf.socket2 yolları mevcut. Kalıcı Runtime hazırlığı gerçek
+- editor9, execution/25, terminal7 ve vf.socket2 yolları mevcut. Kalıcı Runtime hazırlığı gerçek
   çevrim sonucu değildir; restart aktif kullanım iznini geri yüklemez. Şema/codec
   değişiminde numaraları baseline ve kaynakla doğrulayın.
 - UI application servislerini kullanır. Üç applicationType ortak Editor/Runtime'dır.
@@ -94,21 +93,22 @@ ve seçili kartın sözleşme/kabulü. Önce başlık/ID arayın.
 
 ## Son doğrulama ve çalışma ortamı
 
-- **ICM-07a:** industrial source/1 registry, strict referans ve editor9 offline taslağı;
-  legacy editor1–8 no-op/hash korundu. Core **8/8**; UI ilk **10/11**, düğme
-  ve görsel düzeltmeleri sonrası **2/2**. [Kapanış](archive/2026-10-18-icm-07a.md).
-  Kanıt: `build/icm-07a-*`, görsel: `build/reference-ui/icm/07a/`.
-  Fiziksel kamera denenmedi.
+- **ICM-07b:** immutable industrial execution/provider/lease, actual evidence,
+  scoped model ve TargetOnly/cache. [Kapanış](archive/2026-10-18-icm-07b.md).
+  Release core ilgili CTest **14/14**; kanıt `build/icm-07b-*`.
+  Fiziksel kamera/yeni UI görseli yok.
+  Engine /25; eski validation/preparation yeniden üretilir, terminal7 değişmedi.
+  Önceki [07a](archive/2026-10-18-icm-07a.md) source/codec/offline UI tamam.
   `plc_socket_runtime` aralıklı başarısızlığı/kök neden açık kalır.
-- Güncel UI `build/reference-ui/visionflow.exe`, core `build/kmc9-core-off`.
+- UI (07a) `build/reference-ui/visionflow.exe`; core /25 `build/kmc9-core-off`.
   Başlatma `.\scripts\run-local.ps1`; build/PATH komutları README'dedir.
 - ICM-02 baseline `53bb972`; sonrası görev ID'li tek commit. Push kullanıcı
   isteğiyle. Ajanlar sıralıdır. Yerel INI korunur; kanıtlar `build/` altındadır.
 
 ## Kapanış ve sonraki adım
 
-**ICM-07a tamam; sıradaki ICM-07b, ardından ICM-07c.** 04e-a/b, 05a-a, 07a-a yeniden yapılmaz;
-ölçüm adayı configure girdisi değildir. 07b edinim, 07c profil seçim UI ve 08a/b production açık.
+**ICM-07b tamam; sıradaki ICM-07c, ardından ICM-08a.** 04e-a/b, 05a-a, 07a-a yeniden yapılmaz;
+ölçüm adayı configure girdisi değildir. 07b application edinimi hazır; 07c seçim UI ve 08a/b production açık.
 [04d cancel incelemesi](archive/2026-10-18-icm-04d-cancel-audit.md): AcquisitionAbort
 yok; DeviceReset garantisiz, çalıştırılmadı. Üretici taslağı gönderilmedi.
 Delay=0, close/open/sessizlik kanıt değil; aynı deneyi tekrarlamayın. Native Unavailable.

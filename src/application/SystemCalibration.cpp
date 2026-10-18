@@ -1,6 +1,7 @@
 #include "SystemCalibration.hpp"
 #include "domain/ReferenceConfig.hpp"
 #include "domain/ToolRegistry.hpp"
+#include "domain/IndustrialSourceReference.hpp"
 #include <QCryptographicHash>
 #include <QJsonDocument>
 #include <QJsonArray>
@@ -66,7 +67,17 @@ void SystemCalibration::compatible(const ActiveCalibrationSnapshot& s,const Reci
     // acquisition/measurement is fabricated here.
     if(!s.scope.isEmpty()){
         const auto ref=setupReference(recipe);require(ref && s.scope["target"].toObject()==ref->toJson(),"Recipe requires a different physical setup");
-        require((tool.kind=="image_file" || tool.kind==setup.adapter) && size==setup.resolution,"Scoped source geometry mismatch");
+        bool adapter=tool.kind=="image_file" || tool.kind==setup.adapter;
+        if(tool.kind=="industrial_camera"){
+            require(s.scope["schemaVersion"]==2,"Industrial source requires industrial calibration scope");
+            const auto requested=IndustrialSourceReference::fromJson(tool.parameters["sourceReference"].toObject());
+            const auto device=DeviceBinding::fromJson(s.scope["device"].toObject());
+            require(requested.physical.toJson()==s.scope["physical"].toObject() && requested.deviceRevision==device.revision &&
+                requested.camera==ref->camera && requested.setup==ref->setup && requested.setupRevision==ref->revision,
+                "Industrial calibration physical identity/revision mismatch");
+            adapter=true;
+        }
+        require(adapter && size==setup.resolution,"Scoped source geometry mismatch");
     }else {require(!setupReference(recipe),"Scoped recipe cannot use legacy global calibration");const auto actual=CalibrationCapture::configuration(tool,directory);
         require(tool.kind==setup.adapter && actual==setup.configId && size==setup.resolution,"Aktif kalibrasyon bu görüntü kaynağına/çözünürlüğüne uygun değil.");}
     const auto declared=recipe.definition["planarSetup"].toObject();if(!declared.isEmpty())require(declared["lensId"]==setup.lensId && declared["workingPlaneId"]==setup.planeId,"Eski reçetenin lens/düzlem beyanı ortak kurulumdan farklı; açıkça düzenleyin.");

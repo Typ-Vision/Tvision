@@ -25,6 +25,20 @@ worker actual identity, pre/post readback ve frame format/boyutunu denetler.
 Preview ayrı trigger-off profile/session ister; lease/Stop mevcut worker'dır.
 Provider sonuçları terminal completion veya production izni değildir.
 
+ICM-07b: `ExecutionService(IndustrialExecutionInputs)` kamera/setup/profile contract'ını
+değer kopyası olarak dondurur; yerel rotalar ve provider yalnız application composition'dan
+gelir. Her edinim bütçesi içinde fresh keşif/exact resolve, ortak Editor lease ve worker
+Connect/Configure/Start/Grab yolunu kullanır. Recipe JSON'u backend seçemez; generic
+source-adapter enjeksiyonu ve frameSnapshot industrial edinimi atlayamaz. Actual
+kimlik/readback, owned raw raster/hash ve backend frame/cycle kimlikleri ayrı
+`IndustrialExecutionEvidence` olarak korunur; execution frame/cycle eşlemesi bunların
+yerine fiziksel kanıt yazmaz. Bu geçici Editor kanıtı terminal codec'ine veya private
+completion authority'ye girmez. Stop/geç sonuç çıktı ve kanıtı bastırır. Aynı fiziksel
+kamera iki enabled source'ta source refresh sırasında da reddedilir. TargetOnly
+edinim yapmaz; cached raw ile aynı kaynak/frame/cycle/piksel içeriği gerekir.
+Scoped industrial model eşlemesi scope2 fiziksel kimlik/device/setup revision ister.
+Profil seçim UI 07c, immutable production admission/terminal 08a/b kapsamındadır.
+
 ICM-05b: CameraManager ortak envanter/registry ve process-local lease üzerinden
 çalışır. Configure-only factory oturumu tetik capability'si istemez, Start/Grab'ı
 reddeder. Actual readback tek kez okunup doğrulanan snapshot olarak owner'a döner.

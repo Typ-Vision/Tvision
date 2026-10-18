@@ -1,6 +1,6 @@
 # Endüstriyel kamera entegrasyonu — ICM ana planı
 
-18 Ekim 2026. **Ortak ürün geliştirmesi donanım kabulünden ayrıldı; OECS native trigger ertelendi, ürün acquisition bağlantısı henüz yok.** Uygulayıcı hedefi:
+18 Ekim 2026. **Ortak ürün geliştirmesi donanım kabulünden ayrıldı; OECS native trigger ertelendi, application edinim bağlantısı hazır, Editor profil seçim UI henüz yok.** Uygulayıcı hedefi:
 **GPT-6.1-sol / medium** (kullanıcının Sol6.1 medium tercihi). Bu belge model
 ayarını değiştirmez veya başka bir chat başlatmaz. Yeni kullanıcı yönlendirmesi,
 KMC-10e sonrasında fiziksel kalibrasyon kabulünden önce gerçek kamera entegrasyonudur.
@@ -93,9 +93,9 @@ gerçek cihaz readback/owned Mono8 probe başarılı; ICM-04d çekirdek/fixture 
 [ICM-01a tanı kabulü](../archive/2026-10-17-icm-01a.md) fiziksel kapıları kapatmaz.
 Bağımlılıklar görevin başlatılabilmesini ifade eder; fiziksel kapı ayrıca belirtilir.
 04d/04e native OECS bölümü **açık/ertelenmiş**; ortak yazılım yolunun önkoşulu değildir.
-04f–07a ortak provider, keşif/kayıt, Camera Manager, reçetesiz kalibrasyon/aktivasyon
-ve industrial source codec/offline taslak tamam; native capability açmaz.
-Sıradaki 07b; güncel kanıt progress'tedir.
+04f–07b ortak provider, keşif/kayıt, Camera Manager, reçetesiz kalibrasyon/aktivasyon,
+industrial source codec ve execution/TargetOnly tamam; native capability açmaz.
+Sıradaki 07c; güncel kanıt progress'tedir.
 
 | ID | Tek teslim | Önkoşul |
 | --- | --- | --- |

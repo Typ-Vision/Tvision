@@ -1,6 +1,7 @@
 #include "IndustrialProviderFixture.hpp"
 #include "application/MeasurementWorkspace.hpp"
 #include "application/ProjectService.hpp"
+#include "application/IndustrialExecution.hpp"
 #include <QTemporaryDir>
 #include <QDir>
 #include <cmath>
@@ -16,6 +17,25 @@ int main(int argc,char** argv){QCoreApplication app(argc,argv);try{
     auto& math=session.math();check(math.accept(CalibrationWizardSession::run(math.scanPair("width",{{"image"},ScanSegment{{20,100},{620,100},4}}))),"real caliper");math.setKnownMillimetres(10);const auto model=math.calculate();service.save(ref,model);service.setOperational(r.camera.id,r.setup.id);reject([&]{service.snapshots({ref});});service.activate(ref,model.contentId(),session);const auto original=service.snapshots({ref}).first().calibration;
     check(original.scope["schemaVersion"]==2 && original.scope["physical"].toObject()==r.camera.physical->toJson(),"industrial scope carries exact physical identity");
     const auto proof=SystemCalibration::evidence(original,"source","source/image");check(SystemCalibration::decodeEvidence(proof).record.contentId()==model.contentId(),"industrial evidence codec replay");
+    {
+        ProjectService project;project.createProject("Industrial Editor","",dir.filePath("editor.vfproject"),"file");
+        const auto id=project.createRecipe("Industrial","",ApplicationType::Measurement,"file");
+        const auto source=project.addTool("industrial_camera");project.bindIndustrialSource(source,ws.environment().current,r.profile.id,1000);project.bindSourceSetup(source,ref.toJson());
+        const auto left=project.addTool("edge_point"),right=project.addTool("edge_point"),metric=project.addTool("measurement");
+        for(auto tool:project.tools())if(tool.id==left || tool.id==right){tool.parameters["scanRoi"]=ToolRoi{{source+"/image"},ScanSegment{{20,100},{620,100},4}}.toJson();tool.parameters["polarity"]=tool.id==left ? "rising":"falling";project.updateTool(tool);}
+        project.setConnections({{source,"image",left,"image"},{source,"image",right,"image"},{left,"point",metric,"p1"},{right,"point",metric,"p2"}});
+        const auto branch=SystemCalibration::branch(*project.activeRecipe(),source);
+        IndustrialExecutionInputs inputs;inputs.contract=ws.environment().current;inputs.factory=backend.factory;inputs.discover=[r](int,const auto&){return IndustrialDiscoverySnapshot{{r.device},{},false};};
+        auto resolver=[&](const ImageFrame& frame){return SystemCalibration::resolve(original,branch,dir.path(),frame);};
+        const auto cycle=ExecutionService(inputs).run(branch.definition,dir.path(),id,"cfg",{}, {},{},resolver);
+        check(cycle.state==ExecutionState::Done && cycle.industrialEvidence.size()==1,"industrial editor acquisition with scoped resolver");
+        const auto raw=std::get<ImageFrame>(cycle.tools.first().outputs["image"].data);
+        check(resolver(raw).calibration!=nullptr,"industrial branch model resolves actual frame");
+        bool measured=false;for(const auto& tool:cycle.tools)if(tool.toolId==metric){const auto value=tool.outputs.value("value");measured=value.valid && std::holds_alternative<double>(value.data) && std::abs(std::get<double>(value.data)-10)<.01;}
+        check(measured,"industrial ROI and scoped model produce actual 10 mm result");
+        auto foreign=branch;auto tools=editorTools(foreign.definition);auto reference=tools[0].parameters["sourceReference"].toObject();auto physical=reference["physical"].toObject();physical["serial"]="foreign";reference["physical"]=physical;tools[0].parameters["sourceReference"]=reference;foreign.definition=withEditorTools(foreign.definition,tools);
+        check(!SystemCalibration::resolve(original,foreign,dir.path(),raw).calibration,"foreign physical source cannot use branch model");
+    }
     for(int mode=0;mode<3;++mode){auto forged=original;auto scope=forged.scope;
         if(mode==0){auto id=*r.camera.physical;id.serial="foreign";scope["physical"]=id.toJson();}
         else {auto setup=r.setup;if(mode==1)setup.geometry.sensorRoi->translate(1,0);else setup.geometry.reverse->x=true;scope["setup"]=setup.toJson();scope["geometryId"]=setup.geometryId();}

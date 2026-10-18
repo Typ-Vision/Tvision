@@ -235,5 +235,5 @@ QJsonObject EditorSession::taughtSearch(const EditorContext& c,const ToolDefinit
         for(const auto& source:editorTools(c.definition))if(source.id==b.sourceTool)p["referenceGeometry"]=referenceGeometry(source);
     }p["searchRoi"]=MatchService::rectangle(roi);return p;
 }
-void EditorSession::suppressCancelled(CycleResult& c) {c.frames.clear();c.state=ExecutionState::Skipped;c.error="Çevrim iptal edildi.";for(auto& r:c.tools){r.edgeDiagnostics.reset();r.outputs.clear();r.regions.clear();r.mask={};r.points.clear();r.rejectedPoints.clear();r.lines.clear();r.searchRegion={};r.decision=PartDecision::NotEvaluated;r.calibration.reset();}}
+void EditorSession::suppressCancelled(CycleResult& c) {c.industrialEvidence.clear();c.frames.clear();c.state=ExecutionState::Skipped;c.error="Çevrim iptal edildi.";for(auto& r:c.tools){r.edgeDiagnostics.reset();r.outputs.clear();r.regions.clear();r.mask={};r.points.clear();r.rejectedPoints.clear();r.lines.clear();r.searchRegion={};r.decision=PartDecision::NotEvaluated;r.calibration.reset();}}
 }
