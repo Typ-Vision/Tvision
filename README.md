@@ -16,7 +16,7 @@ UI algoritma veya donanım SDK'sını doğrudan çağırmaz.
   kayıtları, restart geçmişi, Logs/CSV ve vf.socket2 scalar mapping.
 - Image File/Webcam edinimi; Camera Manager'da ortak keşif, kamera kaydı ve
   çevrimdışı Mono8 profil taslağı. Native endüstriyel edinim kapalıdır;
-  kalibrasyon/Editor/Runtime bağlantısı henüz uygulanmadı.
+  kalibrasyon sözleşmesi bağlı, Editor/Runtime bağlantısı açık.
 
 Hazırlık veya keşif sonucu üretim kabulü değildir. Gerçek sonuç olmadan PASS, skor
 veya robot pose gösterilmez. Robot hazırlık ekranları çalışan robot entegrasyonu
@@ -26,7 +26,7 @@ CUDA performansı veya ürün kurulum/dağıtım kabulünün yerine geçmez.
 ## Yerel derleme ve test — PowerShell
 
 Bu makinede Qt 6.12.0 / MinGW 13.1.0 ve MinGW ile derlenmiş OpenCV 5.0.0 kullanılır.
-Komutlar mevcut bağımlılık kurulumunu varsayar. Ayrıntılı kurulum/yeniden hazırlama
+Ayrıntılı kurulum/yeniden hazırlama
 ve ZXing bağımlılığı [Windows ortamı belgesindedir](docs/windows-workstation.md).
 Başka makinede yolları ve ABI uyumunu doğrulayın.
 
@@ -83,8 +83,8 @@ geçici ayarları geri yükler. Native production admission henüz yoktur.
    akışı yürütür. **Run Tool** güncel girdilerle seçili aracı çalıştırır; eksik
    upstream sonucu veya görüntü yerine değer üretmez.
 3. **Camera Manager** ile kamerayı projeye kaydedin; yerel producer hatırlanır.
-   **Setup → Calibration** aynı kamera kayıtlarını kullanır. Profil taslağı readback,
-   kalibrasyon adayı etkin model değildir. Aktivasyon ve kaynak→kurulum bağı ayrıdır.
+   **Setup → Calibration** aynı kamera kayıtlarını kullanır. Kalibrasyonda kayıtlı edinim
+   profilini seçin; aday kaydı etkin model değildir. Aktivasyon ve kaynak→kurulum bağı ayrıdır.
 4. Kaydedilmiş reçeteyi **Load Recipe → Run** ile Runtime'a hazırlayın.
    **Tek çevrim** gerçek edinim/yürütmeyi başlatır; Run tek başına sonuç üretmez.
    Stop eski sonucu bastırır; farklı sürüm için Stop → Load Recipe → Run kullanın.

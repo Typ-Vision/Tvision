@@ -6,6 +6,7 @@ görev” ifadeleri yazıldıkları tarihe aittir.
 
 | Dönem / görev | Kayıt |
 | --- | --- |
+| 18 Ekim 2026 — ICM-06b | [Industrial aktivasyon, geometri/profil invalidation ve scope2](2026-10-18-icm-06b.md) |
 | 18 Ekim 2026 — ICM-06a | [Reçetesiz industrial kalibrasyon edinimi](2026-10-18-icm-06a.md) |
 | 18 Ekim 2026 — ICM-05b | [Camera Manager ve capability kapılı ayar/preview UI](2026-10-18-icm-05b.md) |
 | 18 Ekim 2026 — ICM-05a | [Ortak keşif, registry ve factory](2026-10-18-icm-05a.md) |

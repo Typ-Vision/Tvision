@@ -21,7 +21,7 @@ public:
     void observeInventory(CameraInventory snapshot){
         inventory_=std::move(snapshot);inventoryDone_=true;
         QVector<DeviceBinding> webcams;for(const auto& d:inventory_.devices)if(d.webcam)webcams.append(*d.webcam);
-        active_.refreshAvailability(webcams);discovered_=webcams;discoveryDone_=!inventory_.cancelled;
+        active_.refreshAvailability(webcams,inventory_.industrial);discovered_=webcams;discoveryDone_=!inventory_.cancelled;
     }
     CameraId registerCamera(const CameraDiscoveryEntry& entry,const QString& name){
         if(!gate_())throw std::runtime_error("Runtime/worker/pending kayıt/ACK meşgul");

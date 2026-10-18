@@ -6,12 +6,12 @@ Son yönlendirme önceliklidir. Ayrıntılar [arşivde](archive/README.md).
 ## Devam noktası
 
 - **ICM-PLAN-02:** ortak yazılım ve donanım kabulü ayrıldı. [Kapanış](archive/2026-10-18-icm-plan-02.md).
-  **ICM-04f tamam:** ortak provider/test adaptörü sözleşmesi.
-  [Kapanış](archive/2026-10-18-icm-04f.md). **ICM-05a tamam:** ortak keşif/kayıt/factory ve yerel rota.
-  [Kapanış](archive/2026-10-18-icm-05a.md). **ICM-05b tamam:** Camera Manager,
-  profil taslağı ve capability kapılı readback/preview UI.
-  [Kapanış](archive/2026-10-18-icm-05b.md). **ICM-06a tamam:** reçetesiz industrial kalibrasyon.
-  [Kapanış](archive/2026-10-18-icm-06a.md). Sıradaki **06b → 07a → 07b → 07c → 08a → 08b → 08c → 09a**.
+  **ICM-06a/06b tamam:** reçetesiz industrial kalibrasyon, actual profile probe,
+  tam geometriyle aktivasyon/invalidation ve scope2.
+  [06a](archive/2026-10-18-icm-06a.md), [06b kapanış](archive/2026-10-18-icm-06b.md).
+  Önceki [04f](archive/2026-10-18-icm-04f.md), [05a](archive/2026-10-18-icm-05a.md),
+  [05b](archive/2026-10-18-icm-05b.md) tamam.
+  Sıradaki **07a → 07b → 07c → 08a → 08b → 08c → 09a**.
   [04f kartı](architecture/industrial-camera-tasks-foundation.md),
   [Basler/Daheng paketleri](architecture/industrial-camera-tasks-backends.md).
   OECS native 04d/04e açık/ertelenmiş; ortak sıra için önkoşul değil. Test adaptörü
@@ -46,7 +46,7 @@ Son yönlendirme önceliklidir. Ayrıntılar [arşivde](archive/README.md).
   [Görev kartları](architecture/industrial-camera-tasks-foundation.md).
   ICM-00 veya tamamlanmış KMC görevlerini yeniden başlatmayın.
 - Ana hedef Basler/Daheng PoE; deney cihazı COE-U USB3/OECS. Tanı probe'u üretim admission/tazelik
-  garantisi değildir; trigger/lifecycle ve kalibrasyon/Editor/Runtime bağlantısı
+  garantisi değildir; native trigger/lifecycle ve Editor/Runtime bağlantısı
   henüz uygulanmadı. Capture/production ret kapıları kabul yapılmadan kaldırılmaz.
 
 ## Göreve göre oku
@@ -94,9 +94,10 @@ ve seçili kartın sözleşme/kabulü. Önce başlık/ID arayın.
 
 ## Son doğrulama ve çalışma ortamı
 
-- **ICM-06a:** core OFF Release ilgili build ve **5/5** test;
-  `build/icm-06a-{target-build,tests}.log`. Fixture; fiziksel kamera denenmedi.
-- Önceki 05b UI/core ve görsel kanıtları arşivdedir; yeniden koşulmadı.
+- **ICM-06b:** Release UI uygulama/ilgili hedefler ve core ilgili build;
+  core **8/8**, UI **6/6**, test font düzeltmesi sonrası **1/1** tekrar.
+  `build/icm-06b-*.log`, görseller `build/reference-ui/icm/06b/` incelendi.
+  Fixture; fiziksel kamera denenmedi. 06a önceki **5/5** kanıtı kapanışındadır.
   `plc_socket_runtime` aralıklı başarısızlığı/kök neden açık kalır.
 - Güncel UI `build/reference-ui/visionflow.exe`, core `build/kmc9-core-off`.
   Başlatma `.\scripts\run-local.ps1`; build/PATH komutları README'dedir.
@@ -105,7 +106,7 @@ ve seçili kartın sözleşme/kabulü. Önce başlık/ID arayın.
 
 ## Kapanış ve sonraki adım
 
-**ICM-06a tamam; sıradaki ICM-06b, ardından ICM-07a.** 04e-a/b, 05a-a, 07a-a yeniden yapılmaz;
+**ICM-06a/06b tamam; sıradaki ICM-07a, ardından ICM-07b.** 04e-a/b, 05a-a, 07a-a yeniden yapılmaz;
 ölçüm adayı configure girdisi değildir. 05a/07a ürün kabulü açık.
 [04d cancel incelemesi](archive/2026-10-18-icm-04d-cancel-audit.md): AcquisitionAbort
 yok; DeviceReset garantisiz, çalıştırılmadı. Üretici taslağı gönderilmedi.

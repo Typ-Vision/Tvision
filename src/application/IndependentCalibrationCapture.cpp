@@ -34,10 +34,12 @@ MeasurementSetup IndependentCaptureRequest::installation(const MeasurementCamera
 IndependentCalibrationSession::IndependentCalibrationSession():thread_(QThread::currentThread()),sourceId_("calibration-session:"+id()){}
 IndependentCalibrationSession::~IndependentCalibrationSession(){if(cancel_)cancel_->store(true);}
 void IndependentCalibrationSession::owner() const {require(thread_==QThread::currentThread(),"Calibration session owner thread required");}
-void IndependentCalibrationSession::cancel(){owner();if(cancel_)cancel_->store(true);ticket_.clear();cancel_.reset();evidence_.reset();acceptedSetup_.reset();math_.clear();}
+void IndependentCalibrationSession::cancel(){owner();if(cancel_)cancel_->store(true);ticket_.clear();cancel_.reset();evidence_.reset();acceptedSetup_.reset();profile_.reset();device_.reset();math_.clear();}
 bool IndependentCalibrationSession::busy() const {owner();return !ticket_.isEmpty();}
 std::optional<MeasurementSourceEvidence> IndependentCalibrationSession::evidence() const {owner();return evidence_;}
 std::optional<MeasurementSetup> IndependentCalibrationSession::acceptedSetup() const {owner();return acceptedSetup_;}
+std::optional<AcquisitionProfile> IndependentCalibrationSession::acceptedProfile() const {owner();return profile_;}
+std::optional<DiscoveredDevice> IndependentCalibrationSession::acceptedDevice() const {owner();return device_;}
 CalibrationWizardSession& IndependentCalibrationSession::math(){owner();return math_;}
 IndependentCaptureJob IndependentCalibrationSession::begin(IndependentCaptureRequest request){
     owner();cancel();request.validate();require(generation_<1000000000,"Capture generation exhausted");IndependentCaptureJob job;job.request_=std::move(request);job.sourceId_=sourceId_;job.ticket_=id();job.generation_=++generation_;job.cancel_=std::make_shared<std::atomic_bool>(false);job.deadline_=Deadline(job.request_.timeoutMs);ticket_=job.ticket_;cancel_=job.cancel_;return job;
@@ -64,7 +66,8 @@ IndependentCaptureResult IndependentCalibrationSession::run(const IndependentCap
             const auto discovery=backend.industrialDiscover ? backend.industrialDiscover():CameraService::industrialSnapshot(CameraService{}.discover(r.localRoute && !r.localRoute->producer.isEmpty() ? QStringList{r.localRoute->producer}:QStringList{},job.deadline_.remainingMs(),job.cancel_));
             require(!job.cancel_->load() && !job.deadline_.expired(),"Industrial discovery cancelled/expired");
             IndustrialCameraRequest request{*r.camera,*r.setup,*r.profile,{},source};
-            auto session=backend.factory.resolveOpen(request,discovery,r.localRoute,CameraLeaseUse::Calibration,FrameQueueMode::ProductionFifo,1);
+            request.device=CameraService::resolveIndustrial(*r.camera,discovery,r.localRoute);
+            auto session=backend.factory.open(request,CameraLeaseUse::Calibration,FrameQueueMode::ProductionFifo,1);
             auto command=[&](CameraOperation op,CameraState expected){
                 require(!job.cancel_->load() && !job.deadline_.expired(),"Industrial capture cancelled/expired");
                 session->submit(op,job.deadline_.remainingMs());
@@ -82,6 +85,7 @@ IndependentCaptureResult IndependentCalibrationSession::run(const IndependentCap
             command(CameraOperation::Grab,CameraState::Streaming);
             auto frame=session->take();require(frame.has_value(),"Industrial capture has no accepted frame");
             require(frame->image.metadata().sourceId==source,"Industrial frame metadata source mismatch");
+            result.profile_=r.profile;result.device_=request.device;
             return frame->image; // owned raster survives worker shutdown and lease release
         }();
         require(image.processing().isEmpty(),"Only raw acquisition accepted");
@@ -99,7 +103,7 @@ IndependentCaptureResult IndependentCalibrationSession::run(const IndependentCap
 }
 bool IndependentCalibrationSession::accept(const IndependentCaptureResult& result){
     owner();if(ticket_.isEmpty() || ticket_!=result.ticket_ || generation_!=result.generation_ || !cancel_)return false;
-    const bool cancelled=cancel_->load();ticket_.clear();cancel_.reset();evidence_.reset();acceptedSetup_.reset();math_.clear();if(cancelled || !result.error_.isEmpty() || !result.frame_ || !result.evidence_ || !result.mathSetup_)return false;
-    const auto origin=result.evidence_->origin;math_.useFrame(*result.frame_,*result.mathSetup_,origin==SourceOrigin::CameraAcquired ? "acquired":sourceOriginName(origin));evidence_=result.evidence_;acceptedSetup_=result.mathSetup_;return true;
+    const bool cancelled=cancel_->load();ticket_.clear();cancel_.reset();evidence_.reset();acceptedSetup_.reset();profile_.reset();device_.reset();math_.clear();if(cancelled || !result.error_.isEmpty() || !result.frame_ || !result.evidence_ || !result.mathSetup_)return false;
+    const auto origin=result.evidence_->origin;math_.useFrame(*result.frame_,*result.mathSetup_,origin==SourceOrigin::CameraAcquired ? "acquired":sourceOriginName(origin));evidence_=result.evidence_;acceptedSetup_=result.mathSetup_;profile_=result.profile_;device_=result.device_;return true;
 }
 }

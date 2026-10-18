@@ -1,5 +1,6 @@
 #include "CalibrationOverview.hpp"
 #include "CalibrationWizard.hpp"
+#include "application/CameraLocalConfiguration.hpp"
 #include <QFileDialog>
 #include <QFile>
 #include <QJsonDocument>
@@ -46,6 +47,7 @@ command("Cihazları keşfet","overviewDiscover",1,1,[this]{if(onCameraManager){o
 cards_=new QWidget;grid_=new QGridLayout(cards_);grid_->setContentsMargins(0,0,0,0);layout->addWidget(cards_);
 auto* selected=new QGroupBox("Seçili kamera ve ölçüm kurulumu");auto* v=new QVBoxLayout(selected);layout->addWidget(selected);
 detail_=label("");detail_->setObjectName("overviewDetail");v->addWidget(detail_);setups_=new QComboBox;setups_->setObjectName("overviewSetups");setups_->setSizeAdjustPolicy(QComboBox::AdjustToMinimumContentsLengthWithIcon);setups_->setMinimumContentsLength(12);v->addWidget(setups_);
+profiles_=new QComboBox;profiles_->setObjectName("overviewProfiles");profiles_->setSizeAdjustPolicy(QComboBox::AdjustToMinimumContentsLengthWithIcon);profiles_->setMinimumContentsLength(12);profiles_->setToolTip("Kalibrasyon edinimi ve etkinleştirme için kayıtlı acquisition profili");v->addWidget(profiles_);
 connect(setups_,&QComboBox::currentIndexChanged,this,[this]{if(!refreshing_)refresh();});
 auto* commands=new QHBoxLayout;v->addLayout(commands);
 connect(button(commands,"Operasyonel seç","overviewOperational"),&QPushButton::clicked,this,[this]{attempt([this]{auto* c=context_();if(!c || selected_.isEmpty() || setups_->currentData().toString().isEmpty())throw std::runtime_error("Kamera ve kurulum seçin.");c->calibrations().setOperational({selected_},{setups_->currentData().toString()});if(onChanged)onChanged();refresh();});});
@@ -85,6 +87,11 @@ const auto full=camera.name+"\n"+setupName+"\n"+choice+"\n"+availability;card->s
 reflow();const auto previous=setups_->currentData().toString();setups_->clear();
 for(const auto& s:e.current.setups)if(s.camera.value==selected_ && !e.archivedSetups.contains(s.id.value))setups_->addItem(s.name+QString(" • r%1").arg(s.revision),s.id.value);
 int index=setups_->findData(previous);if(index<0)index=setups_->findData(e.operational.value(selected_));if(index>=0)setups_->setCurrentIndex(index);
+const auto priorProfile=profiles_->currentData();profiles_->clear();bool industrial=false;
+for(const auto& camera:cameras)if(camera.id.value==selected_)industrial=camera.physical.has_value();
+for(const auto& p:e.current.profiles)if(p.camera.value==selected_ && p.setup.value==setups_->currentData().toString())profiles_->addItem(p.name+QString(" • r%1").arg(p.revision),p.id.value);
+profiles_->setCurrentIndex(profiles_->findData(priorProfile));if(profiles_->currentIndex()<0 && profiles_->count()==1)profiles_->setCurrentIndex(0);
+profiles_->setPlaceholderText("Edinim profili seçin • Camera Manager'da düzenlenir");profiles_->setVisible(industrial);
 detail_->clear();for(const auto& camera:cameras)if(camera.id.value==selected_){
     const auto identity=camera.physical ? camera.physical->vendor+" / "+camera.physical->model+" / Seri: "+camera.physical->serial : camera.device.providerId+" • "+camera.device.adapter;
     detail_->setText(camera.name+"\n"+c->availability(camera)+"\nCihaz: "+identity+"\nKamera kaydı gerçek edinim veya fiziksel süreklilik kabulü değildir.");
@@ -98,6 +105,12 @@ QStringList cells{r.name()+QString(" • v%1").arg(r.model().dependency().versio
 }catch(const std::exception& e){status_->setText(QString::fromUtf8(e.what()));detail_->clear();records_->setRowCount(0);}
 refreshing_=false;
 }
+void CalibrationOverview::configureCapture(IndependentCaptureRequest& request) const {
+    if(!request.camera || !request.camera->physical)return;
+    const auto e=context_()->environment();
+    for(const auto& p:e.current.profiles)if(p.id.value==profiles_->currentData().toString() && p.camera==request.camera->id && request.setup && p.setup==request.setup->id)request.profile=p;
+    if(!localSettings_.isEmpty())request.localRoute=CameraLocalConfiguration(localSettings_).route(*request.camera->physical);
+}
 void CalibrationOverview::activate(){
     auto* c=context_();if(!c || records_->currentRow()<0)throw std::runtime_error("Bir kayıt seçin.");const auto e=c->environment();std::optional<MeasurementCamera> camera;std::optional<MeasurementSetupDescriptor> setup;
     for(const auto& v:e.current.cameras)if(v.id.value==selected_)camera=v;for(const auto& v:e.current.setups)if(v.id.value==setups_->currentData().toString())setup=v;
@@ -105,13 +118,14 @@ void CalibrationOverview::activate(){
     QString old="Seçim yok";for(const auto& selection:e.selections)if(selection.target.setup==ref.setup)old=selection.id+QString(" v%1").arg(selection.version);
     QStringList report{camera->name+" • "+setup->name+QString(" r%1").arg(setup->revision),"Mevcut seçim: "+old,"Yeni kayıt: "+candidate.record.name()+QString(" v%1").arg(candidate.selection.version),"Köken: "+candidate.record.image().origin,candidate.record.residualsMillimetres().isEmpty() ? "Bağımsız kontrol yapılmadı":"Bağımsız kontrol kanıtı mevcut"};
     QStringList blockers;if(!candidate.record.activatable())blockers<<"Deneme / reddedilmiş kontrol etkinleştirilemez.";if(e.operational.value(camera->id.value)!=setup->id.value)blockers<<"Önce hedef kurulumu operasyonel seçin.";if(!c->changeAllowed())blockers<<"Runtime/worker/pending kayıt/ACK meşgul.";
-    IndependentCaptureRequest request;request.origin=SourceOrigin::CameraAcquired;request.camera=camera;request.setup=setup;try{request.validate();}catch(const std::exception& ex){blockers<<QString::fromUtf8(ex.what());}
+    IndependentCaptureRequest request;request.origin=SourceOrigin::CameraAcquired;request.camera=camera;request.setup=setup;configureCapture(request);try{request.validate();}catch(const std::exception& ex){blockers<<QString::fromUtf8(ex.what());}
+    if(request.profile)report<<"Edinim profili: "+request.profile->name+QString(" r%1 • %2 µs • gain %3").arg(request.profile->revision).arg(request.profile->requested.exposureTimeUs).arg(request.profile->requested.gain);
     int affected=0;if(recipesProvider_)for(const auto& recipe:recipesProvider_())try{const auto target=SystemCalibration::setupReference(recipe);if(target && target->setup==ref.setup && target->camera==ref.camera){++affected;report<<SystemCalibration::impact(candidate,recipe,c->directory());}}catch(const std::exception& ex){report<<recipe.name+": "+QString::fromUtf8(ex.what());}
     if(!affected)report<<"Etkilenen reçete yok. Reçete olmadan kaynak uyumu denetlenebilir.";report<<"Kaydetme seçim değildir. Resim çek yalnız açık komutla başlar; yeni gerçek kare bu exact hedef için denetlenir.";report<<blockers;
     QDialog d(this);d.setObjectName("scopedActivationReview");d.setWindowTitle("Etkinleştirme incelemesi");auto* layout=new QVBoxLayout(&d);auto* scroll=new QScrollArea;scroll->setWidgetResizable(true);auto* text=label(report.join('\n'));text->setObjectName("activationReviewText");text->setAlignment(Qt::AlignTop|Qt::AlignLeft);scroll->setWidget(text);layout->addWidget(scroll);
     auto* error=label("");error->setObjectName("activationStatus");layout->addWidget(error);auto* action=button(layout,"Resim çek, uyumu denetle ve etkinleştir","activationAcquire");action->setEnabled(blockers.isEmpty());auto* close=button(layout,"Kapat","activationClose");connect(close,&QPushButton::clicked,&d,&QDialog::reject);
     JobSession jobs;IndependentCalibrationSession probe;connect(&d,&QDialog::finished,&d,[&]{probe.cancel();});
-    connect(action,&QPushButton::clicked,&d,[&]{try{if(jobs.busy())return;const auto job=probe.begin(request);const auto backend=backend_;auto* watcher=jobs.watch<IndependentCaptureResult>(&d,SessionJob::Image);action->setEnabled(false);error->setText("Gerçek kaynak karesi bekleniyor…");connect(watcher,&QFutureWatcher<IndependentCaptureResult>::finished,&d,[&,watcher]{const auto r=watcher->result();watcher->deleteLater();action->setEnabled(true);try{if(!probe.accept(r))throw std::runtime_error(r.error().isEmpty() ? "Edinim iptal edildi.":r.error().toUtf8().constData());c->calibrations().activate(ref,content,probe);if(onChanged)onChanged();d.accept();}catch(const std::exception& ex){error->setText(QString::fromUtf8(ex.what()));}});jobs.launch(watcher,[job,backend]{return IndependentCalibrationSession::run(job,backend);});}catch(const std::exception& ex){error->setText(QString::fromUtf8(ex.what()));}});d.resize(680,540);d.exec();refresh();
+    connect(action,&QPushButton::clicked,&d,[&]{try{if(jobs.busy())return;const auto job=probe.begin(request);const auto backend=backend_;auto* watcher=jobs.watch<IndependentCaptureResult>(&d,SessionJob::Image);action->setEnabled(false);error->setText("Gerçek kaynak karesi bekleniyor…");connect(watcher,&QFutureWatcher<IndependentCaptureResult>::finished,&d,[&,watcher]{const auto r=watcher->result();watcher->deleteLater();action->setEnabled(true);try{if(!probe.accept(r)){if(camera->physical){c->calibrations().disconnect(ref.camera);if(onChanged)onChanged();}throw std::runtime_error(r.error().isEmpty() ? "Edinim iptal edildi.":r.error().toUtf8().constData());}c->calibrations().activate(ref,content,probe);if(onChanged)onChanged();d.accept();}catch(const std::exception& ex){error->setText(QString::fromUtf8(ex.what()));}});jobs.launch(watcher,[job,backend]{return IndependentCalibrationSession::run(job,backend);});}catch(const std::exception& ex){error->setText(QString::fromUtf8(ex.what()));}});d.resize(680,540);d.exec();refresh();
 }
 void CalibrationOverview::migrate(){
     auto* c=context_();if(!c)throw std::runtime_error("Önce projeyi kaydedin.");const auto e=c->environment();std::optional<SetupReference> ref;for(const auto& s:e.current.setups)if(s.id.value==setups_->currentData().toString())ref=SetupReference{s.camera,s.id,s.revision};if(!ref)throw std::runtime_error("Hedef kurulum seçin.");const auto histories=c->legacyHistories();if(histories.isEmpty())throw std::runtime_error("Aktarılabilir eski kayıt yok.");
@@ -138,7 +152,8 @@ void CalibrationOverview::wizard(bool plate,bool trial){
     if(!trial){for(const auto& camera:e.current.cameras)if(camera.id.value==selected_)request.camera=camera;
         for(const auto& setup:e.current.setups)if(setup.id.value==setups_->currentData().toString())request.setup=setup;
         if((!request.camera || !request.setup) && !e.current.cameras.isEmpty())throw std::runtime_error("Hedef kurulum seçin.");}
-    CalibrationWizard dialog(plate,request,c->directory(),[c,request](const auto& r){if(r.image().origin=="trial_file")c->saveTrial(r);else c->calibrations().save({request.camera->id,request.setup->id,request.setup->revision},r);},this);
+    configureCapture(request);
+    CalibrationWizard dialog(plate,request,c->directory(),[c,request](const auto& r){if(r.image().origin=="trial_file")c->saveTrial(r);else c->calibrations().save({request.camera->id,request.setup->id,request.setup->revision},r);},this,backend_);
     dialog.exec();refresh();
 }
 void CalibrationOverview::associateTrial(){

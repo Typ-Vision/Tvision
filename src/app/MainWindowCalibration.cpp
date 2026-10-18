@@ -109,6 +109,7 @@ QWidget* MainWindow::makeCalibration() {
     calibrationHome_=new CalibrationHome([this]{CalibrationHomeContext c;if(service_.hasProject()){c.path=service_.path();c.projectId=service_.project().id;c.recipes=service_.project().recipes;if(service_.activeRecipe())c.currentRecipe=*service_.activeRecipe();c.directory=QFileInfo(c.path).absolutePath();if(service_.activeRecipe())for(const auto& t:service_.tools())if(t.enabled && (t.kind=="image_file" || t.kind=="webcam")){if(c.source){c.source.reset();break;}c.source=t;}}return c;},[this]{return !editorSession_.busy() && !cameraSession_.busy() && !runtimeJobs_.busy() && !(runtime_ && runtime_->busy()) && !(runtimeCoordinator_ && (runtimeCoordinator_->state()==RuntimeState::Running || runtimeCoordinator_->state()==RuntimeState::Starting || runtimeCoordinator_->state()==RuntimeState::Stopping)) && !(plc_ && plc_->blocking());});
     calibrationHome_->onSelectionChanged=[this]{editorSession_.calibrationChanged(editorContext());runtimeResult_.reset();refreshMatchOverlay();refreshFlow();showRuntimeResult();refreshRuntime();};
     calibrationOverview_=new CalibrationOverview([this]{return measurementWorkspace();});
+    calibrationOverview_->setLocalSettings(settingsFile_);
     calibrationOverview_->onCameraManager=[this]{selectPage("camera");};
     calibrationOverview_->setRecipes([this]{return service_.hasProject() ? service_.project().recipes:QVector<Recipe>{};});
     calibrationOverview_->onChanged=[this]{refreshFlow();refreshMatchOverlay();runtimeResult_.reset();showRuntimeResult();refreshRuntime();};

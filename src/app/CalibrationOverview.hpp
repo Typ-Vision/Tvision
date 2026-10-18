@@ -12,12 +12,15 @@ public:
     std::function<void()> onCameraManager;
     void setRecipes(std::function<QVector<Recipe>()> f){recipesProvider_=std::move(f);}
     void setCaptureBackendForTests(IndependentCaptureBackend b){backend_=std::move(b);}
+    void setLocalSettings(QString path){localSettings_=std::move(path);}
     QString selectedCamera() const{return selected_;}
 protected:
     void resizeEvent(QResizeEvent*) override;
 private:
     void attempt(std::function<void()>);
     void activate();
+    void configureCapture(IndependentCaptureRequest&) const;
+    QString localSettings_;
     void migrate();
     void transfer(const QString& action);
     std::function<QVector<Recipe>()> recipesProvider_;
@@ -33,7 +36,7 @@ private:
     QLabel *status_,*summary_,*detail_;
     QWidget* cards_;
     QGridLayout* grid_;
-    QComboBox* setups_;
+    QComboBox *setups_,*profiles_;
     QTableWidget* records_;
     QVector<QWidget*> cardWidgets_;
     bool refreshing_=false;

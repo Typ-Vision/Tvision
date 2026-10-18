@@ -67,6 +67,8 @@ Native capability yokken ayar uygulama/preview kapalıdır; offline taslak düze
 
 ## ICM-06b — activation ve kurulum invalidation
 
+**Ortak yazılım kabulü tamam:** [kapanış](../archive/2026-10-18-icm-06b.md).
+
 - Önkoşul: 06a, 03b.
 - Dosyalar: ScopedActiveCalibration, SystemCalibration, MeasurementWorkspace,
   calibration activation UI ve scope codec/transfer.

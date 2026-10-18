@@ -144,3 +144,10 @@ UI değişmediği için yeni görsel kontrol yoktur. **G0–G4 ve H01–H08 aç�
 0-device pre-reboot probe gerçek kamera/open/grab kanıtı değildir. ICM-01a bir sonraki
 tek teslim olarak tekrar çalıştırılabilir SDK/probe tanısını hazırlayacak; fiziksel
 seri/görüntü/reboot doğrulaması ICM-01b'de kalır.
+
+## ICM-06b scope sürüm kararı
+
+18 Ekim 2026: scoped calibration scope2 industrial physical/profile alanlarını
+opt-in ekler; scope1 exact reader korunur. System evidence dış zarf2, model/wrapper1–5,
+root/recipe/editor9/terminal7 ve engine değişmedi: industrial execution/production
+henüz açılmadı. Alan sözleşmesi [kaynak-kurulum belgesindedir](scoped-calibration-integration.md#icm-06b--industrial-model-ready-kapsamı).

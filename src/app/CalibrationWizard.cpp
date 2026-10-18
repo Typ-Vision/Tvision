@@ -129,7 +129,7 @@ void CalibrationWizard::captureIndependent(QString path){
     cancelWork();pendingFrame_.reset();setup_.reset();independentSetup_.reset();resultRecord_.reset();controls_={};lastResult_.reset();viewer_->clearImage();imageInfo_->setText("Görüntü yok.");step_=0;
     auto request=*independentTarget_;request.filePath=path;
     request.origin=path.isEmpty() ? SourceOrigin::CameraAcquired:usage_->currentIndex()==1 ? SourceOrigin::SetupFile:SourceOrigin::TrialFile;
-    if(request.origin==SourceOrigin::TrialFile){request.camera.reset();request.setup.reset();}
+    if(request.origin==SourceOrigin::TrialFile){request.camera.reset();request.setup.reset();request.profile.reset();request.localRoute.reset();}
     const auto job=independent_.begin(request);const auto backend=backend_;
     auto* watcher=jobs_.watch<IndependentCaptureResult>(this,SessionJob::Image);
     connect(watcher,&QFutureWatcher<IndependentCaptureResult>::finished,this,[this,watcher]{const auto r=watcher->result();watcher->deleteLater();

@@ -46,6 +46,8 @@ class IndependentCaptureResult {
     std::optional<ImageFrame> frame_;
     std::optional<MeasurementSourceEvidence> evidence_;
     std::optional<MeasurementSetup> mathSetup_;
+    std::optional<AcquisitionProfile> profile_;
+    std::optional<DiscoveredDevice> device_;
 public:
     const QString& error() const {return error_;}
 };
@@ -64,6 +66,8 @@ public:
     bool busy() const;
     std::optional<MeasurementSourceEvidence> evidence() const;
     std::optional<MeasurementSetup> acceptedSetup() const;
+    std::optional<AcquisitionProfile> acceptedProfile() const;
+    std::optional<DiscoveredDevice> acceptedDevice() const;
     CalibrationWizardSession& math(); // existing Edge/Caliper/plate implementation
 private:
     void owner() const;
@@ -73,6 +77,8 @@ private:
     std::shared_ptr<std::atomic_bool> cancel_;
     std::optional<MeasurementSourceEvidence> evidence_;
     std::optional<MeasurementSetup> acceptedSetup_;
+    std::optional<AcquisitionProfile> profile_;
+    std::optional<DiscoveredDevice> device_;
     CalibrationWizardSession math_;
 };
 }

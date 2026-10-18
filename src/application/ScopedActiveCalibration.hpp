@@ -25,7 +25,7 @@ public:
     void deactivate(const SetupId&);
     void setOperational(const CameraId&,const SetupId&);
     void disconnect(const CameraId&);
-    void refreshAvailability(const QVector<DeviceBinding>&);
+    void refreshAvailability(const QVector<DeviceBinding>&,const IndustrialDiscoverySnapshot& = {});
     QVector<ScopedCalibrationSnapshot> snapshots(const QVector<SetupReference>&,std::function<void()> beforeVerify={}) const;
 private:
     void owner() const;
@@ -33,7 +33,7 @@ private:
     MeasurementEnvironmentRepository repository_;
     ActiveCalibrationService::ChangeGate gate_;
     QThread* thread_;
-    struct Permission { RememberedCalibration selection; int revision; bool operator==(const Permission&) const = default; };
+    struct Permission { RememberedCalibration selection; int revision; std::optional<AcquisitionProfile> profile{}; std::optional<DiscoveredDevice> device{}; bool operator==(const Permission&) const = default; };
     QMap<QString,Permission> permissions_;
     int revision_=0;
     QSet<QString> usedProbes_;

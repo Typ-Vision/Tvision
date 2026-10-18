@@ -93,8 +93,8 @@ gerçek cihaz readback/owned Mono8 probe başarılı; ICM-04d çekirdek/fixture 
 [ICM-01a tanı kabulü](../archive/2026-10-17-icm-01a.md) fiziksel kapıları kapatmaz.
 Bağımlılıklar görevin başlatılabilmesini ifade eder; fiziksel kapı ayrıca belirtilir.
 04d/04e native OECS bölümü **açık/ertelenmiş**; ortak yazılım yolunun önkoşulu değildir.
-04f/05a/05b ortak provider, keşif/kayıt ve Camera Manager yazılımı tamam;
-native capability açmaz. Sıradaki 06a; güncel kanıt progress'tedir.
+04f–06b ortak provider, keşif/kayıt, Camera Manager ve reçetesiz kalibrasyon/aktivasyon
+yazılımı tamam; native capability açmaz. Sıradaki 07a; güncel kanıt progress'tedir.
 
 | ID | Tek teslim | Önkoşul |
 | --- | --- | --- |

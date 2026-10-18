@@ -11,7 +11,23 @@ namespace {
 void require(bool b,const char* s){if(!b)throw std::runtime_error(s);}
 QString digest(const QJsonObject& o){return QString::fromLatin1(QCryptographicHash::hash(QJsonDocument(o).toJson(QJsonDocument::Compact),QCryptographicHash::Sha256).toHex());}
 void valid(const ActiveCalibrationSnapshot& snapshot){const auto r=CalibrationModelRecord::decode(snapshot.record.encode());const auto& d=r.model().dependency();require(snapshot.selection.id==d.calibrationId && snapshot.selection.version==d.version && snapshot.selection.contentId==r.contentId() && snapshot.selection.revision>0 && snapshot.selection.revision<=1000000000 && r.activatable(),"Invalid active model-ready selection/evidence");
-    if(!snapshot.scope.isEmpty()){const auto o=snapshot.scope;require(o.size()==5 && o["setup"].isObject() && o["schemaVersion"]==1 && o["target"].isObject() && o["device"].isObject() && o["geometryId"].isString(),"Invalid scoped calibration envelope");const auto ref=SetupReference::fromJson(o["target"].toObject());const auto device=DeviceBinding::fromJson(o["device"].toObject());const auto setup=MeasurementSetupDescriptor::fromJson(o["setup"].toObject());require(setup.camera==ref.camera && setup.id==ref.setup && setup.revision==ref.revision && setup.deviceRevision==device.revision && setup.geometryId()==o["geometryId"].toString() && setup.opticalProfile==r.setup().lensId && setup.workingPlane==r.setup().planeId && setup.geometry.resolution==r.setup().resolution,"Scope descriptor mismatch");require(r.setup().id==ref.setup.value+"/"+QString::number(ref.revision) && r.setup().adapter==device.adapter && r.setup().configId==CalibrationWizardSession::configurationId({{"geometryId",o["geometryId"]},{"device",device.toJson()}}),"Scoped physical installation/evidence mismatch");}}
+    if(!snapshot.scope.isEmpty()){
+        const auto o=snapshot.scope;const bool industrial=o["schemaVersion"]==2;
+        require(o.size()==(industrial?7:5) && o["setup"].isObject() && (industrial || o["schemaVersion"]==1) && o["target"].isObject() && o["device"].isObject() && o["geometryId"].isString(),"Invalid scoped calibration envelope");
+        const auto ref=SetupReference::fromJson(o["target"].toObject());const auto device=DeviceBinding::fromJson(o["device"].toObject());const auto setup=MeasurementSetupDescriptor::fromJson(o["setup"].toObject());
+        require(setup.camera==ref.camera && setup.id==ref.setup && setup.revision==ref.revision && setup.deviceRevision==device.revision && setup.geometryId()==o["geometryId"].toString(),"Scope descriptor mismatch");
+        MeasurementCamera camera{ref.camera,"scope",device};
+        if(industrial){
+            require(o["physical"].isObject() && (o["profile"].isNull() || o["profile"].isObject()),"Missing industrial scope identity/profile");
+            camera.physical=PhysicalDeviceIdentity::fromJson(o["physical"].toObject());
+            if(o["profile"].isObject()){
+                const auto profile=AcquisitionProfile::fromJson(o["profile"].toObject());
+                require(profile.camera==ref.camera && profile.setup==ref.setup && profile.requested.trigger.enabled && profile.requested.trigger.source=="Software","Industrial scope profile mismatch");
+            }
+        }
+        require(r.setup()==IndependentCaptureRequest::installation(camera,setup),"Scoped physical installation/evidence mismatch");
+    }}
+
 QJsonObject selection(const ActiveCalibrationSelection& s){return {{"id",s.id},{"version",s.version},{"contentId",s.contentId},{"revision",s.revision}};}
 }
 Recipe SystemCalibration::branch(const Recipe& recipe,const QString& source) {

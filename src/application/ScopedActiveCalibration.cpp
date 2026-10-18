@@ -4,7 +4,12 @@
 #include <QCryptographicHash>
 namespace visionflow {
 namespace {QJsonObject setupProof(const MeasurementEnvironment& e,const SetupReference& r){for(auto s:e.current.setups)if(s.id==r.setup && s.revision==r.revision){s.name=s.id.value;return s.toJson();}throw std::runtime_error("Missing setup proof");}
-QString sGeometryId(const MeasurementEnvironment& e,const SetupReference& r){for(const auto& s:e.current.setups)if(s.id==r.setup && s.revision==r.revision)return s.geometryId();throw std::runtime_error("Missing setup geometry");}
+QJsonObject scope(const MeasurementEnvironment& e,const SetupReference& ref,const MeasurementCamera& c,const std::optional<AcquisitionProfile>& profile={}){
+    QJsonObject o{{"schemaVersion",1},{"target",ref.toJson()},{"device",c.device.toJson()},{"setup",setupProof(e,ref)}};
+    o["geometryId"]=MeasurementSetupDescriptor::fromJson(o["setup"].toObject()).geometryId();
+    if(c.physical){o["schemaVersion"]=2;o["physical"]=c.physical->toJson();o["profile"]=profile ? QJsonValue(profile->toJson()):QJsonValue();}return o;
+}
+bool currentProfile(const MeasurementEnvironment& e,const AcquisitionProfile& p){for(auto n:e.current.profiles)if(n.id==p.id){n.name=p.name;return n==p;}return false;}
 void require(bool b,const char* s){if(!b)throw std::runtime_error(s);}}
 ScopedActiveCalibrationService::ScopedActiveCalibrationService(MeasurementEnvironmentRepository r,ActiveCalibrationService::ChangeGate g)
     :repository_(std::move(r)),gate_(std::move(g)),thread_(QThread::currentThread()) {require(bool(gate_),"Change gate required");repository_.load();}
@@ -14,8 +19,7 @@ MeasurementSetup ScopedActiveCalibrationService::installation(const MeasurementE
     ref.validate();require(!e.archivedCameras.contains(ref.camera.value) && !e.archivedSetups.contains(ref.setup.value),"Archived installation");
     for(const auto& s:e.current.setups)if(s.id==ref.setup && s.camera==ref.camera && s.revision==ref.revision){
         for(const auto& c:e.current.cameras)if(c.id==ref.camera){
-            require(c.device.adapter=="webcam" && s.geometry.complete && !s.geometry.sensorRoi && !s.geometry.binning && c.device.confidence!=DeviceIdentityConfidence::Unavailable,"Unsupported/unknown installation geometry or identity");
-            return {s.id.value+"/"+QString::number(s.revision),c.device.adapter,CalibrationWizardSession::configurationId({{"geometryId",s.geometryId()},{"device",c.device.toJson()}}),s.opticalProfile,s.workingPlane,s.geometry.resolution,{"image",LengthUnit::Pixel,AxisConvention::XRightYDown},{s.workingPlane+"/mm",LengthUnit::Millimetre,AxisConvention::XRightYDown}};
+            return IndependentCaptureRequest::installation(c,s);
         }
     }throw std::runtime_error("Current exact installation required");
 }
@@ -36,7 +40,7 @@ QVector<CalibrationModelRecord> ScopedActiveCalibrationService::historyRecords(c
     return out; // Historical display only; never an activation/resolve path.
 }
 ActiveCalibrationSnapshot ScopedActiveCalibrationService::candidate(const SetupReference& ref,const QString& content) const {
-    const auto e=environment();for(const auto& r:records(ref))if(r.contentId()==content){const auto& d=r.model().dependency();for(const auto& c:e.current.cameras)if(c.id==ref.camera)return {r,{d.calibrationId,r.contentId(),d.version,1},{{"schemaVersion",1},{"target",ref.toJson()},{"device",c.device.toJson()},{"geometryId",sGeometryId(e,ref)},{"setup",setupProof(e,ref)}}};}throw std::runtime_error("Exact candidate not found");
+    const auto e=environment();for(const auto& r:records(ref))if(r.contentId()==content){const auto& d=r.model().dependency();for(const auto& c:e.current.cameras)if(c.id==ref.camera)return {r,{d.calibrationId,r.contentId(),d.version,1},scope(e,ref,c)};}throw std::runtime_error("Exact candidate not found");
 }
 int ScopedActiveCalibrationService::migrateLegacy(const SetupReference& ref,const QVector<CalibrationModelRecord>& originals,int failAfter){
     const auto target=setup(ref);require(gate_(),"Runtime/worker/pending record/ACK busy");require(!originals.isEmpty(),"Legacy history empty");QVector<CalibrationModelRecord> pending;const auto existing=records(ref);const auto id=originals.first().model().dependency().calibrationId;const auto at=QDateTime::currentDateTimeUtc();int version=0;
@@ -49,12 +53,16 @@ void ScopedActiveCalibrationService::activate(const SetupReference& ref,const QS
     const auto e=environment();require(gate_(),"Runtime/worker/pending record/ACK busy");require(revision_<1000000000,"Activation revision exhausted");
     const auto expected=installation(e,ref);const auto proof=probe.evidence();
     require(!probe.busy() && proof && proof->origin==SourceOrigin::CameraAcquired && proof->target==std::optional(ref) && probe.acceptedSetup()==std::optional(expected),"Accepted actual camera probe for exact installation required");
+    const auto profile=probe.acceptedProfile();const auto device=probe.acceptedDevice();
+    for(const auto& c:e.current.cameras)if(c.id==ref.camera && c.physical){
+        require(profile && device && device->identity==*c.physical && currentProfile(e,*profile),"Actual industrial probe profile changed; acquire again");
+    }
     require(!usedProbes_.contains(proof->frameId),"Acquire a new activation probe");
     require(e.operational.value(ref.camera.value)==ref.setup.value,"Select operational setup explicitly first");
     for(const auto& r:records(ref))if(r.contentId()==content){
         require(r.activatable() && (r.image().origin=="acquired" || r.image().origin=="setup_file" || (r.image().origin=="legacy_record" && r.encode()["schemaVersion"]==5)),"Trial/legacy/rejected control cannot activate");
         const auto committed=repository_.saveAndRemember(e,r,ref,fault);
-        for(const auto& selection:committed.selections)if(selection.target==ref){permissions_.insert(ref.setup.value,{selection,++revision_});usedProbes_.insert(proof->frameId);return;}
+        for(const auto& selection:committed.selections)if(selection.target==ref){permissions_.insert(ref.setup.value,{selection,++revision_,profile,device});usedProbes_.insert(proof->frameId);return;}
     }throw std::runtime_error("Exact calibration content not found");
 }
 void ScopedActiveCalibrationService::deactivate(const SetupId& id){
@@ -67,8 +75,18 @@ void ScopedActiveCalibrationService::setOperational(const CameraId& camera,const
     repository_.commit(e,next);if(e.operational.value(camera.value)!=setup.value)disconnect(camera);
 }
 void ScopedActiveCalibrationService::disconnect(const CameraId& camera){owner();for(auto i=permissions_.begin();i!=permissions_.end();)if(i->selection.target.camera==camera)i=permissions_.erase(i);else ++i;}
-void ScopedActiveCalibrationService::refreshAvailability(const QVector<DeviceBinding>& devices){
-    const auto e=environment();for(const auto& c:e.current.cameras)try{c.device.resolve(devices);}catch(const std::exception&){disconnect(c.id);}
+void ScopedActiveCalibrationService::refreshAvailability(const QVector<DeviceBinding>& devices,const IndustrialDiscoverySnapshot& industrial){
+    const auto e=environment();for(const auto& c:e.current.cameras)try{
+        if(c.physical){
+            require(!industrial.cancelled && industrial.errors.isEmpty(),"Industrial inventory incomplete");
+            resolveRoutes(*c.physical,industrial.devices);
+            for(const auto& p:permissions_)if(p.selection.target.camera==c.id){
+                require(p.device.has_value(),"Industrial device evidence missing");
+                const auto found=CameraService::resolveIndustrial(c,industrial,p.device->route);
+                require(p.device->backend==found.backend && p.profile && currentProfile(e,*p.profile),"Industrial backend/profile changed");
+            }
+        }else c.device.resolve(devices);
+    }catch(const std::exception&){disconnect(c.id);}
 }
 QVector<ScopedCalibrationSnapshot> ScopedActiveCalibrationService::snapshots(const QVector<SetupReference>& refs,std::function<void()> beforeVerify) const {
     auto fingerprint=[&]{QFile f(repository_.catalogPath());if(!f.exists())return QByteArray("missing");require(f.open(QIODevice::ReadOnly) && f.size()<=4*1024*1024,"Catalog snapshot bounded read failed");const auto bytes=f.read(4*1024*1024+1);require(f.error()==QFileDevice::NoError && bytes.size()<=4*1024*1024,"Catalog snapshot read failed");return QCryptographicHash::hash(bytes,QCryptographicHash::Sha256);};
@@ -76,9 +94,9 @@ QVector<ScopedCalibrationSnapshot> ScopedActiveCalibrationService::snapshots(con
     const auto models=ActiveCalibrationService(repository_.catalogPath(),e.projectId,gate_).records();QVector<ScopedCalibrationSnapshot> out;QSet<QString> seen;
     for(const auto& ref:refs){require(!seen.contains(ref.setup.value),"Duplicate snapshot target");seen.insert(ref.setup.value);
         const auto expected=installation(e,ref);require(e.operational.value(ref.camera.value)==ref.setup.value && permissions_.contains(ref.setup.value),"Installation requires explicit activation");
-        const auto p=permissions_.value(ref.setup.value);require(p.selection.target==ref && e.selections.contains(p.selection),"Selection changed; reactivate");bool found=false;
+        const auto p=permissions_.value(ref.setup.value);if(p.profile)require(currentProfile(e,*p.profile),"Acquisition profile changed; reactivate without refitting model");require(p.selection.target==ref && e.selections.contains(p.selection),"Selection changed; reactivate");bool found=false;
         for(const auto& r:models)if(r.contentId()==p.selection.contentId && r.activatable() && r.setup()==expected){
-            for(const auto& c:e.current.cameras)if(c.id==ref.camera)out.append({ref,c.device,{r,{p.selection.id,p.selection.contentId,p.selection.version,p.revision},{{"schemaVersion",1},{"target",ref.toJson()},{"device",c.device.toJson()},{"geometryId",sGeometryId(e,ref)},{"setup",setupProof(e,ref)}}}});found=true;
+            for(const auto& c:e.current.cameras)if(c.id==ref.camera)out.append({ref,c.device,{r,{p.selection.id,p.selection.contentId,p.selection.version,p.revision},scope(e,ref,c,p.profile)}});found=true;
         }require(found,"Calibration dependency unavailable");
     }if(beforeVerify)beforeVerify();require(before==fingerprint() && e.encode()==environment().encode() && permissions==permissions_,"Calibration snapshot set changed; retry whole admission");return out;
 }
