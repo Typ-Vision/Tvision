@@ -1,6 +1,6 @@
 # Endüstriyel kamera entegrasyonu — ICM ana planı
 
-18 Ekim 2026. **Ortak ürün geliştirmesi donanım kabulünden ayrıldı; OECS native trigger ertelendi, application edinimi ve Editor profil seçimi hazır; Runtime admission/terminal sırası açık.** Uygulayıcı hedefi:
+18 Ekim 2026. **Ortak ürün geliştirmesi donanım kabulünden ayrıldı; OECS native trigger ertelendi, application edinimi ve Editor profil seçimi hazır; immutable Runtime admission hazır; trusted terminal sırası açık.** Uygulayıcı hedefi:
 **GPT-6.1-sol / medium** (kullanıcının Sol6.1 medium tercihi). Bu belge model
 ayarını değiştirmez veya başka bir chat başlatmaz. Yeni kullanıcı yönlendirmesi,
 KMC-10e sonrasında fiziksel kalibrasyon kabulünden önce gerçek kamera entegrasyonudur.

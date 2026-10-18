@@ -17,6 +17,7 @@
 #include "domain/ReferenceConfig.hpp"
 #include "SystemCalibration.hpp"
 #include "SourceFrameIndex.hpp"
+#include "IndustrialRuntime.hpp"
 #include <cmath>
 #include <algorithm>
 
@@ -144,7 +145,21 @@ QJsonObject ProductionRecipeService::dependencies(const Recipe& recipe,const QSt
     QJsonObject result{{"engine",current.engineVersion},{"tools",tools},{"models",models},{"assets",assets},{"calibration",calibration}};
     if(!references.isEmpty())result["referenceBindings"]=references;
     if(!current.systemCalibration.isEmpty()){SystemCalibration::decodeEvidence(current.systemCalibration);if(current.systemCalibration["executionDependency"].toObject()!=calibration)fail(ProductionError::DependencyChanged,"System binding differs from execution calibration");result["systemCalibration"]=current.systemCalibration;}
-    if(recipe.definition.contains("sourceSetup")){
+    if(SystemCalibration::source(recipe).kind=="industrial_camera"){
+        if(!industrialAdmission_)fail(ProductionError::InvalidConfiguration,"Industrial production terminal acceptance pending ICM-08b");
+        const auto request=decodeIndustrialRuntimeDependency(SystemCalibration::source(recipe),current.industrialSource);
+        if(!current.measurementSource.isEmpty())fail(ProductionError::DependencyChanged,"Industrial source cannot use webcam evidence envelope");
+        if(!current.systemCalibration.isEmpty()){
+            const auto model=SystemCalibration::decodeEvidence(current.systemCalibration);
+            const auto scope=model.scope;
+            const auto profile=AcquisitionProfile::fromJson(scope["profile"].toObject());
+            if(profile.id!=request.profile.id || profile.revision!=request.profile.revision || profile.acquisitionId(request.setup)!=request.profile.acquisitionId(request.setup))fail(ProductionError::DependencyChanged,"Industrial model/admission profile differs");
+            if(scope["schemaVersion"]!=2 || scope["physical"]!=request.device.identity.toJson() || scope["device"]!=request.camera.device.toJson() || scope["target"]!=SetupReference{request.camera.id,request.setup.id,request.setup.revision}.toJson() || scope["geometryId"]!=request.setup.geometryId())fail(ProductionError::DependencyChanged,"Industrial model/admission geometry differs");
+        }
+        result["industrialSource"]=current.industrialSource;
+    }else if(!current.industrialSource.isEmpty())fail(ProductionError::DependencyChanged,"Unexpected industrial source snapshot");
+    if(recipe.definition.contains("sourceSetup") && SystemCalibration::source(recipe).kind!="industrial_camera"){
+
         const auto source=current.measurementSource;const auto acquisition=source["acquisition"].toObject();const auto ref=SystemCalibration::setupReference(recipe);
         if(source.size()!=4 || source["schemaVersion"]!=1 || source["binding"]!=recipe.definition["sourceSetup"] || !ref || acquisition.size()!=3 || acquisition["target"]!=ref->toJson())fail(ProductionError::DependencyChanged,"Physical source snapshot mismatch");
         const auto device=DeviceBinding::fromJson(acquisition["device"].toObject());const auto geometry=GeometryDescriptor::fromJson(acquisition["geometry"].toObject());
@@ -166,7 +181,7 @@ RecipeValidation ProductionRecipeService::validate(const QString& principal,cons
         Project p;p.id=QUuid::createUuid().toString();p.name="Validation";p.cameraReference=draft.cameraReference;
         p.createdAt=p.modifiedAt=QDateTime::currentDateTimeUtc();p.recipes={draft};validateProject(p);
         validateEditorDefinition(draft.definition);
-        if(draft.definition["editor"].toObject()["schemaVersion"].toInt()==9)throw std::runtime_error("Editor9 requires whole source-set Runtime preparation");
+        if(draft.definition["editor"].toObject()["schemaVersion"].toInt()==9 && !industrialAdmission_)throw std::runtime_error("Editor9 requires whole source-set Runtime preparation");
         const auto tools=editorTools(draft.definition);const auto connections=editorConnections(draft.definition);
         const auto graph=validateGraph(tools,connections);
         if(!graph.valid())throw std::runtime_error(graph.errors.join("\n").toUtf8().constData());
@@ -184,8 +199,8 @@ RecipeValidation ProductionRecipeService::validate(const QString& principal,cons
                 if(acquisition==tools.cend())throw std::runtime_error("Reference acquisition identity differs from recipe");
                 if(b.world && (!draft.calibrationBinding || b.calibration!=draft.calibrationBinding))throw std::runtime_error("Reference calibration differs from recipe");
             }
-            if(!QStringList{"image_file","template_match","blob","edge","calculate","webcam","measurement","preprocess","code_read","edge_point","edge_pair","line_fit","circle_fit","geometry_measurement","pattern_pose","shape_pose"}.contains(tool.kind))throw std::runtime_error("Üretim sözleşmesinde desteklenmeyen tool.");
-            if(tool.kind=="webcam")++sources;
+            if(!(industrialAdmission_ && tool.kind=="industrial_camera") && !QStringList{"image_file","template_match","blob","edge","calculate","webcam","measurement","preprocess","code_read","edge_point","edge_pair","line_fit","circle_fit","geometry_measurement","pattern_pose","shape_pose"}.contains(tool.kind))throw std::runtime_error("Üretim sözleşmesinde desteklenmeyen tool.");
+            if(tool.kind=="webcam" || (industrialAdmission_ && tool.kind=="industrial_camera"))++sources;
             if((ToolRegistry::get(tool.kind).usesCalibration || ((tool.kind=="edge_pair" || tool.kind=="line_fit" || tool.kind=="circle_fit" || tool.kind=="geometry_measurement") && tool.parameters["mode"]=="calibrated")) && !draft.calibrationBinding)throw std::runtime_error("Metric tool requires an exact calibration binding.");
             if(tool.kind=="image_file") {++sources;if(tool.parameters["path"].toString().isEmpty())throw std::runtime_error("Kaynak yolu boş.");}
             if(tool.kind=="template_match" || tool.kind=="pattern_pose" || tool.kind=="shape_pose")MatchService::validateModel(MatchService::parameters(tool.parameters));

@@ -39,7 +39,7 @@ edinim yapmaz; cached raw ile aynı kaynak/frame/cycle/piksel içeriği gerekir.
 Scoped industrial model eşlemesi scope2 fiziksel kimlik/device/setup revision ister.
 ICM-07c kayıtlı profil seçimini açık bağlama/güncelleme ve immutable worker girdisine bağlar.
 Liste seçimi edinim yapmaz; profil değişimi açık rebind ister. Üç applicationType
-ortak Editor/Viewer/ROI yolundadır. Immutable production admission/terminal 08a/b kapsamındadır.
+ortak Editor/Viewer/ROI yolundadır. Runtime admission 08a hazır; terminal 08b kapsamındadır.
 
 ICM-05b: CameraManager ortak envanter/registry ve process-local lease üzerinden
 çalışır. Configure-only factory oturumu tetik capability'si istemez, Start/Grab'ı
@@ -329,6 +329,29 @@ Runtime Run preparation'dır, üretim trigger'ı veya sonuç üretmez; gerekirse
 kontrol/configure etmek UI'da hazırlık olarak gösterilir. Begin tam required source
 seti ve current profile/device/geometry kanıtını yeniden doğrular. Actual frame de
 aynı snapshot ile eşleşir; bir kaynak hatasında global PASS üretilmez.
+
+ICM-08a: `MeasurementWorkspace::productionSources` tek environment/model görünümünü
+trusted application composition'a bağlar. `freezeIndustrialRuntime` her enabled
+industrial source için exact discovery/backend/capability çözer; prepare/begin
+Connect/Configure/Grab veya software command üretmez. `industrialSource`/1 ayrı
+branch dependency'si reference, camera/setup/profile, physical, backend ve yerel
+route'u taşır; eski measurementSource/1 zarfı gevşetilmez. Decoder exact alanları ve
+requested hash/revision'ı denetler. Gerekli model scope2 physical/device/setup/profile
+ve geometryId ile eşleşir; raw-only kaynak unused/offline modele bağlı değildir.
+
+Whole-set snapshot contract/route/factory ve resolved device'ı değer kopyasıyla
+saklar; worker canlı registry/model seçimini okumaz. Edinim öncesi fresh exact
+resolve aynı device/backend/route olmalıdır; actual identity/readback ve raster
+07b provider denetiminden geçer. Runtime ortak lease'i kullanır. UI/profil/model
+ve backend değişimi eski cycle'a sızmaz; sonraki begin dependency farkında reprepare
+ister. Duplicate physical identity prepare'da reddedilir.
+
+08a yalnız in-memory admission/worker kabulüdür. Persistent whole-set service
+industrial prepare'ı açıkça reddeder; normal workspace yolu industrial composition
+vermez. Industrial worker sonucu private completion authority almaz ve finish
+reddedilir. Terminal1–7 codec/okuyucu değişmedi; 08b bu kanıtı digest ve yeni exact
+terminal schema'ya birlikte bağlamadan kullanıcı production açılamaz. Normal factory
+test adaptörüne veya native backend'e capability vermez.
 
 Completion güveni private worker/lease sınırından gelir; caller-supplied JSON/hardware
 metadata trusted sayılmaz. Gerekli acquisition evidence digest'e dahil edilir.

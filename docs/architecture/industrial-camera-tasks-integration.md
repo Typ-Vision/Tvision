@@ -138,6 +138,10 @@ Kayıtlı profil seçimi ve worker bağlantısı hazır; native edinim kapılar�
 
 ## ICM-08a — immutable Runtime admission
 
+**Ortak yazılım kabulü tamam:** [kapanış](../archive/2026-10-18-icm-08a.md).
+In-memory admission/worker hazır; persistent kullanıcı production ve completion
+authority 08b bitene kadar kapalıdır. Native factory capability açılmadı.
+
 - Önkoşul: 07b. 08b bitene kadar kullanıcı production capability kapalı.
 - Dosyalar: ProductionRecipeService, MultiSourceRuntimeService, RuntimeService,
   ScopedActiveCalibration, MeasurementWorkspace.

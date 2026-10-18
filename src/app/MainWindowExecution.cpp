@@ -55,6 +55,16 @@ EditorContext MainWindow::editorContext() const {
 QByteArray MainWindow::flowSignature() const {return editorSession_.signature(editorContext());}
 void MainWindow::refreshFlow() {
     const auto identity=systemCalibrationIdentity();if(identity!=editorCalibrationIdentity_ && !editorSession_.busy()){if(service_.activeRecipe() && service_.activeRecipe()->definition["editor"].toObject()["schemaVersion"]==9){for(auto i=identity.begin();i!=identity.end();++i)if(editorCalibrationIdentity_[i.key()]!=i.value())editorSession_.calibrationChanged(editorContext(),i.key());}else editorSession_.calibrationChanged(editorContext());editorCalibrationIdentity_=identity;}
+    if(!editorSession_.busy() && measurementWorkspace_ && service_.activeRecipe()){
+        const auto tools=service_.tools();
+        if(std::any_of(tools.cbegin(),tools.cend(),[](const auto& tool){return tool.kind=="industrial_camera";})){
+        const auto e=measurementWorkspace_->environment();
+        for(const auto& tool:tools)if(tool.kind=="industrial_camera")try{
+            const auto ref=IndustrialSourceReference::fromJson(tool.parameters["sourceReference"].toObject());ref.validateAgainst(e.current);
+            if(e.archivedCameras.contains(ref.camera.value) || e.archivedSetups.contains(ref.setup.value))throw std::runtime_error("Archived industrial source");
+        }catch(const std::exception&){editorSession_.invalidateTool(editorContext(),tool.id);editorSession_.sourceFrames.remove(tool.id);if(editorSession_.frame && editorSession_.frame->metadata().sourceId==tool.id)editorSession_.frame.reset();}
+    }
+    }
     editorSession_.reconcile(editorContext());
     QString text="Önce reçete açın.";
     if(service_.activeRecipe()) {

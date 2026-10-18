@@ -1,6 +1,7 @@
 #include "MultiSourceRuntimeService.hpp"
 #include "domain/ToolRegistry.hpp"
 #include "ProductionResultCodec.hpp"
+#include "IndustrialRuntime.hpp"
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QCryptographicHash>
@@ -26,19 +27,30 @@ MultiSourceRuntimeService::Prepared MultiSourceRuntimeService::capture(const Rec
     require(recipe.definition["editor"].toObject()["schemaVersion"]==9,ProductionError::InvalidConfiguration,"Explicit editor9 required");validateEditorDefinition(recipe.definition);
     const auto graph=validateSourceGraph(editorTools(recipe.definition),editorConnections(recipe.definition));require(graph.valid() && !graph.requiredSources.isEmpty(),ProductionError::InvalidConfiguration,"Invalid/empty multi-source graph");
     const auto set=provider_(recipe);require(set.sources.size()==graph.requiredSources.size(),ProductionError::DependencyChanged,"Missing/foreign source snapshot set");Prepared out;QJsonObject sourceSet;QSet<QString> devices;
+    const auto configured=editorTools(recipe.definition);bool hasIndustrial=false;
+    for(const auto& t:configured)if(t.enabled && t.kind=="industrial_camera")hasIndustrial=true;
+    require(hasIndustrial==bool(set.industrial),ProductionError::DependencyChanged,"Missing/foreign industrial execution composition");
+    require(!hasIndustrial || !persist_,ProductionError::InvalidConfiguration,"Industrial user production pending ICM-08b trusted terminal");
+    std::optional<IndustrialRuntimeAdmission> industrial;
+    if(hasIndustrial)industrial=freezeIndustrialRuntime(*set.industrial,configured);
     for(const auto& source:graph.requiredSources){
-        require(set.sources.contains(source),ProductionError::DependencyChanged,"Required source snapshot missing");auto branch=SystemCalibration::branch(recipe,source);auto editor=branch.definition["editor"].toObject();editor["schemaVersion"]=8;branch.definition["editor"]=editor;
-        const auto dependencies=set.sources[source];
+        require(set.sources.contains(source),ProductionError::DependencyChanged,"Required source snapshot missing");auto branch=SystemCalibration::branch(recipe,source);auto editor=branch.definition["editor"].toObject();editor["schemaVersion"]=SystemCalibration::source(branch).kind=="industrial_camera" ? 9:8;branch.definition["editor"]=editor;
+        auto dependencies=set.sources[source];
+        require(dependencies.industrialSource.isEmpty(),ProductionError::DependencyChanged,"Caller cannot supply industrial admission evidence");
+        const bool industrialBranch=SystemCalibration::source(branch).kind=="industrial_camera";
+        if(industrialBranch)dependencies.industrialSource=industrial->sources.value(source);
+
         if(!dependencies.systemCalibration.isEmpty())branch=SystemCalibration::prepareRecipe(SystemCalibration::decodeEvidence(dependencies.systemCalibration),branch,directory);
         else {branch.calibrationBinding.reset();branch.calibrationReference.clear();}
         const auto tool=SystemCalibration::source(branch);if(tool.kind=="image_file"){const QFileInfo file(QDir(directory).absoluteFilePath(tool.parameters["path"].toString()));require(file.isFile() && file.isReadable(),ProductionError::InvalidConfiguration,"Required source file unavailable");}QString device;
         if(branch.definition.contains("sourceSetup"))device="physical:"+branch.definition["sourceSetup"].toObject()["target"].toObject()["cameraId"].toString();
         else if(tool.kind=="webcam")device="legacy:"+tool.parameters["backend"].toString()+":"+QString::number(tool.parameters["deviceIndex"].toInt());
         if(!device.isEmpty()){require(!devices.contains(device),ProductionError::InvalidConfiguration,"Repeated physical source requires an explicit reuse policy");devices.insert(device);}
-        ProductionRecipeService validator([](const QString&,ProductionAction){return true;},[dependencies](const Recipe&){return dependencies;});const auto validation=validator.validate(identity_.principal,branch,directory);validator.activate(identity_.principal,validation.id,branch,directory);
+        ProductionRecipeService validator([](const QString&,ProductionAction){return true;},[dependencies](const Recipe&){return dependencies;});validator.industrialAdmission_=industrialBranch;const auto validation=validator.validate(identity_.principal,branch,directory);validator.activate(identity_.principal,validation.id,branch,directory);
         out.branches[source]=validator.active();sourceSet[source]=validator.active()->dependencies();
     }
     auto snapshot=std::make_shared<ProductionSnapshot>();snapshot->recipe_=recipe;snapshot->directory_=QDir(directory).absolutePath();snapshot->dependencies_={{"engine",ExecutionService::version()},{"sourceSet",sourceSet},{"scope",(persist_ ? "multi_source_runtime/1":"multi_source_in_memory/1")}};
+    if(industrial)snapshot->industrial_=std::make_shared<const IndustrialExecutionInputs>(industrial->inputs);
     snapshot->validation_={QUuid::createUuid().toString(QUuid::WithoutBraces),identity_.principal,QByteArray{},hash(snapshot->dependencies_),QDateTime::currentDateTimeUtc(),(persist_ ? "multi_source_runtime/1":"multi_source_in_memory/1")};
     // Canonical complete recipe identity uses the same fields as legacy admission.
     snapshot->validation_.contentId=ProductionRecipeService::recipeContent(recipe,directory);
@@ -58,6 +70,7 @@ ProductionCycle MultiSourceRuntimeService::begin(const QJsonObject& communicatio
 }
 void MultiSourceRuntimeService::finish(quint64 ticket,const CycleResult& result){
     owner();require(ticket && ticket==cycle_.ticket,ProductionError::InvalidCompletion,"Foreign/stale multi-source ticket");
+    require(!cycle_.snapshot->industrial(),ProductionError::InvalidCompletion,"Industrial completion/terminal pending ICM-08b");
     if(!pending_.isEmpty()){
         require(pendingCompletion_ && result.completionSnapshot_==cycle_.snapshot && result.completionTicket_==ticket && result.completionDigest_==ProductionRecipeService::completionDigest(result) && ProductionRecipeService::completionDigest(*pendingCompletion_)==result.completionDigest_,ProductionError::InvalidCompletion,"Pending completion cannot change");
         persist("cycles",pending_["recordId"].toString(),pending_);pending_={};pendingCompletion_.reset();last_=result;failure_.clear();cycle_={};return;

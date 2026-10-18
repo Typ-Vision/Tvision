@@ -24,8 +24,9 @@ struct ProductionDependencies {
     std::optional<CalibrationDependency> calibration;
     QJsonObject systemCalibration;
     QJsonObject measurementSource;
+    QJsonObject industrialSource; // Admission only; terminal support follows in ICM-08b
 };
-struct MultiSourceDependencies {QMap<QString,ProductionDependencies> sources;};
+struct MultiSourceDependencies {QMap<QString,ProductionDependencies> sources;std::shared_ptr<const IndustrialExecutionInputs> industrial;};
 struct RecipeValidation {
     QString id,principal;
     QByteArray contentId,dependencyId;
@@ -38,6 +39,7 @@ public:
     const QString& projectDirectory() const { return directory_; }
     const RecipeValidation& validation() const { return validation_; }
     const QJsonObject& dependencies() const { return dependencies_; }
+    const std::shared_ptr<const IndustrialExecutionInputs>& industrial() const { return industrial_; }
 private:
     friend class ProductionRecipeService;
     friend class MultiSourceRuntimeService;
@@ -45,6 +47,7 @@ private:
     QString directory_;
     RecipeValidation validation_;
     QJsonObject dependencies_;
+    std::shared_ptr<const IndustrialExecutionInputs> industrial_;
 };
 struct ProductionCycle {
     quint64 ticket=0;
@@ -89,6 +92,7 @@ private:
     void persist(const QString&,const QString&,const QJsonObject&) const;
     void transition(const QString&,const QString&,const ProductionSnapshot&) const;
     int historyLimit_;
+    bool industrialAdmission_=false; // Private whole-set validator seam; never user production permission
     QMap<QString,std::shared_ptr<const ProductionSnapshot>> validated_;
     QVector<QString> activated_;
     std::shared_ptr<const ProductionSnapshot> active_;

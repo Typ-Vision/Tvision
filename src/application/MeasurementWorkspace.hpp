@@ -5,6 +5,7 @@
 #include "CalibrationService.hpp"
 #include "MultiSourceRuntimeService.hpp"
 #include "IndustrialCameraProvider.hpp"
+#include "IndustrialExecution.hpp"
 #include <QUuid>
 #include <stdexcept>
 #include <QFileInfo>
@@ -55,13 +56,23 @@ public:
     void archive(const CameraId& id){if(!gate_())throw std::runtime_error("Runtime/worker/pending kayıt/ACK meşgul");registry_.reload();registry_.archiveCamera(id);active_.disconnect(id);}
     void archiveSetup(const SetupId& id){if(!gate_())throw std::runtime_error("Runtime/worker/pending kayıt/ACK meşgul");registry_.reload();auto e=registry_.snapshot();registry_.archiveSetup(id);for(const auto& s:e.current.setups)if(s.id==id)active_.disconnect(s.camera);}
     std::optional<ActiveCalibrationSnapshot> forRecipe(const Recipe& r) const {const auto ref=SystemCalibration::setupReference(r);if(!ref){if(r.definition.contains("calibrationPolicy"))throw std::runtime_error("Scoped recipe requires explicit setup binding");return {};}return active_.snapshots({*ref}).first().calibration;}
-    MultiSourceDependencies productionSources(const Recipe& recipe) const {
+    MultiSourceDependencies productionSources(const Recipe& recipe,const std::optional<IndustrialExecutionInputs>& industrial={}) const {
         const auto before=active_.environment();const auto graph=validateSourceGraph(editorTools(recipe.definition),editorConnections(recipe.definition));if(!graph.valid() || graph.requiredSources.isEmpty())throw std::runtime_error("Invalid required source graph");
         QVector<SetupReference> refs;QMap<QString,Recipe> branches;
         for(const auto& source:graph.requiredSources){const auto branch=SystemCalibration::branch(recipe,source);branches[source]=branch;if(SystemCalibration::requestsCalibration(branch,false)){const auto ref=SystemCalibration::setupReference(branch);if(!ref)throw std::runtime_error("Metric source requires exact setup binding");refs.append(*ref);}}
         const auto models=active_.snapshots(refs);MultiSourceDependencies set;
+        for(const auto& source:graph.requiredSources)if(SystemCalibration::source(branches[source]).kind=="industrial_camera"){
+            if(!industrial)throw std::runtime_error("Industrial Runtime production pending ICM-08b/native acceptance");
+            auto frozen=*industrial;frozen.contract=before.current;frozen.admittedDevices.clear();frozen.leaseUse=CameraLeaseUse::Runtime;
+            set.industrial=std::make_shared<const IndustrialExecutionInputs>(std::move(frozen));break;
+        }
         for(const auto& source:graph.requiredSources){const auto branch=branches[source];ProductionDependencies d;const auto ref=SystemCalibration::setupReference(branch);
-            if(ref){bool found=false;for(const auto& c:before.current.cameras)if(c.id==ref->camera)for(const auto& s:before.current.setups)if(s.id==ref->setup && s.revision==ref->revision && s.camera==c.id){if(before.archivedCameras.contains(c.id.value) || before.archivedSetups.contains(s.id.value))throw std::runtime_error("Archived required source");d.measurementSource={{"schemaVersion",1},{"binding",branch.definition["sourceSetup"]},{"acquisition",QJsonObject{{"target",ref->toJson()},{"device",c.device.toJson()},{"geometry",s.geometry.toJson()}}},{"origin",SystemCalibration::source(branch).kind=="image_file" ? "offline_replay":"camera_acquired"}};found=true;}if(!found)throw std::runtime_error("Required source setup changed");}
+            const auto tool=SystemCalibration::source(branch);
+            if(tool.kind=="industrial_camera"){
+                const auto reference=IndustrialSourceReference::fromJson(tool.parameters["sourceReference"].toObject());reference.validateAgainst(before.current);
+                if(before.archivedCameras.contains(reference.camera.value) || before.archivedSetups.contains(reference.setup.value))throw std::runtime_error("Archived industrial Runtime source");
+            }
+            if(ref && tool.kind!="industrial_camera"){bool found=false;for(const auto& c:before.current.cameras)if(c.id==ref->camera)for(const auto& s:before.current.setups)if(s.id==ref->setup && s.revision==ref->revision && s.camera==c.id){if(before.archivedCameras.contains(c.id.value) || before.archivedSetups.contains(s.id.value))throw std::runtime_error("Archived required source");d.measurementSource={{"schemaVersion",1},{"binding",branch.definition["sourceSetup"]},{"acquisition",QJsonObject{{"target",ref->toJson()},{"device",c.device.toJson()},{"geometry",s.geometry.toJson()}}},{"origin",SystemCalibration::source(branch).kind=="image_file" ? "offline_replay":"camera_acquired"}};found=true;}if(!found)throw std::runtime_error("Required source setup changed");}
             for(const auto& m:models)if(ref && m.target==*ref){d.calibration=SystemCalibration::binding(m.calibration,source,source+"/image");d.systemCalibration=SystemCalibration::evidence(m.calibration,source,source+"/image");}
             set.sources.insert(source,d);
         }

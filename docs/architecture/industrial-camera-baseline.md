@@ -62,7 +62,7 @@ Kaynak yolları `src/` altındadır.
 | Tool kayıt/DAG | `domain/ToolRegistry.cpp`, `ToolDefinition.cpp`, `ToolGraph.cpp`: image_file/webcam + industrial_camera1 acquisitionSource; industrial minimum editor9, strict sourceReference1 veya null taslak. Bilinmeyen kind ret; eski editor1–8 no-op korunur | 07a tamam |
 | Recipe invalidation | `application/ProjectService.cpp`: bütün registry acquisitionSource parametre/enabled değişimleri eski calibrationBinding'i invalid eder; industrial reference/profile hash dahildir. Rename/no-op korur | 07a tamam |
 | Executor/factory | `application/ToolExecutors.cpp`: image_file ve webcam gerçek source executor'ları. `ExecutionService.cpp`: scoped webcam Qt discovery + WebcamAdapter; injection sourceKind eşleşmesi kapısı industrial ürün desteği değildir; actual frame sonrası snapshot geometri kontrolü korunur | 07b |
-| Immutable admission | `application/ProductionRecipeService.cpp`, dependencies: measurementSource/1 dört alan, acquisition üç alan; complete webcam, ROI/binning yok; whitelist'te industrial yok. editor9 doğrudan single service'de ret, whole-set service gerekli | 08a |
+| Immutable admission | `application/ProductionRecipeService.cpp`, dependencies: measurementSource/1 webcam zarfı korunur; industrialSource/1 ayrı exact admission dependency. Private whole-set branch validator ve frozen worker hazır; persistent industrial production 08b bekler. editor9 doğrudan single service'de ret | 08a |
 | Çok-source admission | `application/MultiSourceRuntimeService.cpp`: her dal iç projection editor8 ile aynı ProductionRecipeService kontrolünden geçer; aynı fiziksel kaynak tekrar talebi reddedilir. Whole-set provider atomic consistency yerine sessiz parçalı fallback yapmaz | 08a |
 | Runtime seçimleri | `application/RuntimeService.cpp`: source/capture/installations kontrollerinde image_file/webcam listeleri; multi worker frozen sourceSet üzerinden yürür; kind listeleri ortak factory/evidence ile birlikte genişlemeli | 08a/08b |
 | Kalıcı terminal okuyucu | `application/ProductionResultCodec.cpp`: terminal6 webcam/complete/no ROI-binning; origin image_file→offline_replay, webcam→camera_acquired. terminal7 branch schema3–6 replay eder; yeni kimlik alanı eski exact envelope'a eklenemez | 08b |
@@ -78,7 +78,7 @@ yeni codec dalıyla ekler; mevcut schema'ya alan ekleyip exact-field kontrolün�
 | --- | --- |
 | Project / Recipe | root1; recipe1–2; `domain/Project.cpp`, `persistence/ProjectRepository.cpp`; calibrationBinding yalnız recipe2 |
 | Editor | reader1–9; dependency array7, reference/world opt-in8, explicit multi-source9; `domain/ToolDefinition.cpp`. Eski Save sırf yeni kod açıldı diye9 olmaz |
-| Engine | `visionflow.execution/25`; ICM-07b industrial execution ve TargetOnly raw eşleşmesi; `application/ExecutionService.hpp` |
+| Engine | `visionflow.execution/26`; ICM-08a frozen industrial Runtime admission/worker; `application/ExecutionService.hpp` |
 | Tool descriptor'ları | 17 built-in: image_file1, template_match1, blob3, edge1, calculate1, webcam1, measurement2, preprocess1, code_read2, edge_point3, geometry_measurement2, edge_pair2, line_fit3, circle_fit3, pattern_pose1, shape_pose1, industrial_camera1 (minimum editor9); `domain/ToolRegistry.cpp` |
 | Measurement contract | DeviceBinding1, GeometryDescriptor1, MeasurementCamera1, MeasurementSetupDescriptor1, MeasurementSetupContract1; DeviceCapabilities sürümsüz dört bool nested nesne; `domain/MeasurementSetupContract.cpp`. ICM-03a ekledi: MeasurementCamera2 (`physical` zorunlu; yoksa schema 1 bayt aynı), PhysicalDeviceIdentity1; TransportLocator1/BackendIdentity1 yalnız yerel, projeye yazılmaz. ICM-03b ekledi: GeometryDescriptor2 (decimation/reverse + açık ROI/binning; yalnız endüstriyel), MeasurementSetupContract2 (`profiles` boş değilse), AcquisitionProfile1/AcquisitionSettings1, AcquisitionReadback1/GeometryReadback1; eski yazımlar bayt/hash aynı |
 | Environment / transfer | measurement-environment1, measurement-bundle1; `application/MeasurementEnvironment.cpp`. Registry geçmişi/arşiv/selection alanları hash'e dahildir |
@@ -86,7 +86,7 @@ yeni codec dalıyla ekler; mevcut schema'ya alan ekleyip exact-field kontrolün�
 | Kalibrasyon | MeasurementSetup1; CalibrationModelRecord wrapper1–5 (model-ready1, named2, legacy3, association4, migration5); active-calibration katalog1; `ActiveCalibrationService.cpp` |
 | Eski model codec | uniform1, raw homography2, manual scale3; `MeasurementService.cpp`; yeni wrapper eski model/hash'i yeniden yazmaz |
 | Source/model scope | sourceSetup1, scoped-source/1; scope1 tam beş alan: schemaVersion/target/device/geometryId/setup; system-model-ready/1 evidence1 unscoped, evidence2 scoped; `SystemCalibration.cpp` |
-| Production dependency | measurementSource1 binding/acquisition/origin; sourceSet dal dependencies; validation scope execution_configuration veya multi_source_in_memory/1 / multi_source_runtime/1; `ProductionRecipeService.hpp/.cpp`, `MultiSourceRuntimeService.cpp` |
+| Production dependency | measurementSource1 binding/acquisition/origin; industrialSource1 yalnız in-memory admission (reference/camera/setup/profile/physical/backend/route); sourceSet dal dependencies; validation scope execution_configuration veya multi_source_in_memory/1 / multi_source_runtime/1; `ProductionRecipeService.hpp/.cpp`, `MultiSourceRuntimeService.cpp` |
 | Terminal / port | terminal reader1–7; single writer3–6, multi writer7 ve branch3–6; output port codec1; `ProductionResultCodec.cpp`, `MultiSourceRuntimeService.cpp`, `ToolResultCodec.cpp` |
 | Arşiv / PLC | snapshot/event1; vf.socket/2 mevcut scalar mapping; terminal schema'sı transport sürümü değildir |
 
@@ -118,7 +118,7 @@ Webcam'in adı veya parametreleri industrial olarak yeniden yorumlanmaz.
 `sourceReference` null veya strict referans1 nesnesidir; backend seçimi yerel factory'dedir.
 ICM-07b engine'i execution/25'e yükseltir; terminal7 değişmez. Eski engine'e bağlı
 validation/preparation yeniden üretilir; proje/recipe codec ve içerik hash'i değişmez.
-Industrial edinim application provider yolundadır; profil seçim UI 07c'de kalır.
+Industrial edinim application provider yolundadır; 07c profil seçim UI hazırdır.
 
 ICM-03a fiziksel identity/confidence ile local TransportLocator ve BackendIdentity'yi
 ayırır. ICM-03b requested/applied profile ve tam geometri codec'lerini ekler. ICM-04c/d
@@ -127,6 +127,10 @@ kanıtlar; mevcut application frame/cycle ID'leri hardware counter yerine kullan
 ICM-06b/07b bu değerleri setup/model/cache ve actual acquisition sınırında doğrular.
 ICM-08a/b frozen dependency, private completion digest ve terminal replay'i birlikte
 sürümler. Terminal7 ve scope1 exact alanları değiştirilmeden eski reader dalı korunur;
+ICM-08a engine execution/26, in-memory industrialSource/1 ve frozen Runtime worker
+ekler; terminal1–7 aynı kalır. Industrial sonuç completion authority almaz;
+persistent industrial admission/finish 08b bekler.
+
 yeni schema numarası ilgili uygulama kartında kaynak envanteri yeniden kontrol edilerek seçilir.
 
 ## Test eşlemesi ve sonraki adım

@@ -1,7 +1,7 @@
 # VisionFlow — güncel devir
 
 18 Ekim 2026.
-Son yönlendirme önceliklidir. Ayrıntılar [arşivde](archive/README.md).
+Güncel yönlendirme önceliklidir. [Arşiv](archive/README.md).
 
 ## Devam noktası
 
@@ -11,14 +11,14 @@ Son yönlendirme önceliklidir. Ayrıntılar [arşivde](archive/README.md).
   [06a](archive/2026-10-18-icm-06a.md), [06b kapanış](archive/2026-10-18-icm-06b.md).
   Önceki [04f](archive/2026-10-18-icm-04f.md), [05a](archive/2026-10-18-icm-05a.md),
   [05b](archive/2026-10-18-icm-05b.md) tamam.
-  Sıradaki **08a → 08b → 08c → 09a**.
+  Sıradaki **08b → 08c → 09a**.
   [04f kartı](architecture/industrial-camera-tasks-foundation.md),
   [Basler/Daheng paketleri](architecture/industrial-camera-tasks-backends.md).
   OECS native 04d/04e açık/ertelenmiş; ortak sıra için önkoşul değil. Test adaptörü
   normal ürün yoluna açılamaz; G2 yazılım, G0/G1/G3 backend, G4 kurulum kabulüdür.
 - Hazırlıklar: [04e-b](archive/2026-10-18-icm-04e-b.md) stress,
-  [05a-a](archive/2026-10-18-icm-05a-a.md) resolve ve
-  [07a](archive/2026-10-18-icm-07a.md) kaynak registry/codec ve offline Editor taslağı tamam.
+  [05a-a](archive/2026-10-18-icm-05a-a.md) resolve;
+  [07a](archive/2026-10-18-icm-07a.md) registry/codec tamam.
 - [ICM-04e-a](archive/2026-10-18-icm-04e-a.md) tamam: lease/worker, polling/shutdown,
   geç kare ret ve cleanup karantinası.
   [ICM-03c](archive/2026-10-18-icm-03c.md) owned ölçüm rasteri/geometri adayı da hazır;
@@ -48,10 +48,7 @@ Son yönlendirme önceliklidir. Ayrıntılar [arşivde](archive/README.md).
 - Ana hedef Basler/Daheng PoE; deney cihazı COE-U USB3/OECS. Tanı probe'u üretim
   admission/tazelik garantisi değildir. Application edinimi ve Editor seçim UI hazır; Runtime bağlantısı bekliyor. Native/production kapıları korunur.
 
-## Göreve göre oku
-
-Başlangıç: AGENTS + bu özet + [README](../README.md); sonra
-[ana plan](architecture/industrial-camera-plan.md) ve seçili kart.
+Görevler: [ana plan](architecture/industrial-camera-plan.md), seçili kart ve sözleşme.
 
 ## Uygulanan durum ve korunacak sınırlar
 
@@ -92,22 +89,23 @@ Başlangıç: AGENTS + bu özet + [README](../README.md); sonra
 
 ## Son doğrulama ve çalışma ortamı
 
-- **ICM-07c:** ortak Editor kayıtlı profil seçimi/açık bağlama, actual Viewer bilgisi
-  ve immutable worker bağlantısı. [Kapanış](archive/2026-10-18-icm-07c.md).
-  Release UI ilgili CTest **5/5**; kanıt `build/icm-07c-*`.
-  İlk UI testindeki reopen sonrası reçete seçimi hatası düzeltildi; ilk koşum korundu.
-  Fiziksel kamera kabulü yok; engine /25 ve terminal7 değişmedi.
-  Önceki [07b](archive/2026-10-18-icm-07b.md) execution/provider/TargetOnly tamam.
+- **ICM-08a:** immutable industrial Runtime admission/worker ve prepare/begin/actual
+  kontrolleri. [Kapanış](archive/2026-10-18-icm-08a.md). Engine **/26**, terminal7 aynı.
+  Core ilgili 6/6, UI 3/3; geniş 9/10, terminal HELLO tekrar 1/1. Kanıt `build/icm-08a-*`.
+  In-memory kabul; kullanıcı production/completion 08b bekler. Fiziksel kabul yok.
+- [07c](archive/2026-10-18-icm-07c.md) Editor profil seçimi/açık binding ve worker bağlantısı:
+  Release UI ilgili CTest 5/5, normal/küçük görseller `build/reference-ui/icm/07c/`.
+  [07b](archive/2026-10-18-icm-07b.md) execution/provider/TargetOnly tamam.
   `plc_socket_runtime` aralıklı başarısızlığı/kök neden açık kalır.
-- UI `build/reference-ui/visionflow.exe`; core /25 `build/kmc9-core-off`.
+- UI `build/reference-ui/visionflow.exe`; core `build/kmc9-core-off`.
   Başlatma `.\scripts\run-local.ps1`; build/PATH komutları README'dedir.
 - ICM-02 baseline `53bb972`; sonrası görev ID'li tek commit. Push kullanıcı
   isteğiyle. Ajanlar sıralıdır. Yerel INI korunur; kanıtlar `build/` altındadır.
 
 ## Kapanış ve sonraki adım
 
-**ICM-07c tamam; sıradaki ICM-08a, ardından ICM-08b.** 04e-a/b, 05a-a, 07a-a yeniden yapılmaz;
-ölçüm adayı configure girdisi değildir. 07b/07c application edinimi ve seçim UI hazır; 08a/b production açık.
+**ICM-08a tamam; sıradaki ICM-08b, ardından ICM-08c.** 04e-a/b, 05a-a, 07a-a yeniden yapılmaz;
+ölçüm adayı configure girdisi değildir. 07b/07c edinim/UI, 08a in-memory admission hazır; 08b production/terminal açık.
 [04d cancel incelemesi](archive/2026-10-18-icm-04d-cancel-audit.md): AcquisitionAbort
 yok; DeviceReset garantisiz, çalıştırılmadı. Üretici taslağı gönderilmedi.
 Delay=0, close/open/sessizlik kanıt değil; aynı deneyi tekrarlamayın. Native Unavailable.

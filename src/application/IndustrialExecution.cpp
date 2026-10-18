@@ -25,7 +25,8 @@ IndustrialExecutionFrame acquireIndustrial(const IndustrialExecutionInputs& inpu
     const auto discovery=inputs.discover ? inputs.discover(deadline.remainingMs(),cancel):
         CameraService::industrialSnapshot(CameraService{}.discover(route && !route->producer.isEmpty() ? QStringList{route->producer}:QStringList{},deadline.remainingMs(),cancel));
     live();request.device=CameraService::resolveIndustrial(request.camera,discovery,route);
-    auto session=inputs.factory.open(request,CameraLeaseUse::Editor,FrameQueueMode::ProductionFifo,1);
+    if(inputs.admittedDevices.contains(request.sourceId))require(request.device==inputs.admittedDevices[request.sourceId],"Industrial Runtime device/backend changed; prepare again");
+    auto session=inputs.factory.open(request,inputs.leaseUse,FrameQueueMode::ProductionFifo,1);
     try {
         auto command=[&](CameraOperation op,CameraState expected){
             live();session->submit(op,deadline.remainingMs());

@@ -9,6 +9,8 @@ struct IndustrialExecutionInputs {
     MeasurementSetupContract contract;
     QMap<QString,TransportLocator> routes; // CameraId -> explicit local route
     CameraProviderFactory factory;
+    QMap<QString,DiscoveredDevice> admittedDevices; // Runtime: exact resolved device/backend at preparation
+    CameraLeaseUse leaseUse=CameraLeaseUse::Editor;
     std::function<IndustrialDiscoverySnapshot(int,const std::shared_ptr<std::atomic_bool>&)> discover;
 };
 struct IndustrialExecutionEvidence {

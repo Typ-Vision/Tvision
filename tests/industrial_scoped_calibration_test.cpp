@@ -33,6 +33,14 @@ int main(int argc,char** argv){QCoreApplication app(argc,argv);try{
         check(resolver(raw).calibration!=nullptr,"industrial branch model resolves actual frame");
         bool measured=false;for(const auto& tool:cycle.tools)if(tool.toolId==metric){const auto value=tool.outputs.value("value");measured=value.valid && std::holds_alternative<double>(value.data) && std::abs(std::get<double>(value.data)-10)<.01;}
         check(measured,"industrial ROI and scoped model produce actual 10 mm result");
+        MultiSourceRuntimeService runtime({"engineer",[](const QString&,ProductionAction){return true;}},[&](const Recipe& recipe){return ws.productionSources(recipe,inputs);});
+        runtime.prepare(*project.activeRecipe(),dir.path());const auto lease=runtime.begin();
+        service.disconnect(r.camera.id); // An admitted worker owns the original model; next begin must reprepare.
+        const auto actual=RuntimeService::execute(lease,"",{});bool runtimeMeasured=false;
+        for(const auto& tool:actual.tools)if(tool.toolId==metric)runtimeMeasured=tool.outputs.value("value").valid && std::abs(std::get<double>(tool.outputs["value"].data)-10)<.01;
+        check(actual.state==ExecutionState::Done && runtimeMeasured,"Runtime frozen industrial model survives live selection invalidation");
+        runtime.abandon(lease.ticket,"08a diagnostics; terminal pending");reject([&]{runtime.begin();});
+        capture();service.activate(ref,model.contentId(),session);
         auto foreign=branch;auto tools=editorTools(foreign.definition);auto reference=tools[0].parameters["sourceReference"].toObject();auto physical=reference["physical"].toObject();physical["serial"]="foreign";reference["physical"]=physical;tools[0].parameters["sourceReference"]=reference;foreign.definition=withEditorTools(foreign.definition,tools);
         check(!SystemCalibration::resolve(original,foreign,dir.path(),raw).calibration,"foreign physical source cannot use branch model");
     }
