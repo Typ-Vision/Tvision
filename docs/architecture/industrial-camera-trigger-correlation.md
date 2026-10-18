@@ -4,6 +4,12 @@
 Bu strateji tek olası çözüm değildir. Yeni timestamp deneyi doğrudan saat
 kıyaslamasını çürüttü; alternatif stratejilerin kanıt koşulları aşağıdadır.**
 
+18 Ekim plan ayrımı: buradaki native engel mevcut OECS/COE-U cihazına aittir;
+04d/04e native açık/ertelenmiştir. Aşağıdaki tarihli "04e başlamaz" ifadeleri
+native OECS yolunu sınırlar. Ortak yazılım 04f → 05a–09a ile ilerler;
+[Basler/Daheng paketleri](industrial-camera-tasks-backends.md) kendi kanıtını üretir.
+Bu kapsam değişikliği aşağıdaki karşı örnekleri veya korelasyon şartlarını kaldırmaz.
+
 ## Kanıt ve kararın sınırı
 
 [Önceki tanıda](../archive/2026-10-17-icm-04d-native-diagnostic.md) nFrameCounter ve

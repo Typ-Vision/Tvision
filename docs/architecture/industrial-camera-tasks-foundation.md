@@ -159,6 +159,9 @@ gerçek open/feature/unit/grab doğrulaması açık.
 
 ## ICM-04d — software trigger admission
 
+- **18 Ekim kapsamı:** çekirdek/fixture kısmi hazır; native OECS tetik eşlemesi
+  açık/ertelenmiş. Belgeli cancel/drain/reset veya eşdeğer korelasyon kanıtı
+  gelmeden kapanmaz. Ortak ürün zinciri 04f üzerinden ilerler.
 - Önkoşul: 04c.
 - Dosyalar: AcquisitionService/adapter, hardware trigger/frame event ve acquisition evidence.
 - İş: stream-ready → tek in-flight → trigger → actual frame eşlemesi; monoton kalan
@@ -172,7 +175,7 @@ gerçek open/feature/unit/grab doğrulaması açık.
 
 ## ICM-04e — lifecycle, sahiplik ve preview
 
-- Önkoşul: 04d.
+- Native OECS önkoşulu: 04d. Bu native bölüm açık/ertelenmiş; 05a yazılımını bloke etmez.
 - 18 Ekim kullanıcı yönlendirmesiyle destek beklerken **04e-a bağımsız yazılım
   hazırlığı** yapılabilir: owner/worker, process-local lease, geç sonuç bastırma ve
   stop bütçesi fixture'ları. Bu alt adım native tetik/preview geçişini veya 04e/G1
@@ -191,3 +194,28 @@ gerçek open/feature/unit/grab doğrulaması açık.
 - Test: camera_lifecycle_contract, session_contract, acquisition_contract ve yeni lease corpus'u.
 - G1: gerçek grab/Stop kanıtı varsa acquisition kapısı kapanır; fixture-only ise fiziksel
   G1 açık tutulur. Editor/Runtime production izni hâlâ ICM-08b'yi bekler.
+
+## ICM-04f — ortak test adaptörü ve ürün bağlantısı sözleşmesi
+
+- Durum: **PLANLANDI; sıradaki görev**. Önkoşul: tamamlanan 03b/03c, 04d
+  çekirdek/fixture ve 04e-a/b. Native OECS 04d/04e veya fiziksel kamera gerekmez.
+- İş: mevcut capture/worker/lease tiplerini yeniden kullanarak SDK'sız, testlere
+  enjekte edilen deterministik industrial adaptörü ve ortak provider sınırını kur.
+  05a factory, 06a kalibrasyon ve 07b execution aynı sözleşmeyi tüketebilsin.
+  Ayrı bir kullanıcı demo modu veya ikinci acquisition mimarisi oluşturma.
+- Sözleşme: discovery/identity/profile/readback, owned frame/geometri, preview,
+  tek tetik, cancel/timeout/cleanup ve capability durumları açıkça temsil edilir.
+  Test adaptörü kendi sentetik kimliğini taşır; gerçek vendor/model/seri adına
+  native kanıt veremez. Native capability varsayılan ret davranışı korunur.
+- Kabul: bağımsız event/frame dizisiyle eski/duplicate/geç kare, timeout, Stop,
+  cleanup failure, busy ve preview→capture geçişi sınanır. Aynı pikselli yeni
+  kareler geçerli olabilir. Kaynak/profile/geometri değişimi yanlış bağa sızmaz.
+  Test enjeksiyonu ürün factory/config/recipe/terminal girişinden etkinleştirilemez;
+  caller-supplied veri trusted completion oluşturamaz. Ürün yolu test backend'ini reddeder.
+- Test: mevcut industrial capture/worker, acquisition/session/lifecycle corpus'u
+  ve gerekli yeni sözleşme testleri; gerçek CTest adları envanterden seçilir.
+  Kanıt `build/icm/04f/`; Release core, etkileniyorsa UI build/test/görsel.
+- Çıkış: **ortak yazılım bağlantısına hazır**; 05a başlayabilir. 04d/04e native,
+  G0/G1/G3/G4 ve fiziksel üretim kabulü kapanmaz; sentetik sonuç gerçek PASS olmaz.
+- Sonraki: ICM-05a. Kapsam dışı: vendor SDK binding, marka entegrasyonu, üretim
+  whitelist'ini gevşetme, tüm UI/Runtime zincirini bu kartta uygulama.

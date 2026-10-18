@@ -5,19 +5,28 @@ Bütün kartlar başlangıçta **PLANLANDI**. [Ana plan](industrial-camera-plan.
 bağlayıcıdır. UI kartları Release, ilgili CTest ve normal/küçük görsel kontrol ister.
 Fiziksel test yoksa sonuç yazılım kabulü olarak kaydedilir.
 
+**18 Ekim bağımlılık kararı:** 05a–09a ortak yazılım görevleridir; 04f test adaptörü
+kabulünden sonra native OECS beklenmeden tamamlanabilir. Testlerde sentetik
+backend kullanılır; normal ürün yolu yalnız doğrulanmış native capability ile gerçek
+edinim yapar. SDK'sız/unsupported cihaz için kayıt ve offline düzenleme yapılabilir,
+edinim açık hata verir. Native kabul [ayrı paketlerdedir](industrial-camera-tasks-backends.md).
+
 ## ICM-05a — ortak keşif, registry ve adapter factory
 
 **05a-a bağımsız hazırlığı tamam:** CameraService üzerinde fixture snapshot gruplama
 ve exact resolve; SDK enumeration, ortak webcam DTO, kayıt/factory/lease bağlantısı
-yok. Ana 05a kabulü ve 04e önkoşulu korunur.
+yok. Ana 05a kabulü açık; yazılım önkoşulu artık 04f'dir.
 
-- Önkoşul: 04e.
+- Önkoşul: 04f; tamamlanan 05a-a yeniden kullanılır. Native tetik ediniminin açılması
+  ayrıca kendi backend G1 kanıtına bağlıdır; keşif/open/preview ayrı yeteneklerdir.
 - Dosyalar: CameraService, MeasurementWorkspace, MeasurementEnvironment,
   ScopedActiveCalibration ve yeni application provider/factory.
 - İş: webcam + industrial discovery tek DTO; yerel producer route, dedup ve exact
   resolve. UI discovery donanımdan frame almaz. Calibration/Editor/Runtime aynı factory/lease'i kullanır.
 - Kabul: 0/1/N cihaz; iki producer aynı cihaz; offline/ambiguous/busy/SDK missing;
   keşif değişimi yanlış CameraId'yi çalıştırmaz; dosya/webcam çalışmaya devam eder.
+  Test adaptörü yalnız test composition'ından enjekte edilir. Normal factory,
+  sentetik veya henüz doğrulanmamış native backend'e tetik edinimi/production izni vermez.
 - Test: camera_transport, measurement_environment_persistence, yeni provider testleri.
 - Kapsam dışı: UI, üretim whitelist açma, aynı kamerayı N-source gibi sayma.
 
@@ -39,8 +48,9 @@ yok. Ana 05a kabulü ve 04e önkoşulu korunur.
 - Önkoşul: 05a.
 - Dosyalar: IndependentCalibrationCapture, CalibrationWizardSession,
   CalibrationCapture, MeasurementWorkspace; ilgili wizard UI yalnız gerekirse.
-- İş: webcam-only factory/validation sınırlarını doğrulanmış industrial backend için
-  genişlet; exact device/setup/profile snapshot ile gerçek raw frame kullan.
+- İş: webcam-only factory/validation sınırlarını ortak industrial sözleşmesi için
+  genişlet; testte fixture, gerçek edinimde doğrulanmış native backend kullan.
+  Exact device/setup/profile snapshot ile owned raw frame kullan.
   Session ticket/cancel/generation ve owned math input yolunu koru.
 - Kabul: recipe yokken gerçek/fixture industrial frame → Edge/Caliper/plaka hesabı;
   wrong device/geometri/late frame ret; trial/setup_file origin relabel edilemez.
@@ -134,8 +144,10 @@ Editor/project codec, migration ve execution bağlantısı yok; ana 07a ve 05a �
   Kayıt hatasında retry aynı payload; yeniden trigger/capture/provider yok; pending ACK korunur.
 - Test: multi_source_terminal_trace, typed_terminal_trace, runtime_persistence,
   plc_socket_runtime; disk tamper/lock/restart ve gerçek capture sayacı oracle'ı.
-- Çıkış: ancak bütün güven zinciri geçerse industrial production capability açılır;
-  fiziksel ölçüm kabulü hâlâ ayrı. Engine/schema yükseltmesi baseline kararına göre kayda alınır.
+- Çıkış: trusted terminal zincirinin yazılım kabulü kapanabilir. Gerçek industrial
+  production capability ancak bu zincir ve ilgili backend G1 kanıtı birlikte
+  sağlanınca açılır; test adaptörü normal ürün yoluna açılamaz. G3 fiziksel e2e ve
+  G4 ölçüm kabulü ayrı kalır. Engine/schema yükseltmesi baseline kararına göre kayda alınır.
 
 ## ICM-08c — Runtime ve Logs sunumu
 
@@ -163,14 +175,16 @@ Editor/project codec, migration ve execution bağlantısı yok; ana 07a ve 05a �
 
 ## ICM-09b — fiziksel kamera ürün kabulü
 
-- Önkoşul: 09a, 01b ve gerçek G1 grab.
+- Önkoşul: 09a ve seçili backend'in G0/G1 kanıtı. OECS için G0=01b;
+  Basler/Daheng için BAS/DAH-01 ve 02. OECS kabulü diğer markalar için önkoşul değildir.
 - İş: [fiziksel matris](industrial-camera-acceptance-plan.md) H01–H08;
   tek kamera + mixed-source, üç applicationType, serial/actual profile/latency/bellek,
   Stop/unplug/replug/viewer contention/restart ve stale-result kontrolleri.
 - Çıktı: aynı release acceptance belgesinde ayrı fiziksel bölüm, gerçek raster/log/JSON.
 - Kabul: zorunlu H satırları ölçülmüş ve başarılı; eksik hardware koşulu açık.
   Kablo/reboot gibi insan adımları gerektiğinde kullanıcıya kısa ve somut işlem verilir.
-- G3 kapanır. Ölçüm hatası/toleransı veya ikinci fiziksel kamera kanıtı çıkarılmaz.
+- G3 yalnız sınanan backend/model/firmware kapsamı için kapanır. Ölçüm hatası/toleransı
+  veya ikinci fiziksel kamera kanıtı çıkarılmaz. BAS/DAH-03 bu kartı kendi cihazında uygular.
 
 ## ICM-10 — bağımsız ölçüm ve lens karar kapısı
 

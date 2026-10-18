@@ -2,7 +2,7 @@
 
 Güncel uygulama durumu ve görev sırası [devir özetindedir](../progress.md). Bu belge gereksinimleri taşır; aşağıdaki tarihli planlar tek başına uygulama kabulü değildir. Üç belgede birebir tekrarlanan teslim paragrafları [taşıma öncesi tam kayıtta](../archive/2026-10-17/01_machine_vision_yazilim_tanimi.md) korunmuştur. Yalnız görevle ilgili bölümleri okuyun; yeni teslim günlüğü eklemeyin.
 
-17 Ekim plan güncellemesi: genel amaçlı kamera desteği için [ICM planı](../architecture/industrial-camera-plan.md) hazırlandı. İlk doğrulanacak cihaz COE-U USB3/OECS; kamera ekleme, reçetesiz kalibrasyon ve ortak Editor/Runtime aynı acquisition servisini kullanacak. Bu hedef henüz uygulanmadı; fiziksel kamera ve ölçüm kabulü ayrı kapılardır.
+18 Ekim plan kararı: [ICM planında](../architecture/industrial-camera-plan.md) ortak kamera yönetimi, reçetesiz kalibrasyon ve Editor/Runtime test adaptörüyle geliştirilecek; Basler/Daheng PoE entegrasyonları ayrı backend kabul paketleridir. Deney cihazı COE-U USB3/OECS'nin tetik engeli ortak yazılımı durdurmaz. Bu hedef henüz uygulanmadı; test kanıtı gerçek kamera/üretim/ölçüm kabulü sayılmaz.
 
 16 Ekim — **Uygulanan A özellikleri / B hedefi:** reçetesiz kamera/dosya kalibrasyonu,
 kamera/ölçüm kurulumu başına etkin kayıt ve N kamera yönetimi. Tek kamera yaygın

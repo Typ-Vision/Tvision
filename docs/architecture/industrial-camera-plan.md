@@ -1,6 +1,6 @@
 # Endüstriyel kamera entegrasyonu — ICM ana planı
 
-17 Ekim 2026. **Gerçek owned Mono8 tanı karesi alındı; ICM-04d native trigger açık, ürün acquisition bağlantısı yok.** Uygulayıcı hedefi:
+18 Ekim 2026. **Ortak ürün geliştirmesi donanım kabulünden ayrıldı; OECS native trigger ertelendi, ürün acquisition bağlantısı henüz yok.** Uygulayıcı hedefi:
 **GPT-6.1-sol / medium** (kullanıcının Sol6.1 medium tercihi). Bu belge model
 ayarını değiştirmez veya başka bir chat başlatmaz. Yeni kullanıcı yönlendirmesi,
 KMC-10e sonrasında fiziksel kalibrasyon kabulünden önce gerçek kamera entegrasyonudur.
@@ -17,9 +17,12 @@ KMC-10e sonrasında fiziksel kalibrasyon kabulünden önce gerçek kamera entegr
 4. Arşivin veya bütün gereksinimlerin toplu okunması başlangıç şartı değildir;
    belirsizlik/çelişkide okumayı genişletin. [Devir şablonu](industrial-camera-handoff.md).
 
-Güncel görev sırası ve son kanıt [progress'tedir](../progress.md);
-18 Ekim kullanıcı yönlendirmesiyle 04d üretici yanıtı beklenirken bağımsız 03c
-ölçüm rasteri ve 04e-a yazılım hazırlığı ilerler; native/üretim kabul kapıları korunur.
+Güncel görev sırası ve son kanıt [progress'tedir](../progress.md).
+18 Ekim kullanıcı kararıyla ana hedef Basler/Daheng PoE kameralardır. Ortak ürün
+geliştirmesi test adaptörüyle ilerler; OECS/COE-U fiziksel engeli bu sırayı durdurmaz.
+Tamamlanan 03c, 04e-a/b, 05a-a ve 07a-a tekrar yapılmaz. Sıradaki **ICM-04f**,
+sonra **05a → 05b → 06a → 06b → 07a → 07b → 07c → 08a → 08b → 08c → 09a**.
+Bu sıra yazılım kabulüdür; gerçek edinim ve üretim yeteneği backend bazında kapılıdır.
 [ICM-00 başlangıç kaydı](industrial-camera-baseline.md) tamamlandı. Bir oturumun varsayılan kapsamı bir görevdir; kullanıcı
 bir sıra verirse aynı sırada devam edilir. Tamamlanan KMC paketleri tekrarlanmaz.
 Bu plan 6B/industrial acquisition açığını devralır; ayrı ikinci kamera mimarisi kurmaz.
@@ -47,7 +50,10 @@ kopyalanmaz; yerel SDK keşfi isteğe bağlı bağımlılık olarak tutulur.
 ## Ürün hedefi ve ilk kapsam
 
 NI Vision Builder/HALCON benzeri genel kullanım hedefi için marka bağımsız cihaz,
-özellik ve acquisition sözleşmesi korunur. İlk doğrulanacak backend OECS/COE-U'dur.
+özellik ve acquisition sözleşmesi korunur. OECS/COE-U mevcut deney backend'idir;
+ilk ürün backend'i olma zorunluluğu kaldırılmıştır. Basler ve Daheng entegrasyonları
+[ayrı görev paketleridir](industrial-camera-tasks-backends.md). Model/SDK seçimi
+ve fiziksel kabul her paket içinde yapılır; PoE bir trigger doğruluğu garantisi değildir.
 Opto'ya özel widget, kalibrasyon matematiği veya ayrı Runtime yaratılmaz.
 
 İlk sürüm: tek fiziksel endüstriyel kamera, Mono8 tam sensör, sabit geometri,
@@ -66,15 +72,18 @@ Donanımın özelliği desteklemesi VisionFlow'un desteklediği anlamına gelmez
 
 | Kapı | Kapanış | Kullanıcıya söylenebilecek kapsam |
 | --- | --- | --- |
-| G0 — fiziksel başlangıç | ICM-01b | OECS gerçek görüntü ve VisionFlow discovery/open kanıtı; ürün grab'i değil |
-| G1 — acquisition | ICM-04e + gerçek grab kanıtı | Ortak adapter tek kameradan doğru owned frame alır; üretim izni değil |
+| G0 — fiziksel başlangıç (backend/model bazında) | OECS: ICM-01b; diğerleri: BAS/DAH-01 | Vendor viewer görüntüsü ve VisionFlow discovery/open kanıtı; ürün grab'i değil |
+| G1 — acquisition (backend/model bazında) | OECS: native 04d/04e; diğerleri: BAS/DAH-02; gerçek grab/lifecycle kanıtı | Ortak adapter seçili cihazdan doğru owned frame alır; tek başına üretim izni değil |
 | G2 — ürün yazılımı | ICM-09a | Kamera ekleme, kalibrasyon, Editor, trusted Runtime/terminal bütünleşik yazılım kabulü |
-| G3 — fiziksel kamera | ICM-09b | Gerçek cihazda e2e, kimlik, kopma ve tekrar bağlanma kabulü |
-| G4 — fiziksel ölçüm | ICM-10 | Belirlenen kurulum/tolerans için bağımsız ölçüm ve tekrar edilebilirlik kabulü |
+| G3 — fiziksel kamera (backend/model bazında) | ICM-09b; BAS/DAH-03 bu kartı uygular | Gerçek cihazda e2e, kimlik, kopma ve tekrar bağlanma kabulü |
+| G4 — fiziksel ölçüm (kurulum bazında) | ICM-10 | Belirlenen kurulum/tolerans için bağımsız ölçüm ve tekrar edilebilirlik kabulü |
 
-G0 yokken uygun fixture işleri yapılabilir; G1/G3/G4 donanım yokluğu nedeniyle
-tamamlandı işaretlenmez. G2 yalnız yazılımdır; kullanıcıya fiziksel üretim doğruluğu
-izni olarak sunulmaz. Production capability, ICM-08b trusted terminal kapısı bitmeden açılmaz.
+**ICM-04f ortak test adaptörü kabulü**, 05a–09a yazılım zincirinin donanımdan bağımsız
+girişidir; yeni bir fiziksel kapı değildir. G2, G0/G1 beklemeden fixture ile kapanabilir.
+G0/G1/G3/G4 fixture ile kapanmaz. G2/08b başarısı tek başına herhangi bir native
+backend'i açmaz: gerçek production capability için ilgili backend'in G1 kanıtı ve
+08b trusted terminal zinciri gerekir. G3 ürünün fiziksel e2e, G4 ölçüm kabulüdür.
+Bir backend'in kabulü diğer backend/model/firmware'e otomatik taşınmaz.
 
 ## Görev envanteri ve bağımlılıklar
 
@@ -83,6 +92,8 @@ izni olarak sunulmaz. Production capability, ICM-08b trusted terminal kapısı b
 gerçek cihaz readback/owned Mono8 probe başarılı; ICM-04d çekirdek/fixture kısmi, native trigger açık. Diğer satırlar PLANLANDI.
 [ICM-01a tanı kabulü](../archive/2026-10-17-icm-01a.md) fiziksel kapıları kapatmaz.
 Bağımlılıklar görevin başlatılabilmesini ifade eder; fiziksel kapı ayrıca belirtilir.
+04d/04e native OECS bölümü **açık/ertelenmiş**; ortak yazılım yolunun önkoşulu değildir.
+04f ve sonrası henüz uygulanmadı; plan değişikliği hiçbir kod capability'sini açmaz.
 
 | ID | Tek teslim | Önkoşul |
 | --- | --- | --- |
@@ -97,7 +108,8 @@ Bağımlılıklar görevin başlatılabilmesini ifade eder; fiziksel kapı ayrı
 | ICM-04c | Stream/buffer → owned Mono8 frame | 04b |
 | ICM-04d | Software trigger ve çevrim-kare eşleştirme | 04c |
 | ICM-04e | Lifecycle/lease/preview/Stop/recovery | 04d |
-| ICM-05a | Ortak discovery/registry/factory | 04e |
+| ICM-04f | Ortak test adaptörü ve ürün bağlantısı için sözleşme kabulü | 03b/03c, 04d çekirdek/fixture, 04e-a/b |
+| ICM-05a | Ortak discovery/registry/factory (yazılım) | 04f; 05a-a yeniden kullanılır |
 | ICM-05b | Camera Manager ve kayıt/ayar UI | 05a |
 | ICM-06a | Reçetesiz kalibrasyon edinimi | 05a |
 | ICM-06b | Gerçek geometriyle aktivasyon/invalidation | 06a, 03b |
@@ -108,11 +120,12 @@ Bağımlılıklar görevin başlatılabilmesini ifade eder; fiziksel kapı ayrı
 | ICM-08b | Trusted completion/terminal/replay/Logs verisi | 08a |
 | ICM-08c | Runtime/Logs/CSV kullanıcı sunumu | 08b, 07c |
 | ICM-09a | Tam Release yazılım ve uyumluluk kabulü | 05b, 06b, 07c, 08c |
-| ICM-09b | Gerçek kamera uçtan uca ve kopma kabulü | 09a, 01b, G1 gerçek grab |
+| ICM-09b | Gerçek kamera uçtan uca ve kopma kabulü | 09a, seçili backend G0/G1 |
 | ICM-10 | Bağımsız fiziksel kalibrasyon/lens karar raporu | 09b, ölçüm referansı |
 
-Tercih edilen sıra tablodaki sıradır. Donanım beklenirse 03a/03b ve fake-backend
-test hazırlığı yapılabilir. 02 backend kararı olmadan vendor acquisition kodu
+Tercih edilen ortak yazılım sırası yukarıdadır; native OECS 04d/04e bu sıranın dışındadır.
+Basler/Daheng paketleri ortak sözleşmeye bağlanır; ajanlar sıralı çalışır. OECS için
+02, diğer backend'ler için BAS/DAH-01 kararı olmadan vendor acquisition kodu
 üretilmez; karar kaydı yalnız offline ise gerçek başarı açık kalır. Bir görev çok
 büyürse mevcut ID altında a/b alt görev önerilip progress'e yazılır; acceptance
 ölçütleri sonraki pakete gizlice bırakılarak tamamlandı denmez.
@@ -121,6 +134,7 @@ büyürse mevcut ID altında a/b alt görev önerilip progress'e yazılır; acce
 
 G4 hata haritası gerektirirse lens T15 öne alınır: intrinsic/distortion modeli,
 raw↔undistorted dönüşüm, model/ROI/replay migration ve ayrı fiziksel doğruluk paketi.
-Başka marka/USB3/GigE, packed format, hardware trigger ve N gerçek kamera kapasitesi
-ayrı backend kabul matrisiyle açılır. PTP bu USB kameranın varsayılan yeteneği değildir.
+Basler/Daheng GigE kapsamı [backend görev kartlarına](industrial-camera-tasks-backends.md)
+ayrılmıştır. Başka marka, packed format, hardware trigger ve N gerçek kamera kapasitesi
+ayrı kabul matrisiyle açılır. PTP bu USB kameranın varsayılan yeteneği değildir.
 KUI-6/native, T8.4.2b.3c pose, PLC/robot ve dağıtım borçları ICM ile otomatik kapanmaz.

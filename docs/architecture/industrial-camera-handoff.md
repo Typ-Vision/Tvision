@@ -32,7 +32,8 @@ docs/archive/ kapanış kaydına yaz; progress'teki kısa güncel özeti ve bağ
 Yeni kaydı docs/archive/README.md dizinine ekle.
 README/mimari/gereksinimleri yalnız ilgili davranış veya sözleşme değiştiğinde
 güncelle; teslim günlüğünü bu dosyalara kopyalama. Mevcut dirty değişiklikleri koru.
-python scripts/check-context-docs.py çalıştır. Commit/push yapma.
+python scripts/check-context-docs.py çalıştır. AGENTS.md uyarınca tamamlanan görevi
+görev ID'li tek commit ile kaydet; push yalnız kullanıcı isteğiyle.
 ```
 
 `ICM-XX` gerçek ID ile değiştirilir. Chat metninde model yazılması uygulamanın model
@@ -41,7 +42,9 @@ ayarını otomatik değiştirdiği anlamına gelmez; kodlama chat'inde seçili m
 ## Çalışma kuralları
 
 - Teknik rutin seçimler bu plan içinde yapılabilir; her dosya için kullanıcıdan tekrar
-  izin istenmez. Model/transport biliniyor: COE-U USB3/OECS. ITALA desteği varsayılmaz.
+  izin istenmez. Ortak yazılım 04f → 05a–09a sırasında native OECS beklemez.
+  Mevcut deney cihazı COE-U USB3/OECS; hedef Basler/Daheng modelleri ayrı paketlerde
+  seçilir. ITALA veya başka markanın desteği varsayılmaz.
 - Donanım gerektiğinde actual exact serial eşlemesi kullan. Device ID=1 veya ilk listelenen
   kamera ile sessiz devam etme. SDK/producer yoksa build veya UI startup'ı çökertme.
 - Gerekli fiziksel adım (reboot/kablo/plaka) yapılamıyorsa ilgili H/G kapısını açık kaydet;

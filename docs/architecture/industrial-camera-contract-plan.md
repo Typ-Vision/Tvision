@@ -11,7 +11,20 @@ Domain codec'leri SDK/GenApi sınıfları içermez. SDK handles/buffer/callback 
 tek worker'dır; UI immutable durum/frame kopyası alır. `AcquisitionService`,
 `CameraLifecycle`, `ImageFrame` ve scoped calibration servisleri yeniden kullanılır.
 
-Tercih sırası:
+18 Ekim kapsam kararı: bu ortak yol OECS, Basler ve Daheng'den bağımsızdır.
+Ortak yazılım 04f test adaptörü üzerinden geliştirilir. Test adaptörü yalnız test
+composition'ından enjekte edilir; kullanıcı config'i, recipe, producer yolu veya
+caller metadata ile ürün backend'i olarak seçilemez. Sentetik kimlik/frame ve
+test sonuçları fiziksel acquisition/üretim kanıtına dönüştürülemez; normal ürün
+factory'si bunları reddeder. UI görsel fixture'ları açıkça sentetik etiketlenir.
+Bu ayrım henüz uygulanmış özellik değil, 04f/05a/08b kabul şartıdır.
+
+Discovery/open, preview ve doğrulanmış tetik edinimi ayrı yeteneklerdir. Gerçek
+production capability hem ilgili backend G1 kabulünü hem 08b güven zincirini ister.
+Bir cihazın tetik engeli diğer backend'leri veya ortak yazılım G2 kabulünü kapatmaz.
+G3 e2e ve G4 ölçüm kabulü ayrıca kaydedilir; preview karesi çevrim karesi sayılmaz.
+
+OECS için seçilmiş kararın tercih sırası (Basler/Daheng seçimi değildir):
 
 1. OECS U3V GenTL C ABI + MinGW ile doğrulanmış GenApi/nodemap consumer.
 2. Birinci yolun feature/ABI/dağıtım engeli varsa ortak application sözleşmesi altında
@@ -19,7 +32,10 @@ Tercih sırası:
 3. İki yol da başarısızsa dar C ABI köprüsü/ayrı süreç veya toolchain geçişi için
    ayrı gerekçeli karar. İlk çözüm olarak Qt/OpenCV tümden MSVC'ye taşınmaz.
 
-ICM-02 tek seçilmiş acquisition backend'i belgeler; iki ayrı tam stack birden yazılmaz.
+ICM-02 OECS için tek seçilmiş acquisition backend'ini belgeler; aynı cihaz için
+iki ayrı tam stack birden yazılmaz. Basler/Daheng SDK/ABI kararları
+[BAS/DAH-01](industrial-camera-tasks-backends.md) içinde ayrı verilir. Marka adaptörleri
+aynı servis/sözleşmeye bağlanır; ikinci Editor/Runtime/kalibrasyon mimarisi kurulmaz.
 Backend C API seçilirse discovery/frame erişiminin vendor tutarlılığı açıklanır;
 GenTL handle'ı vendor C handle'ına cast edilmez. Generic discovery kullanılabilir,
 fakat actual open kimliği aynı fiziksel cihazı ayrıca doğrular.

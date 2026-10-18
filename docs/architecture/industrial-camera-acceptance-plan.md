@@ -16,6 +16,11 @@ Yeni test adları task sırasında CMake'e kaydedilir; aşağıdaki S satırlar�
 mevcut CTest adı değildir. Fixture gerçek cihazın yerine kullanılmaz. Ürün veri şemasına
 test kolaylığı için güvenilir completion veya identity atlama yolu açılmaz.
 
+18 Ekim kararıyla yazılım S matrisi 04f test adaptörü üzerinden native OECS beklemeden
+uygulanabilir; G2=09a bağımsız yazılım kabulüdür. G0/G1/G3 backend/model/firmware,
+G4 kurulum bazında tutulur. Fixture başarısı native capability açmaz. Gerçek
+production capability ilgili G1 + 08b ister; fiziksel e2e/ölçüm beyanı G3/G4'e bağlıdır.
+
 ## 2. Yazılım kabul matrisi
 
 | ID | Senaryo / oracle | Görev | Mevcut regresyon grubu |
@@ -48,6 +53,8 @@ test kolaylığı için güvenilir completion veya identity atlama yolu açılma
 | S26 | 0/1/8/10 kaynak UI, küçük ekran, busy/error, üç applicationType | 05b/07c/08c | ui_calibration_overview, ui_multi_source_editor/runtime |
 | S27 | SDK yokken core/UI startup + file/webcam; SDK sınırlı optional build | 04a/09a | backend_capabilities ve tam CTest |
 | S28 | Son kaynak Release UI ON/ZXing ON ve core OFF/ZXing OFF | 09a | Tam test envanteri |
+| S29 | Test adaptörü yalnız test enjeksiyonunda; normal factory/config/recipe üzerinden seçilemez; sentetik evidence native kabul edilmez | 04f/05a/08b | Yeni provider isolation corpus'u |
+| S30 | Bir backend unsupported iken diğer backend'in bağımsız capability'si ve file/webcam çalışır; keşif/preview trigger izni vermez | 04f/05a/08a | backend_capabilities, yeni provider testleri |
 
 Fixture node/stream katmanı gerçekten farklı pikseller ve bağımsız kimlik/event sırası
 üretmeli. Testte beklenen değer implementation fonksiyonuyla yeniden hesaplanıp oracle
@@ -97,16 +104,18 @@ Panel ayarları test INI ile build altında; `config/local.ui.ini` korunur.
 ## 5. Fiziksel kamera kabulü
 
 Önce H01, ardından ürün geliştikten sonra diğer satırlar. Başlangıçta bütün durumlar AÇIK.
-USB3 kablo/port, kamera/seri, SDK/hash, actual profile, PC/toolchain ve lens bilgisi
+Her backend/model için ayrı H01–H08 raporu açılır; OECS sonucu Basler/Daheng kabulü
+değildir. USB3 kablo/port veya GigE NIC/switch/PoE/IP/MTU yapılandırması,
+kamera/seri/firmware, SDK/hash, actual profile, PC/toolchain ve lens bilgisi
 her fiziksel rapora bağlanır. Kamera datasheet fps'i test hedefi veya ölçülmüş sonuç sayılmaz.
 
 | ID | Prosedür | Kabul / kayıt |
 | --- | --- | --- |
-| H01 | Reboot durumu → OECS gerçek Mono8 görüntü → viewer release → U3V discovery/open | Exact model/seri ve raster kanıtı; 0 device başarı değil |
+| H01 | Reboot durumu → ilgili vendor viewer'da gerçek Mono8 görüntü → viewer release → seçili transport discovery/open | Exact model/seri ve raster kanıtı; 0 device başarı değil; OECS için mevcut 01b uygulanır |
 | H02 | VisionFlow tek-frame ve 100 ardışık software trigger; sahne değişikliğiyle frame gözlemi | 100 kabul edilen isteğe 100 doğru tamamlanma veya açık hata; sessiz stale/duplicate/missing yok; HW counter varsa kaydı |
 | H03 | 20 connect/configure/start/stop/disconnect; preview→production geçişleri | Kilit/handle/buffer sızıntısı belirtisi yok; cycle preview karesi tüketmiyor; her aşama sonucu |
 | H04 | Idle/preview/acquisition sırasında kontrollü unplug; replug; 10 Stop denemesi | Hang/stale PASS yok; Fault/timeout açık; yeniden kullanım explicit reconfigure/activation/prepare ile |
-| H05 | OECS cihazı tutarken VisionFlow open, sonra serbest bırakma | Busy/access denied anlaşılır; başka cihaza fallback yok; sonra temiz open |
+| H05 | Vendor viewer cihazı tutarken VisionFlow open, sonra serbest bırakma | Busy/access denied anlaşılır; başka cihaza fallback yok; sonra temiz open |
 | H06 | Profile değişimi, aynı çözünürlükte geometri farklılığı destekleniyorsa; restart | Eski model/Runtime kapısı ret; desteklenmeyen ayar testi unsupported olarak raporlanır |
 | H07 | Tek camera ve camera+file recipe, üç applicationType; save/load/Run/cycle/Logs/CSV | Doğru source/frame/model; Run trigger0; error/Stop sahte sonuç yok; record retry capture0 |
 | H08 | 30 dk bounded preview ve en az 1000 sıralı cycle; native pencere/kapanış | Dropped preview/production error sayıları; kaynak/bellek trendi; p50/p95/max süre; UI kapanışı ölçülür |

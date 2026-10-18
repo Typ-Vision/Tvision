@@ -6,6 +6,7 @@ görev” ifadeleri yazıldıkları tarihe aittir.
 
 | Dönem / görev | Kayıt |
 | --- | --- |
+| 18 Ekim 2026 — ICM-PLAN-02 | [Ortak yazılım sırası, OECS erteleme ve Basler/Daheng kabul paketleri](2026-10-18-icm-plan-02.md) |
 | 18 Ekim 2026 — ICM-07a-a | [Bağımsız industrial kaynak referans codec hazırlığı](2026-10-18-icm-07a-a.md) |
 | 18 Ekim 2026 — ICM-05a-a | [Keşif gruplama ve exact resolve hazırlığı](2026-10-18-icm-05a-a.md) |
 | 18 Ekim 2026 — ICM-04e-b | [Worker 1000 fixture çevrimi ve teardown stress](2026-10-18-icm-04e-b.md) |
