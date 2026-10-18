@@ -8,7 +8,8 @@
 **EUI-05 tamamlandı** ([kapanış](../archive/2026-10-18-eui-05.md)).
 **EUI-06 tamamlandı** ([kapanış](../archive/2026-10-18-eui-06.md)).
 **EUI-07 tamamlandı** ([kapanış](../archive/2026-10-18-eui-07.md)).
-EUI-08 açık. Sıradaki EUI-08.
+**EUI-08 tamamlandı** ([kapanış](../archive/2026-10-18-eui-08.md)).
+Sıradaki: kullanıcı tekrar testi ve geri bildirim; fiziksel kabul kapıları açık.
 Canlı devam noktası [progress](../progress.md)'tir.
 Kullanıcının beş talebi, ICM fiziksel kabulünden önce önceliklidir.
 [Devir mesajı](editor-refinement-handoff.md), [güncel durum](../progress.md).
@@ -66,7 +67,7 @@ Planlama sırasındaki kaynak incelemesi (uygulama öncesi):
 ## Görev sırası
 
 Tek ajan, sıralı çalışma; her ID bağımsız kabul ve tek commit. Bir kart tamamlanmadan
-sonrakine geçilmez. EUI-01–07 tamamlandı. Kullanıcının sıradaki iki görev talimatı EUI-06 → EUI-07'dir.
+sonrakine geçilmez. EUI-01–08 tamamlandı; kullanıcı tekrar testi bekleniyor.
 
 | ID | Paket | Önkoşul | Talep |
 | --- | --- | --- | --- |

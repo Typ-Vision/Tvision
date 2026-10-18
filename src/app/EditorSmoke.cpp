@@ -634,6 +634,22 @@ bool MainWindow::verifyCircle(const QString& artifacts){
         check(service_.activeRecipe()->definition==valid && std::get<ArcRoi>(imageViewer_->roi()->geometry).sweepDegrees==90,"invalid zero sweep preserves last valid geometry");
         geometry(96.25,95.75,34,46,360);
     }
+    // EUI-08 visual matrix uses the real Editor/application guide path before Run.
+    ToolDefinition guideTool;for(const auto& t:service_.tools())if(t.id==id)guideTool=t;
+    for(const auto direction:{QString("outward"),QString("inward")}){
+        auto configured=guideTool;configured.parameters["scanCount"]=10;configured.parameters["direction"]=direction;
+        service_.updateTool(configured);refreshWorkspace();
+        for(double angle:{360.,180.,90.}){
+            geometry(96.25,95.75,34,46,angle);
+            int arrows=0;for(auto* item:imageViewer_->scene()->items())if(item->data(0)=="scanGuide")++arrows;
+            check(arrows==10 && !editorSession_.cycle,"ten nominal arrows with no stale fit");
+            for(const auto size:{QSize(1400,900),QSize(850,600)}){
+                resize(size);QApplication::processEvents();imageViewer_->fitImage();QApplication::processEvents();
+                check(grab().save(QDir(artifacts).filePath(QString("eui08-circle-%1-%2-%3.png").arg(direction).arg(int(angle)).arg(size.width()))),"Circle direction and sweep PNG");
+            }
+        }
+    }
+    service_.updateTool(guideTool);refreshWorkspace();selectTool(id);resize(1400,900);
     service_.setCalibrationSetup("lens","plane");const auto frame=*editorSession_.frame;const auto setup=CalibrationWorkflow::installation(*service_.activeRecipe(),frame);auto sample=[&](QString name,QPointF a,QPointF b,double mm){return CalibrationSample{name,{a,setup.source},{b,setup.source},mm};};const auto accepted=MeasurementService{}.validate(CalibrationWorkflow::teach(*service_.activeRecipe(),frame,"circle-scale",1,sample("teach",{0,0},{100,0},10)),{sample("x",{10,20},{110,20},10),sample("y",{30,10},{30,110},10)},.001);const auto catalog=service_.path()+".calibrations.json";CalibrationService(catalog).save(accepted);CalibrationWorkflow::bind(service_,frame,catalog,"circle-scale");refreshWorkspace();selectTool(id);propertiesBody_->findChild<QComboBox*>("mt_mode")->setCurrentText("calibrated");wait();check(!imageViewer_->roi(),"mode changes discard raw teaching");
     geometry(9.625,-9.575,3.4,4.6,360);for(auto t:service_.tools())if(t.id==id){t.parameters["scanWidth"]=.1;t.parameters["inlierDistance"]=.1;t.parameters["maxRms"]=.035;t.parameters["maxResidual"]=.1;t.parameters["diameterLower"]=7.97;t.parameters["diameterUpper"]=8.03;t.parameters["deviationUpper"]=.04;service_.updateTool(t);}refreshWorkspace();selectTool(id);runFlow();wait();check(result().state==ExecutionState::Done && result().outputs["circleMm"].valid && std::get<bool>(result().outputs["accepted"].data),"Circle UI calibrated tolerance");
     auto hash=editorSession_.frame->contentId();runExecution(id);wait();check(editorSession_.cycle->partial && editorSession_.cycle->acquisitions==0 && editorSession_.cycle->executedTools==QStringList{id} && editorSession_.frame->contentId()==hash,"Circle UI TargetOnly");

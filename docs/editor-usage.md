@@ -37,3 +37,31 @@ Line Fit ve Circle/Arc seçildiğinde Run öncesinde de tarama sayısı kadar no
 ok çizilir. Circle Basic'teki Start/Sweep geçerli değişimde yayı önizler; düzenleme
 bitince ROI kaydedilir. Yeni fit sonucu için Run gerekir. Nominal kılavuz sonuç
 değildir; gerçek sonuç olmadan PASS, skor veya robot pose gösterilmez.
+
+## EUI kullanıcı tekrar testi
+
+Uygulamayı repo kökünden `.\scripts\run-local.ps1` ile başlatın. EXE:
+`C:\Projects\Tvision\build\reference-ui\visionflow.exe`. ExecutionPolicy engeli
+varsa yalnız başlatılan alt süreç için şu komutu kullanın:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "C:\Projects\Tvision\scripts\run-local.ps1"
+```
+
+1400×900 ve 850×600 pencere boyutlarında gerçek bir görüntüyle deneyin:
+
+1. Blob ROI'yi taşıyın, köşe/kenarlardan boyutlandırın; Escape ve Ctrl+Z'yi deneyin.
+   Sınır filtresini açıp Run Tool yapın: sınıra değen nesne elenmeli; kaydet/aç
+   sonrası ROI ve checkbox korunmalı.
+2. Workspace pin/otomatik gizleme, hover, Escape ve View → Panel düzenini sıfırla
+   yollarını deneyin. Komutlara, Properties'e ve viewer'a küçük ekranda erişin.
+3. Toolbox gruplarını kapatıp arama yapın, temizleyin ve araç ekleyin. Yeni listede
+   Edge Point bulunmalı; eski Edge içeren reçete açılıp çalışabilmeli.
+4. Line Fit, Circle, iki nokta ölçümü ve Blob sonuçlarında açıklamaları açıp
+   kapatın; %10/%25/%100/%400 zoom deneyin. Geometri ve Results görünür kalmalı.
+5. Circle'da tarama sayısını 10 yapın; iç/dış yönü ve 360°/180°/90° yayları deneyin.
+   Line Fit yönünü de kontrol edin. Oklar Run öncesinde görünmeli; değişiklikten
+   sonra eski fit kaybolmalı, yeni sonuç yalnız Run ile oluşmalı.
+
+Bu liste kullanıcı tarafından henüz yeniden uygulanmış sayılmaz. Native DPI/çoklu
+monitör ve fiziksel kamera/kalibrasyon kabulü ayrı kontrollerdir.

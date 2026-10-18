@@ -108,7 +108,10 @@ int main(int argc,char** argv){QApplication app(argc,argv);QFontDatabase::addApp
                     }else if(item->zValue()==5){check(item->isVisible()==visible && std::abs(item->scale()-std::min(zoom,1.5))<1e-9,"background shares text visibility and scale");}
                     else if(item->zValue()<10)check(item->isVisible()==geometryVisibility[item],"raster geometry mask and ROI visibility unchanged");
                 }check(labels>0,"fixture contains result labels");
-                if(visible){viewer.resize(1400,900);viewer.centerOn(320,240);app.processEvents();check(viewer.grab().save(dir.filePath(QString("eui03-kind%1-zoom%2.png").arg(kind).arg(int(zoom*100)))),"annotation zoom PNG");}
+                for(const auto size:{QSize(1400,900),QSize(850,600)}){
+                    viewer.resize(size);viewer.centerOn(320,240);app.processEvents();
+                    check(viewer.grab().save(dir.filePath(QString("eui08-kind%1-zoom%2-%3-%4.png").arg(kind).arg(int(zoom*100)).arg(visible ? "on":"off").arg(size.width()))),"annotation zoom and visibility PNG");
+                }
             }
         }
     }

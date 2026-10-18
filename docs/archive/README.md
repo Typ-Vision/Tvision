@@ -6,6 +6,7 @@ görev” ifadeleri yazıldıkları tarihe aittir.
 
 | Dönem / görev | Kayıt |
 | --- | --- |
+| 18 Ekim 2026 — EUI-08 | [Birleşik yazılım/görsel kabul ve kullanıcı tekrar testi](2026-10-18-eui-08.md) |
 | 18 Ekim 2026 — EUI-07 | [Kompakt Editor, viewport karşılaştırması ve regresyonlar](2026-10-18-eui-07.md) |
 | 18 Ekim 2026 — EUI-06 | [Workspace pin, yüzer otomatik gizleme ve yerel tercih](2026-10-18-eui-06.md) |
 | 18 Ekim 2026 — EUI-05 | [Gruplu Toolbox, katalog ve eski Edge uyumluluğu](2026-10-18-eui-05.md) |
