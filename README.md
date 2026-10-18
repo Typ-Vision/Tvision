@@ -97,6 +97,11 @@ Panel düzeni ve son seçimler `config/local.ui.ini` içindedir; bu proje autosa
 değildir. Test INI, fixture, görüntü ve raporlar `build/` altında tutulur.
 Sıfırlama: **View → Panel düzenini sıfırla**.
 
+Workspace pin düğmesi veya **View → Workspace sabit** otomatik gizlemeyi açar.
+Sol şerit hover/tıklama veya Tab ve Space ile açılır; içerik üzerinde yüzer.
+Panelde klavye odağı varken açık kalır; Escape odağı şeride döndürür.
+İlk kullanım ve panel sıfırlama sabit moddur.
+
 ## Göreve göre belge haritası
 
 Başlangıç: AGENTS + [progress](docs/progress.md) + README; ardından seçili görev

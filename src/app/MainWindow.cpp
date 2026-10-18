@@ -1,5 +1,6 @@
 #include "CameraManager.hpp"
 #include "MainWindow.hpp"
+#include "WorkspacePanel.hpp"
 #include <QAction>
 #include <QApplication>
 #include <QCloseEvent>
@@ -48,7 +49,10 @@ MainWindow::MainWindow(const QString& settingsFile) : settingsFile_(settingsFile
     auto* editor = view->addAction("Recipe Editor");
     connect(editor,&QAction::triggered,this,[this]{selectPage("editor");});
     auto* reset = view->addAction("Panel düzenini sıfırla");
-    connect(reset,&QAction::triggered,this,[this]{horizontal_->setSizes({200,700,260}); vertical_->setSizes({550,210});});
+    reset->setObjectName("resetPanels");
+    connect(reset,&QAction::triggered,this,[this]{workspacePanel_->setPinned(true);horizontal_->setSizes({200,700,260}); vertical_->setSizes({550,210});});
+    auto* pinWorkspace=view->addAction("Workspace sabit");pinWorkspace->setCheckable(true);pinWorkspace->setObjectName("pinWorkspace");
+    connect(pinWorkspace,&QAction::triggered,this,[this](bool pinned){workspacePanel_->setPinned(pinned);});
     auto* setup = menuBar()->addMenu("Setup");
     for (const auto& id : {QString("communication"), QString("calibration")}) {
         auto* action = setup->addAction(id=="communication" ? "Communication" : "Calibration");
@@ -58,10 +62,14 @@ MainWindow::MainWindow(const QString& settingsFile) : settingsFile_(settingsFile
     auto* root = new QWidget; auto* rootLayout = new QHBoxLayout(root);
     rootLayout->setContentsMargins(0,0,0,0); rootLayout->setSpacing(0);
     auto* sidebar = new QFrame; sidebar->setObjectName("sidebar"); sidebar->setFixedWidth(215);
+    sidebar->setStyleSheet("QFrame#sidebar QListWidget::item {padding: 6px; margin: 1px;} QFrame#sidebar QLabel#brand {font-size: 20px;}");
     auto* side = new QVBoxLayout(sidebar);
     side->addWidget(label("VF  VisionFlow","brand")); side->addWidget(label("INDUSTRIAL VISION SUITE"));
-    navigation_ = new QListWidget; navigation_->setAccessibleName("Ana navigasyon"); side->addWidget(navigation_,1);
-    hardwareStatus_=label("Camera: bağlı değil\nRobot / PLC: bağlı değil\nGeliştirme aşaması 6");side->addWidget(hardwareStatus_); rootLayout->addWidget(sidebar);
+    navigation_ = new QListWidget; navigation_->setAccessibleName("Ana navigasyon");navigation_->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff); side->addWidget(navigation_,1);
+    hardwareStatus_=label("Camera: bağlı değil\nRobot / PLC: bağlı değil\nGeliştirme aşaması 6");side->addWidget(hardwareStatus_);
+    workspacePanel_=new WorkspacePanel(root,sidebar,settingsFile_);rootLayout->addWidget(workspacePanel_);
+    pinWorkspace->setChecked(workspacePanel_->pinned());
+    workspacePanel_->onPinnedChanged=[pinWorkspace](bool pinned){pinWorkspace->setChecked(pinned);};
     auto* content = new QWidget; auto* contentLayout = new QVBoxLayout(content);
     contentLayout->setContentsMargins(20,16,20,16); pageTitle_ = label("Dashboard","heading");
     contentLayout->addWidget(pageTitle_);

@@ -5,26 +5,27 @@
 
 ## Devam noktası
 
-- **EUI-05 tamam.** Gruplu Toolbox/yerel arama; eski Edge uyumluluğu korunur.
-  [Kapanış](archive/2026-10-18-eui-05.md): Release 7/7 + localhost 2/2; görseller incelendi.
-  [EUI-04](archive/2026-10-18-eui-04.md): nominal N ok ve canlı Circle açıları;
+- **EUI-06 tamam.** Workspace pin/28 px şerit, gecikmeli yüzer açılma ve yerel tercih.
+  [Kapanış/testler/görseller](archive/2026-10-18-eui-06.md).
+  [EUI-05](archive/2026-10-18-eui-05.md): gruplu Toolbox/arama ve eski Edge korunur.
+  Önceki [04](archive/2026-10-18-eui-04.md) N ok/canlı yay,
   [03](archive/2026-10-18-eui-03.md) zoom,
-  [02](archive/2026-10-18-eui-02.md) Blob sınır filtresi ve
+  [02](archive/2026-10-18-eui-02.md) sınır filtresi ve
   [01](archive/2026-10-18-eui-01.md) ROI kabulü korunur.
-  Blob4 / engine28 / editor1–9 no-op korunur. **Sıradaki EUI-06.**
-  EUI-06–08 açık. [Kartlar](architecture/editor-refinement-plan.md).
+  Blob4 / engine28 / editor1–9 no-op korunur. **Sıradaki EUI-07.**
+  EUI-07–08 açık. [Kartlar](architecture/editor-refinement-plan.md).
 - [ICM-PLAN-02](archive/2026-10-18-icm-plan-02.md): ortak yazılım/donanım kabulü ayrı.
   [06a](archive/2026-10-18-icm-06a.md)/[06b](archive/2026-10-18-icm-06b.md)
   kalibrasyon/profil/aktivasyon tamam; 04f–05b kapanışları [arşivde](archive/README.md).
   09a/G2 tamam; 09b native G0/G1 bekliyor. [Backend kartları](architecture/industrial-camera-tasks-backends.md).
   OECS native 04d/04e açık/ertelenmiş; ortak yazılımı engellemez. Test adaptörü normal
   ürüne açılamaz; G2 yazılım, G0/G1/G3 backend, G4 kurulum kabulüdür.
-- Hazır: [04e-a lease/worker](archive/2026-10-18-icm-04e-a.md),
+- Hazır: [04e-a](archive/2026-10-18-icm-04e-a.md),
   [04e-b stress](archive/2026-10-18-icm-04e-b.md),
   [05a-a resolve](archive/2026-10-18-icm-05a-a.md),
   [07a codec](archive/2026-10-18-icm-07a.md).
   [03c ölçüm rasteri](archive/2026-10-18-icm-03c.md) canlı ürün yoluna bağlı değil;
-  native 04e/G1 hâlâ 04d'ye bağlı.
+  native 04e/G1, 04d'ye bağlı.
 - **ICM-04d kısmi: gecikmiş command Stop/Start'ı aşıyor; native Unavailable**.
   [Gecikme deneyi](archive/2026-10-18-icm-04d-pending.md): delay=500 ms iken
   Clear→Stop→Start sonrası yeni command olmadan **8/8 eski kare** geldi.
@@ -105,8 +106,8 @@ Görevler: [ana plan](architecture/industrial-camera-plan.md), seçili kart ve s
 
 ## Kapanış ve sonraki adım
 
-**EUI-04 ve EUI-05 sıralı tamam. Sıradaki EUI-06.**
-Plan 06→08, kullanıcı testi/düzeltme ve kamera önkoşullarıdır.
+**EUI-06 tamam. Kullanıcı talimatındaki ikinci görev EUI-07.**
+Plan 07→08, kullanıcı testi/düzeltme ve kamera önkoşullarıdır.
 [ICM-09b](archive/2026-10-18-icm-09b-start.md) G0/G1 bekliyor; H01–H08 açık.
 Basler/Daheng model/SDK 01→02 veya OECS belgeli pending-command bariyeri gerekir.
 Tamamlanan hazırlıklar tekrarlanmaz; ölçüm adayı configure girdisi değildir.

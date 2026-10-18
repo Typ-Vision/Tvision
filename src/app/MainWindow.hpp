@@ -32,6 +32,7 @@ class EdgeProfileView;
 class CalibrationHome;
 class CalibrationOverview;
 class CameraManager;
+class WorkspacePanel;
 class MainWindow : public QMainWindow {
 public:
     explicit MainWindow(const QString& settingsFile);
@@ -149,6 +150,7 @@ private:
     void restoreSession();
     QString settingsFile_;
     QListWidget* navigation_{};
+    WorkspacePanel* workspacePanel_{};
     QStackedWidget* pages_{};
     QLabel* pageTitle_{};
     QSplitter* horizontal_{};

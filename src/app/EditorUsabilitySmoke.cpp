@@ -1,6 +1,10 @@
 #include "MainWindow.hpp"
 #include "ImageViewer.hpp"
 #include "Toolbox.hpp"
+#include "WorkspacePanel.hpp"
+#include <QAction>
+#include <QDialog>
+#include <QEnterEvent>
 #include <QSet>
 #include <QLineEdit>
 #include <QApplication>
@@ -23,6 +27,7 @@
 #include <QScrollBar>
 #include <QSettings>
 #include <QSplitter>
+#include <QStackedWidget>
 #include <QThread>
 #include <QTabWidget>
 #include <QUuid>
@@ -42,6 +47,37 @@ bool MainWindow::verifyEditorUsability(const QString& artifacts) {
     const auto path=QDir(artifacts).filePath("usability-source.png");check(image.save(path),"usability PNG");
     service_.createProject("Usability","",QDir(artifacts).filePath("usability-"+QUuid::createUuid().toString(QUuid::WithoutBraces)+".vfproject"),"file");service_.createRecipe("Usability","",ApplicationType::Measurement,"file");
     const auto source=service_.setImageFile(path);refreshWorkspace();selectPage("editor");wait();
+    // EUI-06: input events exercise timed reveal, focus retention and Escape.
+    {
+        auto pause=[](int ms){QElapsedTimer t;t.start();while(t.elapsed()<ms){QApplication::processEvents();QThread::msleep(1);}QApplication::processEvents();};
+        auto click=[](QWidget* w){const QPointF p=w->rect().center();for(auto type:{QEvent::MouseButtonPress,QEvent::MouseButtonRelease}){QMouseEvent e(type,p,QPointF(w->mapToGlobal(p.toPoint())),Qt::LeftButton,type==QEvent::MouseButtonPress ? Qt::LeftButton:Qt::NoButton,Qt::NoModifier);QApplication::sendEvent(w,&e);}};
+        workspacePanel_->setPinned(true);QApplication::processEvents();
+        const auto definition=service_.activeRecipe()->definition;const auto signature=flowSignature();const auto generation=editorSession_.generation;
+        const auto page=pages_->currentIndex();const auto selected=selectedToolId_;
+        auto* pin=findChild<QPushButton*>("workspacePin");auto* rail=findChild<QPushButton*>("workspaceReveal");
+        click(pin);QApplication::processEvents();check(!workspacePanel_->pinned() && workspacePanel_->width()==28 && !workspacePanel_->expanded(),"pin input enters collapsed auto-hide");
+        const auto viewport=imageViewer_->viewport()->size();
+        QEnterEvent enter(QPointF(10,10),QPointF(10,10),QPointF(10,10));QApplication::sendEvent(rail,&enter);pause(70);check(!workspacePanel_->expanded(),"hover reveal delayed");pause(120);check(workspacePanel_->expanded(),"hover reveals after delay");
+        check(imageViewer_->viewport()->size()==viewport,"floating navigation does not resize viewer");
+        navigation_->setFocus();QEvent leave(QEvent::Leave);QApplication::sendEvent(rail,&leave);QApplication::sendEvent(findChild<QWidget*>("sidebar"),&leave);pause(400);check(workspacePanel_->expanded(),"keyboard focus retains panel");
+        QKeyEvent escape(QEvent::KeyPress,Qt::Key_Escape,Qt::NoModifier);QApplication::sendEvent(navigation_,&escape);check(!workspacePanel_->expanded() && rail->hasFocus(),"Escape closes and returns rail focus");
+        QKeyEvent space(QEvent::KeyPress,Qt::Key_Space,Qt::NoModifier),release(QEvent::KeyRelease,Qt::Key_Space,Qt::NoModifier);QApplication::sendEvent(rail,&space);QApplication::sendEvent(rail,&release);check(workspacePanel_->expanded(),"keyboard rail opens navigation");
+        imageViewer_->setFocus();QDialog dialog(this);dialog.setModal(true);dialog.show();pause(400);check(workspacePanel_->expanded(),"modal retains navigation");dialog.hide();
+        QMenu menu(this);menu.addAction("Test");menu.popup(mapToGlobal(QPoint(400,200)));pause(400);check(workspacePanel_->expanded(),"popup retains navigation");menu.close();
+        imageViewer_->setFocus();QApplication::sendEvent(findChild<QWidget*>("sidebar"),&leave);pause(180);check(workspacePanel_->expanded(),"exit delay avoids boundary flicker");pause(230);check(!workspacePanel_->expanded(),"exit collapses after delay");
+        {MainWindow reopened(settingsFile_);check(!reopened.workspacePanel_->pinned(),"restart restores local auto-hide preference");}
+        QFile metrics(QDir(artifacts).filePath("workspace-viewports.txt"));check(metrics.open(QIODevice::WriteOnly),"viewport metrics file");
+        for(const auto size:{QSize(1400,900),QSize(850,600)})for(bool pinned:{true,false}){
+            resize(size);workspacePanel_->setPinned(pinned);horizontal_->setSizes({180,680,300});vertical_->setSizes({540,220});QApplication::processEvents();imageViewer_->fitImage();
+            const auto v=imageViewer_->viewport()->size();metrics.write(QString("%1 %2 %3x%4\n").arg(size.width()).arg(pinned ? "pinned":"auto").arg(v.width()).arg(v.height()).toUtf8());
+            grab().save(QDir(artifacts).filePath(QString("workspace-%1-%2.png").arg(size.width()).arg(pinned ? "pinned":"auto")));
+            if(!pinned){workspacePanel_->reveal();QApplication::processEvents();check(imageViewer_->viewport()->size()==v,"overlay maintains viewport at each size");grab().save(QDir(artifacts).filePath(QString("workspace-%1-overlay.png").arg(size.width())));}
+        }
+        selectPage("calibration");check(pages_->currentIndex()==pageIds_.indexOf("calibration"),"auto-hide shared by Calibration");selectPage("runtime");selectPage("editor");
+        findChild<QAction*>("resetPanels")->trigger();QApplication::processEvents();check(workspacePanel_->pinned(),"Reset restores pinned mode");
+        check(service_.activeRecipe()->definition==definition && flowSignature()==signature && editorSession_.generation==generation && pages_->currentIndex()==page && selectedToolId_==selected,"navigation presentation preserves recipe execution and selection");
+        resize(1400,900);
+    }
     // EUI-05: group headers are presentation, never tool kinds.
     {QSet<QString> kinds;QListWidgetItem *measurementGroup=nullptr,*lineEntry=nullptr;int groups=0;
         for(int i=0;i<toolbox_->count();++i){auto* item=toolbox_->item(i);const auto kind=item->data(Qt::UserRole).toString();

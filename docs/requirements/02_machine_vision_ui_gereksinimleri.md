@@ -78,6 +78,12 @@ Panel genişlikleri/yükseklikleri değiştirilebilir, düzen kullanıcı bazın
 
 ### Sol navigasyon
 
+Workspace ilk kullanımda sabittir. Pin veya View menüsüyle yerel otomatik gizleme
+seçilir; 28 mantıksal px şerit 150 ms hover veya tıklama/klavyeyle açılır. Yüzer
+panel viewer'ı yeniden boyutlandırmaz; çıkışta 350 ms sonra kapanır. Klavye odağı,
+açık menü/modal ve fare sürüklemesi kapanmayı tutar. Escape odağı şeride döndürür.
+Reset sabit moda döner; reçete ve execution kimliği değişmez.
+
 | Grup | Sayfalar |
 | --- | --- |
 | Workspace | Dashboard, Project Manager, Recipe Manager |

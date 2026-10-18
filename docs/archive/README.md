@@ -6,6 +6,7 @@ görev” ifadeleri yazıldıkları tarihe aittir.
 
 | Dönem / görev | Kayıt |
 | --- | --- |
+| 18 Ekim 2026 — EUI-06 | [Workspace pin, yüzer otomatik gizleme ve yerel tercih](2026-10-18-eui-06.md) |
 | 18 Ekim 2026 — EUI-05 | [Gruplu Toolbox, katalog ve eski Edge uyumluluğu](2026-10-18-eui-05.md) |
 | 18 Ekim 2026 — EUI-04 | [Nominal tarama okları ve canlı halka/yay kabulü](2026-10-18-eui-04.md) |
 | 18 Ekim 2026 — EUI-03 | [Editor açıklama görünürlüğü, yerel tercih ve zoom kabulü](2026-10-18-eui-03.md) |

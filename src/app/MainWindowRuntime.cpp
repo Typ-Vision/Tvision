@@ -1,6 +1,7 @@
 #include "application/CircleToolService.hpp"
 #include "application/CalibrationWorkflow.hpp"
 #include "MainWindow.hpp"
+#include "WorkspacePanel.hpp"
 #include "ImageViewer.hpp"
 #include "EdgeProfileView.hpp"
 #include "application/ToolResultCodec.hpp"
@@ -83,11 +84,11 @@ void MainWindow::updateOperatorMode(bool active) {
     if(active) {
         operatorGeometry_=saveGeometry();operatorWindowState_=windowState();
         pages_->setCurrentIndex(pageIds_.indexOf("runtime"));pageTitle_->setText("Runtime");
-        navigation_->setEnabled(false);findChild<QWidget*>("sidebar")->hide();
+        navigation_->setEnabled(false);workspacePanel_->setAvailable(false);
         menuBar()->setEnabled(false);menuBar()->hide();showFullScreen();
     } else {
         menuBar()->setEnabled(true);menuBar()->show();
-        navigation_->setEnabled(true);findChild<QWidget*>("sidebar")->show();
+        navigation_->setEnabled(true);workspacePanel_->setAvailable(true);
         restoreGeometry(operatorGeometry_);setWindowState(operatorWindowState_);
         selectPage("runtime");
     }
