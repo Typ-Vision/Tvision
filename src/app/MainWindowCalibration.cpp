@@ -108,15 +108,8 @@ QWidget* MainWindow::makeCalibration() {
     auto* wrapper=new QWidget;auto* outer=new QVBoxLayout(wrapper);auto* stack=new QStackedWidget;
     calibrationHome_=new CalibrationHome([this]{CalibrationHomeContext c;if(service_.hasProject()){c.path=service_.path();c.projectId=service_.project().id;c.recipes=service_.project().recipes;if(service_.activeRecipe())c.currentRecipe=*service_.activeRecipe();c.directory=QFileInfo(c.path).absolutePath();if(service_.activeRecipe())for(const auto& t:service_.tools())if(t.enabled && (t.kind=="image_file" || t.kind=="webcam")){if(c.source){c.source.reset();break;}c.source=t;}}return c;},[this]{return !editorSession_.busy() && !cameraSession_.busy() && !runtimeJobs_.busy() && !(runtime_ && runtime_->busy()) && !(runtimeCoordinator_ && (runtimeCoordinator_->state()==RuntimeState::Running || runtimeCoordinator_->state()==RuntimeState::Starting || runtimeCoordinator_->state()==RuntimeState::Stopping)) && !(plc_ && plc_->blocking());});
     calibrationHome_->onSelectionChanged=[this]{editorSession_.calibrationChanged(editorContext());runtimeResult_.reset();refreshMatchOverlay();refreshFlow();showRuntimeResult();refreshRuntime();};
-    calibrationOverview_=new CalibrationOverview([this]() -> MeasurementWorkspace* {
-        const auto key=service_.hasProject() ? service_.path()+"\n"+service_.project().id:QString{};
-        if(key!=measurementWorkspaceKey_){measurementWorkspace_.reset();measurementWorkspaceKey_.clear();
-            if(service_.hasProject() && !service_.path().isEmpty()){
-                measurementWorkspace_=std::make_shared<MeasurementWorkspace>(service_.path(),service_.project().id,[this]{return !editorSession_.busy() && !cameraSession_.busy() && !runtimeJobs_.busy() && !(runtime_ && runtime_->busy()) && !(runtimeCoordinator_ && (runtimeCoordinator_->state()==RuntimeState::Running || runtimeCoordinator_->state()==RuntimeState::Starting || runtimeCoordinator_->state()==RuntimeState::Stopping)) && !(plc_ && plc_->blocking());});
-                measurementWorkspaceKey_=key;
-            }
-        }return measurementWorkspace_.get();
-    });
+    calibrationOverview_=new CalibrationOverview([this]{return measurementWorkspace();});
+    calibrationOverview_->onCameraManager=[this]{selectPage("camera");};
     calibrationOverview_->setRecipes([this]{return service_.hasProject() ? service_.project().recipes:QVector<Recipe>{};});
     calibrationOverview_->onChanged=[this]{refreshFlow();refreshMatchOverlay();runtimeResult_.reset();showRuntimeResult();refreshRuntime();};
     stack->addWidget(calibrationOverview_);stack->addWidget(calibrationHome_);stack->addWidget(page);outer->addWidget(stack,1);
@@ -124,6 +117,15 @@ QWidget* MainWindow::makeCalibration() {
     QStringList names{"Sistem özeti","Önceki kalibrasyon akışı","Eski kayıt / kanıt ekranı"};
     for(int i=0;i<names.size();++i){auto* b=new QPushButton(names[i]);b->setObjectName(i==2 ? "calibrationLegacyView":i==1 ? "calibrationPreviousView":"calibrationOverviewView");navigation->addWidget(b);connect(b,&QPushButton::clicked,this,[stack,i]{stack->setCurrentIndex(i);});}
     return wrapper;
+}
+MeasurementWorkspace* MainWindow::measurementWorkspace(){
+        const auto key=service_.hasProject() ? service_.path()+"\n"+service_.project().id:QString{};
+        if(key!=measurementWorkspaceKey_){measurementWorkspace_.reset();measurementWorkspaceKey_.clear();
+            if(service_.hasProject() && !service_.path().isEmpty()){
+                measurementWorkspace_=std::make_shared<MeasurementWorkspace>(service_.path(),service_.project().id,[this]{return !editorSession_.busy() && !cameraSession_.busy() && !runtimeJobs_.busy() && !(runtime_ && runtime_->busy()) && !(runtimeCoordinator_ && (runtimeCoordinator_->state()==RuntimeState::Running || runtimeCoordinator_->state()==RuntimeState::Starting || runtimeCoordinator_->state()==RuntimeState::Stopping)) && !(plc_ && plc_->blocking());});
+                measurementWorkspaceKey_=key;
+            }
+        }return measurementWorkspace_.get();
 }
 void MainWindow::invalidateCalibrationDraft(){++calibrationGeneration_;calibrationCandidate_.reset();calibrationReport_.reset();calibrationTrialPoints_.clear();if(calibrationTrialStatus_)calibrationTrialStatus_->setText("Doğrulanmadı — deneme sonucu yok.");if(calibrationSamples_){QSignalBlocker blocker(calibrationSamples_);for(int r=0;r<calibrationSamples_->rowCount();++r)for(int c=6;c<8;++c)if(auto* item=calibrationSamples_->item(r,c))item->setText("");}if(calibrationStatus_)calibrationStatus_->setText("Örnek/ayar değişti — yeniden hesaplama ve doğrulama gerekli.");refreshCalibration();}
 void MainWindow::refreshCalibration() {

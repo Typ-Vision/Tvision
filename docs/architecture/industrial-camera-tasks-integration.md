@@ -17,7 +17,7 @@ edinim açık hata verir. Native kabul [ayrı paketlerdedir](industrial-camera-t
 
 **05a-a bağımsız hazırlığı tamam:** CameraService üzerinde fixture snapshot gruplama
 ve exact resolve; SDK enumeration, ortak webcam DTO, kayıt/factory/lease bağlantısı
-yok. Ana 05a kabulü açık; yazılım önkoşulu artık 04f'dir.
+yoktu. Ana 05a kabulü yukarıdaki teslimle kapandı; native kapılar açıktır.
 
 - Önkoşul: 04f; tamamlanan 05a-a yeniden kullanılır. Native tetik ediniminin açılması
   ayrıca kendi backend G1 kanıtına bağlıdır; keşif/open/preview ayrı yeteneklerdir.
@@ -33,6 +33,9 @@ yok. Ana 05a kabulü açık; yazılım önkoşulu artık 04f'dir.
 - Kapsam dışı: UI, üretim whitelist açma, aynı kamerayı N-source gibi sayma.
 
 ## ICM-05b — Camera Manager ve kamera ekleme UI
+
+**Ortak yazılım kabulü tamam:** [kapanış](../archive/2026-10-18-icm-05b.md).
+Native capability yokken ayar uygulama/preview kapalıdır; offline taslak düzenlenebilir.
 
 - Önkoşul: 05a.
 - Dosyalar: MainWindowCamera, CalibrationOverview, application command DTO'ları.

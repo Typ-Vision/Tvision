@@ -6,6 +6,7 @@ görev” ifadeleri yazıldıkları tarihe aittir.
 
 | Dönem / görev | Kayıt |
 | --- | --- |
+| 18 Ekim 2026 — ICM-05b | [Camera Manager ve capability kapılı ayar/preview UI](2026-10-18-icm-05b.md) |
 | 18 Ekim 2026 — ICM-05a | [Ortak keşif, registry ve factory](2026-10-18-icm-05a.md) |
 | 18 Ekim 2026 — ICM-04f | [Ortak provider ve test adaptörü kabulü](2026-10-18-icm-04f.md) |
 | 18 Ekim 2026 — ICM-PLAN-02 | [Ortak yazılım sırası, OECS erteleme ve Basler/Daheng kabul paketleri](2026-10-18-icm-plan-02.md) |

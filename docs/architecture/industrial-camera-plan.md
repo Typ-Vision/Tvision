@@ -20,8 +20,8 @@ KMC-10e sonrasında fiziksel kalibrasyon kabulünden önce gerçek kamera entegr
 Güncel görev sırası ve son kanıt [progress'tedir](../progress.md).
 18 Ekim kullanıcı kararıyla ana hedef Basler/Daheng PoE kameralardır. Ortak ürün
 geliştirmesi test adaptörüyle ilerler; OECS/COE-U fiziksel engeli bu sırayı durdurmaz.
-Tamamlanan 03c, 04e-a/b, 05a-a ve 07a-a tekrar yapılmaz. Sıradaki **ICM-04f**,
-sonra **05a → 05b → 06a → 06b → 07a → 07b → 07c → 08a → 08b → 08c → 09a**.
+Tamamlanan 03c, 04e-a/b, 05a-a ve 07a-a tekrar yapılmaz. Ortak sıra **ICM-04f**,
+ardından **05a → 05b → 06a → 06b → 07a → 07b → 07c → 08a → 08b → 08c → 09a**.
 Bu sıra yazılım kabulüdür; gerçek edinim ve üretim yeteneği backend bazında kapılıdır.
 [ICM-00 başlangıç kaydı](industrial-camera-baseline.md) tamamlandı. Bir oturumun varsayılan kapsamı bir görevdir; kullanıcı
 bir sıra verirse aynı sırada devam edilir. Tamamlanan KMC paketleri tekrarlanmaz.
@@ -93,8 +93,8 @@ gerçek cihaz readback/owned Mono8 probe başarılı; ICM-04d çekirdek/fixture 
 [ICM-01a tanı kabulü](../archive/2026-10-17-icm-01a.md) fiziksel kapıları kapatmaz.
 Bağımlılıklar görevin başlatılabilmesini ifade eder; fiziksel kapı ayrıca belirtilir.
 04d/04e native OECS bölümü **açık/ertelenmiş**; ortak yazılım yolunun önkoşulu değildir.
-04f ortak provider/test enjeksiyonu kabulü tamam; native capability açmaz.
-05a ve sonrası güncel durum için progress'e bakın.
+04f/05a/05b ortak provider, keşif/kayıt ve Camera Manager yazılımı tamam;
+native capability açmaz. Sıradaki 06a; güncel kanıt progress'tedir.
 
 | ID | Tek teslim | Önkoşul |
 | --- | --- | --- |

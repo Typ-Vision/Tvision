@@ -13,17 +13,21 @@ namespace {
 void require(bool ok,const char* reason){if(!ok)throw std::runtime_error(reason);}
 class CheckedBackend final : public CameraWorkerBackend {
 public:
-    CheckedBackend(std::shared_ptr<const IndustrialCameraProvider> provider,IndustrialCameraRequest request)
-        :request_(std::move(request)),backend_(provider->create(request_)) {
+    CheckedBackend(std::shared_ptr<const IndustrialCameraProvider> provider,IndustrialCameraRequest request,bool configurationOnly=false)
+        :request_(std::move(request)),backend_(provider->create(request_)),configurationOnly_(configurationOnly) {
         require(bool(backend_),"Industrial backend missing.");
     }
     CameraWorkerResult execute(const CameraTicket& ticket) override {
+        require(!configurationOnly_ || (ticket.operation!=CameraOperation::Start && ticket.operation!=CameraOperation::Grab),
+                "Configuration-only session cannot start acquisition.");
         if(ticket.operation==CameraOperation::Grab)checkApplied();
         auto result=backend_->execute(ticket);
         if(!result.success)return result;
         if(ticket.operation==CameraOperation::Connect)
             require(backend_->actualIdentity()==request_.device.identity,"Actual camera identity changed.");
-        if(ticket.operation==CameraOperation::Configure || ticket.operation==CameraOperation::Grab)checkApplied();
+        if(ticket.operation==CameraOperation::Configure || ticket.operation==CameraOperation::Grab){
+            result.readback=checkApplied();
+        }
         if(ticket.operation==CameraOperation::Grab){
             require(result.frame.has_value(),"Industrial grab has no owned frame.");
             const auto& f=*result.frame;
@@ -34,12 +38,14 @@ public:
     }
     void shutdown() override {backend_->shutdown();}
 private:
-    void checkApplied() const {
+    AcquisitionReadback checkApplied() const {
         require(backend_->actualIdentity()==request_.device.identity,"Actual camera identity changed.");
-        verifyApplied(request_.setup,request_.profile,backend_->readback());
+        const auto actual=backend_->readback();
+        verifyApplied(request_.setup,request_.profile,actual);return actual;
     }
     IndustrialCameraRequest request_;
     std::unique_ptr<IndustrialCameraBackend> backend_;
+    bool configurationOnly_=false;
 };
 }
 void IndustrialCameraRequest::validate() const {
@@ -63,6 +69,12 @@ std::unique_ptr<CameraWorkerSession> CameraProviderFactory::resolveOpen(Industri
 IndustrialCameraCapabilities CameraProviderFactory::capabilities(const DiscoveredDevice& device) const {
     device.validate();if(injected_)return injected_->capabilities(device);
     return {false,false,false,false,false,false,"Native backend edinimi doğrulanmadı / SDK adapter'ı kullanılamıyor."};
+}
+std::unique_ptr<CameraWorkerSession> CameraProviderFactory::configure(const IndustrialCameraRequest& request,CameraLeaseUse use) const {
+    request.validate();const auto caps=capabilities(request.device);
+    require(injected_ && caps.open && caps.configure,"Industrial configuration backend unavailable.");
+    return std::make_unique<CameraWorkerSession>(request.device.identity,use,request.sourceId,FrameQueueMode::ProductionFifo,
+        [provider=injected_,request]{return std::make_unique<CheckedBackend>(provider,request,true);});
 }
 std::unique_ptr<CameraWorkerSession> CameraProviderFactory::open(const IndustrialCameraRequest& request,
     CameraLeaseUse use,FrameQueueMode mode,size_t capacity) const {

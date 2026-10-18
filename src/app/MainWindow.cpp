@@ -1,3 +1,4 @@
+#include "CameraManager.hpp"
 #include "MainWindow.hpp"
 #include <QAction>
 #include <QApplication>
@@ -30,6 +31,7 @@ QFrame* card(const QString& title, const QString& text) {
     layout->addWidget(label(title,"heading")); layout->addWidget(label(text)); layout->addStretch(); return frame;
 }
 }
+MainWindow::~MainWindow(){delete cameraManager_;cameraManager_=nullptr;}
 MainWindow::MainWindow(const QString& settingsFile) : settingsFile_(settingsFile) {
     smokeMode_=QCoreApplication::arguments().contains("--multi-source-smoke") || QCoreApplication::arguments().contains("--system-calibration-smoke") || QCoreApplication::arguments().contains("--usability-smoke") || QCoreApplication::arguments().contains("--smoke-test") || QCoreApplication::arguments().contains("--circle-smoke") || QCoreApplication::arguments().contains("--geometry-smoke");
     setWindowTitle("VisionFlow Industrial Vision Suite"); resize(1400,900); setMinimumSize(850,600);
@@ -145,6 +147,7 @@ void MainWindow::selectPage(const QString& id) {
     }
     pages_->setCurrentIndex(index);
     if(id=="calibration")refreshCalibration();
+    if(id=="camera" && cameraManager_)cameraManager_->refresh();
     if(id=="runtime")refreshRuntime();
     if(id=="communication")refreshCommunication();
     if(id=="logs")refreshLogs();

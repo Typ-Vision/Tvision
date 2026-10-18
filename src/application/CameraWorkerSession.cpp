@@ -70,6 +70,7 @@ bool CameraWorkerSession::poll(){
             result.success=false;result.error="Camera grab completed without an owned frame.";
         }
         accepted=lifecycle_.complete(ticket,result.success,result.error);
+        if(accepted && result.readback)readback_=result.readback;
         if(accepted && ticket.operation==CameraOperation::Grab && result.frame){
             const auto admission=lifecycle_.enqueue(std::move(*result.frame),ticket.generation,ticket.deadline);
             if(admission!=FrameAdmission::Accepted && admission!=FrameAdmission::DroppedOldest){

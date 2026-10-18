@@ -9,6 +9,7 @@ public:
     void refresh();
     void transferFile(const QString& action,const QString& path); // same command used by file chooser/tests
     std::function<void()> onChanged;
+    std::function<void()> onCameraManager;
     void setRecipes(std::function<QVector<Recipe>()> f){recipesProvider_=std::move(f);}
     void setCaptureBackendForTests(IndependentCaptureBackend b){backend_=std::move(b);}
     QString selectedCamera() const{return selected_;}

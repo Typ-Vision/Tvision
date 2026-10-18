@@ -1,22 +1,23 @@
 # VisionFlow — güncel devir
 
 Güncelleme: 18 Ekim 2026.
-Son yönlendirme önceliklidir. Ayrıntılar [arşivde](archive/README.md); topluca okumayın.
+Son yönlendirme önceliklidir. Ayrıntılar [arşivde](archive/README.md).
 
 ## Devam noktası
 
-- **ICM-PLAN-02 tamam:** kullanıcı kararıyla ortak ürün yazılımı ile marka/model
-  donanım kabulü ayrıldı. [Kapanış](archive/2026-10-18-icm-plan-02.md).
+- **ICM-PLAN-02:** ortak yazılım ve donanım kabulü ayrıldı. [Kapanış](archive/2026-10-18-icm-plan-02.md).
   **ICM-04f tamam:** ortak provider/test adaptörü sözleşmesi.
   [Kapanış](archive/2026-10-18-icm-04f.md). **ICM-05a tamam:** ortak keşif/kayıt/factory ve yerel rota.
-  [Kapanış](archive/2026-10-18-icm-05a.md). Sıradaki **05b → 06a → 06b → 07a → 07b → 07c → 08a → 08b → 08c → 09a**.
+  [Kapanış](archive/2026-10-18-icm-05a.md). **ICM-05b tamam:** Camera Manager,
+  profil taslağı ve capability kapılı readback/preview UI.
+  [Kapanış](archive/2026-10-18-icm-05b.md). Sıradaki **06a → 06b → 07a → 07b → 07c → 08a → 08b → 08c → 09a**.
   [04f kartı](architecture/industrial-camera-tasks-foundation.md),
   [Basler/Daheng paketleri](architecture/industrial-camera-tasks-backends.md).
   OECS native 04d/04e açık/ertelenmiş; ortak sıra için önkoşul değil. Test adaptörü
   normal ürün yoluna açılamaz; G2 yazılım, G0/G1/G3 backend, G4 kurulum kabulüdür.
-- **Üç sıralı hazırlık tamam:** [04e-b](archive/2026-10-18-icm-04e-b.md) stress,
-  [05a-a](archive/2026-10-18-icm-05a-a.md) keşif/resolve,
-  [07a-a](archive/2026-10-18-icm-07a-a.md) kaynak referans codec; ürün bağlantısı yok.
+- Hazırlıklar: [04e-b](archive/2026-10-18-icm-04e-b.md) stress,
+  [05a-a](archive/2026-10-18-icm-05a-a.md) resolve ve
+  [07a-a](archive/2026-10-18-icm-07a-a.md) kaynak codec; 07a ürün bağlantısı açık.
 - [ICM-04e-a](archive/2026-10-18-icm-04e-a.md) tamam: lease/worker, polling/shutdown,
   geç kare ret ve cleanup karantinası.
   [ICM-03c](archive/2026-10-18-icm-03c.md) owned ölçüm rasteri/geometri adayı da hazır;
@@ -92,8 +93,9 @@ ve seçili kartın sözleşme/kabulü. Önce başlık/ID arayın.
 
 ## Son doğrulama ve çalışma ortamı
 
-- **ICM-05a:** core Release build ve ilgili CTest **6/6** geçti.
-  Kanıt: `build/icm/05a/`. UI/donanım koşulmadı.
+- **ICM-05b:** Release UI/core build; ilgili UI **11/11**, core **7/7**.
+  Shell TCP testi sandbox'ta timeout, dışarıda **1/1** geçti. Normal/küçük görsel
+  kontrol: `build/icm/05b/`. Fiziksel kamera denenmedi.
 - Önceki 04e-b/05a-a/07a-a **4/4** core Release sonuçları arşivdedir; yeniden koşulmadı.
   `plc_socket_runtime` aralıklı başarısızlığı/kök neden açık kalır.
 - Güncel UI `build/reference-ui/visionflow.exe`, core `build/kmc9-core-off`.
@@ -103,7 +105,7 @@ ve seçili kartın sözleşme/kabulü. Önce başlık/ID arayın.
 
 ## Kapanış ve sonraki adım
 
-**ICM-04f/05a tamam; sıradaki ICM-05b, ardından ICM-06a.** 04e-a/b, 05a-a, 07a-a yeniden yapılmaz;
+**ICM-04f/05a/05b tamam; sıradaki ICM-06a, ardından ICM-06b.** 04e-a/b, 05a-a, 07a-a yeniden yapılmaz;
 ölçüm adayı configure girdisi değildir. 05a/07a ürün kabulü açık.
 [04d cancel incelemesi](archive/2026-10-18-icm-04d-cancel-audit.md): AcquisitionAbort
 yok; DeviceReset garantisiz, çalıştırılmadı. Üretici taslağı gönderilmedi.

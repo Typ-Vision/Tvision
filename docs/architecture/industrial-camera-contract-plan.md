@@ -25,6 +25,15 @@ worker actual identity, pre/post readback ve frame format/boyutunu denetler.
 Preview ayrı trigger-off profile/session ister; lease/Stop mevcut worker'dır.
 Provider sonuçları terminal completion veya production izni değildir.
 
+ICM-05b: CameraManager ortak envanter/registry ve process-local lease üzerinden
+çalışır. Configure-only factory oturumu tetik capability'si istemez, Start/Grab'ı
+reddeder. Actual readback tek kez okunup doğrulanan snapshot olarak owner'a döner.
+Preview trigger-off ayrı session'dır; Stop rasteri anında temizler, worker cleanup
+bitene kadar ortak CameraSession işi busy kalır. UI SDK çağırmaz. Profil taslağı
+istenen tam sensör geometri/manual Mono8 ayarlarıdır; gerçek readback veya aktif
+kalibrasyon değildir. Normal composition'da native ayar/preview kontrolleri kapalıdır.
+Kalibrasyon sistem özeti aynı CameraId'yi gösterir; keşif ortak Manager'a yönlenir.
+
 Discovery/open, preview ve doğrulanmış tetik edinimi ayrı yeteneklerdir. Gerçek
 production capability hem ilgili backend G1 kabulünü hem 08b güven zincirini ister.
 Bir cihazın tetik engeli diğer backend'leri veya ortak yazılım G2 kabulünü kapatmaz.

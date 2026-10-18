@@ -11,6 +11,7 @@ struct CameraWorkerResult {
     bool success=false;
     QString error;
     std::optional<AcquiredFrame> frame;
+    std::optional<AcquisitionReadback> readback;
 };
 // Factory, execute, shutdown and destruction all run on the same persistent worker.
 // shutdown must release resources even after a failed/partial operation. Throwing
@@ -40,6 +41,7 @@ public:
     ShutdownState shutdownState();
     const CameraLifecycle& lifecycle() const {return lifecycle_;}
     std::optional<AcquiredFrame> take();
+    std::optional<AcquisitionReadback> readback() const {owner();return readback_;}
 private:
     void owner() const;
     void run(Factory);
@@ -56,6 +58,7 @@ private:
     struct Completion {CameraTicket ticket;CameraWorkerResult result;};
     std::optional<Completion> completion_;
     bool pending_=false,closing_=false,exited_=false,clean_=false;
+    std::optional<AcquisitionReadback> readback_;
     QString startupError_,cleanupError_;
     std::thread worker_;
 };

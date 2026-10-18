@@ -5,7 +5,6 @@ C++20 / Qt Widgets / OpenCV ile endüstriyel görüntü işleme uygulaması.
 UI algoritma veya donanım SDK'sını doğrudan çağırmaz.
 
 **Güncel görev, son doğrulama ve açık engeller [devir özetindedir](docs/progress.md).**
-Bu README giriş ve kullanım rehberidir.
 
 ## Uygulanan kapsam
 
@@ -15,9 +14,9 @@ Bu README giriş ve kullanım rehberidir.
   kalibrasyon sihirbazları; aday kaydı ile etkinleştirme ayrı işlemlerdir.
 - Çok kaynaklı Editor ve immutable Runtime hazırlığı; gerçek çevrim, kalıcı terminal
   kayıtları, restart geçmişi, Logs/CSV ve vf.socket2 scalar mapping.
-- Image File/Webcam edinimi ve GenTL keşif/salt okunur kontrolü. Endüstriyel
-  backend’de sınırlı tek-kare Mono8 probe mevcut; kalibrasyon/Editor/Runtime
-  edinim bağlantısı henüz uygulanmadı.
+- Image File/Webcam edinimi; Camera Manager'da ortak keşif, kamera kaydı ve
+  çevrimdışı Mono8 profil taslağı. Native endüstriyel edinim kapalıdır;
+  kalibrasyon/Editor/Runtime bağlantısı henüz uygulanmadı.
 
 Hazırlık veya keşif sonucu üretim kabulü değildir. Gerçek sonuç olmadan PASS, skor
 veya robot pose gösterilmez. Robot hazırlık ekranları çalışan robot entegrasyonu
@@ -83,9 +82,9 @@ geçici ayarları geri yükler. Native production admission henüz yoktur.
 2. Image File için gerçek görüntü açın; kamera kaynağında edinim yapın. **Run Flow**
    akışı yürütür. **Run Tool** güncel girdilerle seçili aracı çalıştırır; eksik
    upstream sonucu veya görüntü yerine değer üretmez.
-3. **Setup → Calibration** sistem özetinden kamera/kurulum ve reçetesiz denemeleri
-   yönetin. Kaydet aday oluşturur; aktivasyon incelemesi ve kaynak→kurulum bağı
-   ayrı adımlardır. Dosya denemesi fiziksel kamera kanıtı üretmez.
+3. **Camera Manager** ile kamerayı projeye kaydedin; yerel producer hatırlanır.
+   **Setup → Calibration** aynı kamera kayıtlarını kullanır. Profil taslağı readback,
+   kalibrasyon adayı etkin model değildir. Aktivasyon ve kaynak→kurulum bağı ayrıdır.
 4. Kaydedilmiş reçeteyi **Load Recipe → Run** ile Runtime'a hazırlayın.
    **Tek çevrim** gerçek edinim/yürütmeyi başlatır; Run tek başına sonuç üretmez.
    Stop eski sonucu bastırır; farklı sürüm için Stop → Load Recipe → Run kullanın.

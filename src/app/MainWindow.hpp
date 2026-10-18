@@ -31,9 +31,11 @@ class ImageViewer;
 class EdgeProfileView;
 class CalibrationHome;
 class CalibrationOverview;
+class CameraManager;
 class MainWindow : public QMainWindow {
 public:
     explicit MainWindow(const QString& settingsFile);
+    ~MainWindow() override;
     bool verifyMultiSource(const QString& artifacts);
     bool verifyMultiSourceRuntime(const QString& artifacts);
     bool verifyShell();
@@ -64,9 +66,9 @@ protected:
 private:
     QWidget* makeDashboard();
     QWidget* makeCameraManager();
+    MeasurementWorkspace* measurementWorkspace();
     void discoverCameras();
     void checkCameraConnection();
-    void updateCameraControls();
     QWidget* makeEditor();
     QWidget* makeCalibration();
     QWidget* makeRuntime();
@@ -187,10 +189,7 @@ private:
     bool modelDrawing_=false;
     QString drawingTool_;
     QLabel* graphInfo_{};
-    QLineEdit* cameraProducer_{};
-    QLabel* cameraStatus_{};
-    QTableWidget* cameraTable_{};
-    QVector<CameraDevice> cameraDevices_;
+    CameraManager* cameraManager_{};
     ImageViewer* calibrationViewer_{};
     CalibrationHome* calibrationHome_{};
     CalibrationOverview* calibrationOverview_{};

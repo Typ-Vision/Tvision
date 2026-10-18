@@ -42,7 +42,7 @@ auto command=[&](QString text,QString name,int row,int col,std::function<void()>
 command("Kamera / kurulum ekle","overviewAdd",0,0,[this]{edit(true);});
 command("Kurulumu düzenle","overviewEdit",0,1,[this]{edit(false);});
 command("Yeni ölçüm kurulumu","overviewAddSetup",1,0,[this]{edit(false,true);});
-command("Cihazları keşfet","overviewDiscover",1,1,[this]{auto* c=context_();if(!c)throw std::runtime_error("Önce projeyi kaydedin.");c->discover();refresh();});
+command("Cihazları keşfet","overviewDiscover",1,1,[this]{if(onCameraManager){onCameraManager();return;}auto* c=context_();if(!c)throw std::runtime_error("Önce projeyi kaydedin.");c->discover();refresh();});
 cards_=new QWidget;grid_=new QGridLayout(cards_);grid_->setContentsMargins(0,0,0,0);layout->addWidget(cards_);
 auto* selected=new QGroupBox("Seçili kamera ve ölçüm kurulumu");auto* v=new QVBoxLayout(selected);layout->addWidget(selected);
 detail_=label("");detail_->setObjectName("overviewDetail");v->addWidget(detail_);setups_=new QComboBox;setups_->setObjectName("overviewSetups");setups_->setSizeAdjustPolicy(QComboBox::AdjustToMinimumContentsLengthWithIcon);setups_->setMinimumContentsLength(12);v->addWidget(setups_);
@@ -85,7 +85,10 @@ const auto full=camera.name+"\n"+setupName+"\n"+choice+"\n"+availability;card->s
 reflow();const auto previous=setups_->currentData().toString();setups_->clear();
 for(const auto& s:e.current.setups)if(s.camera.value==selected_ && !e.archivedSetups.contains(s.id.value))setups_->addItem(s.name+QString(" • r%1").arg(s.revision),s.id.value);
 int index=setups_->findData(previous);if(index<0)index=setups_->findData(e.operational.value(selected_));if(index>=0)setups_->setCurrentIndex(index);
-detail_->clear();for(const auto& camera:cameras)if(camera.id.value==selected_)detail_->setText(camera.name+"\n"+c->availability(camera)+"\nCihaz: "+camera.device.providerId+" • "+camera.device.adapter+"\nProvider kimliği seri numarası veya fiziksel süreklilik garantisi değildir.");
+detail_->clear();for(const auto& camera:cameras)if(camera.id.value==selected_){
+    const auto identity=camera.physical ? camera.physical->vendor+" / "+camera.physical->model+" / Seri: "+camera.physical->serial : camera.device.providerId+" • "+camera.device.adapter;
+    detail_->setText(camera.name+"\n"+c->availability(camera)+"\nCihaz: "+identity+"\nKamera kaydı gerçek edinim veya fiziksel süreklilik kabulü değildir.");
+}
 for(const auto& s:e.current.setups)if(s.id.value==setups_->currentData().toString()){
 detail_->setText(detail_->text()+QString("\n%1 • %2 • %3×%4 px • %5").arg(s.opticalProfile,s.workingPlane).arg(s.geometry.resolution.width()).arg(s.geometry.resolution.height()).arg(e.operational.value(selected_)==s.id.value ? "Operasyonel":"Operasyonel değil"));
 try{for(const auto& r:c->calibrations().historyRecords(s.id)){int row=records_->rowCount();records_->insertRow(row);const bool old=r.setup().id!=s.id.value+"/"+QString::number(s.revision);QString choice=old ? "Eski kurulum revision • kullanılamaz":"Seçili değil";for(const auto& selection:e.selections)if(selection.contentId==r.contentId() && selection.target.setup==s.id)choice=old ? "Son seçim • eski kurulum revision":"Son seçim • uyum denetimi bekliyor";if(!old)try{const auto active=c->calibrations().snapshots({{s.camera,s.id,s.revision}});if(active.first().calibration.record.contentId()==r.contentId())choice="Seçili • kullanılabilir";}catch(const std::exception&){};
