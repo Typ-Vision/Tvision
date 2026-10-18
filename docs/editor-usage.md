@@ -63,5 +63,6 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File "C:\Projects\Tvision\scr
    Line Fit yönünü de kontrol edin. Oklar Run öncesinde görünmeli; değişiklikten
    sonra eski fit kaybolmalı, yeni sonuç yalnız Run ile oluşmalı.
 
-Bu liste kullanıcı tarafından henüz yeniden uygulanmış sayılmaz. Native DPI/çoklu
-monitör ve fiziksel kamera/kalibrasyon kabulü ayrı kontrollerdir.
+18 Ekim 2026: kullanıcı bu tekrar testlerini gerçekleştirdiğini ve hepsinin
+başarılı olduğunu bildirdi. [Kabul kaydı](archive/2026-10-18-eui-accept-01.md).
+Native DPI/çoklu monitör ve fiziksel kamera/kalibrasyon kabulü ayrı kontrollerdir.
