@@ -144,3 +144,31 @@ Bu bölüm G2'den bağımsızdır. Yeni fiziksel deney yapılmadı.
 lens, gerçek PLC/robot, CUDA ve kurulum/dağıtım kabulü açık kalır.
 G2 başarısı production capability açmaz; ilgili native G1 ve trusted completion
 gerekir. G3 yalnız sınanan backend/model/firmware, G4 yalnız sınanan kurulum içindir.
+
+## ICM-09b — başlatıldı, fiziksel kabul açık
+
+09a commit `1cfa72a` sonrasında önkoşul incelemesi yapıldı. G2 hazır;
+hiçbir seçili native backend için G0/G1 tamam değil. Normal
+`CameraProviderFactory::capabilities` bütün edinim yeteneklerini false döndürüyor;
+open/configure test enjeksiyonunu zorunlu tutuyor. Kapı gevşetilmedi.
+`build/icm/09b/preflight.json`, `native-gate.txt` ve
+`preflight-source-hashes.json` yeni statik inceleme kanıtıdır.
+Bu adımda fiziksel test/command/kare **0/0/0**; yeni build/CTest yapılmadı.
+09a'nın test sonuçları 09b fiziksel sonucu olarak kullanılmaz.
+
+| Satır | Güncel durum / gereken kanıt |
+| --- | --- |
+| H01 | Açık: seçili model/seri/firmware, vendor viewer gerçek sahne + release ve exact open. OECS geçmiş open/grab tam H01 değil. |
+| H02 | G1 önkoşulunda bekliyor: native 100 software trigger ve bağımsız olay/kare tazeliği. Eski OECS gecikme karşı örneği geçerli. |
+| H03 | G1 önkoşulunda bekliyor: gerçek 20 lifecycle ve preview→production geçişi. Fixture stress fiziksel kabul değil. |
+| H04 | G1 önkoşulunda bekliyor: kontrollü unplug/replug ve 10 Stop; explicit recovery/activation/prepare. Şimdilik kablo adımı istenmedi. |
+| H05 | G1 önkoşulunda bekliyor: viewer contention ve serbest bırakma sonrası exact tekrar open. |
+| H06 | G1 önkoşulunda bekliyor: desteklenen actual profil/geometri değişimi ve restart invalidation. |
+| H07 | G1 önkoşulunda bekliyor: tek/mixed-source, üç applicationType gerçek ürün çevrimi ve kalıcı Logs/CSV. |
+| H08 | G1 önkoşulunda bekliyor: gerçek 30 dk preview/1000 cycle, süre/RSS/pool/native kapanış. |
+
+Devam girdisi: erişilebilir Basler/Daheng exact model/seri/firmware ve SDK ile
+ilgili BAS/DAH-01→02; ya da OECS exact firmware için belgeli pending-command
+cancel/completion/drain/reset bariyeri ve buna yönelik yeni karşı deney.
+Aynı Stop→Start/sessizlik deneyi tekrarlanmaz. Backend G0/G1 sonrası H01–H08
+uygulanır; G3/G4 ve ICM-10 açık kalır.

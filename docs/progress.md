@@ -1,7 +1,7 @@
 # VisionFlow — güncel devir
 
 18 Ekim 2026.
-Güncel yönlendirme önceliklidir. [Arşiv](archive/README.md).
+[Arşiv](archive/README.md).
 
 ## Devam noktası
 
@@ -11,7 +11,7 @@ Güncel yönlendirme önceliklidir. [Arşiv](archive/README.md).
   [06a](archive/2026-10-18-icm-06a.md), [06b kapanış](archive/2026-10-18-icm-06b.md).
   [04f](archive/2026-10-18-icm-04f.md), [05a](archive/2026-10-18-icm-05a.md),
   [05b](archive/2026-10-18-icm-05b.md) tamam.
-  **09a/G2 tamam**; kullanıcı yönlendirmesiyle sıradaki 09b.
+  **09a/G2 tamam; 09b başladı**, native G0/G1 bekliyor.
   [04f kartı](architecture/industrial-camera-tasks-foundation.md),
   [Basler/Daheng paketleri](architecture/industrial-camera-tasks-backends.md).
   OECS native 04d/04e açık/ertelenmiş; ortak sıra için önkoşul değil. Test adaptörü
@@ -88,8 +88,8 @@ Görevler: [ana plan](architecture/industrial-camera-plan.md), seçili kart ve s
 ## Son doğrulama ve çalışma ortamı
 
 - **ICM-09a/G2 tamam:** son kaynak Release UI ON/ZXing ON **105/105**, core
-  OFF/ZXing OFF **89/89**, optional SDK fixture **2/2**. İki eski araç sayısı
-  beklentisi düzeltildi; ilk hatalar/tekrarlar korunur. [Kapanış](archive/2026-10-18-icm-09a.md).
+  OFF/ZXing OFF **89/89**, optional SDK fixture **2/2**.
+  [Kapanış](archive/2026-10-18-icm-09a.md).
   [Birleşik rapor](architecture/industrial-camera-release-acceptance.md),
   kanıt `build/icm/09a/`; native G1/G3/G4 ve dağıtım açık.
 - **ICM-08b/08c tamam:** trusted completion/terminal8–9 ve Runtime/Logs/CSV.
@@ -106,8 +106,10 @@ Görevler: [ana plan](architecture/industrial-camera-plan.md), seçili kart ve s
 
 ## Kapanış ve sonraki adım
 
-**ICM-09a/G2 tamam; sıradaki ICM-09b.** 04e-a/b, 05a-a, 07a-a yeniden yapılmaz;
-ölçüm adayı configure girdisi değildir. 07b/07c edinim/UI, 08a admission, 08b terminal ve 08c sunum hazır; native G1 kapalı.
+**[ICM-09b başladı](archive/2026-10-18-icm-09b-start.md), G0/G1 önkoşulunda.**
+H01–H08 açık; yeni fiziksel istek/kare 0. Basler/Daheng exact model/SDK ile
+01→02 veya OECS belgeli pending-command bariyeri gerekiyor. 04e-a/b, 05a-a,
+07a-a yeniden yapılmaz; ölçüm adayı configure girdisi değildir. 07b–08c hazır.
 [04d cancel incelemesi](archive/2026-10-18-icm-04d-cancel-audit.md): AcquisitionAbort
 yok; DeviceReset garantisiz, çalıştırılmadı. Üretici taslağı gönderilmedi.
 Delay=0, close/open/sessizlik kanıt değil; aynı deneyi tekrarlamayın. Native Unavailable.
