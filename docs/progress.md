@@ -11,7 +11,7 @@ Son yönlendirme önceliklidir. Ayrıntılar [arşivde](archive/README.md).
   [06a](archive/2026-10-18-icm-06a.md), [06b kapanış](archive/2026-10-18-icm-06b.md).
   Önceki [04f](archive/2026-10-18-icm-04f.md), [05a](archive/2026-10-18-icm-05a.md),
   [05b](archive/2026-10-18-icm-05b.md) tamam.
-  Sıradaki **07c → 08a → 08b → 08c → 09a**.
+  Sıradaki **08a → 08b → 08c → 09a**.
   [04f kartı](architecture/industrial-camera-tasks-foundation.md),
   [Basler/Daheng paketleri](architecture/industrial-camera-tasks-backends.md).
   OECS native 04d/04e açık/ertelenmiş; ortak sıra için önkoşul değil. Test adaptörü
@@ -46,8 +46,7 @@ Son yönlendirme önceliklidir. Ayrıntılar [arşivde](archive/README.md).
   [Görev kartları](architecture/industrial-camera-tasks-foundation.md).
   ICM-00 veya tamamlanmış KMC görevlerini yeniden başlatmayın.
 - Ana hedef Basler/Daheng PoE; deney cihazı COE-U USB3/OECS. Tanı probe'u üretim
-  admission/tazelik garantisi değildir. Application edinimi hazır; Editor seçim UI
-  ve Runtime bağlantısı bekliyor. Native/production kapıları korunur.
+  admission/tazelik garantisi değildir. Application edinimi ve Editor seçim UI hazır; Runtime bağlantısı bekliyor. Native/production kapıları korunur.
 
 ## Göreve göre oku
 
@@ -93,22 +92,22 @@ Başlangıç: AGENTS + bu özet + [README](../README.md); sonra
 
 ## Son doğrulama ve çalışma ortamı
 
-- **ICM-07b:** immutable industrial execution/provider/lease, actual evidence,
-  scoped model ve TargetOnly/cache. [Kapanış](archive/2026-10-18-icm-07b.md).
-  Release core ilgili CTest **14/14**; kanıt `build/icm-07b-*`.
-  Fiziksel kamera/yeni UI görseli yok.
-  Engine /25; eski validation/preparation yeniden üretilir, terminal7 değişmedi.
-  Önceki [07a](archive/2026-10-18-icm-07a.md) source/codec/offline UI tamam.
+- **ICM-07c:** ortak Editor kayıtlı profil seçimi/açık bağlama, actual Viewer bilgisi
+  ve immutable worker bağlantısı. [Kapanış](archive/2026-10-18-icm-07c.md).
+  Release UI ilgili CTest **5/5**; kanıt `build/icm-07c-*`.
+  İlk UI testindeki reopen sonrası reçete seçimi hatası düzeltildi; ilk koşum korundu.
+  Fiziksel kamera kabulü yok; engine /25 ve terminal7 değişmedi.
+  Önceki [07b](archive/2026-10-18-icm-07b.md) execution/provider/TargetOnly tamam.
   `plc_socket_runtime` aralıklı başarısızlığı/kök neden açık kalır.
-- UI (07a) `build/reference-ui/visionflow.exe`; core /25 `build/kmc9-core-off`.
+- UI `build/reference-ui/visionflow.exe`; core /25 `build/kmc9-core-off`.
   Başlatma `.\scripts\run-local.ps1`; build/PATH komutları README'dedir.
 - ICM-02 baseline `53bb972`; sonrası görev ID'li tek commit. Push kullanıcı
   isteğiyle. Ajanlar sıralıdır. Yerel INI korunur; kanıtlar `build/` altındadır.
 
 ## Kapanış ve sonraki adım
 
-**ICM-07b tamam; sıradaki ICM-07c, ardından ICM-08a.** 04e-a/b, 05a-a, 07a-a yeniden yapılmaz;
-ölçüm adayı configure girdisi değildir. 07b application edinimi hazır; 07c seçim UI ve 08a/b production açık.
+**ICM-07c tamam; sıradaki ICM-08a, ardından ICM-08b.** 04e-a/b, 05a-a, 07a-a yeniden yapılmaz;
+ölçüm adayı configure girdisi değildir. 07b/07c application edinimi ve seçim UI hazır; 08a/b production açık.
 [04d cancel incelemesi](archive/2026-10-18-icm-04d-cancel-audit.md): AcquisitionAbort
 yok; DeviceReset garantisiz, çalıştırılmadı. Üretici taslağı gönderilmedi.
 Delay=0, close/open/sessizlik kanıt değil; aynı deneyi tekrarlamayın. Native Unavailable.

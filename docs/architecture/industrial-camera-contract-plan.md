@@ -37,7 +37,9 @@ completion authority'ye girmez. Stop/geç sonuç çıktı ve kanıtı bastırır
 kamera iki enabled source'ta source refresh sırasında da reddedilir. TargetOnly
 edinim yapmaz; cached raw ile aynı kaynak/frame/cycle/piksel içeriği gerekir.
 Scoped industrial model eşlemesi scope2 fiziksel kimlik/device/setup revision ister.
-Profil seçim UI 07c, immutable production admission/terminal 08a/b kapsamındadır.
+ICM-07c kayıtlı profil seçimini açık bağlama/güncelleme ve immutable worker girdisine bağlar.
+Liste seçimi edinim yapmaz; profil değişimi açık rebind ister. Üç applicationType
+ortak Editor/Viewer/ROI yolundadır. Immutable production admission/terminal 08a/b kapsamındadır.
 
 ICM-05b: CameraManager ortak envanter/registry ve process-local lease üzerinden
 çalışır. Configure-only factory oturumu tetik capability'si istemez, Start/Grab'ı
@@ -319,7 +321,7 @@ değildir. `ProjectService::bindIndustrialSource` güncel contract'tan explicit 
 kurulum ve revision'ı göstermelidir; farklı kurulum bağı önce açıkça kaldırılmalıdır.
 Kaynak parametre/enabled değişimi legacy calibrationBinding'i invalid eder; rename/no-op
 korur. Toolbox çevrimdışı taslak ekler ve edinimin kullanılamadığını açıkça gösterir.
-Kamera/profil seçimi UI 07c, execution 07b kapsamındadır; production/native kapıları kapalıdır.
+Kamera/profil seçimi UI 07c ve execution 07b hazırdır; production/native kapıları kapalıdır.
 
 Editor/Runtime aynı acquisition provider'ı kullanır. TargetOnly aynı doğru frame'de
 acquisition0'dır; profile/model değişimi ilgili source cache'ini invalid eder.

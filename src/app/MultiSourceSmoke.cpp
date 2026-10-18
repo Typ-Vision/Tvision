@@ -16,6 +16,9 @@
 #include <QLabel>
 #include <QListWidget>
 #include <QJsonArray>
+#include <QSpinBox>
+#include <QScrollArea>
+#include "domain/IndustrialSourceReference.hpp"
 #include "application/ProductionResultCodec.hpp"
 #include <cmath>
 namespace visionflow {
@@ -47,11 +50,27 @@ bool MainWindow::verifyMultiSource(const QString& artifacts){
     const auto industrial=service_.addTool("industrial_camera");refreshWorkspace();selectPage("editor");selectTool(industrial);
     check(findChild<QLabel*>("industrialSourceStatus") && !findChild<QPushButton*>("runSelectedTool")->isEnabled(),"Industrial draft clearly unavailable");
     check(matchInfo_->text().isEmpty() && imageInfo_->text()=="Görüntü yok.","New industrial recipe clears previous results/frame labels");
+    // Offline registry fixture: no provider or synthetic acquisition is linked into the app.
+    MeasurementCamera camera{{"ui-industrial"},"Sentetik offline kamera",{"gentl",{},DeviceIdentityConfidence::Unavailable,1,{}},PhysicalDeviceIdentity{"VF","Offline fixture","SYNTHETIC",DeviceIdentityConfidence::SerialReported}};
+    GeometryDescriptor geometry;geometry.resolution={640,480};geometry.sensorRoi=QRect(0,0,640,480);geometry.binning=QSize(1,1);geometry.decimation=QSize(1,1);geometry.reverse=GeometryMirror{};geometry.complete=true;
+    MeasurementSetupDescriptor setup{{"ui-setup"},camera.id,"Sentetik kurulum","lens","plane",1,1,geometry};
+    AcquisitionProfile profile{{"ui-profile"},camera.id,setup.id,"Mono8 software trigger",1,{"Mono8",{true,"FrameStart","Software"},AutoMode::Off,100,AutoMode::Off,1,{}}};
+    measurementWorkspace_->replace({{camera},{setup},{profile}});refreshWorkspace();selectTool(industrial);
+    auto* profiles=findChild<QComboBox*>("industrialProfileSelector");check(profiles && profiles->count()==2,"Offline registry profile listed");
+    profiles->setCurrentIndex(1);check(!editorSession_.busy() && !editorSession_.cycle,"Selection never acquires");
+    findChild<QSpinBox*>("industrialTimeout")->setValue(2000);findChild<QPushButton*>("industrialProfileApply")->click();
+    check(IndustrialSourceReference::fromJson(service_.tools().last().parameters["sourceReference"].toObject()).timeoutMs==2000,"Explicit UI binding");
+    service_.save();const auto definition=service_.activeRecipe()->definition;const auto industrialRecipe=service_.activeRecipe()->id;service_.openProject(service_.path());service_.selectRecipe(industrialRecipe);refreshWorkspace();selectTool(industrial);
+    check(service_.activeRecipe()->definition==definition && findChild<QPushButton*>("runSelectedTool")->isEnabled(),"Bound offline source survives reopen");
+    profile.revision++;profile.requested.gain=2;measurementWorkspace_->replace({{camera},{setup},{profile}});refreshWorkspace();selectTool(industrial);
+    check(findChild<QLabel*>("industrialSourceStatus")->text().contains("Bağ geçersiz"),"Profile edit requires explicit rebind");
+    findChild<QPushButton*>("industrialProfileApply")->click();
     service_.save();refreshWorkspace();selectTool(industrial);
     for(int i=0;i<toolbox_->count();++i)if(toolbox_->item(i)->data(Qt::UserRole)=="industrial_camera"){toolbox_->setCurrentRow(i);toolbox_->scrollToItem(toolbox_->item(i));}
-    const auto output=QDir(artifacts).filePath("icm/07a");check(QDir().mkpath(output),"Industrial screenshot directory");
+    const auto output=QDir(artifacts).filePath("icm/07c");check(QDir().mkpath(output),"Industrial screenshot directory");
     resize(1400,900);QApplication::processEvents();check(grab().save(output+"/industrial-normal.png"),"Industrial normal screenshot");
     resize(850,600);QApplication::processEvents();check(grab().save(output+"/industrial-small.png"),"Industrial small screenshot");
+    for(const auto size:{QSize(1400,900),QSize(850,600)}){resize(size);QApplication::processEvents();findChild<QScrollArea*>("propertiesScroll")->ensureWidgetVisible(findChild<QPushButton*>("industrialProfileApply"));QApplication::processEvents();check(grab().save(output+QString("/industrial-binding-%1.png").arg(size.width())),"Industrial binding screenshot");}
     runFlow();wait();check(editorSession_.cycle && editorSession_.cycle->state==ExecutionState::Error && editorSession_.sourceFrames.isEmpty(),"Industrial Run Flow fails without fabricated raster");
     QTextStream(stdout)<<checks<<" multi-source UI checks passed\n";return true;
 }

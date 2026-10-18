@@ -122,6 +122,9 @@ bağlantısı hazırdır; kullanıcı profil seçimi 07c'de, production 08a/b'de
 
 ## ICM-07c — ortak Recipe Editor UI
 
+**Ortak yazılım kabulü tamam:** [kapanış](../archive/2026-10-18-icm-07c.md).
+Kayıtlı profil seçimi ve worker bağlantısı hazır; native edinim kapıları korunur.
+
 - Önkoşul: 07b, 05b.
 - Dosyalar: MainWindowEditor/Execution, Properties ve tool creation UI.
 - İş: Industrial Camera source ekle → kayıtlı kamerayı/kurulumu/profili seç → kare al;

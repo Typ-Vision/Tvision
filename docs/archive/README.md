@@ -6,6 +6,7 @@ görev” ifadeleri yazıldıkları tarihe aittir.
 
 | Dönem / görev | Kayıt |
 | --- | --- |
+| 18 Ekim 2026 — ICM-07c | [Editor kayıtlı profil seçimi ve worker edinim bağlantısı](2026-10-18-icm-07c.md) |
 | 18 Ekim 2026 — ICM-07b | [Industrial execution, actual evidence ve TargetOnly/cache](2026-10-18-icm-07b.md) |
 | 18 Ekim 2026 — ICM-07a | [Industrial source tool, codec ve explicit migration](2026-10-18-icm-07a.md) |
 | 18 Ekim 2026 — ICM-06b | [Industrial aktivasyon, geometri/profil invalidation ve scope2](2026-10-18-icm-06b.md) |

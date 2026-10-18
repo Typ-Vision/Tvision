@@ -1,6 +1,6 @@
 # VisionFlow Industrial Vision Suite
 
-C++20 / Qt Widgets / OpenCV ile endüstriyel görüntü işleme uygulaması.
+C++20 / Qt Widgets / OpenCV endüstriyel görüntü işleme uygulaması.
 Üç applicationType aynı Recipe Editor, yürütme servisleri ve Runtime'ı kullanır.
 UI algoritma veya donanım SDK'sını doğrudan çağırmaz.
 
@@ -16,7 +16,8 @@ UI algoritma veya donanım SDK'sını doğrudan çağırmaz.
   kayıtları, restart geçmişi, Logs/CSV ve vf.socket2 scalar mapping.
 - Image File/Webcam edinimi; Camera Manager'da ortak keşif, kamera kaydı ve
   çevrimdışı Mono8 profil taslağı. Native endüstriyel edinim kapalıdır;
-  Industrial Camera Editor taslağı eklenebilir; profil seçim UI/edinim ve Runtime henüz yoktur.
+  Industrial Camera Editor kaynağına kayıtlı kamera/kurulum/profil bağlanabilir;
+  kare isteği ortak worker/provider yolundadır. Native edinim ve industrial Runtime üretimi kapalıdır.
 
 Hazırlık veya keşif sonucu üretim kabulü değildir. Gerçek sonuç olmadan PASS, skor
 veya robot pose gösterilmez. Robot hazırlık ekranları çalışan robot entegrasyonu
@@ -25,10 +26,10 @@ CUDA performansı veya ürün kurulum/dağıtım kabulünün yerine geçmez.
 
 ## Yerel derleme ve test — PowerShell
 
-Bu makinede Qt 6.12.0 / MinGW 13.1.0 ve MinGW ile derlenmiş OpenCV 5.0.0 kullanılır.
+Yerel toolchain: Qt 6.12.0 / MinGW 13.1.0 ve MinGW OpenCV 5.0.0.
 Ayrıntılı kurulum/yeniden hazırlama
 ve ZXing bağımlılığı [Windows ortamı belgesindedir](docs/windows-workstation.md).
-Başka makinede yolları ve ABI uyumunu doğrulayın.
+
 
 ```powershell
 $env:PATH = 'C:\OpenCV\5.0.0\x64\mingw\bin;C:\Qt\6.12.0\mingw_64\bin;C:\Qt\Tools\mingw1310_64\bin;C:\Qt\Tools\CMake_64\bin;C:\Qt\Tools\Ninja;' + $env:PATH
@@ -46,8 +47,8 @@ cmake --build build/kmc9-core-off -j 6
 ctest --test-dir build/kmc9-core-off --output-on-failure
 ```
 
-Göreve ait test seçimi için `ctest --test-dir build/reference-ui -N` ile adları
-inceleyip `-R` kullanın; ilgili test sonucunu tam suite kabulü diye kaydetmeyin.
+Test seçimi: `ctest --test-dir build/reference-ui -N` ile adları inceleyip `-R` kullanın;
+ilgili koşum tam suite kabulü değildir.
 Socket testleri localhost erişimi gerektirir. UI değişikliğinde Release build,
 ilgili CTest ve normal/küçük ekran görsel kontrolü yapılır.
 
@@ -67,13 +68,11 @@ pwsh -NoProfile -File scripts/diagnose-camera.ps1 -OpenCheck
 `build/icm/01a/local/diagnostic.json`. Sürüm/hash, mimari, ortam ve exit code kaydedilir; kalıcı ortam değişmez. `NO_DEVICES`/`DEVICES_DISCOVERED` exit 0,
 diğer durumlar exit 1'dir. Bu GenTL probe grab yapmaz; sıfır cihaz kabul değildir.
 
-Fiziksel erişim sandbox içinde 0 cihaz dönebilir; sandbox dışı C API exact open/grab
-başarısı [04d kaydında](docs/archive/2026-10-17-icm-04d.md). SDK opt-in build'deki
-`oecs_capture_probe` elle çalıştırılır, otomatik CTest değildir. Argümanlar: mutlak
-DLL yolu, exact vendor, model, seri ve output.pgm yolu. Runtime DLL dizini child
-PATH'te olmalıdır. Probe TriggerMode Off ister, ayar yazmaz; rasteri SDK kapanınca
-kaydeder. Hata exit 1'dir. Ayrı [100-trigger/metadata tanısı](docs/archive/2026-10-17-icm-04d-correlation.md)
-geçici ayarları geri yükler. Native production admission henüz yoktur.
+Fiziksel erişim sandbox içinde 0 cihaz dönebilir; sandbox dışı C API exact open/grab/close
+kanıtı ve opt-in probe kullanımı [04d kaydındadır](docs/archive/2026-10-17-icm-04d.md).
+Probe üretim admission değildir; native production kapalıdır. Ayrı
+[100-trigger/metadata tanısı](docs/archive/2026-10-17-icm-04d-correlation.md)
+geçici ayarları geri yükler.
 
 ## Temel kullanım
 
@@ -85,6 +84,9 @@ geçici ayarları geri yükler. Native production admission henüz yoktur.
 3. **Camera Manager** ile kamerayı projeye kaydedin; yerel producer hatırlanır.
    **Setup → Calibration** aynı kamera kayıtlarını kullanır. Kalibrasyonda kayıtlı edinim
    profilini seçin; aday kaydı etkin model değildir. Aktivasyon ve kaynak→kurulum bağı ayrıdır.
+   Editor’da Industrial Camera ekleyin, Properties üzerinden kayıtlı profili seçip
+   **Profili bağla / güncelle** düğmesine basın. **Görüntü al** yeni kare ister; seçim
+   tek başına edinim yapmaz. Profil düzenlenirse açıkça yeniden bağlayın.
 4. Kaydedilmiş reçeteyi **Load Recipe → Run** ile Runtime'a hazırlayın.
    **Tek çevrim** gerçek edinim/yürütmeyi başlatır; Run tek başına sonuç üretmez.
    Stop eski sonucu bastırır; farklı sürüm için Stop → Load Recipe → Run kullanın.
