@@ -34,10 +34,13 @@ public:
 class CameraProviderFactory {
 public:
     CameraProviderFactory()=default;
+    std::unique_ptr<AcquisitionAdapter> webcam(const MeasurementCamera&,const QVector<DeviceBinding>&,QSize resolution={}) const;
     static CameraProviderFactory forTests(std::shared_ptr<const IndustrialCameraProvider>);
     IndustrialCameraCapabilities capabilities(const DiscoveredDevice&) const;
     std::unique_ptr<CameraWorkerSession> open(const IndustrialCameraRequest&,CameraLeaseUse,
                                              FrameQueueMode,size_t capacity=2) const;
+    std::unique_ptr<CameraWorkerSession> resolveOpen(IndustrialCameraRequest,const IndustrialDiscoverySnapshot&,
+        const std::optional<TransportLocator>&,CameraLeaseUse,FrameQueueMode,size_t capacity=2) const;
 private:
     std::shared_ptr<const IndustrialCameraProvider> injected_;
 };

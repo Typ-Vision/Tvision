@@ -92,7 +92,14 @@ serisiz kayıtlar ayrı kalır; aynı enumeration içindeki tekrar ambiguous'dur
 Birden çok rotada explicit local route gerekir; rota kaybolursa fallback yoktur.
 Cancelled/error içeren kısmi tarama resolve edilemez. Sonuç bir keşif değeridir;
 actual open doğrulaması, lease, capability veya trusted completion değildir.
-Native enumeration, ortak webcam discovery ve ürün factory bağlantısı henüz yoktur.
+ICM-05a: CameraService::inventory GenTL metadata + Qt webcam keşfini ortak
+CameraInventory/CameraDiscoveryEntry içinde sunar. Endüstriyel rotalarda canonical
+producer yolu ve dosya SHA-256 vardır; hash SDK/G1 kabulü değildir. Kısmi tarama
+kayıt/resolve vermez. MeasurementWorkspace aynı environment registry'sine kayıt
+komutu uygular; duplicate physical identity reddedilir. CameraLocalConfiguration
+producer ve exact kimlik→rota tercihini yalnız yerel INI'de tutar. Export/proje
+bu rotayı içermez. Factory resolveOpen fresh snapshot ile exact resolve yapıp
+aynı lease'i alır; webcam dalı mevcut WebcamAdapter'ı üretir. Native edinim kapalıdır.
 
 ## 3. Acquisition profile ve gerçek geometri
 

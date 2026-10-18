@@ -1,4 +1,9 @@
 #include "application/CameraService.hpp"
+#include "application/MeasurementWorkspace.hpp"
+#include "application/CameraLocalConfiguration.hpp"
+#include <QTemporaryDir>
+#include <QDir>
+#include <QFile>
 #include <QCoreApplication>
 #include <QTextStream>
 #include <stdexcept>
@@ -45,5 +50,39 @@ int main(int argc,char** argv){QCoreApplication app(argc,argv);try{
     snapshot.errors.clear();snapshot.devices[0].backend.adapter="gentl";
     reject([&]{CameraService::groupIndustrial(snapshot);});
     check(registered.toJson()==bytes,"resolution never mutates portable registration");
+    snapshot.devices={device(),device("one","C:/producer/one.cti")};
+    const DeviceBinding webcam{"webcam","71742d646576696365",DeviceIdentityConfidence::ProviderReported,1,{true,true,false,false}};
+    const auto inventory=CameraService::combine({webcam},snapshot);
+    check(inventory.devices.size()==2 && inventory.devices[1].industrial->routes.size()==2,"unified webcam/industrial inventory deduplicates routes");
+    QTemporaryDir dir(QDir::currentPath()+"/industrial-registry-XXXXXX");check(dir.isValid(),"temporary registry");
+    bool idle=true;const auto path=dir.path()+"/project.vfproject";
+    MeasurementWorkspace workspace(path,"project",[&]{return idle;},[&]{return QVector<DeviceBinding>{webcam};});
+    workspace.observeInventory(inventory);
+    const auto cameraId=workspace.registerCamera(inventory.devices[1],"Industrial");
+    workspace.registerCamera(inventory.devices[0],"Webcam");
+    const auto e=workspace.environment();
+    auto adapter=CameraProviderFactory{}.webcam(e.current.cameras[1],{webcam},QSize(640,480));
+    check(adapter->capabilities().softwareTrigger,"shared factory preserves webcam capability");
+    reject([&]{CameraProviderFactory{}.webcam(e.current.cameras[1],{});});
+    check(e.current.cameras.size()==2 && e.current.cameras[0].id==cameraId,"shared persistent CameraId");
+    reject([&]{workspace.registerCamera(inventory.devices[1],"Duplicate");});
+    idle=false;reject([&]{workspace.registerCamera(inventory.devices[1],"Busy");});idle=true;
+    MeasurementWorkspace restarted(path,"project",[]{return true;});
+    check(restarted.environment().current.cameras[0].id==cameraId && restarted.availability(e.current.cameras[0]).contains("Keşif yapılmadı"),"restart keeps registration without availability permission");
+    auto offline=CameraService::combine({},{});workspace.observeInventory(offline);
+    check(workspace.availability(e.current.cameras[0]).contains("Çevrimdışı"),"unplug availability lost");
+    reject([&]{workspace.registerCamera(inventory.devices[1],"Old discovery");});
+    CameraLocalConfiguration local(dir.path()+"/local.ini");
+    local.setRoute(device().identity,device().route);
+    check(local.route(device().identity)==device().route && !local.route(device("other").identity),"local exact route persistence");
+    check(!QJsonDocument(e.encode()).toJson().contains("C:/producer"),"transport never exported in project registry");
+    const auto producer=dir.path()+"/fake.cti";QFile binary(producer);check(binary.open(QIODevice::WriteOnly),"fake producer file");binary.write("fixture");binary.close();
+    local.setProducers({producer,producer});check(local.producers().size()==1,"remember local producer without repeated selection");
+    CameraDiscovery raw;raw.devices={{producer,"if","dev","vendor","model","one","GigE"}};
+    auto actual=CameraService::industrialSnapshot(raw);
+    check(actual.errors.isEmpty() && actual.devices.size()==1 && actual.devices[0].identity==device().identity && actual.devices[0].backend.runtimeSha256.size()==64,"discovery converts actual identity and binary fingerprint");
+    check(!CameraProviderFactory{}.capabilities(actual.devices[0]).softwareTrigger,"discovery cannot grant native capture");
+    raw.devices[0].producerPath=dir.path()+"/missing.cti";
+    actual=CameraService::industrialSnapshot(raw);check(!actual.errors.isEmpty() && actual.devices.isEmpty(),"missing SDK route explicit failure");
     QTextStream(stdout)<<"PASS: offline/0/1/N, grouping, exact resolve, ambiguous and partial discovery rejection\n";return 0;
 }catch(const std::exception& e){QTextStream(stderr)<<"FAIL: "<<e.what()<<'\n';return 1;}}

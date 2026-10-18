@@ -4,6 +4,8 @@
 #include "SystemCalibration.hpp"
 #include "CalibrationService.hpp"
 #include "MultiSourceRuntimeService.hpp"
+#include "IndustrialCameraProvider.hpp"
+#include <QUuid>
 #include <stdexcept>
 #include <QFileInfo>
 namespace visionflow {
@@ -16,7 +18,33 @@ public:
     ScopedActiveCalibrationService& calibrations(){return active_;}
     QVector<DeviceBinding> discover(){auto devices=discovery_();active_.refreshAvailability(devices);discovered_=devices;discoveryDone_=true;return devices;}
     const QVector<DeviceBinding>& discovered() const{return discovered_;}
+    void observeInventory(CameraInventory snapshot){
+        inventory_=std::move(snapshot);inventoryDone_=true;
+        QVector<DeviceBinding> webcams;for(const auto& d:inventory_.devices)if(d.webcam)webcams.append(*d.webcam);
+        active_.refreshAvailability(webcams);discovered_=webcams;discoveryDone_=!inventory_.cancelled;
+    }
+    CameraId registerCamera(const CameraDiscoveryEntry& entry,const QString& name){
+        if(!gate_())throw std::runtime_error("Runtime/worker/pending kayıt/ACK meşgul");
+        if(name.trimmed().isEmpty())throw std::runtime_error("Kamera adı gerekli.");
+        auto e=environment();MeasurementCamera camera;camera.name=name.trimmed();
+        camera.id={QUuid::createUuid().toString(QUuid::WithoutBraces)};
+        if(entry.webcam && !entry.industrial){camera.device=*entry.webcam;camera.device.resolve(discovered_);}
+        else if(entry.industrial && !entry.webcam){
+            camera.device={"gentl",{},DeviceIdentityConfidence::Unavailable,1,{}};camera.physical=entry.industrial->identity;
+            if(!inventoryDone_ || inventory_.cancelled || !inventory_.errors.isEmpty() || entry.industrial->ambiguous)
+                throw std::runtime_error("Tam ve belirsiz olmayan keşif gerekli.");
+            resolveRoutes(*camera.physical,inventory_.industrial.devices);
+        }else throw std::runtime_error("Tek keşif kaydı gerekli.");
+        camera.validate();e.current.cameras.append(camera);replace(e.current,e.revision);return camera.id;
+    }
     QString availability(const MeasurementCamera& c) const {
+        if(c.physical){
+            if(!inventoryDone_)return "Keşif yapılmadı • kayıtlı endüstriyel kamera";
+            if(inventory_.cancelled || !inventory_.errors.isEmpty())return "Keşif eksik / SDK kullanılamıyor";
+            try{const auto routes=resolveRoutes(*c.physical,inventory_.industrial.devices);
+                return routes.size()>1 ? "Keşfedildi • yerel rota seçimi gerekli" : "Keşfedildi • native edinim doğrulanmadı";
+            }catch(const std::exception&){return "Çevrimdışı / belirsiz • otomatik eşleme yok";}
+        }
         if(c.device.adapter!="webcam")return "Desteklenmeyen edinim adapter'ı";
         if(c.device.confidence==DeviceIdentityConfidence::Unavailable)return "Cihaz eşlemesi gerekli";
         if(!discoveryDone_)return "Keşif yapılmadı";
@@ -84,6 +112,8 @@ private:
     ActiveCalibrationService::ChangeGate gate_;
     QVector<DeviceBinding> discovered_;
     bool discoveryDone_=false;
+    CameraInventory inventory_;
+    bool inventoryDone_=false;
     std::function<QVector<DeviceBinding>()> discovery_;
 };
 }

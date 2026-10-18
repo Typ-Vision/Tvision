@@ -59,6 +59,7 @@ add_library(visionflow_acquisition src/application/IndustrialSoftwareCapture.cpp
 target_sources(visionflow_acquisition PRIVATE src/application/IndustrialMeasurementRaster.cpp)
 target_sources(visionflow_acquisition PRIVATE src/application/CameraWorkerSession.cpp)
 target_sources(visionflow_acquisition PRIVATE src/application/IndustrialCameraProvider.cpp)
+target_sources(visionflow_acquisition PRIVATE src/application/CameraLocalConfiguration.cpp)
 target_sources(visionflow_acquisition PRIVATE src/application/WebcamAdapter.cpp src/vision/Preprocessing.cpp src/vision/codes/CodeReader.cpp src/application/CodeReadService.cpp)
 target_sources(visionflow_acquisition PRIVATE src/vision/metrology/ProfileSampler.cpp src/application/MetrologyService.cpp)
 target_sources(visionflow_acquisition PRIVATE src/vision/metrology/EdgeFinder.cpp src/application/EdgePointService.cpp)

@@ -8,7 +8,8 @@ Son yönlendirme önceliklidir. Ayrıntılar [arşivde](archive/README.md); topl
 - **ICM-PLAN-02 tamam:** kullanıcı kararıyla ortak ürün yazılımı ile marka/model
   donanım kabulü ayrıldı. [Kapanış](archive/2026-10-18-icm-plan-02.md).
   **ICM-04f tamam:** ortak provider/test adaptörü sözleşmesi.
-  [Kapanış](archive/2026-10-18-icm-04f.md). Sıradaki **05a → 05b → 06a → 06b → 07a → 07b → 07c → 08a → 08b → 08c → 09a**.
+  [Kapanış](archive/2026-10-18-icm-04f.md). **ICM-05a tamam:** ortak keşif/kayıt/factory ve yerel rota.
+  [Kapanış](archive/2026-10-18-icm-05a.md). Sıradaki **05b → 06a → 06b → 07a → 07b → 07c → 08a → 08b → 08c → 09a**.
   [04f kartı](architecture/industrial-camera-tasks-foundation.md),
   [Basler/Daheng paketleri](architecture/industrial-camera-tasks-backends.md).
   OECS native 04d/04e açık/ertelenmiş; ortak sıra için önkoşul değil. Test adaptörü
@@ -91,8 +92,8 @@ ve seçili kartın sözleşme/kabulü. Önce başlık/ID arayın.
 
 ## Son doğrulama ve çalışma ortamı
 
-- **ICM-04f:** core Release build ve ilgili CTest **7/7** geçti.
-  Kanıt: `build/icm/04f/`. UI/donanım koşulmadı.
+- **ICM-05a:** core Release build ve ilgili CTest **6/6** geçti.
+  Kanıt: `build/icm/05a/`. UI/donanım koşulmadı.
 - Önceki 04e-b/05a-a/07a-a **4/4** core Release sonuçları arşivdedir; yeniden koşulmadı.
   `plc_socket_runtime` aralıklı başarısızlığı/kök neden açık kalır.
 - Güncel UI `build/reference-ui/visionflow.exe`, core `build/kmc9-core-off`.
@@ -102,7 +103,7 @@ ve seçili kartın sözleşme/kabulü. Önce başlık/ID arayın.
 
 ## Kapanış ve sonraki adım
 
-**ICM-04f tamam; sıradaki ICM-05a, ardından ICM-05b.** 04e-a/b, 05a-a, 07a-a yeniden yapılmaz;
+**ICM-04f/05a tamam; sıradaki ICM-05b, ardından ICM-06a.** 04e-a/b, 05a-a, 07a-a yeniden yapılmaz;
 ölçüm adayı configure girdisi değildir. 05a/07a ürün kabulü açık.
 [04d cancel incelemesi](archive/2026-10-18-icm-04d-cancel-audit.md): AcquisitionAbort
 yok; DeviceReset garantisiz, çalıştırılmadı. Üretici taslağı gönderilmedi.

@@ -1,6 +1,14 @@
 #include "IndustrialCameraProvider.hpp"
+#include "WebcamAdapter.hpp"
 #include <stdexcept>
 namespace visionflow {
+std::unique_ptr<AcquisitionAdapter> CameraProviderFactory::webcam(const MeasurementCamera& camera,
+    const QVector<DeviceBinding>& discovered,QSize resolution) const {
+    camera.validate();if(camera.physical || camera.device.adapter!="webcam")throw std::runtime_error("Expected registered webcam.");
+    const auto index=camera.device.resolve(discovered);
+    WebcamSettings settings;settings.providerId=discovered[index].providerId;settings.resolution=resolution;
+    return std::make_unique<WebcamAdapter>(settings);
+}
 namespace {
 void require(bool ok,const char* reason){if(!ok)throw std::runtime_error(reason);}
 class CheckedBackend final : public CameraWorkerBackend {
@@ -45,6 +53,12 @@ void IndustrialCameraRequest::validate() const {
 }
 CameraProviderFactory CameraProviderFactory::forTests(std::shared_ptr<const IndustrialCameraProvider> provider){
     require(bool(provider),"Test provider missing.");CameraProviderFactory result;result.injected_=std::move(provider);return result;
+}
+std::unique_ptr<CameraWorkerSession> CameraProviderFactory::resolveOpen(IndustrialCameraRequest request,
+    const IndustrialDiscoverySnapshot& discovery,const std::optional<TransportLocator>& route,
+    CameraLeaseUse use,FrameQueueMode mode,size_t capacity) const {
+    request.device=CameraService::resolveIndustrial(request.camera,discovery,route);
+    return open(request,use,mode,capacity);
 }
 IndustrialCameraCapabilities CameraProviderFactory::capabilities(const DiscoveredDevice& device) const {
     device.validate();if(injected_)return injected_->capabilities(device);

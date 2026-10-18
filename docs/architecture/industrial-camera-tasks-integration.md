@@ -13,6 +13,8 @@ edinim açık hata verir. Native kabul [ayrı paketlerdedir](industrial-camera-t
 
 ## ICM-05a — ortak keşif, registry ve adapter factory
 
+**Yazılım kabulü tamam:** [kapanış](../archive/2026-10-18-icm-05a.md).
+
 **05a-a bağımsız hazırlığı tamam:** CameraService üzerinde fixture snapshot gruplama
 ve exact resolve; SDK enumeration, ortak webcam DTO, kayıt/factory/lease bağlantısı
 yok. Ana 05a kabulü açık; yazılım önkoşulu artık 04f'dir.

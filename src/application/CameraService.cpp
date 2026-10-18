@@ -1,8 +1,46 @@
 #include "CameraService.hpp"
+#include "WebcamAdapter.hpp"
+#include <QCryptographicHash>
+#include <QFile>
+#include <QFileInfo>
 #include <algorithm>
 #include <exception>
 #include <stdexcept>
 namespace visionflow {
+CameraInventory CameraService::combine(const QVector<DeviceBinding>& webcams,const IndustrialDiscoverySnapshot& industrial){
+    CameraInventory result;result.industrial=industrial;result.errors=industrial.errors;result.cancelled=industrial.cancelled;
+    if(result.cancelled)return result;
+    for(const auto& webcam:webcams){webcam.validate();if(webcam.adapter!="webcam")throw std::runtime_error("Expected webcam discovery entry.");result.devices.append({webcam,{}});}
+    for(const auto& group:groupIndustrial(industrial))result.devices.append({{},group});
+    return result;
+}
+IndustrialDiscoverySnapshot CameraService::industrialSnapshot(const CameraDiscovery& discovery){
+    IndustrialDiscoverySnapshot result;result.errors=discovery.errors;result.cancelled=discovery.cancelled;
+    if(result.cancelled)return result;
+    QMap<QString,BackendIdentity> binaries;
+    for(const auto& d:discovery.devices){
+        try {
+            const auto path=QFileInfo(d.producerPath).canonicalFilePath();
+            if(!binaries.contains(path)){
+                QFile file(path);if(path.isEmpty() || !file.open(QIODevice::ReadOnly))throw std::runtime_error("Producer fingerprint unavailable.");
+                QCryptographicHash hash(QCryptographicHash::Sha256);if(!hash.addData(&file))throw std::runtime_error("Producer fingerprint failed.");
+                // File hash is the binary version identity; no SDK or G1 admission is inferred.
+                binaries.insert(path,{"gentl","sha256:"+QString::fromLatin1(hash.result().toHex()),QString::fromLatin1(hash.result().toHex()),1});
+            }
+            PhysicalDeviceIdentity id;
+            if(!d.vendor.isEmpty() && !d.model.isEmpty())id={d.vendor,d.model,d.serialNumber,
+                d.serialNumber.isEmpty()?DeviceIdentityConfidence::ProviderReported:DeviceIdentityConfidence::SerialReported};
+            DiscoveredDevice device{id,{"gentl",path,d.interfaceId,d.deviceId},binaries[path]};device.validate();result.devices.append(device);
+        }catch(const std::exception& e){result.errors.append(d.producerPath+": "+QString::fromUtf8(e.what()));}
+    }return result;
+}
+CameraInventory CameraService::inventory(const QStringList& files,int timeout,const std::shared_ptr<std::atomic_bool>& cancel) const {
+    const auto scan=discover(files,timeout,cancel);
+    auto snapshot=industrialSnapshot(scan);
+    auto result=combine(snapshot.cancelled?QVector<DeviceBinding>{}:WebcamAdapter::discover(),snapshot);
+    if(cancel && cancel->load()){result.cancelled=true;result.devices.clear();result.industrial.devices.clear();result.industrial.cancelled=true;}
+    result.producers=scan.producers;return result;
+}
 QVector<IndustrialDeviceGroup> CameraService::groupIndustrial(const IndustrialDiscoverySnapshot& snapshot){
     QVector<IndustrialDeviceGroup> groups;
     for(const auto& device:snapshot.devices){

@@ -77,7 +77,7 @@ int main(int argc,char** argv){QCoreApplication app(argc,argv);try{
     for(const auto scenario:{"","old","duplicate-trigger","late-epoch","timeout","stop-error"}){
         auto state=std::make_shared<State>();state->hardware->scenario=scenario;
         auto factory=CameraProviderFactory::forTests(std::make_shared<Provider>(state));
-        auto s=factory.open(r,CameraLeaseUse::Editor,FrameQueueMode::ProductionFifo,1);
+        auto s=factory.resolveOpen(r,{{r.device},{},false},{},CameraLeaseUse::Editor,FrameQueueMode::ProductionFifo,1);
         reject([&]{factory.open(r,CameraLeaseUse::Calibration,FrameQueueMode::PreviewLatest);});
         start(*s);command(*s,CameraOperation::Grab);
         if(QString(scenario).isEmpty()){
