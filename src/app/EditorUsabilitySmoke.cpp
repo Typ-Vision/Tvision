@@ -1,5 +1,8 @@
 #include "MainWindow.hpp"
 #include "ImageViewer.hpp"
+#include "Toolbox.hpp"
+#include <QSet>
+#include <QLineEdit>
 #include <QApplication>
 #include <QComboBox>
 #include <QCheckBox>
@@ -39,7 +42,42 @@ bool MainWindow::verifyEditorUsability(const QString& artifacts) {
     const auto path=QDir(artifacts).filePath("usability-source.png");check(image.save(path),"usability PNG");
     service_.createProject("Usability","",QDir(artifacts).filePath("usability-"+QUuid::createUuid().toString(QUuid::WithoutBraces)+".vfproject"),"file");service_.createRecipe("Usability","",ApplicationType::Measurement,"file");
     const auto source=service_.setImageFile(path);refreshWorkspace();selectPage("editor");wait();
-    auto add=[&](const QString& kind){for(int i=0;i<toolbox_->count();++i)if(toolbox_->item(i)->data(Qt::UserRole)==kind)toolbox_->setCurrentRow(i);addSelectedTool();QApplication::processEvents();return selectedToolId_;};
+    // EUI-05: group headers are presentation, never tool kinds.
+    {QSet<QString> kinds;QListWidgetItem *measurementGroup=nullptr,*lineEntry=nullptr;int groups=0;
+        for(int i=0;i<toolbox_->count();++i){auto* item=toolbox_->item(i);const auto kind=item->data(Qt::UserRole).toString();
+            if(item->data(Toolbox::HeaderRole).toBool()){++groups;if(item->data(Toolbox::GroupRole)=="measurement")measurementGroup=item;check(kind.isEmpty(),"header has no kind");}
+            else {check(!kinds.contains(kind),"catalog kind appears exactly once");kinds.insert(kind);check(item->data(Toolbox::GroupRole)==ToolCatalog::groupForKind(kind),"kind assigned to expected group");if(kind=="line_fit")lineEntry=item;}}
+        check(groups==6 && kinds.size()==ToolCatalog::entries().size() && !kinds.contains("edge") && kinds.contains("edge_point"),"semantic catalog contents without retired Edge");
+        const auto definition=service_.activeRecipe()->definition;const auto signature=flowSignature();const auto generation=editorSession_.generation;
+        auto key=[&](int code){QKeyEvent e(QEvent::KeyPress,code,Qt::NoModifier);QApplication::sendEvent(toolbox_,&e);};
+        toolbox_->setCurrentItem(measurementGroup);check(!findChild<QPushButton*>("addTool")->isEnabled(),"Add Tool disabled for header");addSelectedTool();
+        key(Qt::Key_Left);check(lineEntry->isHidden(),"keyboard collapses group");
+        auto* search=findChild<QLineEdit*>("toolboxSearch");search->setText("Line Fit");check(!lineEntry->isHidden() && !measurementGroup->isHidden(),"search temporarily opens matching group");
+        check(!QSettings(settingsFile_,QSettings::IniFormat).value("editor/toolboxGroups/measurement",true).toBool(),"search does not overwrite collapse preference");
+        search->clear();check(lineEntry->isHidden(),"cleared search restores collapsed group");
+        {Toolbox reopened(settingsFile_);bool hidden=false;for(int i=0;i<reopened.count();++i)if(reopened.item(i)->data(Qt::UserRole)=="line_fit")hidden=reopened.item(i)->isHidden();check(hidden,"group preference survives new widget");}
+        toolbox_->setCurrentItem(lineEntry);check(!findChild<QPushButton*>("addTool")->isEnabled(),"hidden tool cannot be added");addSelectedTool();
+        toolbox_->setCurrentItem(measurementGroup);key(Qt::Key_Right);check(!lineEntry->isHidden(),"keyboard reopens group");
+        search->setText("no_such_tool");for(int i=0;i<toolbox_->count();++i)check(toolbox_->item(i)->isHidden(),"no-match filter hides groups and children");search->clear();
+        check(service_.activeRecipe()->definition==definition && flowSignature()==signature && editorSession_.generation==generation,"group and search preserve recipe and execution identity");
+        for(const auto size:{QSize(1400,900),QSize(850,600)}){resize(size);horizontal_->setSizes({190,750,300});QApplication::processEvents();toolbox_->scrollToTop();imageViewer_->fitImage();grab().save(QDir(artifacts).filePath(QString("eui05-toolbox-%1.png").arg(size.width())));}
+        for(int i=0;i<toolbox_->count();++i)if(toolbox_->item(i)->data(Toolbox::HeaderRole).toBool()){toolbox_->setCurrentRow(i);key(Qt::Key_Left);}
+        resize(1400,900);QApplication::processEvents();toolbox_->scrollToTop();grab().save(QDir(artifacts).filePath("eui05-groups-collapsed-1400.png"));
+        search->setText("Line Fit");for(const auto size:{QSize(1400,900),QSize(850,600)}){resize(size);QApplication::processEvents();toolbox_->scrollToTop();grab().save(QDir(artifacts).filePath(QString("eui05-search-%1.png").arg(size.width())));}search->clear();
+        for(int i=0;i<toolbox_->count();++i)if(toolbox_->item(i)->data(Toolbox::HeaderRole).toBool()){toolbox_->setCurrentRow(i);key(Qt::Key_Right);}
+
+    }
+    {QListWidgetItem* entry=nullptr;for(int i=0;i<toolbox_->count();++i)if(toolbox_->item(i)->data(Qt::UserRole)=="calculate")entry=toolbox_->item(i);
+        check(entry,"double-click catalog entry");toolbox_->scrollToItem(entry);QApplication::processEvents();
+        const auto point=toolbox_->visualItemRect(entry).center();const auto before=service_.tools().size();
+        for(const auto type:{QEvent::MouseButtonPress,QEvent::MouseButtonRelease,QEvent::MouseButtonDblClick,QEvent::MouseButtonRelease}) {
+            QMouseEvent event(type,QPointF(point),QPointF(toolbox_->viewport()->mapToGlobal(point)),Qt::LeftButton,type==QEvent::MouseButtonRelease ? Qt::NoButton:Qt::LeftButton,Qt::NoModifier);
+            QApplication::sendEvent(toolbox_->viewport(),&event);
+        }
+        check(service_.tools().size()==before+1 && service_.tools().last().kind=="calculate","double click creates exactly one tool by kind");
+        service_.removeTool(selectedToolId_);refreshWorkspace();selectTool(source);
+    }
+    auto add=[&](const QString& kind){for(int i=0;i<toolbox_->count();++i)if(toolbox_->item(i)->data(Qt::UserRole)==kind)toolbox_->setCurrentRow(i);QKeyEvent activate(QEvent::KeyPress,Qt::Key_Return,Qt::NoModifier);QApplication::sendEvent(toolbox_,&activate);QApplication::processEvents();return selectedToolId_;};
     auto mouse=[&](QEvent::Type type,QPointF point,Qt::MouseButton button,Qt::MouseButtons buttons){const auto p=imageViewer_->mapFromScene(point);QMouseEvent event(type,QPointF(p),QPointF(p),button,buttons,Qt::NoModifier);QApplication::sendEvent(imageViewer_->viewport(),&event);};
     auto click=[&](QPointF point){mouse(QEvent::MouseButtonPress,point,Qt::LeftButton,Qt::LeftButton);mouse(QEvent::MouseButtonRelease,point,Qt::LeftButton,Qt::NoButton);QApplication::processEvents();};
     auto drag=[&](QPointF a,QPointF b){mouse(QEvent::MouseButtonPress,a,Qt::LeftButton,Qt::LeftButton);mouse(QEvent::MouseMove,b,Qt::NoButton,Qt::LeftButton);mouse(QEvent::MouseButtonRelease,b,Qt::LeftButton,Qt::NoButton);QApplication::processEvents();};

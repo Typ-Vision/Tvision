@@ -155,6 +155,20 @@ Kaydedilmemiş değişiklikler görünür olmalıdır. Reçete değiştirme veya
 
 ## 7. Toolbox
 
+Ortak Editor'ın mevcut kataloğu Edinim, Ön işleme, Tespit, Eşleştirme, Ölçüm ve
+Hesaplama gruplarını kullanır; tür eşlemesi [EUI-05 kartındadır](../architecture/editor-refinement-plan.md).
+Başlık araç değildir; Add Tool başlıkta veya gizli/backend'i eksik öğede pasiftir.
+Gruplar tıklama, Enter/Space ve sağ/sol tuşlarıyla açılır/kapanır; durum yerel INI'dedir.
+Arama grup içeriğine uygulanır ve eşleşen grupları geçici açar. Temizleme önceki
+tercihi geri getirir. Araçta Enter, çift tık veya Add Tool aynı ekleme yolunu kullanır.
+Edge yeni katalogda sunulmaz; registry/codec ve eski Flow/Properties/yürütme desteği
+korunur. Otomatik dönüşüm yoktur; Edge strength gray8 ve Edge Point gray8/px ayrıdır.
+Bilinmeyen kayıtlı extension türü Diğer grubuna düşer. Industrial Camera görünmesi
+native kabulü açmaz. Grup/arama tercihi recipe hash/dirty veya execution'ı değiştirmez.
+
+Aşağıdaki geniş araç ailesi tablosu ileri ürün kapsamını da içerir; tamamının mevcut
+katalogda çalıştığı anlamına gelmez.
+
 | Kategori | Araçlar |
 | --- | --- |
 | Acquisition | Camera, Image, Trigger, Exposure, Gain |

@@ -11,6 +11,7 @@
 #include "EdgePointEditor.hpp"
 #include "PropertySections.hpp"
 #include "MetrologyEditor.hpp"
+#include "Toolbox.hpp"
 #include "domain/GeometryMeasurementConfig.hpp"
 #include "EdgeProfileView.hpp"
 #include "application/BackendCapabilities.hpp"
@@ -66,19 +67,14 @@ QWidget* MainWindow::makeEditor() {
     horizontal_=new QSplitter(Qt::Horizontal); horizontal_->setObjectName("editorHorizontal"); horizontal_->setChildrenCollapsible(false);
     auto* toolsPanel=new QWidget; toolsPanel->setMinimumWidth(150); auto* toolsLayout=new QVBoxLayout(toolsPanel);
     toolsLayout->addWidget(note("TOOLBOX")); auto* search=new QLineEdit; search->setPlaceholderText("Tool ara…"); toolsLayout->addWidget(search);
-    toolbox_=new QListWidget; toolbox_->setObjectName("toolbox"); toolbox_->setAccessibleName("Toolbox");
-    for (const auto& descriptor : ToolRegistry::entries()) {
-        const auto kind=descriptor.kind;
-        auto* item=new QListWidgetItem(toolLabel(kind),toolbox_); item->setData(Qt::UserRole,QString(kind));
-        if(kind=="code_read" && !BackendCapabilities::get("zxing-reader").available){item->setFlags(item->flags() & ~Qt::ItemIsEnabled);item->setToolTip("Kod okuyucu backend bu derlemede yok; araç eklenemez.");continue;}
-        if(kind=="industrial_camera"){item->setToolTip("Kayıtlı kamera, kurulum ve profil seçin; Görüntü al ile tek kare isteyin.");continue;}
-        item->setToolTip(QString(kind)=="image_file" ? "Dosyadan görüntü edinme" : QString(kind)=="template_match" ? "ROI/model öğretme ve sabit açı/ölçek eşleştirme" : "Gerçek tool yürütmesi; girişleri Properties üzerinden bağlayın.");
-    }
-    toolbox_->setCurrentRow(0); toolsLayout->addWidget(toolbox_,1);
-    auto* add=new QPushButton("Add Tool"); add->setObjectName("addTool"); toolsLayout->addWidget(add);toolsLayout->addWidget(multi);
+    auto* catalog=new Toolbox(settingsFile_);toolbox_=catalog;toolsLayout->addWidget(toolbox_,1);
+    search->setObjectName("toolboxSearch");
+    auto* add=new QPushButton("Add Tool");add->setObjectName("addTool");toolsLayout->addWidget(add);toolsLayout->addWidget(multi);
+    auto updateAdd=[this,add]{const auto* item=toolbox_->currentItem();add->setEnabled(item && !item->isHidden() && (item->flags() & Qt::ItemIsEnabled) && ToolCatalog::canAdd(item->data(Qt::UserRole).toString()));};
+    catalog->onAvailabilityChanged=updateAdd;catalog->onAddRequested=[this]{addSelectedTool();};
+    connect(toolbox_,&QListWidget::currentItemChanged,this,[updateAdd]{updateAdd();});
     connect(add,&QPushButton::clicked,this,&MainWindow::addSelectedTool);
-    connect(toolbox_,&QListWidget::itemDoubleClicked,this,[this]{addSelectedTool();});
-    connect(search,&QLineEdit::textChanged,this,[this](const QString& query){for (int i=0;i<toolbox_->count();++i) toolbox_->item(i)->setHidden(!toolbox_->item(i)->text().contains(query,Qt::CaseInsensitive));});
+    connect(search,&QLineEdit::textChanged,this,[catalog](const QString& query){catalog->filter(query);});updateAdd();
     horizontal_->addWidget(toolsPanel);
     auto* imagePanel=new QWidget; auto* imageLayout=new QVBoxLayout(imagePanel); imageLayout->setContentsMargins(0,0,0,0);
     auto* toolbar=new QHBoxLayout;
@@ -554,8 +550,8 @@ bool MainWindow::applyToolProperties() {
     return true;
 }
 void MainWindow::addSelectedTool() {
+    if (!toolbox_->currentItem() || toolbox_->currentItem()->isHidden() || !(toolbox_->currentItem()->flags() & Qt::ItemIsEnabled) || !ToolCatalog::canAdd(toolbox_->currentItem()->data(Qt::UserRole).toString())) return;
     if (!applyToolProperties()) return;
-    if (!toolbox_->currentItem() || toolbox_->currentItem()->isHidden()) return;
     if(editorSession_.busy())return;
     try {const auto previous=service_.tools();selectedToolId_=service_.addTool(toolbox_->currentItem()->data(Qt::UserRole).toString());
         if(std::none_of(previous.begin(),previous.end(),[this](const auto& t){return t.id==selectedToolId_;}))for(auto tool:service_.tools())if(tool.id==selectedToolId_ && QStringList{"edge_pair","line_fit","circle_fit","geometry_measurement"}.contains(tool.kind)){tool.parameters["mode"]="calibrated";if(tool.kind=="circle_fit"){tool.parameters["unitsPerSample"]=.1;tool.parameters["scanWidth"]=.1;tool.parameters["inlierDistance"]=.1;tool.parameters["maxRms"]=.035;tool.parameters["maxResidual"]=.1;}service_.updateTool(tool);break;}

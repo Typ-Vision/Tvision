@@ -5,14 +5,14 @@
 
 ## Devam noktası
 
-- **EUI-04 tamam.** Line/Circle nominal N ok, ortak scan-layout ve world mapping;
-  Circle Basic Start/Sweep canlı önizleme ve editingFinished ROI commit.
-  [Kapanış](archive/2026-10-18-eui-04.md): Release ve ilgili **12/12**;
-  1400×900 / 850×600 görseller incelendi. [EUI-03](archive/2026-10-18-eui-03.md)
-  açıklama/zoom, [02](archive/2026-10-18-eui-02.md) Blob sınır filtresi ve
-  [01](archive/2026-10-18-eui-01.md) ROI kabulü korunur. Blob4 / engine28;
-  editor1–9 no-op korunur. **Sıradaki EUI-05, bu oturumda devam edilecek.**
-  EUI-05–08 açık. [Kartlar](architecture/editor-refinement-plan.md).
+- **EUI-05 tamam.** Gruplu Toolbox/yerel arama; eski Edge uyumluluğu korunur.
+  [Kapanış](archive/2026-10-18-eui-05.md): Release 7/7 + localhost 2/2; görseller incelendi.
+  [EUI-04](archive/2026-10-18-eui-04.md): nominal N ok ve canlı Circle açıları;
+  [03](archive/2026-10-18-eui-03.md) zoom,
+  [02](archive/2026-10-18-eui-02.md) Blob sınır filtresi ve
+  [01](archive/2026-10-18-eui-01.md) ROI kabulü korunur.
+  Blob4 / engine28 / editor1–9 no-op korunur. **Sıradaki EUI-06.**
+  EUI-06–08 açık. [Kartlar](architecture/editor-refinement-plan.md).
 - [ICM-PLAN-02](archive/2026-10-18-icm-plan-02.md): ortak yazılım/donanım kabulü ayrı.
   [06a](archive/2026-10-18-icm-06a.md)/[06b](archive/2026-10-18-icm-06b.md)
   kalibrasyon/profil/aktivasyon tamam; 04f–05b kapanışları [arşivde](archive/README.md).
@@ -105,8 +105,8 @@ Görevler: [ana plan](architecture/industrial-camera-plan.md), seçili kart ve s
 
 ## Kapanış ve sonraki adım
 
-**EUI-04 tamam. Kullanıcının sıralı talimatıyla EUI-05 uygulanacak.**
-Plan 05→08, kullanıcı testi/düzeltme ve kamera önkoşullarıdır.
+**EUI-04 ve EUI-05 sıralı tamam. Sıradaki EUI-06.**
+Plan 06→08, kullanıcı testi/düzeltme ve kamera önkoşullarıdır.
 [ICM-09b](archive/2026-10-18-icm-09b-start.md) G0/G1 bekliyor; H01–H08 açık.
 Basler/Daheng model/SDK 01→02 veya OECS belgeli pending-command bariyeri gerekir.
 Tamamlanan hazırlıklar tekrarlanmaz; ölçüm adayı configure girdisi değildir.

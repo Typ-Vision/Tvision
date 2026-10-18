@@ -3,6 +3,7 @@
 #include "CodeReadEditor.hpp"
 #include "EdgePointEditor.hpp"
 #include "MetrologyEditor.hpp"
+#include "application/ToolCatalog.hpp"
 #include "EdgeProfileView.hpp"
 #include "application/BackendCapabilities.hpp"
 #include "application/ProductionResultCodec.hpp"
@@ -193,7 +194,8 @@ bool MainWindow::verifyEditor(const QString& artifacts) {
     const QString invalid=QDir(artifacts).filePath("corrupt-image.png");
     {QFile file(invalid); if (!file.open(QIODevice::WriteOnly)) return false; file.write("not an image");}
     if (loadEditorImage(invalid) || !editorSession_.frame || service_.imageFilePath()!=fixture) return false;
-    toolbox_->setCurrentRow(1); findChild<QPushButton*>("addTool")->click();
+    for(int i=0;i<toolbox_->count();++i)if(toolbox_->item(i)->data(Qt::UserRole)=="template_match")toolbox_->setCurrentRow(i);
+    findChild<QPushButton*>("addTool")->click();
     const auto matchId=selectedToolId_; if (matchId==sourceId) return false;
     auto* score=propertiesBody_->findChild<QDoubleSpinBox*>("minScore"); if (!score) return false;
     score->setValue(84.5);
@@ -307,7 +309,8 @@ bool MainWindow::verifyExecution(const QString& artifacts) {
     findChild<QPushButton*>("runTool")->click();wait();
     bool mask=false;for(const auto& r:editorSession_.cycle->tools)if(r.toolId==blob)mask=!r.mask.pixels.isEmpty();check(mask && editorSession_.frame->contentId()==rawHash,"Run Tool restores mask on same raw frame");
     QApplication::processEvents();grab().save(QDir(artifacts).filePath("p5-blob-mask.png"));resize(850,600);QApplication::processEvents();grab().save(QDir(artifacts).filePath("p5-blob-mask-small.png"));resize(1400,900);
-    toolbox_->setCurrentRow(3);findChild<QPushButton*>("addTool")->click();
+    for(int i=0;i<toolbox_->count();++i)if(toolbox_->item(i)->data(Qt::UserRole)=="edge_point")toolbox_->setCurrentRow(i);
+    findChild<QPushButton*>("addTool")->click();
     const auto temporary=selectedToolId_;findChild<QPushButton*>("removeTool")->click();
     check(selectedToolId_.isEmpty(),"delete clears selected tool");
     for(const auto& tool:service_.tools())check(tool.id!=temporary,"UI temporary tool removed");
@@ -547,7 +550,8 @@ bool MainWindow::verifyEdgePoint(const QString& artifacts) {
         if(kind=="edge_point")entry=toolbox_->item(i);
         if(kind=="industrial_camera")industrialSource=true;
     }
-    check(entry && industrialSource && toolbox_->count()==17,"seventeen Toolbox entries including industrial source and pose tools");toolbox_->setCurrentItem(entry);findChild<QPushButton*>("addTool")->click();const auto left=selectedToolId_;findChild<QPushButton*>("addTool")->click();const auto right=selectedToolId_,measurement=service_.addTool("measurement");refreshWorkspace();
+    int catalogCount=0;for(int i=0;i<toolbox_->count();++i)if(!toolbox_->item(i)->data(Qt::UserRole).toString().isEmpty())++catalogCount;
+    check(entry && industrialSource && catalogCount==ToolCatalog::entries().size(),"all new catalog kinds present independently of group headers");toolbox_->setCurrentItem(entry);findChild<QPushButton*>("addTool")->click();const auto left=selectedToolId_;findChild<QPushButton*>("addTool")->click();const auto right=selectedToolId_,measurement=service_.addTool("measurement");refreshWorkspace();
     auto bind=[&](QString target,QString input,QString upstream,QString output){selectTool(target);auto* c=propertiesBody_->findChild<QComboBox*>("input_"+input);check(c && c->findData(upstream+"/"+output)>0,"edge UI compatible binding");c->setCurrentIndex(c->findData(upstream+"/"+output));};
     bind(left,"image",source,"image");bind(right,"image",source,"image");bind(measurement,"p1",left,"point");bind(measurement,"p2",right,"point");
     selectTool(left);imageViewer_->fitImage();findChild<QPushButton*>("edgeDraw")->click();

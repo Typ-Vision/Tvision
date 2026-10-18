@@ -55,23 +55,8 @@ ilgili CTest ve normal/küçük ekran görsel kontrolü yapılır.
 `-BuildDirectory build`, offscreen smoke için `-SmokeTest` verilebilir.
 EXE'yi tek başına kopyalamak doğrulanmış dağıtım değildir.
 
-### OECS / GenTL tanısı
-
-PowerShell 7 ile mevcut Release probe'unu explicit x64 U3V producer üzerinden çalıştırın:
-
-```powershell
-pwsh -NoProfile -File scripts/diagnose-camera.ps1 -OpenCheck
-```
-
-`-ProducerPath`, `-ProbePath`, `-OutputDirectory` değiştirilebilir; rapor varsayılanı
-`build/icm/01a/local/diagnostic.json`. Sürüm/hash, mimari, ortam ve exit code kaydedilir; kalıcı ortam değişmez. `NO_DEVICES`/`DEVICES_DISCOVERED` exit 0,
-diğer durumlar exit 1'dir. Bu GenTL probe grab yapmaz; sıfır cihaz kabul değildir.
-
-Fiziksel erişim sandbox içinde 0 cihaz dönebilir; sandbox dışı C API exact open/grab/close
-kanıtı ve opt-in probe kullanımı [04d kaydındadır](docs/archive/2026-10-17-icm-04d.md).
-Probe üretim admission değildir; native production kapalıdır. Ayrı
-[100-trigger/metadata tanısı](docs/archive/2026-10-17-icm-04d-correlation.md)
-geçici ayarları geri yükler.
+OECS / GenTL probe komutları, sandbox sınırları ve kanıt bağlantıları
+[Windows kamera tanı rehberindedir](docs/windows-camera-diagnostics.md).
 
 ## Temel kullanım
 
@@ -99,6 +84,10 @@ Ctrl+Z geri alır; ROI dışı sol veya orta tuş pan yapar. Referans/region ba�
 Sınır filtresi kapalı başlar. Editor komutlarının hemen altındaki **Açıklamaları göster**
 kapalı başlar ve yerel olarak hatırlanır. Sonuç yazıları zoom ile küçülür; büyütme
 1,5× ile sınırlıdır. Geometri, maskeler ve Results bilgisi görünür kalır.
+
+Toolbox başlıklarını tıklayarak veya Enter/Space ve sağ/sol oklarla açıp kapatın.
+Arama eşleşen grubu geçici açar; temizlenince yerel grup tercihi geri gelir.
+Başlık araç eklemez. Yeni kenar aracı Edge Point'tir; eski Edge reçeteleri korunur.
 
 Line Fit ve Circle/Arc seçildiğinde Run öncesinde de tarama sayısı kadar nominal ok
 çizilir. Circle Basic'teki Start/Sweep geçerli değişimde yayı önizler; düzenleme
