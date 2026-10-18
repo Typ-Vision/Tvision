@@ -6,6 +6,7 @@ görev” ifadeleri yazıldıkları tarihe aittir.
 
 | Dönem / görev | Kayıt |
 | --- | --- |
+| 18 Ekim 2026 — ICM-08b | [Trusted industrial completion, terminal8/9 ve retry](2026-10-18-icm-08b.md) |
 | 18 Ekim 2026 — ICM-08a | [Immutable industrial Runtime admission ve actual worker denetimi](2026-10-18-icm-08a.md) |
 | 18 Ekim 2026 — ICM-07c | [Editor kayıtlı profil seçimi ve worker edinim bağlantısı](2026-10-18-icm-07c.md) |
 | 18 Ekim 2026 — ICM-07b | [Industrial execution, actual evidence ve TargetOnly/cache](2026-10-18-icm-07b.md) |

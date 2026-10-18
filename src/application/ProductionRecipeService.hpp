@@ -24,7 +24,7 @@ struct ProductionDependencies {
     std::optional<CalibrationDependency> calibration;
     QJsonObject systemCalibration;
     QJsonObject measurementSource;
-    QJsonObject industrialSource; // Admission only; terminal support follows in ICM-08b
+    QJsonObject industrialSource; // Frozen admission; terminal8 actual evidence stays separate
 };
 struct MultiSourceDependencies {QMap<QString,ProductionDependencies> sources;std::shared_ptr<const IndustrialExecutionInputs> industrial;};
 struct RecipeValidation {

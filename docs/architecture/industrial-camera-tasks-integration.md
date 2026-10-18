@@ -157,6 +157,9 @@ authority 08b bitene kadar kapalıdır. Native factory capability açılmadı.
 
 ## ICM-08b — trusted completion ve kalıcı terminal
 
+**Ortak yazılım kabulü tamam:** [kapanış](../archive/2026-10-18-icm-08b.md).
+Terminal8/9 ve engine/27; native G1 kapısı korunur.
+
 - Önkoşul: 08a.
 - Dosyalar: ProductionResultCodec, ProductionRecipeService, MultiSourceRuntimeService,
   RuntimeService, terminal/snapshot schema ve CSV veri adapter'ı.

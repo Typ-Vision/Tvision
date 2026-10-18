@@ -39,7 +39,7 @@ int main(int argc,char** argv){QCoreApplication app(argc,argv);try{
         const auto actual=RuntimeService::execute(lease,"",{});bool runtimeMeasured=false;
         for(const auto& tool:actual.tools)if(tool.toolId==metric)runtimeMeasured=tool.outputs.value("value").valid && std::abs(std::get<double>(tool.outputs["value"].data)-10)<.01;
         check(actual.state==ExecutionState::Done && runtimeMeasured,"Runtime frozen industrial model survives live selection invalidation");
-        runtime.abandon(lease.ticket,"08a diagnostics; terminal pending");reject([&]{runtime.begin();});
+        runtime.finish(lease.ticket,actual);reject([&]{runtime.begin();});
         capture();service.activate(ref,model.contentId(),session);
         auto foreign=branch;auto tools=editorTools(foreign.definition);auto reference=tools[0].parameters["sourceReference"].toObject();auto physical=reference["physical"].toObject();physical["serial"]="foreign";reference["physical"]=physical;tools[0].parameters["sourceReference"]=reference;foreign.definition=withEditorTools(foreign.definition,tools);
         check(!SystemCalibration::resolve(original,foreign,dir.path(),raw).calibration,"foreign physical source cannot use branch model");

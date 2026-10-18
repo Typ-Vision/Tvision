@@ -11,7 +11,7 @@ Güncel yönlendirme önceliklidir. [Arşiv](archive/README.md).
   [06a](archive/2026-10-18-icm-06a.md), [06b kapanış](archive/2026-10-18-icm-06b.md).
   Önceki [04f](archive/2026-10-18-icm-04f.md), [05a](archive/2026-10-18-icm-05a.md),
   [05b](archive/2026-10-18-icm-05b.md) tamam.
-  Sıradaki **08b → 08c → 09a**.
+  Sıradaki **08c → 09a**.
   [04f kartı](architecture/industrial-camera-tasks-foundation.md),
   [Basler/Daheng paketleri](architecture/industrial-camera-tasks-backends.md).
   OECS native 04d/04e açık/ertelenmiş; ortak sıra için önkoşul değil. Test adaptörü
@@ -89,10 +89,11 @@ Görevler: [ana plan](architecture/industrial-camera-plan.md), seçili kart ve s
 
 ## Son doğrulama ve çalışma ortamı
 
-- **ICM-08a:** immutable industrial Runtime admission/worker ve prepare/begin/actual
-  kontrolleri. [Kapanış](archive/2026-10-18-icm-08a.md). Engine **/26**, terminal7 aynı.
-  Core ilgili 6/6, UI 3/3; geniş 9/10, terminal HELLO tekrar 1/1. Kanıt `build/icm-08a-*`.
-  In-memory kabul; kullanıcı production/completion 08b bekler. Fiziksel kabul yok.
+- **ICM-08b tamam:** trusted industrial completion, terminal8/9, retry ve SDK'sız
+  history/CSV. [Kapanış](archive/2026-10-18-icm-08b.md). Engine **/27**.
+  Release core ilgili 6/8; HELLO hatalı iki socket testi sandbox dışı 2/2.
+  Release UI Runtime 1/1. Kanıt `build/icm-08b-*`; tam/fiziksel kabul yok.
+  [08a admission](archive/2026-10-18-icm-08a.md) tamam; native factory kapalı.
 - [07c](archive/2026-10-18-icm-07c.md) Editor profil seçimi/açık binding ve worker bağlantısı:
   Release UI ilgili CTest 5/5, normal/küçük görseller `build/reference-ui/icm/07c/`.
   [07b](archive/2026-10-18-icm-07b.md) execution/provider/TargetOnly tamam.
@@ -104,8 +105,8 @@ Görevler: [ana plan](architecture/industrial-camera-plan.md), seçili kart ve s
 
 ## Kapanış ve sonraki adım
 
-**ICM-08a tamam; sıradaki ICM-08b, ardından ICM-08c.** 04e-a/b, 05a-a, 07a-a yeniden yapılmaz;
-ölçüm adayı configure girdisi değildir. 07b/07c edinim/UI, 08a in-memory admission hazır; 08b production/terminal açık.
+**ICM-08b tamam; sıradaki ICM-08c, ardından ICM-09a.** 04e-a/b, 05a-a, 07a-a yeniden yapılmaz;
+ölçüm adayı configure girdisi değildir. 07b/07c edinim/UI, 08a admission ve 08b terminal hazır; native G1 kapalı.
 [04d cancel incelemesi](archive/2026-10-18-icm-04d-cancel-audit.md): AcquisitionAbort
 yok; DeviceReset garantisiz, çalıştırılmadı. Üretici taslağı gönderilmedi.
 Delay=0, close/open/sessizlik kanıt değil; aynı deneyi tekrarlamayın. Native Unavailable.

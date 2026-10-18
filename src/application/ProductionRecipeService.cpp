@@ -51,13 +51,14 @@ QJsonObject ProductionRecipeService::validateMultiSourceCompletion(const Product
     else for(const auto& tool:r.tools)for(const auto& value:tool.outputs)invalid(!value.valid,"Output without acquired frame");
     if(r.state==ExecutionState::Done){invalid(acquired.size()==graph.requiredSources.size(),"DONE missing required source");SourceFrameIndex index(r.cycleId,graph.requiredSources,r.frames);invalid(r.frameId==index.legacyFrameId(),"Wrong compatibility frame ID");}
     else if(graph.requiredSources.size()>1)invalid(r.frameId.isEmpty(),"Multi-source error invented shared frame ID");
+    for(auto i=r.industrialEvidence.cbegin();i!=r.industrialEvidence.cend();++i){invalid(i.value() && branches.contains(i.key()) && branches[i.key()]->dependencies().contains("industrialSource"),"Foreign industrial evidence");bool matched=false;for(const auto& t:r.tools)if(t.toolId==i.key())for(const auto& v:t.outputs)if(v.valid && std::holds_alternative<ImageFrame>(v.data)){const auto& image=std::get<ImageFrame>(v.data);invalid(image.contentId()==i.value()->pixelHash && image.metadata().frameId==i.value()->execution.frameId && image.metadata().cycleId==i.value()->execution.cycleId,"Industrial pixels/frame differ from acquisition");matched=true;}invalid(matched,"Industrial evidence without actual raster");}
     QSet<QString> seen;for(const auto& tool:r.tools){invalid(!seen.contains(tool.toolId) && std::any_of(configured.cbegin(),configured.cend(),[&](const auto& t){return t.id==tool.toolId;}),"Duplicate/foreign completed tool");seen.insert(tool.toolId);if(!graph.requiredSources.contains(graph.toolSources.value(tool.toolId)))invalid(tool.state==ExecutionState::Skipped && tool.outputs.isEmpty() && tool.decision==PartDecision::NotEvaluated && !tool.calibration,"Disabled branch carried output");}
     if(r.state==ExecutionState::Done)invalid(seen.size()==configured.size(),"DONE missing tool results");
     for(const auto& source:graph.requiredSources){const auto snapshot=branches.value(source);invalid(bool(snapshot) && snapshot->dependencies()==lease.snapshot->dependencies()["sourceSet"].toObject()[source].toObject(),"Branch dependency set mismatch");
         // Frozen dependency accessor, no live model resolution during completion.
         ProductionRecipeService verifier([](const QString&,ProductionAction){return true;});verifier.active_=snapshot;verifier.cycle_={lease.ticket,snapshot};verifier.cyclePrincipal_=snapshot->validation().principal;verifier.cycleBeginId_=QUuid::createUuid().toString(QUuid::WithoutBraces);verifier.cycleStarted_=QDateTime::currentDateTimeUtc();
         verifier.completionResolver_=[snapshot](const ImageFrame& image){if(snapshot->dependencies().contains("systemCalibration"))return SystemCalibration::resolve(SystemCalibration::decodeEvidence(snapshot->dependencies()["systemCalibration"].toObject()),snapshot->recipe(),snapshot->projectDirectory(),image);MeasurementExecutionContext c;c.rawSize=image.size();c.error="Raw-only immutable source";return c;};
-        auto part=r;part.configId=snapshot->validation().contentId;part.frames.clear();part.tools.clear();part.executedTools.clear();part.frameId.clear();
+        auto part=r;part.industrialEvidence.clear();if(r.industrialEvidence.contains(source))part.industrialEvidence[source]=r.industrialEvidence[source];part.configId=snapshot->validation().contentId;part.frames.clear();part.tools.clear();part.executedTools.clear();part.frameId.clear();
         for(const auto& frame:r.frames)if(frame.sourceId==source){part.frames.append(frame);part.frameId=frame.frameId;}
         for(const auto& tool:r.tools)if(graph.toolSources.value(tool.toolId)==source)part.tools.append(tool);
         for(const auto& id:r.executedTools)if(graph.toolSources.value(id)==source)part.executedTools.append(id);part.acquisitions=part.executedTools.contains(source) ? 1:0;
@@ -73,6 +74,7 @@ QByteArray ProductionRecipeService::completionDigest(const CycleResult& r) {
     auto metadata=[&](const FrameMetadata& m){out<<m.sourceId<<m.frameId<<m.cycleId<<m.coordinateSystemId<<m.completedAtUtc
         <<bool(m.exposureAtUtc)<<m.exposureAtUtc.value_or(QDateTime{})<<bool(m.deviceTimestampTicks)
         <<quint64(m.deviceTimestampTicks.value_or(0))<<m.deviceClockId;};
+    out<<r.industrialEvidence.size();for(auto it=r.industrialEvidence.cbegin();it!=r.industrialEvidence.cend();++it){out<<it.key()<<bool(it.value());if(it.value())out<<QJsonDocument(industrialCompletionEvidence(*it.value())).toJson(QJsonDocument::Compact);}
     out<<r.frames.size();for(const auto& f:r.frames)metadata(f);
     out<<r.tools.size();for(const auto& t:r.tools) {
         out<<t.toolId<<int(t.state)<<t.message<<t.milliseconds<<int(t.decision)<<t.errorCode
@@ -257,7 +259,7 @@ void ProductionRecipeService::finishCycle(quint64 ticket,const CycleResult& r) {
     for(const auto& f:r.frames)if(f.cycleId!=r.cycleId || f.frameId.isEmpty() || f.sourceId.isEmpty())fail(ProductionError::InvalidCompletion,"Çevrim frame kökeni uyumsuz.");
     for(const auto& log:records_)if(log["cycleId"]==r.cycleId)fail(ProductionError::InvalidCompletion,"Çevrim kimliği daha önce tamamlandı.");
     const auto configured=editorTools(cycle_.snapshot->recipe().definition);QSet<QString> seen;
-    const bool trusted=trustedCompletionRequired(configured) || cycle_.snapshot->dependencies().contains("systemCalibration") || cycle_.snapshot->dependencies().contains("measurementSource");
+    const bool trusted=trustedCompletionRequired(configured) || cycle_.snapshot->dependencies().contains("systemCalibration") || cycle_.snapshot->dependencies().contains("measurementSource") || cycle_.snapshot->dependencies().contains("industrialSource");
     if(trusted)try {
         if(r.completionSnapshot_!=cycle_.snapshot || r.completionTicket_!=ticket || r.completionDigest_.isEmpty() ||
            r.completionDigest_!=completionDigest(r))fail(ProductionError::InvalidCompletion,"Runtime completion evidence missing, changed or foreign to lease");
@@ -337,13 +339,14 @@ void ProductionRecipeService::record(const CycleResult* r,const QString& error) 
             QJsonObject outputs;
             for(auto it=t.outputs.cbegin();it!=t.outputs.cend();++it)
                 outputs[it.key()]=ProductionResultCodec::output(*it);
+            if(s.dependencies().contains("industrialSource"))for(auto it=t.outputs.begin();it!=t.outputs.end();++it)if(it->valid && std::holds_alternative<ImageFrame>(it->data)){auto o=outputs[it.key()].toObject(), image=o["imageInfo"].toObject();image["contentId"]=QString::fromLatin1(std::get<ImageFrame>(it->data).contentId().toHex());o["imageInfo"]=image;outputs[it.key()]=o;}
             QString name,kind;for(const auto& configured:editorTools(s.recipe().definition))if(configured.id==t.toolId){name=configured.name;kind=configured.kind;}
             tools.append(QJsonObject{{"toolId",t.toolId},{"name",name},{"kind",kind},{"state",executionStateName(t.state)},{"message",t.message},{"milliseconds",t.milliseconds},{"outputs",outputs},{"errorCode",t.errorCode},
                 {"decision",t.decision==PartDecision::Pass ? "PASS" : t.decision==PartDecision::Fail ? "FAIL" : "NOT_EVALUATED"},
                 {"calibration",t.calibration ? QJsonValue(t.calibration->toJson()) : QJsonValue(QJsonValue::Null)}});
         }
     }
-    if(pendingRecord_.isEmpty())pendingRecord_=QJsonObject{{"schemaVersion",s.dependencies().contains("measurementSource") ? 6:s.dependencies().contains("systemCalibration") ? 5:s.dependencies().contains("referenceBindings") ? 4:3},{"evaluationId",r ? r->evaluationId : QString{}},{"recordId",QUuid::createUuid().toString(QUuid::WithoutBraces)},{"beginEventId",cycleBeginId_},{"ticket",QString::number(cycle_.ticket)},{"principal",cyclePrincipal_},
+    if(pendingRecord_.isEmpty())pendingRecord_=QJsonObject{{"schemaVersion",s.dependencies().contains("industrialSource") ? 8:s.dependencies().contains("measurementSource") ? 6:s.dependencies().contains("systemCalibration") ? 5:s.dependencies().contains("referenceBindings") ? 4:3},{"evaluationId",r ? r->evaluationId : QString{}},{"recordId",QUuid::createUuid().toString(QUuid::WithoutBraces)},{"beginEventId",cycleBeginId_},{"ticket",QString::number(cycle_.ticket)},{"principal",cyclePrincipal_},
         {"recipeId",s.recipe().id},{"recipeName",s.recipe().name},{"applicationType",typeKey(s.recipe().applicationType)},{"recipeVersion",s.recipe().recipeVersion},{"validationId",s.validation().id},
         {"configId",QString::fromLatin1(s.validation().contentId)},{"dependencyId",QString::fromLatin1(s.validation().dependencyId)},
         {"dependencies",s.dependencies()},{"startedAtUtc",cycleStarted_.toString(Qt::ISODateWithMs)},
@@ -353,6 +356,11 @@ void ProductionRecipeService::record(const CycleResult* r,const QString& error) 
     if(s.dependencies().contains("referenceBindings"))pendingRecord_["referenceBindings"]=s.dependencies()["referenceBindings"];
     if(s.dependencies().contains("measurementSource"))pendingRecord_["measurementSource"]=s.dependencies()["measurementSource"];
     if(s.dependencies().contains("systemCalibration"))pendingRecord_["systemCalibration"]=s.dependencies()["systemCalibration"];
+    if(s.dependencies().contains("industrialSource")){
+        const auto admission=s.dependencies()["industrialSource"].toObject();const auto source=admission["sourceToolId"].toString();pendingRecord_["industrialSource"]=admission;
+        QString reason=r ? r->error:error,code; if(r)for(const auto& t:r->tools)if(t.toolId==source){if(!t.message.isEmpty())reason=t.message;code=t.errorCode;}
+        pendingRecord_["industrialAcquisition"]=r && r->industrialEvidence.contains(source) && r->industrialEvidence[source] ? industrialCompletionEvidence(*r->industrialEvidence[source]):QJsonObject{{"schemaVersion",1},{"sourceToolId",source},{"status","NOT_ACQUIRED"},{"reason",reason},{"errorCode",code}};
+    }
     ProductionResultCodec::validate(pendingRecord_);
     persist("cycles",pendingRecord_["recordId"].toString(),pendingRecord_);
     records_.append(pendingRecord_);pendingRecord_={};

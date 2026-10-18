@@ -62,10 +62,10 @@ Kaynak yolları `src/` altındadır.
 | Tool kayıt/DAG | `domain/ToolRegistry.cpp`, `ToolDefinition.cpp`, `ToolGraph.cpp`: image_file/webcam + industrial_camera1 acquisitionSource; industrial minimum editor9, strict sourceReference1 veya null taslak. Bilinmeyen kind ret; eski editor1–8 no-op korunur | 07a tamam |
 | Recipe invalidation | `application/ProjectService.cpp`: bütün registry acquisitionSource parametre/enabled değişimleri eski calibrationBinding'i invalid eder; industrial reference/profile hash dahildir. Rename/no-op korur | 07a tamam |
 | Executor/factory | `application/ToolExecutors.cpp`: image_file ve webcam gerçek source executor'ları. `ExecutionService.cpp`: scoped webcam Qt discovery + WebcamAdapter; injection sourceKind eşleşmesi kapısı industrial ürün desteği değildir; actual frame sonrası snapshot geometri kontrolü korunur | 07b |
-| Immutable admission | `application/ProductionRecipeService.cpp`, dependencies: measurementSource/1 webcam zarfı korunur; industrialSource/1 ayrı exact admission dependency. Private whole-set branch validator ve frozen worker hazır; persistent industrial production 08b bekler. editor9 doğrudan single service'de ret | 08a |
+| Immutable admission | `application/ProductionRecipeService.cpp`, dependencies: measurementSource/1 webcam zarfı korunur; industrialSource/1 ayrı exact admission dependency. Private whole-set branch validator ve frozen worker hazır; industrial completion terminal8/9 üzerinden doğrulanır; native G1 kapısı korunur. editor9 doğrudan single service'de ret | 08a |
 | Çok-source admission | `application/MultiSourceRuntimeService.cpp`: her dal iç projection editor8 ile aynı ProductionRecipeService kontrolünden geçer; aynı fiziksel kaynak tekrar talebi reddedilir. Whole-set provider atomic consistency yerine sessiz parçalı fallback yapmaz | 08a |
 | Runtime seçimleri | `application/RuntimeService.cpp`: source/capture/installations kontrollerinde image_file/webcam listeleri; multi worker frozen sourceSet üzerinden yürür; kind listeleri ortak factory/evidence ile birlikte genişlemeli | 08a/08b |
-| Kalıcı terminal okuyucu | `application/ProductionResultCodec.cpp`: terminal6 webcam/complete/no ROI-binning; origin image_file→offline_replay, webcam→camera_acquired. terminal7 branch schema3–6 replay eder; yeni kimlik alanı eski exact envelope'a eklenemez | 08b |
+| Kalıcı terminal okuyucu | `application/ProductionResultCodec.cpp`: terminal6 webcam/complete/no ROI-binning; origin image_file→offline_replay, webcam→camera_acquired. terminal7 branch schema3–6 replay eder; terminal8 industrial dal, terminal9 industrial içeren whole-set exact kanıtıdır | 08b |
 | UI kaynakları | `app/CalibrationOverview.cpp`: webcam kaydı/düzenleme ve ROI/binning retleri; `MainWindowCalibration.cpp`: recipe source seçimi image_file/webcam; `MainWindowEditor.cpp`: webcam properties/preview caption; `MainWindowCamera.cpp`: ayrı discovery/read-only ekranı | 05b/07c/08c |
 | Backend capability | `application/BackendCapabilities.cpp`: yalnız zxing-reader kayıtlı; unknown backend unavailable. GenTL discovery bulunması acquisition backend capability değildir | 02/04a |
 
@@ -78,7 +78,7 @@ yeni codec dalıyla ekler; mevcut schema'ya alan ekleyip exact-field kontrolün�
 | --- | --- |
 | Project / Recipe | root1; recipe1–2; `domain/Project.cpp`, `persistence/ProjectRepository.cpp`; calibrationBinding yalnız recipe2 |
 | Editor | reader1–9; dependency array7, reference/world opt-in8, explicit multi-source9; `domain/ToolDefinition.cpp`. Eski Save sırf yeni kod açıldı diye9 olmaz |
-| Engine | `visionflow.execution/26`; ICM-08a frozen industrial Runtime admission/worker; `application/ExecutionService.hpp` |
+| Engine | `visionflow.execution/27`; ICM-08b trusted industrial completion/terminal8–9; `application/ExecutionService.hpp` |
 | Tool descriptor'ları | 17 built-in: image_file1, template_match1, blob3, edge1, calculate1, webcam1, measurement2, preprocess1, code_read2, edge_point3, geometry_measurement2, edge_pair2, line_fit3, circle_fit3, pattern_pose1, shape_pose1, industrial_camera1 (minimum editor9); `domain/ToolRegistry.cpp` |
 | Measurement contract | DeviceBinding1, GeometryDescriptor1, MeasurementCamera1, MeasurementSetupDescriptor1, MeasurementSetupContract1; DeviceCapabilities sürümsüz dört bool nested nesne; `domain/MeasurementSetupContract.cpp`. ICM-03a ekledi: MeasurementCamera2 (`physical` zorunlu; yoksa schema 1 bayt aynı), PhysicalDeviceIdentity1; TransportLocator1/BackendIdentity1 yalnız yerel, projeye yazılmaz. ICM-03b ekledi: GeometryDescriptor2 (decimation/reverse + açık ROI/binning; yalnız endüstriyel), MeasurementSetupContract2 (`profiles` boş değilse), AcquisitionProfile1/AcquisitionSettings1, AcquisitionReadback1/GeometryReadback1; eski yazımlar bayt/hash aynı |
 | Environment / transfer | measurement-environment1, measurement-bundle1; `application/MeasurementEnvironment.cpp`. Registry geçmişi/arşiv/selection alanları hash'e dahildir |
@@ -87,7 +87,7 @@ yeni codec dalıyla ekler; mevcut schema'ya alan ekleyip exact-field kontrolün�
 | Eski model codec | uniform1, raw homography2, manual scale3; `MeasurementService.cpp`; yeni wrapper eski model/hash'i yeniden yazmaz |
 | Source/model scope | sourceSetup1, scoped-source/1; scope1 tam beş alan: schemaVersion/target/device/geometryId/setup; system-model-ready/1 evidence1 unscoped, evidence2 scoped; `SystemCalibration.cpp` |
 | Production dependency | measurementSource1 binding/acquisition/origin; industrialSource1 yalnız in-memory admission (reference/camera/setup/profile/physical/backend/route); sourceSet dal dependencies; validation scope execution_configuration veya multi_source_in_memory/1 / multi_source_runtime/1; `ProductionRecipeService.hpp/.cpp`, `MultiSourceRuntimeService.cpp` |
-| Terminal / port | terminal reader1–7; single writer3–6, multi writer7 ve branch3–6; output port codec1; `ProductionResultCodec.cpp`, `MultiSourceRuntimeService.cpp`, `ToolResultCodec.cpp` |
+| Terminal / port | terminal reader1–9; single writer3–6/8, multi writer7/9 ve branch3–6/8; output port codec1; `ProductionResultCodec.cpp`, `MultiSourceRuntimeService.cpp`, `ToolResultCodec.cpp` |
 | Arşiv / PLC | snapshot/event1; vf.socket/2 mevcut scalar mapping; terminal schema'sı transport sürümü değildir |
 
 ## Hash ve legacy no-op koruma alanları
@@ -129,7 +129,8 @@ ICM-08a/b frozen dependency, private completion digest ve terminal replay'i birl
 sürümler. Terminal7 ve scope1 exact alanları değiştirilmeden eski reader dalı korunur;
 ICM-08a engine execution/26, in-memory industrialSource/1 ve frozen Runtime worker
 ekler; terminal1–7 aynı kalır. Industrial sonuç completion authority almaz;
-persistent industrial admission/finish 08b bekler.
+08a sırasında persistent industrial admission/finish kapalıydı. ICM-08b engine/27
+ve terminal8/9 ile trusted completion zincirini ekler; native factory/G1 kapalı kalır.
 
 yeni schema numarası ilgili uygulama kartında kaynak envanteri yeniden kontrol edilerek seçilir.
 

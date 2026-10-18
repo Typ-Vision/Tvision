@@ -170,7 +170,6 @@ CycleResult RuntimeService::execute(const ProductionCycle& cycle,const QString& 
     try{result=execution.run(recipe.definition,s->projectDirectory(),recipe.id,s->validation().contentId,cancel,{}, {},
         [catalogPath,s](const ImageFrame& frame){return calibration(*s,frame,catalogPath);},nullptr,acquisition);}
     catch(const std::exception& e){result.recipeId=recipe.id;result.configId=s->validation().contentId;result.cycleId=QUuid::createUuid().toString(QUuid::WithoutBraces);result.state=ExecutionState::Error;result.error=QString::fromUtf8(e.what());}
-    if(s->industrial())return result; // Admission diagnostics have no terminal authority until ICM-08b.
     result.completionDigest_=ProductionRecipeService::completionDigest(result);
     result.completionTicket_=cycle.ticket;result.completionSnapshot_=s;
     return result;

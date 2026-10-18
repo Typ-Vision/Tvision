@@ -14,6 +14,24 @@ Record failure ilk terminal nesnesini ve private trusted completion'ı bellekte 
 
 Logs dal başına model sürümü, etkinleştirme, kurulum ve sonuç kanıtını gösterir. CSV legacy kolonlarını korur; schema7 içeren export'a executionState, sourceId, sourceSet ve sourceFrames eklenir. Çıktısı olmayan ERROR/Stop çevrimi boş sonuç hücreleriyle ayrı kanıt satırı olarak korunur; scalar/değer uydurulmaz. sourceSet içindeki referenceBindings/systemCalibration/measurementSource tam tarihsel bağlamı taşır; canlı registry'ye ihtiyaç yoktur. Rasterlar terminal JSON'a gömülmez.
 
+## Industrial terminal8 / terminal9
+
+Industrial dal terminal8, industrial içeren whole-set terminal9 yazar. Eski terminal1–7
+okuyucusu korunur; schema7 industrial alan kabul etmez. Terminal8 exact alan seti,
+industrialSource/1 frozen admission ve ayrı industrialAcquisition/1 taşır. ACQUIRED,
+actual readback, fiziksel/backend/route/profile/setup, özgün backend ve mapped execution
+metadata ve raster content hash'ini bağlar. NOT_ACQUIRED yalnız source/reason/errorCode
+ile kaydedilir; kare, piksel hash'i, scalar veya karar uydurulmaz. Partial ERROR'da
+başarılı dalların gerçek kanıtı korunur; Stop bütün frame/sonuç/industrial evidence'i temizler.
+
+Private completion digest industrial evidence'i de kapsar. Runtime worker dışında
+caller completion yetkisi üretilemez; yanlış raster/request/readback/frame ve değişmiş
+completion ret olur. Record retry frozen payload'ı yeniden yazar; discovery/capture/model
+çözümü yoktur. Tarihsel okuma SDK, registry veya provider gerektirmez. CSV terminal9 için
+industrialEvidence kolonu ve edinilemeyen her industrial kaynak için boş scalar kanıt
+satırı taşır. JSON raster saklamaz; hash dijital imza değildir. Normal ürün factory'si
+native G1 kanıtı olmadan açılmaz; test factory normal ürün yolundan seçilemez.
+
 ## vf.socket/2
 
 Mevcut seçili `measurementToolId` scalar mapping'i bütün çevrim DONE ve ilgili gerçek Measurement sonucu olduğunda yayınlanır. Seçilen araç ikinci veya başka bir kaynağa ait olabilir. Çok output/aggregate karar eklenmedi. Terminal commit → PLC_RESULT event → ACK düzeni, timeout/retry/dedup ve süreç/oturum sınırları değişmedi. İletişim context'i aynı schema7 terminalde saklanır. Localhost fixture gerçek PLC kabulü değildir.
