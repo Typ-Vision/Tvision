@@ -29,6 +29,9 @@ public:
     std::function<void()> onSearchRegionActivityChanged;
     std::function<bool()> onSearchRegionStarting;
     void setToolOverlay(const QVector<QRect>& regions,const QVector<QPointF>& points,const QVector<QLineF>& lines={},const QString& annotation={},const QByteArray& mask={},const QSize& maskSize={},const QPoint& maskOrigin={},const QVector<QPointF>& rejected={},bool densePoints=false);
+    // Opt-in Editor preference; other viewers retain their existing presentation.
+    void setResultAnnotationsVisible(bool visible);
+    bool resultAnnotationsVisible() const {return annotationsVisible_;}
     void setCodeOverlay(const CodeResults& codes);
     void setChessboardOverlay(const QVector<QPointF>& points,int columns);
     // Geometry workspace; legacy integer rectangle teaching remains separate.
@@ -65,6 +68,10 @@ protected:
     void paintEvent(QPaintEvent* event) override;
     void keyPressEvent(QKeyEvent* event) override;
 private:
+    void addResultLabel(const QString&,QPointF,const QColor&,bool background=false);
+    void updateResultAnnotations();
+    bool annotationsManaged_=false,annotationsVisible_=true;
+    QList<QGraphicsItem*> resultAnnotations_;
     bool searchPress(QMouseEvent*);
     bool searchMove(QMouseEvent*);
     bool searchRelease(QMouseEvent*);

@@ -11,6 +11,9 @@
 #include <QPushButton>
 #include <QFontDatabase>
 #include <QPainter>
+#include <QGraphicsScene>
+#include <QGraphicsSimpleTextItem>
+#include <QGraphicsRectItem>
 #include <QTextStream>
 #include <stdexcept>
 using namespace visionflow;
@@ -84,5 +87,32 @@ int main(int argc,char** argv){QApplication app(argc,argv);QFontDatabase::addApp
     viewer.setSearchRegionEditing("blob/frame-b",search,false);drag({240,210},{260,230});check(search==beforePan,"locked Blob exposes no editable gesture");
     viewer.setSearchRegionEditing("blob/frame-b",search,true);viewer.onSearchRegionStarting=[] {return false;};const auto beforeRejected=searchCommits;drag({240,210},{260,230});check(search==beforePan && searchCommits==beforeRejected && !viewer.roiGestureActive(),"failed gesture preflight preserves saved Blob region");viewer.onSearchRegionStarting={};
     viewer.setSearchRegionEditing("blob/frame-b",search,true);viewer.fitImage();app.processEvents();check(viewer.grab().save(dir.filePath("eui01-blob-viewer-normal.png")),"Blob viewer normal PNG");viewer.resize(850,600);viewer.fitImage();app.processEvents();check(viewer.grab().save(dir.filePath("eui01-blob-viewer-small.png")),"Blob viewer small PNG");
+    // EUI-03: visibility is separate from geometry and survives overlay/image rebuilds.
+    ImageViewer other;other.setImage(image);other.setToolOverlay({},{{20,20}}, {},"unchanged");
+    check(other.resultAnnotationsVisible(),"non-Editor viewer keeps annotations");
+    viewer.setResultAnnotationsVisible(false);viewer.setImage(image);viewer.setRoiFrame("test/raw");viewer.setRoi(ToolRoi{{"test/raw"},shapes[1]});
+    const QByteArray mask(40*40,char(1));
+    for(int kind=0;kind<4;++kind){
+        const QVector<QPointF> points=kind==2 ? QVector<QPointF>{{150,200},{450,200}}:QVector<QPointF>{{300,240}};
+        viewer.setToolOverlay({QRect(100,100,400,280)},points,{QLineF(100,240,500,240)},kind==0 ? "support=32 angle=0 RMS=0.25":kind==1 ? "Circle R=120 RMS=0.15":kind==2 ? "distance=300 px":"Blob count=1 area=1600",kind==3 ? mask:QByteArray{},kind==3 ? QSize(40,40):QSize{},QPoint(280,220),{{310,250}},kind<2);
+        QMap<QGraphicsItem*,bool> geometryVisibility;for(auto* item:viewer.scene()->items())if(!dynamic_cast<QGraphicsSimpleTextItem*>(item) && item->zValue()!=5)geometryVisibility[item]=item->isVisible();
+        for(bool visible:{false,true}){
+            viewer.setResultAnnotationsVisible(visible);
+            for(double zoom:{.1,.25,1.,4.}){
+                viewer.actualSize();viewer.zoomBy(zoom);
+                int labels=0;for(auto* item:viewer.scene()->items()){
+                    if(auto* text=dynamic_cast<QGraphicsSimpleTextItem*>(item)){
+                        if(text->zValue()==12){check(text->isVisible(),"ROI coordinate and invalidity status stays visible");continue;}
+                        ++labels;check(text->isVisible()==visible,"all result labels follow preference");
+                        check(std::abs(text->scale()-std::min(zoom,1.5))<1e-9 && text->font().pointSizeF()==11,"text scales at 10/25/100/400 percent with 11pt base and 150 percent cap");
+                    }else if(item->zValue()==5){check(item->isVisible()==visible && std::abs(item->scale()-std::min(zoom,1.5))<1e-9,"background shares text visibility and scale");}
+                    else check(item->isVisible()==geometryVisibility[item],"raster geometry mask and ROI visibility unchanged");
+                }check(labels>0,"fixture contains result labels");
+                if(visible){viewer.resize(1400,900);viewer.centerOn(320,240);app.processEvents();check(viewer.grab().save(dir.filePath(QString("eui03-kind%1-zoom%2.png").arg(kind).arg(int(zoom*100)))),"annotation zoom PNG");}
+            }
+        }
+    }
+    viewer.setResultAnnotationsVisible(false);viewer.setImage(image);viewer.setToolOverlay({},{{300,240}}, {},"new result");
+    for(auto* item:viewer.scene()->items())if(dynamic_cast<QGraphicsSimpleTextItem*>(item))check(!item->isVisible(),"hidden preference survives new image and Run overlay");
     QTextStream(stdout)<<checks<<" viewer checks passed\n";return 0;
 }catch(const std::exception& e){QTextStream(stderr)<<e.what()<<" after "<<checks<<"\n";return 1;}}

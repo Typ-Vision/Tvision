@@ -47,8 +47,7 @@ cmake --build build/kmc9-core-off -j 6
 ctest --test-dir build/kmc9-core-off --output-on-failure
 ```
 
-Test seçimi: `ctest --test-dir build/reference-ui -N` ile adları inceleyip `-R` kullanın;
-ilgili koşum tam suite kabulü değildir.
+`ctest --test-dir build/reference-ui -N` testleri listeler; `-R` seçimi tam suite değildir.
 Socket testleri localhost erişimi gerektirir. UI değişikliğinde Release build,
 ilgili CTest ve normal/küçük ekran görsel kontrolü yapılır.
 
@@ -97,17 +96,18 @@ geçici ayarları geri yükler.
 Blob Search ROI'yi gövdeden taşıyın, sekiz tutamaçla boyutlandırın. Escape iptal,
 Ctrl+Z geri alır; ROI dışı sol veya orta tuş pan yapar. Referans/region bağı düzenlemeyi kilitler.
 
-Sınır filtresi kapalı başlar.
+Sınır filtresi kapalı başlar. Editor komutlarının hemen altındaki **Açıklamaları göster**
+kapalı başlar ve yerel olarak hatırlanır. Sonuç yazıları zoom ile küçülür; büyütme
+1,5× ile sınırlıdır. Geometri, maskeler ve Results bilgisi görünür kalır.
 
 Panel düzeni ve son seçimler `config/local.ui.ini` içindedir; bu proje autosave'i
 değildir. Test INI, fixture, görüntü ve raporlar `build/` altında tutulur.
-Görünümü sıfırlamak için **View → Panel düzenini sıfırla** kullanılır.
+Sıfırlama: **View → Panel düzenini sıfırla**.
 
 ## Göreve göre belge haritası
 
-Yeni chat: AGENTS + [kısa progress](docs/progress.md) + bu README; ardından seçili
-görev kartı ve ilgili bölümler. Bütün gereksinim/mimari/arşiv dosyalarını topluca
-okumayın. Önce başlık veya görev ID'si arayın; belirsizlikte bağımlılıklara genişletin.
+Başlangıç: AGENTS + [progress](docs/progress.md) + README; ardından seçili görev
+kartı ve ilgili sözleşme. Güncel sıra progress'tedir.
 
 | Konu | Kaynak |
 | --- | --- |
@@ -119,9 +119,8 @@ okumayın. Önce başlık veya görev ID'si arayın; belirsizlikte bağımlılı
 | Runtime ve kabul | [Runtime/terminal](docs/architecture/multi-source-runtime-terminal.md), [B kabulü](docs/architecture/multi-source-release-acceptance.md), [PLC socket](docs/architecture/plc-socket.md) |
 | Geçmiş karar ve teslim | [Arşiv dizini](docs/archive/README.md), [önceki README](docs/archive/2026-10-17/README.md) |
 
-Güncel sıra progress'tedir.
 
-Belge boyutu ve başlangıç bağlantılarını kontrol etmek için:
+Belge kontrolü:
 
 ```powershell
 python scripts/check-context-docs.py

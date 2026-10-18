@@ -31,6 +31,10 @@ bool MainWindow::verifyEditorUsability(const QString& artifacts) {
     auto check=[](bool ok,const char* message){if(!ok)throw std::runtime_error(message);};
     auto wait=[&]{QElapsedTimer timer;timer.start();do{QApplication::processEvents();QThread::msleep(1);}while(editorSession_.busy() && timer.elapsed()<20000);QApplication::processEvents();check(!editorSession_.busy(),"usability worker deadline");};
     {QSettings preferences(settingsFile_,QSettings::IniFormat);preferences.remove("properties");}
+    {MainWindow firstUse(QDir(artifacts).filePath("annotation-first-use-"+QUuid::createUuid().toString(QUuid::WithoutBraces)+".ini"));check(!firstUse.findChild<QCheckBox*>("showResultAnnotations")->isChecked() && !firstUse.imageViewer_->resultAnnotationsVisible(),"first use defaults annotations off");}
+    auto* annotations=findChild<QCheckBox*>("showResultAnnotations");check(annotations,"Editor annotation checkbox");
+    check(annotations->isChecked()==QSettings(settingsFile_,QSettings::IniFormat).value("editor/showResultAnnotations",false).toBool(),"annotation preference loaded");
+    annotations->setChecked(false);
     QImage image(256,256,QImage::Format_Grayscale8);image.fill(20);for(int y=80;y<160;++y)for(int x=0;x<256;++x)image.scanLine(y)[x]=220;
     const auto path=QDir(artifacts).filePath("usability-source.png");check(image.save(path),"usability PNG");
     service_.createProject("Usability","",QDir(artifacts).filePath("usability-"+QUuid::createUuid().toString(QUuid::WithoutBraces)+".vfproject"),"file");service_.createRecipe("Usability","",ApplicationType::Measurement,"file");
@@ -148,6 +152,22 @@ bool MainWindow::verifyEditorUsability(const QString& artifacts) {
     for(const auto size:{QSize(1400,900),QSize(850,600)}){resize(size);vertical_->setSizes(size.width()==850 ? QList<int>{360,90}:QList<int>{600,180});QApplication::processEvents();imageViewer_->fitImage();QApplication::processEvents();check(grab().save(QDir(artifacts).filePath(QString("eui01-blob-editor-%1.png").arg(size.width()))),"Blob Editor screenshot");}
     const auto beforeRecipeSwitch=service_.activeRecipe()->definition;mouse(QEvent::MouseButtonPress,{100.5,100.5},Qt::LeftButton,Qt::LeftButton);mouse(QEvent::MouseMove,{110.5,110.5},Qt::NoButton,Qt::LeftButton);service_.createRecipe("Cancel Blob gesture","",ApplicationType::Measurement,"file");refreshWorkspace();mouse(QEvent::MouseButtonRelease,{110.5,110.5},Qt::LeftButton,Qt::NoButton);service_.selectRecipe(savedRecipe);refreshWorkspace();check(service_.activeRecipe()->definition==beforeRecipeSwitch,"recipe switch retires Blob preview without commit");
 
+    // EUI-03: real result toggling neither runs nor edits/invalidate the recipe.
+    service_.save();service_.createRecipe("Annotation acceptance","",ApplicationType::DefectInspection,"file");service_.enableMultiSource();
+    const auto annotationSourceA=service_.setImageFile(path),annotationSourceB=service_.addTool("image_file");service_.setImageFile(path,annotationSourceB);
+    const auto annotationBlob=service_.addTool("blob");service_.setConnections({{annotationSourceB,"image",annotationBlob,"image"}});
+    refreshWorkspace();selectTool(annotationBlob);runFlow();wait();check(editorSession_.cycle && editorSession_.cycle->state==ExecutionState::Done,"annotation acceptance has real DONE result");service_.save();const auto annotationDefinition=service_.activeRecipe()->definition;
+    const auto annotationSignature=flowSignature();
+    for(bool visible:{true,false,true}){
+        const auto generation=editorSession_.generation;const auto cycleId=editorSession_.cycle->cycleId;
+        annotations->setChecked(visible);QApplication::processEvents();
+        check(imageViewer_->resultAnnotationsVisible()==visible && !editorSession_.busy(),"toggle updates presentation without execution");
+        check(service_.activeRecipe()->definition==annotationDefinition && !service_.dirty() && flowSignature()==annotationSignature && editorSession_.generation==generation && editorSession_.cycle && editorSession_.cycle->cycleId==cycleId,"toggle preserves recipe identity and current cycle");
+        selectTool(annotationSourceA);selectTool(annotationSourceB);selectTool(annotationBlob);runExecution(annotationBlob);wait();check(editorSession_.cycle && editorSession_.cycle->state==ExecutionState::Done,"annotation rerun has real DONE result");check(imageViewer_->resultAnnotationsVisible()==visible,"preference survives tool/source selection and rerun");
+        for(const auto size:{QSize(1400,900),QSize(850,600)}){resize(size);QApplication::processEvents();imageViewer_->fitImage();QApplication::processEvents();check(grab().save(QDir(artifacts).filePath(QString("eui03-editor-%1-%2.png").arg(visible ? "on":"off").arg(size.width()))),"annotation Editor PNG");}
+    }
+    {MainWindow restarted(settingsFile_);check(restarted.findChild<QCheckBox*>("showResultAnnotations")->isChecked() && restarted.imageViewer_->resultAnnotationsVisible(),"restart loads annotation preference");}
+    annotations->setChecked(false);
     service_.save();return true;
 }
 }

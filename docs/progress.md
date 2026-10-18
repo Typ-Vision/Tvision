@@ -5,14 +5,14 @@
 
 ## Devam noktası
 
-- **EUI-02 tamam.** Blob sınır filtresi (varsayılan false), tüm bileşeni eleme,
-  kayıt/kimlik ve stale temizliği hazır.
-  [Kapanış/ayrı koşumlar](archive/2026-10-18-eui-02.md): Release; ilk ilgili **15/18**,
-  düzeltme **3/4** (pose UI geçti), son **3/3**; 18 testin kalan hatası yok.
-  Normal/küçük görseller incelendi. Blob4 / engine28; editor1–9 no-op korunur.
-  [EUI-01 kabulü](archive/2026-10-18-eui-01.md).
-  **Sıradaki EUI-03; bu görevde başlatılmadı.** EUI-03–08 uygulanmadı.
-  [Kartlar](architecture/editor-refinement-plan.md). ICM engelleri korunur.
+- **EUI-03 tamam.** Editor sonuç açıklamaları kapalı başlar; yerel tercih,
+  zoom ile 11 pt × min(zoom, 1.5), geometri/uyarı/Results korunur.
+  [Kapanış ve doğrulama](archive/2026-10-18-eui-03.md): Release ve ilgili **9/9**;
+  normal/küçük görseller incelendi.
+  [EUI-02](archive/2026-10-18-eui-02.md) Blob sınır filtresi ve
+  [EUI-01](archive/2026-10-18-eui-01.md) ROI kabulü korunur. Blob4 / engine28;
+  editor1–9 no-op korunur. **Sıradaki EUI-04; bu görevde başlatılmadı.**
+  EUI-04–08 açık. [Kartlar](architecture/editor-refinement-plan.md).
 - [ICM-PLAN-02](archive/2026-10-18-icm-plan-02.md): ortak yazılım/donanım kabulü ayrı.
   [06a](archive/2026-10-18-icm-06a.md)/[06b](archive/2026-10-18-icm-06b.md)
   kalibrasyon/profil/aktivasyon tamam; 04f–05b kapanışları [arşivde](archive/README.md).
@@ -105,8 +105,8 @@ Görevler: [ana plan](architecture/industrial-camera-plan.md), seçili kart ve s
 
 ## Kapanış ve sonraki adım
 
-**EUI-02 tamam. Sıradaki EUI-03; devam talimatı bekleniyor.**
-Plan 03→08, kullanıcı testi/düzeltme ve kamera önkoşullarıdır.
+**EUI-03 tamam. Sıradaki EUI-04; devam talimatı bekleniyor.**
+Plan 04→08, kullanıcı testi/düzeltme ve kamera önkoşullarıdır.
 [ICM-09b](archive/2026-10-18-icm-09b-start.md) G0/G1 bekliyor; H01–H08 açık.
 Basler/Daheng model/SDK 01→02 veya OECS belgeli pending-command bariyeri gerekir.
 Tamamlanan hazırlıklar tekrarlanmaz; ölçüm adayı configure girdisi değildir.

@@ -36,6 +36,7 @@
 #include <QTabWidget>
 #include <QVBoxLayout>
 #include <QShortcut>
+#include <QSettings>
 #include <QTimer>
 #include <QJsonDocument>
 #include <exception>
@@ -56,8 +57,12 @@ QWidget* MainWindow::makeEditor() {
     runFlowButton->setToolTip("Yeni görüntü edin ve tam akışı çalıştır.");
     auto* runTool=new QPushButton("Run Tool");runTool->setObjectName("runTool");commands->addWidget(runTool);
     connect(runTool,&QPushButton::clicked,this,[this]{for(const auto& t:service_.tools())if(t.id==selectedToolId_){runExecution(t.id);return;}});
+    auto* annotations=new QCheckBox("Açıklamaları göster");annotations->setObjectName("showResultAnnotations");
+    annotations->setToolTip("Sonuç etiketlerini gösterir; geometri ve Results tablosu görünür kalır.");
+    annotations->setChecked(QSettings(settingsFile_,QSettings::IniFormat).value("editor/showResultAnnotations",false).toBool());
+    connect(annotations,&QCheckBox::toggled,this,[this](bool visible){imageViewer_->setResultAnnotationsVisible(visible);QSettings(settingsFile_,QSettings::IniFormat).setValue("editor/showResultAnnotations",visible);});
     auto* stop=new QPushButton("Stop");stop->setObjectName("stopFlow");commands->addWidget(stop);connect(stop,&QPushButton::clicked,this,[this]{pendingDrawTool_.clear();imageViewer_->cancelRoi();imageViewer_->drawRegion(false);editorSession_.stop(SessionJob::Execution);editorSession_.stop(SessionJob::Teaching);});
-    commands->addStretch(); layout->addLayout(commands); editorContext_=note(""); layout->addWidget(editorContext_);
+    commands->addStretch(); layout->addLayout(commands); layout->addWidget(annotations,0,Qt::AlignLeft); editorContext_=note(""); layout->addWidget(editorContext_);
     horizontal_=new QSplitter(Qt::Horizontal); horizontal_->setObjectName("editorHorizontal"); horizontal_->setChildrenCollapsible(false);
     auto* toolsPanel=new QWidget; toolsPanel->setMinimumWidth(150); auto* toolsLayout=new QVBoxLayout(toolsPanel);
     toolsLayout->addWidget(note("TOOLBOX")); auto* search=new QLineEdit; search->setPlaceholderText("Tool ara…"); toolsLayout->addWidget(search);
@@ -83,6 +88,7 @@ QWidget* MainWindow::makeEditor() {
     auto* reload=new QPushButton("Reload"); reload->setObjectName("reloadImage"); toolbar->addWidget(reload);
     connect(reload,&QPushButton::clicked,this,[this]{if(service_.activeRecipe() && service_.activeRecipe()->definition["editor"].toObject()["schemaVersion"]==9){const auto source=editorSession_.sourceForTool(editorContext(),selectedToolId_);if(!source.isEmpty())runExecution(source);}else {imageBinding_.clear();refreshWorkspace();}});
     imageViewer_=new ImageViewer; imageViewer_->setObjectName("imageViewer");imageViewer_->setMinimumHeight(80);
+    imageViewer_->setResultAnnotationsVisible(annotations->isChecked());
     auto* fit=new QPushButton("Fit"); fit->setObjectName("fitImage"); toolbar->addWidget(fit); connect(fit,&QPushButton::clicked,this,[this]{imageViewer_->fitImage();});
     auto* minus=new QPushButton("−"); minus->setObjectName("zoomOut"); toolbar->addWidget(minus); connect(minus,&QPushButton::clicked,this,[this]{imageViewer_->zoomBy(1.0/1.25);});
     auto* plus=new QPushButton("+"); plus->setObjectName("zoomIn"); toolbar->addWidget(plus); connect(plus,&QPushButton::clicked,this,[this]{imageViewer_->zoomBy(1.25);});

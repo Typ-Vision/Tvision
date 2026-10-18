@@ -9,7 +9,7 @@ gruplu Toolbox ve yeni araç kataloğunda Edge yerine Edge Point; açılıp kapa
 zoom ile dengeli görüntü açıklamaları; tarama sayısı/yönüyle eşleşen oklar ve
 start/sweep değişiminde halka/yay önizlemesi.
 [EUI planı](../architecture/editor-refinement-plan.md) davranış, uyumluluk ve kabul
-ölçütlerini tanımlar. **Henüz uygulanmadı.** Bu talep, aşağıdaki 7 Ekim GUI koruma
+ölçütlerini tanımlar; uygulama durumu devir özetindedir. Bu talep, aşağıdaki 7 Ekim GUI koruma
 kararını Editor/Toolbox ve ortak Workspace için günceller. Eski Edge reçeteleri
 çalışır kalır; sessiz dönüşüm yoktur. Görünüm tercihleri reçete sonucunu değiştirmez.
 
@@ -184,6 +184,15 @@ Match: kırmızı contour, merkez, X/Y ekseni, angle, score ve seçilen match ID
 Örnek: `X: 124.52 px`, `Y: 235.14 px`, `Angle: −7.2°`, `Score: 96.4%`.
 
 Görüntü piksel koordinatı ile kalibre edilmiş mm/robot koordinatı aynı etikette karıştırılmaz. Her overlay kaynak tool ve cycle ID ile ilişkilidir. Disabled/skipped sonuçlar aktif sonuçlardan ayrılır.
+
+Recipe Editor'da “Açıklamaları göster” yerel tercihi ilk kullanımda kapalıdır;
+yeniden açılışta korunur. Sonuç etiketleri (support/angle/RMS, P1/P2, değer,
+outlier, maske ve kod açıklaması) bu tercihe uyar. Yazı ve arka planı 1:1'de
+11 pt tabanıyla `min(zoom, 1.5)` oranında birlikte ölçeklenir. Geometri,
+ölçüm çizgileri/noktaları, maske, ROI tutamaçları, tarama okları, hata/geçersizlik
+ve kaynak/koordinat bilgisi ile Results sayıları görünür kalır. Tercih execution,
+acquisition, recipe hash/dirty veya aktif Runtime'ı değiştirmez; Calibration ve
+Runtime viewer'ları bu Editor tercihine bağlı değildir.
 
 ## 10. Tool Selection
 

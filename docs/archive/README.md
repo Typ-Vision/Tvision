@@ -6,6 +6,7 @@ görev” ifadeleri yazıldıkları tarihe aittir.
 
 | Dönem / görev | Kayıt |
 | --- | --- |
+| 18 Ekim 2026 — EUI-03 | [Editor açıklama görünürlüğü, yerel tercih ve zoom kabulü](2026-10-18-eui-03.md) |
 | 18 Ekim 2026 — EUI-02 | [Blob etkili ROI sınır filtresi, kayıt/kimlik ve kabul](2026-10-18-eui-02.md) |
 | 18 Ekim 2026 — EUI-01 | [Blob ROI taşıma/boyutlandırma ve bağımsız kabul](2026-10-18-eui-01.md) |
 | 18 Ekim 2026 — EUI-PLAN-01 | [Beş Editor talebi, EUI-01–08 görevleri ve Sol 6.1 medium devri](2026-10-18-eui-plan-01.md) |
