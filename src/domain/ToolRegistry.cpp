@@ -3,6 +3,7 @@
 #include "CircleConfig.hpp"
 #include "CircleConfig.hpp"
 #include "ToolRegistry.hpp"
+#include "IndustrialSourceReference.hpp"
 #include "ReferenceConfig.hpp"
 #include "PreprocessConfig.hpp"
 #include "CodeReadConfig.hpp"
@@ -27,8 +28,9 @@ void roi(const QJsonValue& v) {
  require(o["width"].toInt()>0 && o["height"].toInt()>0,"ROI boyutu pozitif olmalı.");
 }
 }
-QString builtinLabel(const QString& k) {if(k=="shape_pose")return "Shape Pose";if(k=="pattern_pose")return "Pattern Pose";if(k=="geometry_measurement")return "Geometry Measurement";if(k=="circle_fit")return "Circle / Arc";if(k=="circle_fit")return "Circle / Arc";if(k=="edge_pair")return "Edge Pair / Caliper";if(k=="line_fit")return "Line Fit";if(k=="edge_point")return "Edge Point";if(k=="preprocess")return "Preprocess";if(k=="code_read")return "Code Read";if(k=="measurement")return "Measurement";if(k=="webcam")return "Webcam";if(k=="image_file")return "Image File";if(k=="template_match")return "Template Match";if(k=="blob")return "Blob";if(k=="edge")return "Edge";return "Calculate";}
+QString builtinLabel(const QString& k) {if(k=="industrial_camera")return "Industrial Camera";if(k=="shape_pose")return "Shape Pose";if(k=="pattern_pose")return "Pattern Pose";if(k=="geometry_measurement")return "Geometry Measurement";if(k=="circle_fit")return "Circle / Arc";if(k=="circle_fit")return "Circle / Arc";if(k=="edge_pair")return "Edge Pair / Caliper";if(k=="line_fit")return "Line Fit";if(k=="edge_point")return "Edge Point";if(k=="preprocess")return "Preprocess";if(k=="code_read")return "Code Read";if(k=="measurement")return "Measurement";if(k=="webcam")return "Webcam";if(k=="image_file")return "Image File";if(k=="template_match")return "Template Match";if(k=="blob")return "Blob";if(k=="edge")return "Edge";return "Calculate";}
 QJsonObject builtinDefaults(const QString& k) {
+ if(k=="industrial_camera")return {{"sourceReference",QJsonValue::Null}};
  if(k=="pattern_pose" || k=="shape_pose")return poseMatchDefaults();
  if(k=="geometry_measurement")return geometryMeasurementDefaults();
  if(k=="circle_fit")return circleDefaults();
@@ -46,6 +48,7 @@ QJsonObject builtinDefaults(const QString& k) {
  return {{"operation","distance"}};
 }
 QVector<PortDefinition> builtinInputs(const QString& k) {
+ if(k=="industrial_camera")return {};
  if(k=="pattern_pose" || k=="shape_pose")return {{"image",PortType::Image,"px","image"}};
  if(k=="geometry_measurement")return geometryMeasurementInputs();
  if(k=="blob")return {{"image",PortType::Image,"px","image"},{"region",PortType::Region,"px","image",false},{"reference",PortType::Point,"px","image",false},{"poseReference",PortType::Pose2D,"px","image",false}};
@@ -57,6 +60,7 @@ QVector<PortDefinition> builtinInputs(const QString& k) {
  return {{"image",PortType::Image,"px","image"},{"region",PortType::Region,"px","image",false}};
 }
 QVector<PortDefinition> builtinOutputs(const QString& k) {
+ if(k=="industrial_camera")return {{"image",PortType::Image,"px","image"}};
  if(k=="pattern_pose" || k=="shape_pose")return {{"pose",PortType::Pose2D,"px","image"},{"scale",PortType::Number,"ratio","image"},{"score",PortType::Number,"ratio","image"},{"found",PortType::Boolean,"","image"},{"ambiguous",PortType::Boolean,"","image"},{"truncated",PortType::Boolean,"","image"},{"candidates",PortType::Text,"","image"}};
  if(k=="geometry_measurement")return geometryMeasurementOutputs();
  if(k=="edge_pair")return {{"first",PortType::Point,"px","image"},{"second",PortType::Point,"px","image"},{"centre",PortType::Point,"px","image"},{"widthPx",PortType::Number,"px","image"},{"widthMm",PortType::Number,"mm","plane"},{"found",PortType::Boolean,"","image"},{"accepted",PortType::Boolean,"","plane"}};
@@ -88,6 +92,13 @@ QVector<PortDefinition> builtinOutputs(const QString& k) {
  return {{"region",PortType::Region,"px","image"},{"point",PortType::Point,"px","image"},{"score",PortType::Number,"ratio","image"},{"found",PortType::Boolean,"","image"}};
 }
 void builtinValidation(const ToolDefinition& t) {
+ if(t.kind=="industrial_camera"){
+  const auto reference=t.parameters["sourceReference"];
+  require(reference.isNull() || reference.isObject(),"Industrial source reference must be null (draft) or an object");
+  if(reference.isObject())IndustrialSourceReference::fromJson(reference.toObject());
+  require(t.dependencies.isEmpty(),"Industrial source backend is resolved locally, not from tool dependencies");
+  return;
+ }
  if(t.kind=="pattern_pose" || t.kind=="shape_pose"){validatePoseMatch(t.parameters);return;}
  if(t.kind=="geometry_measurement"){validateGeometryMeasurement(t.parameters);return;}
  if(t.kind=="circle_fit"){validateCircle(t.parameters);return;}
@@ -137,7 +148,7 @@ void ToolRegistry::registerType(ToolDescriptor descriptor) {
     QMutexLocker lock(&registryMutex);extensions.append(std::move(descriptor));
 }
 QVector<ToolDescriptor> ToolRegistry::entries() {
- static const QVector<ToolDescriptor> builtins=[] {QVector<ToolDescriptor> result;for(const QString kind:{"image_file","template_match","blob","edge","calculate","webcam","measurement"})result.append({kind,builtinLabel(kind),kind=="blob" ? 3 : kind=="measurement" ? 2 : 1,builtinDefaults(kind),builtinInputs(kind),builtinOutputs(kind),builtinValidation,kind=="image_file" || kind=="webcam",kind=="measurement"});result.append({"preprocess",builtinLabel("preprocess"),1,builtinDefaults("preprocess"),builtinInputs("preprocess"),builtinOutputs("preprocess"),builtinValidation,false,false,{},7});result.append({"code_read",builtinLabel("code_read"),2,builtinDefaults("code_read"),builtinInputs("code_read"),builtinOutputs("code_read"),builtinValidation,false,false,"zxing-reader",7});result.append({"edge_point",builtinLabel("edge_point"),3,builtinDefaults("edge_point"),builtinInputs("edge_point"),builtinOutputs("edge_point"),builtinValidation,false,false,{},7});result.append({"geometry_measurement",builtinLabel("geometry_measurement"),2,builtinDefaults("geometry_measurement"),builtinInputs("geometry_measurement"),builtinOutputs("geometry_measurement"),builtinValidation,false,false,{},7});for(const QString k:{"edge_pair","line_fit","circle_fit"})result.append({k,builtinLabel(k),(k=="line_fit" || k=="circle_fit") ? 3:2,builtinDefaults(k),builtinInputs(k),builtinOutputs(k),builtinValidation,false,false,{},7});result.append({"pattern_pose",builtinLabel("pattern_pose"),1,builtinDefaults("pattern_pose"),builtinInputs("pattern_pose"),builtinOutputs("pattern_pose"),builtinValidation,false,false,{},7});result.append({"shape_pose",builtinLabel("shape_pose"),1,builtinDefaults("shape_pose"),builtinInputs("shape_pose"),builtinOutputs("shape_pose"),builtinValidation,false,false,{},7});return result;}();
+ static const QVector<ToolDescriptor> builtins=[] {QVector<ToolDescriptor> result;for(const QString kind:{"image_file","template_match","blob","edge","calculate","webcam","measurement"})result.append({kind,builtinLabel(kind),kind=="blob" ? 3 : kind=="measurement" ? 2 : 1,builtinDefaults(kind),builtinInputs(kind),builtinOutputs(kind),builtinValidation,kind=="image_file" || kind=="webcam",kind=="measurement"});result.append({"preprocess",builtinLabel("preprocess"),1,builtinDefaults("preprocess"),builtinInputs("preprocess"),builtinOutputs("preprocess"),builtinValidation,false,false,{},7});result.append({"code_read",builtinLabel("code_read"),2,builtinDefaults("code_read"),builtinInputs("code_read"),builtinOutputs("code_read"),builtinValidation,false,false,"zxing-reader",7});result.append({"edge_point",builtinLabel("edge_point"),3,builtinDefaults("edge_point"),builtinInputs("edge_point"),builtinOutputs("edge_point"),builtinValidation,false,false,{},7});result.append({"geometry_measurement",builtinLabel("geometry_measurement"),2,builtinDefaults("geometry_measurement"),builtinInputs("geometry_measurement"),builtinOutputs("geometry_measurement"),builtinValidation,false,false,{},7});for(const QString k:{"edge_pair","line_fit","circle_fit"})result.append({k,builtinLabel(k),(k=="line_fit" || k=="circle_fit") ? 3:2,builtinDefaults(k),builtinInputs(k),builtinOutputs(k),builtinValidation,false,false,{},7});result.append({"pattern_pose",builtinLabel("pattern_pose"),1,builtinDefaults("pattern_pose"),builtinInputs("pattern_pose"),builtinOutputs("pattern_pose"),builtinValidation,false,false,{},7});result.append({"shape_pose",builtinLabel("shape_pose"),1,builtinDefaults("shape_pose"),builtinInputs("shape_pose"),builtinOutputs("shape_pose"),builtinValidation,false,false,{},7});result.append({"industrial_camera",builtinLabel("industrial_camera"),1,builtinDefaults("industrial_camera"),builtinInputs("industrial_camera"),builtinOutputs("industrial_camera"),builtinValidation,true,false,{},9});return result;}();
     QMutexLocker lock(&registryMutex);auto result=builtins;result+=extensions;return result;
 }
 ToolDescriptor ToolRegistry::get(const QString& kind) {for(const auto& e:entries())if(e.kind==kind)return e;throw std::runtime_error(("Desteklenmeyen tool türü: "+kind).toUtf8().constData());}

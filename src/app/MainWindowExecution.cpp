@@ -67,12 +67,13 @@ void MainWindow::refreshFlow() {
     graphInfo_->setText(text);
     findChild<QPushButton*>("runFlow")->setEnabled(service_.activeRecipe() && !editorSession_.busy(SessionJob::Execution) && !editorSession_.busy(SessionJob::Teaching) && !editorSession_.busy(SessionJob::Image));
     if(auto* run=findChild<QPushButton*>("runTool")) {
-        bool source=false;if(service_.activeRecipe())for(const auto& t:service_.tools())if(t.id==selectedToolId_)source=ToolRegistry::get(t.kind).acquisitionSource;
-        run->setText(source ? "Görüntü al" : "Run Tool");run->setEnabled(!selectedToolId_.isEmpty() && !editorSession_.busy());
+        bool source=false,unavailable=false;if(service_.activeRecipe())for(const auto& t:service_.tools())if(t.id==selectedToolId_){source=ToolRegistry::get(t.kind).acquisitionSource;unavailable=t.kind=="industrial_camera";}
+        run->setText(source ? "Görüntü al" : "Run Tool");run->setEnabled(!selectedToolId_.isEmpty() && !editorSession_.busy() && !unavailable);
     }
     findChild<QPushButton*>("stopFlow")->setEnabled(editorSession_.busy() || !pendingDrawTool_.isEmpty() || imageViewer_->drawingActive());
     for(const auto name:{"teachPoseReference","clearPoseReference","runSelectedTool"})if(auto* button=findChild<QPushButton*>(name)) {
         bool enabled=!editorSession_.busy();
+        if(QString(name)=="runSelectedTool" && service_.activeRecipe())for(const auto& t:service_.tools())if(t.id==selectedToolId_ && t.kind=="industrial_camera")enabled=false;
         if(QString(name)=="teachPoseReference")enabled=enabled && editorSession_.frame.has_value();
         if(QString(name)=="clearPoseReference"){enabled=false;for(const auto& t:service_.tools())if(t.id==selectedToolId_)enabled=!editorSession_.busy() && (t.parameters.contains("poseTracking") || t.parameters.contains("referenceBinding"));}
         button->setEnabled(enabled);
@@ -102,7 +103,7 @@ void MainWindow::showExecutionResult() {
     imageViewer_->setToolOverlay({},{});
     if(editorSession_.frame){imageViewer_->setPreviewPixels(drawingImage_ ? drawingImage_->preview():editorSession_.frame->preview());imageInfo_->setText(QString("Ham g\u00f6r\u00fcnt\u00fc - %1 x %2 px - Frame %3").arg(editorSession_.frame->size().width()).arg(editorSession_.frame->size().height()).arg(editorSession_.frame->metadata().frameId));}
     if(drawingImage_)imageInfo_->setText(drawingImage_->processing().isEmpty() ? "Ham görüntü · bağlı kaynak":"İşlenmiş görüntü · bağlı Preprocess");
-    if(!editorSession_.frame && !drawingImage_)imageViewer_->clearImage("Bu kaynak için güncel kare yok.");
+    if(!editorSession_.frame && !drawingImage_){imageViewer_->clearImage("Bu kaynak için güncel kare yok.");imageInfo_->setText("Görüntü yok.");}
     if(!editorSession_.cycle)return;
     QStringList lines;if(editorSession_.cycle->partial)lines<<"Seçili araç değerlendirmesi • "+editorSession_.cycle->evaluationId;lines<<QString("%1 | Cycle %2 | Frame %3 | %4 ms").arg(executionStateName(editorSession_.cycle->state),editorSession_.cycle->cycleId,editorSession_.cycle->frameId).arg(editorSession_.cycle->milliseconds,0,'f',2);
     if(!editorSession_.cycle->error.isEmpty())lines<<editorSession_.cycle->error;

@@ -56,11 +56,11 @@ Kaynak yolları `src/` altındadır.
 | Scoped installation | `application/ScopedActiveCalibration.cpp`, installation: webcam, complete, ROI/binning yok, confidence unavailable değil. activate accepted camera probe/exact setup ister; restart yalnız seçimdir | 06b |
 | Model-ready setup codec | `application/ActiveCalibrationService.cpp`, MeasurementSetup::validate: adapter yalnız image_file/webcam; yeni industrial model, capture kapısı açılsa bile burada reddedilir. Yeni sürüm eski wrapper replay'ini korumalı | 06a/06b |
 | Workspace discovery/availability | `application/MeasurementWorkspace.hpp`: webcam discovery, webcam dışı unsupported availability; observeAcquisition yalnız webcam hatasında disconnect; acquisition exact kayıtlı setup için IndependentCaptureRequest::validate kapısını uygular, setup/device/geometry döndürür, kendisi SDK açmaz | 05a/06b |
-| Eski recipe calibration | `application/CalibrationCapture.cpp`: acquire/configuration yalnız image_file/webcam; diğer kind hata. SystemCalibration::source yalnız bu iki enabled kind'den tek kaynak seçer; branch aynı kurala gelir | 06a/07a |
+| Eski recipe calibration | `application/CalibrationCapture.cpp`: acquire/configuration yalnız image_file/webcam; diğer kind hata. ICM-07a SystemCalibration::source seçimini registry acquisitionSource üzerinden yapar; bu seçim edinim veya legacy fallback açmaz | 07a/07b |
 | Legacy calibration context | `application/CalibrationService.cpp` context ve `CalibrationWorkflow.cpp` actual frame kontrolü yalnız image_file/webcam enabled kaynağını sayar; tam bir kaynak/provenance ister. Recipe-scoped eski yol industrial için sessiz fallback olamaz | 06b/07b |
 | Model scope | `application/SystemCalibration.cpp`: exact source/setup/device/geometryId/config/actual resolution ve metadata; scoped kaynak kind'i image_file veya model adapter olmalı, scoped→legacy fallback yok | 06b/07b |
-| Tool kayıt/DAG | `domain/ToolRegistry.cpp`, `ToolDefinition.cpp`, `ToolGraph.cpp`: yalnız image_file/webcam built-in acquisitionSource; bilinmeyen tool kayıtlı değil. Eski editor tek source; explicit editor9 çok source | 07a |
-| Recipe invalidation | `application/ProjectService.cpp`: sourceConfig image_file/webcam parametre/enabled değişimini eski calibrationBinding invalidation'ına dahil eder; industrial/profile eklenince aynı invalidation sınırı korunmalı | 07a/07b |
+| Tool kayıt/DAG | `domain/ToolRegistry.cpp`, `ToolDefinition.cpp`, `ToolGraph.cpp`: image_file/webcam + industrial_camera1 acquisitionSource; industrial minimum editor9, strict sourceReference1 veya null taslak. Bilinmeyen kind ret; eski editor1–8 no-op korunur | 07a tamam |
+| Recipe invalidation | `application/ProjectService.cpp`: bütün registry acquisitionSource parametre/enabled değişimleri eski calibrationBinding'i invalid eder; industrial reference/profile hash dahildir. Rename/no-op korur | 07a tamam |
 | Executor/factory | `application/ToolExecutors.cpp`: image_file ve webcam gerçek source executor'ları. `ExecutionService.cpp`: scoped webcam Qt discovery + WebcamAdapter; injection sourceKind eşleşmesi kapısı industrial ürün desteği değildir; actual frame sonrası snapshot geometri kontrolü korunur | 07b |
 | Immutable admission | `application/ProductionRecipeService.cpp`, dependencies: measurementSource/1 dört alan, acquisition üç alan; complete webcam, ROI/binning yok; whitelist'te industrial yok. editor9 doğrudan single service'de ret, whole-set service gerekli | 08a |
 | Çok-source admission | `application/MultiSourceRuntimeService.cpp`: her dal iç projection editor8 ile aynı ProductionRecipeService kontrolünden geçer; aynı fiziksel kaynak tekrar talebi reddedilir. Whole-set provider atomic consistency yerine sessiz parçalı fallback yapmaz | 08a |
@@ -79,7 +79,7 @@ yeni codec dalıyla ekler; mevcut schema'ya alan ekleyip exact-field kontrolün�
 | Project / Recipe | root1; recipe1–2; `domain/Project.cpp`, `persistence/ProjectRepository.cpp`; calibrationBinding yalnız recipe2 |
 | Editor | reader1–9; dependency array7, reference/world opt-in8, explicit multi-source9; `domain/ToolDefinition.cpp`. Eski Save sırf yeni kod açıldı diye9 olmaz |
 | Engine | `visionflow.execution/24`; `application/ExecutionService.hpp` |
-| Tool descriptor'ları | 16 built-in: image_file1, template_match1, blob3, edge1, calculate1, webcam1, measurement2, preprocess1, code_read2, edge_point3, geometry_measurement2, edge_pair2, line_fit3, circle_fit3, pattern_pose1, shape_pose1; `domain/ToolRegistry.cpp` |
+| Tool descriptor'ları | 17 built-in: image_file1, template_match1, blob3, edge1, calculate1, webcam1, measurement2, preprocess1, code_read2, edge_point3, geometry_measurement2, edge_pair2, line_fit3, circle_fit3, pattern_pose1, shape_pose1, industrial_camera1 (minimum editor9); `domain/ToolRegistry.cpp` |
 | Measurement contract | DeviceBinding1, GeometryDescriptor1, MeasurementCamera1, MeasurementSetupDescriptor1, MeasurementSetupContract1; DeviceCapabilities sürümsüz dört bool nested nesne; `domain/MeasurementSetupContract.cpp`. ICM-03a ekledi: MeasurementCamera2 (`physical` zorunlu; yoksa schema 1 bayt aynı), PhysicalDeviceIdentity1; TransportLocator1/BackendIdentity1 yalnız yerel, projeye yazılmaz. ICM-03b ekledi: GeometryDescriptor2 (decimation/reverse + açık ROI/binning; yalnız endüstriyel), MeasurementSetupContract2 (`profiles` boş değilse), AcquisitionProfile1/AcquisitionSettings1, AcquisitionReadback1/GeometryReadback1; eski yazımlar bayt/hash aynı |
 | Environment / transfer | measurement-environment1, measurement-bundle1; `application/MeasurementEnvironment.cpp`. Registry geçmişi/arşiv/selection alanları hash'e dahildir |
 | Source evidence | SetupReference1, MeasurementSourceEvidence1; origin camera_acquired/setup_file/trial_file/legacy_record, sourceKind recipe_tool/calibration_session; `MeasurementSourceIdentity.cpp` |
@@ -112,9 +112,11 @@ terminal1–7 SDK/registry olmadan okuma, Stop/ERROR boş değer ve vf.socket2 s
 ## Industrial tool ve evidence genişletme kararı
 
 Yeni tool kind **`industrial_camera`** olarak sabitlendi; `gentl` mevcut discovery/binding
-adapter etiketi olarak kalır. Bu ad henüz ToolRegistry/Toolbox'a eklenmedi. Webcam'in
-adı veya parametreleri industrial olarak yeniden yorumlanmayacak. ICM-07a yeni source'u
-registry/default/validation/port/migration ile explicit ekleyecek; backend seçimi ICM-02'de.
+adapter etiketi olarak kalır. ICM-07a `industrial_camera`/1'i registry/default/validation/
+Image port/migration ile explicit ekler (minimum editor9); Toolbox offline taslaktır.
+Webcam'in adı veya parametreleri industrial olarak yeniden yorumlanmaz.
+`sourceReference` null veya strict referans1 nesnesidir; backend seçimi yerel factory'dedir.
+Execution/24 ve terminal7 değişmedi; edinim 07b, profil seçim UI 07c'de kalır.
 
 ICM-03a fiziksel identity/confidence ile local TransportLocator ve BackendIdentity'yi
 ayırır. ICM-03b requested/applied profile ve tam geometri codec'lerini ekler. ICM-04c/d

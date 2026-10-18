@@ -57,8 +57,7 @@ int main(int argc,char** argv){QCoreApplication app(argc,argv);try{
     auto changed=c;changed.profiles[0].requested.trigger.selector="FrameStart";
     auto frameStart=IndustrialSourceReference::bind(changed,{"profile"},5000);
     check(frameStart.acquisitionId!=r.acquisitionId,"FrameBurstStart never aliases FrameStart");
-    // Fixture reference is not installed in the product registry; existing rejection remains.
-    reject([]{ToolRegistry::get("industrial_camera");});
+    check(ToolRegistry::get("industrial_camera").acquisitionSource,"industrial source registered explicitly");
     changed=c;changed.profiles[0].requested.pixelFormat="Mono12";
     reject([&]{IndustrialSourceReference::bind(changed,{"profile"},5000);});
     changed=c;changed.profiles[0].requested.exposureAuto=AutoMode::Continuous;

@@ -1,6 +1,6 @@
 # VisionFlow — güncel devir
 
-Güncelleme: 18 Ekim 2026.
+18 Ekim 2026.
 Son yönlendirme önceliklidir. Ayrıntılar [arşivde](archive/README.md).
 
 ## Devam noktası
@@ -11,14 +11,14 @@ Son yönlendirme önceliklidir. Ayrıntılar [arşivde](archive/README.md).
   [06a](archive/2026-10-18-icm-06a.md), [06b kapanış](archive/2026-10-18-icm-06b.md).
   Önceki [04f](archive/2026-10-18-icm-04f.md), [05a](archive/2026-10-18-icm-05a.md),
   [05b](archive/2026-10-18-icm-05b.md) tamam.
-  Sıradaki **07a → 07b → 07c → 08a → 08b → 08c → 09a**.
+  Sıradaki **07b → 07c → 08a → 08b → 08c → 09a**.
   [04f kartı](architecture/industrial-camera-tasks-foundation.md),
   [Basler/Daheng paketleri](architecture/industrial-camera-tasks-backends.md).
   OECS native 04d/04e açık/ertelenmiş; ortak sıra için önkoşul değil. Test adaptörü
   normal ürün yoluna açılamaz; G2 yazılım, G0/G1/G3 backend, G4 kurulum kabulüdür.
 - Hazırlıklar: [04e-b](archive/2026-10-18-icm-04e-b.md) stress,
   [05a-a](archive/2026-10-18-icm-05a-a.md) resolve ve
-  [07a-a](archive/2026-10-18-icm-07a-a.md) kaynak codec; 07a ürün bağlantısı açık.
+  [07a](archive/2026-10-18-icm-07a.md) kaynak registry/codec ve offline Editor taslağı tamam.
 - [ICM-04e-a](archive/2026-10-18-icm-04e-a.md) tamam: lease/worker, polling/shutdown,
   geç kare ret ve cleanup karantinası.
   [ICM-03c](archive/2026-10-18-icm-03c.md) owned ölçüm rasteri/geometri adayı da hazır;
@@ -94,10 +94,11 @@ ve seçili kartın sözleşme/kabulü. Önce başlık/ID arayın.
 
 ## Son doğrulama ve çalışma ortamı
 
-- **ICM-06b:** Release UI uygulama/ilgili hedefler ve core ilgili build;
-  core **8/8**, UI **6/6**, test font düzeltmesi sonrası **1/1** tekrar.
-  `build/icm-06b-*.log`, görseller `build/reference-ui/icm/06b/` incelendi.
-  Fixture; fiziksel kamera denenmedi. 06a önceki **5/5** kanıtı kapanışındadır.
+- **ICM-07a:** industrial source/1 registry, strict referans ve editor9 offline taslağı;
+  legacy editor1–8 no-op/hash korundu. Core **8/8**; UI ilk **10/11**, düğme
+  ve görsel düzeltmeleri sonrası **2/2**. [Kapanış](archive/2026-10-18-icm-07a.md).
+  Kanıt: `build/icm-07a-*`, görsel: `build/reference-ui/icm/07a/`.
+  Fiziksel kamera denenmedi.
   `plc_socket_runtime` aralıklı başarısızlığı/kök neden açık kalır.
 - Güncel UI `build/reference-ui/visionflow.exe`, core `build/kmc9-core-off`.
   Başlatma `.\scripts\run-local.ps1`; build/PATH komutları README'dedir.
@@ -106,8 +107,8 @@ ve seçili kartın sözleşme/kabulü. Önce başlık/ID arayın.
 
 ## Kapanış ve sonraki adım
 
-**ICM-06a/06b tamam; sıradaki ICM-07a, ardından ICM-07b.** 04e-a/b, 05a-a, 07a-a yeniden yapılmaz;
-ölçüm adayı configure girdisi değildir. 05a/07a ürün kabulü açık.
+**ICM-07a tamam; sıradaki ICM-07b, ardından ICM-07c.** 04e-a/b, 05a-a, 07a-a yeniden yapılmaz;
+ölçüm adayı configure girdisi değildir. 07b edinim, 07c profil seçim UI ve 08a/b production açık.
 [04d cancel incelemesi](archive/2026-10-18-icm-04d-cancel-audit.md): AcquisitionAbort
 yok; DeviceReset garantisiz, çalıştırılmadı. Üretici taslağı gönderilmedi.
 Delay=0, close/open/sessizlik kanıt değil; aynı deneyi tekrarlamayın. Native Unavailable.

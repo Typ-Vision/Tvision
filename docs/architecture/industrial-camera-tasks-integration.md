@@ -83,9 +83,13 @@ Native capability yokken ayar uygulama/preview kapalıdır; offline taslak düze
 
 ## ICM-07a — industrial source tool ve migration
 
+**Ortak yazılım kabulü tamam:** [kapanış](../archive/2026-10-18-icm-07a.md).
+Industrial Camera/1 açık ekleme ile editor9 taslağıdır; seçim/edinim UI 07c,
+execution 07b, production admission 08a/b kapsamındadır.
+
 **07a-a bağımsız hazırlığı tamam:** standalone IndustrialSourceReference1 codec,
-versioned kamera/setup/profile ve requested acquisition hash kontrolü. ToolRegistry,
-Editor/project codec, migration ve execution bağlantısı yok; ana 07a ve 05a önkoşulu açık.
+versioned kamera/setup/profile ve requested acquisition hash kontrolü; 07a bunu
+registry ve Editor/project codec'e bağladı. Eski webcam dönüştürülmez.
 
 - Önkoşul: 05a.
 - Dosyalar: ToolRegistry/ToolDefinition/ToolGraph, ProjectService, source/profile codec.

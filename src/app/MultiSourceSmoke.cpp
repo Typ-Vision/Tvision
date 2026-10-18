@@ -14,6 +14,7 @@
 #include <QTableWidget>
 #include <QStackedWidget>
 #include <QLabel>
+#include <QListWidget>
 #include <QJsonArray>
 #include "application/ProductionResultCodec.hpp"
 #include <cmath>
@@ -42,6 +43,16 @@ bool MainWindow::verifyMultiSource(const QString& artifacts){
         selectTool(edges.last());resize(1400,900);QApplication::processEvents();check(grab().save(QDir(artifacts).filePath(QString("kmc10b-editor-%1-normal.png").arg(n))),"Normal screenshot");resize(850,600);QApplication::processEvents();check(grab().save(QDir(artifacts).filePath(QString("kmc10b-editor-%1-small.png").arg(n))),"Small screenshot");check(picker->isEnabled(),"Small source selector enabled");
         service_.removeTool(sources.first());refreshWorkspace();check(!editorSession_.sourceFrames.contains(sources.first()),"Deleted source frame removed");service_.save();
     }
+    service_.createRecipe("Industrial source draft","",ApplicationType::Measurement,"industrial");
+    const auto industrial=service_.addTool("industrial_camera");refreshWorkspace();selectPage("editor");selectTool(industrial);
+    check(findChild<QLabel*>("industrialSourceStatus") && !findChild<QPushButton*>("runSelectedTool")->isEnabled(),"Industrial draft clearly unavailable");
+    check(matchInfo_->text().isEmpty() && imageInfo_->text()=="Görüntü yok.","New industrial recipe clears previous results/frame labels");
+    service_.save();refreshWorkspace();selectTool(industrial);
+    for(int i=0;i<toolbox_->count();++i)if(toolbox_->item(i)->data(Qt::UserRole)=="industrial_camera"){toolbox_->setCurrentRow(i);toolbox_->scrollToItem(toolbox_->item(i));}
+    const auto output=QDir(artifacts).filePath("icm/07a");check(QDir().mkpath(output),"Industrial screenshot directory");
+    resize(1400,900);QApplication::processEvents();check(grab().save(output+"/industrial-normal.png"),"Industrial normal screenshot");
+    resize(850,600);QApplication::processEvents();check(grab().save(output+"/industrial-small.png"),"Industrial small screenshot");
+    runFlow();wait();check(editorSession_.cycle && editorSession_.cycle->state==ExecutionState::Error && editorSession_.sourceFrames.isEmpty(),"Industrial Run Flow fails without fabricated raster");
     QTextStream(stdout)<<checks<<" multi-source UI checks passed\n";return true;
 }
 }

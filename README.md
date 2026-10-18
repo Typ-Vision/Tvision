@@ -16,7 +16,7 @@ UI algoritma veya donanım SDK'sını doğrudan çağırmaz.
   kayıtları, restart geçmişi, Logs/CSV ve vf.socket2 scalar mapping.
 - Image File/Webcam edinimi; Camera Manager'da ortak keşif, kamera kaydı ve
   çevrimdışı Mono8 profil taslağı. Native endüstriyel edinim kapalıdır;
-  kalibrasyon sözleşmesi bağlı, Editor/Runtime bağlantısı açık.
+  Industrial Camera Editor taslağı eklenebilir; profil seçim UI/edinim ve Runtime henüz yoktur.
 
 Hazırlık veya keşif sonucu üretim kabulü değildir. Gerçek sonuç olmadan PASS, skor
 veya robot pose gösterilmez. Robot hazırlık ekranları çalışan robot entegrasyonu

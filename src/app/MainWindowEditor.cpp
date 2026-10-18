@@ -65,6 +65,7 @@ QWidget* MainWindow::makeEditor() {
         const auto kind=descriptor.kind;
         auto* item=new QListWidgetItem(toolLabel(kind),toolbox_); item->setData(Qt::UserRole,QString(kind));
         if(kind=="code_read" && !BackendCapabilities::get("zxing-reader").available){item->setFlags(item->flags() & ~Qt::ItemIsEnabled);item->setToolTip("Kod okuyucu backend bu derlemede yok; araç eklenemez.");continue;}
+        if(kind=="industrial_camera"){item->setToolTip("Çevrimdışı kaynak taslağı ekler. Kamera/profil seçimi ve edinim bağlantısı henüz kullanılamıyor.");continue;}
         item->setToolTip(QString(kind)=="image_file" ? "Dosyadan görüntü edinme" : QString(kind)=="template_match" ? "ROI/model öğretme ve sabit açı/ölçek eşleştirme" : "Gerçek tool yürütmesi; girişleri Properties üzerinden bağlayın.");
     }
     toolbox_->setCurrentRow(0); toolsLayout->addWidget(toolbox_,1);
@@ -140,7 +141,7 @@ void MainWindow::showFlowMenu(const QPoint& position) {
 }
 void MainWindow::refreshEditor() {
     const auto* recipe=service_.activeRecipe(); const QString recipeId=recipe ? service_.project().id+"/"+recipe->id : "";
-    if (recipeId!=editorRecipeId_) {editorSession_.sourceFrames.clear();editorSession_.frame.reset();editorSession_.invalidateResults();pendingDrawTool_.clear();imageViewer_->cancelRoi();selectedToolId_.clear(); editorRecipeId_=recipeId; imageBinding_.clear();}
+    if (recipeId!=editorRecipeId_) {editorSession_.sourceFrames.clear();editorSession_.frame.reset();editorSession_.invalidateResults();matchInfo_->clear();imageInfo_->setText("Görüntü yok.");pendingDrawTool_.clear();imageViewer_->cancelRoi();selectedToolId_.clear(); editorRecipeId_=recipeId; imageBinding_.clear();}
     const auto tools=recipe ? service_.tools() : QVector<ToolDefinition>{};
     const QSignalBlocker blocker(flowTools_);
     if (!propertiesEditing_) flowTools_->clear();
@@ -211,9 +212,10 @@ void MainWindow::showToolProperties() {
     auto* drawHint=note("");drawHint->setObjectName("newToolDrawHint");drawHint->hide();form->addRow(drawHint);
     if(tool.kind!="template_match") {
         auto* run=new QPushButton(ToolRegistry::get(tool.kind).acquisitionSource ? "Görüntü al" : "Run Tool");run->setObjectName("runSelectedTool");form->addRow(run);
+        if(tool.kind=="industrial_camera")run->setEnabled(false);
         connect(run,&QPushButton::clicked,this,[this,tool]{runExecution(tool.id);});
     }
-    if(ToolRegistry::get(tool.kind).acquisitionSource && measurementWorkspace_){
+    if(ToolRegistry::get(tool.kind).acquisitionSource && tool.kind!="industrial_camera" && measurementWorkspace_){
         auto* setups=new QComboBox;setups->setObjectName("sourceSetupSelector");setups->addItem("Kurulum bağı yok",QJsonObject{});
         const auto e=measurementWorkspace_->environment();for(const auto& s:e.current.setups)if(!e.archivedSetups.contains(s.id.value) && !e.archivedCameras.contains(s.camera.value))setups->addItem(s.name+QString(" • r%1").arg(s.revision),SetupReference{s.camera,s.id,s.revision}.toJson());
         const auto d=service_.activeRecipe()->definition;const auto binding=d["sourceSetups"].toObject().contains(tool.id) ? d["sourceSetups"].toObject()[tool.id].toObject():d["sourceSetup"].toObject();const auto current=binding["sourceToolId"]==tool.id ? binding["target"].toObject():QJsonObject{};for(int i=0;i<setups->count();++i)if(setups->itemData(i).toJsonObject()==current)setups->setCurrentIndex(i);
@@ -222,7 +224,11 @@ void MainWindow::showToolProperties() {
         connect(bind,&QPushButton::clicked,this,[this,setups,tool]{try{if(editorSession_.busy() || runtimeJobs_.busy() || (runtimeCoordinator_ && (runtimeCoordinator_->state()==RuntimeState::Running || runtimeCoordinator_->state()==RuntimeState::Starting || runtimeCoordinator_->state()==RuntimeState::Stopping)) || (plc_ && plc_->blocking()))throw std::runtime_error("Önce Runtime/worker/pending kayıt/ACK işlemini bitirin.");const auto before=service_.activeRecipe()->definition;const auto target=setups->currentData().toJsonObject();if(target.isEmpty())service_.clearSourceSetup(tool.id);else service_.bindSourceSetup(tool.id,target);if(before==service_.activeRecipe()->definition)return;editorSession_.invalidateTool(editorContext(),tool.id);editorSession_.sourceFrames.remove(tool.id);editorSession_.frame.reset();editorSession_.invalidateResults();imageBinding_.clear();matchInfo_->clear();refreshWorkspace();}catch(const std::exception& e){displayError(QString::fromUtf8(e.what()));}});
         auto* manage=new QPushButton("Kurulumları aç");manage->setObjectName("sourceSetupManage");form->addRow(manage);connect(manage,&QPushButton::clicked,this,[this]{selectPage("calibration");});
     }
-    if (tool.kind=="image_file") {
+    if(tool.kind=="industrial_camera") {
+        auto* status=note("Çevrimdışı kaynak taslağı. Kamera/profil seçimi ve edinim bağlantısı henüz kullanılamıyor.");status->setObjectName("industrialSourceStatus");form->addRow(status);
+        const auto reference=tool.parameters["sourceReference"].toObject();
+        if(!reference.isEmpty())form->addRow(note(QString("Kamera: %1\nKurulum: %2 • Profil: %3\nTimeout: %4 ms").arg(reference["cameraId"].toString(),reference["setupId"].toString(),reference["profileId"].toString()).arg(reference["timeoutMs"].toInt())));
+    } else if (tool.kind=="image_file") {
         auto* path=new QLineEdit(tool.parameters["path"].toString()); path->setReadOnly(true); path->setCursorPosition(0); path->setPlaceholderText("Seçilmedi"); path->setToolTip(path->text()); form->addRow("File",path);
         auto* choose=new QPushButton("Open Image…"); form->addRow(choose); connect(choose,&QPushButton::clicked,this,&MainWindow::openImageDialog);
     } else if(tool.kind=="webcam") {

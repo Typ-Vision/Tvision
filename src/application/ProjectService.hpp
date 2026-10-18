@@ -5,6 +5,7 @@
 #include <QSet>
 #include <optional>
 #include "domain/ReferenceConfig.hpp"
+#include "domain/IndustrialSourceReference.hpp"
 
 namespace visionflow {
 class ProjectService {
@@ -28,6 +29,7 @@ public:
     QVector<ToolDefinition> tools() const;
     void enableMultiSource();
     QString addTool(const QString& kind);
+    void bindIndustrialSource(const QString& toolId,const MeasurementSetupContract&,const ProfileId&,int timeoutMs);
     void updateTool(const ToolDefinition& tool);
     // Commit teaching and its reference connection as one validated edit.
     void updateToolConnections(const ToolDefinition&,const QVector<ToolConnection>&);

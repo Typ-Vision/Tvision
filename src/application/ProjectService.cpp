@@ -120,7 +120,7 @@ void ProjectService::setTools(const QVector<ToolDefinition>& tools,const QVector
         definition=withEditorConnections(definition,connections);
         if (definition==r.definition || definition==withEditorTools(r.definition,editorTools(r.definition))) return;
         if(r.calibrationBinding) {
-            auto sourceConfig=[](const QVector<ToolDefinition>& list){QJsonArray sources;for(const auto& t:list)if(t.kind=="image_file" || t.kind=="webcam")sources.append(QJsonObject{{"id",t.id},{"kind",t.kind},{"enabled",t.enabled},{"parameters",t.parameters}});return sources;};
+            auto sourceConfig=[](const QVector<ToolDefinition>& list){QJsonArray sources;for(const auto& t:list)if(ToolRegistry::get(t.kind).acquisitionSource)sources.append(QJsonObject{{"id",t.id},{"kind",t.kind},{"enabled",t.enabled},{"parameters",t.parameters}});return sources;};
             if(sourceConfig(previous)!=sourceConfig(tools))r.calibrationBinding.reset();
         }
         r.definition=definition; r.status=RecipeStatus::Draft; validateProject(candidate);
@@ -181,6 +181,14 @@ void ProjectService::updateTool(const ToolDefinition& tool) {
     for (auto& t : list) if (t.id==tool.id) {
         if (t.kind!=tool.kind) fail("Tool türü değiştirilemez.");
         t=tool; setTools(list); return;
+    }
+    fail("Tool bulunamadı.");
+}
+void ProjectService::bindIndustrialSource(const QString& id,const MeasurementSetupContract& contract,const ProfileId& profile,int timeoutMs) {
+    const auto reference=IndustrialSourceReference::bind(contract,profile,timeoutMs);
+    for(auto tool:tools())if(tool.id==id){
+        if(tool.kind!="industrial_camera")fail("Industrial source tool required");
+        tool.parameters={{"sourceReference",reference.toJson()}};updateTool(tool);return;
     }
     fail("Tool bulunamadı.");
 }
