@@ -197,7 +197,7 @@ Offline Load beyandır; Run/native kabul kapısı korunur.
 - Önkoşul: 05b, 06b, 07c, 08c.
 - İş: son kaynakla Release UI/ZXing ON ve Widgets OFF/ZXing OFF tam CTest; legacy
   golden/no-op, camera missing startup, save-as/transfer ve görsel kontroller.
-- Çıktı: `docs/architecture/industrial-camera-release-acceptance.md` (uygulama sırasında);
+- Çıktı: [birleşik Release kabul raporu](industrial-camera-release-acceptance.md);
   `build/icm/09a/` log/XML/hash/görseller ve açık fiziksel matris.
 - Kabul: bütün zorunlu testler geçti; SDK kurulmamış ortam davranışı doğrulandı;
   ilk başarısızlık ve tekrar kanıtları saklı. Sadece regex test geçti diye tam kabul yok.

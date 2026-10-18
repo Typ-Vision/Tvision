@@ -538,7 +538,13 @@ bool MainWindow::verifyEdgePoint(const QString& artifacts) {
     auto wait=[&]{QApplication::processEvents();QElapsedTimer timer;timer.start();while((editorSession_.busy() || runtimeJobs_.busy()) && timer.elapsed()<20000){QApplication::processEvents();QThread::msleep(1);}QApplication::processEvents();check(!editorSession_.busy() && !runtimeJobs_.busy(),"edge UI worker deadline");};
     const auto recipe=service_.createRecipe("Yönlü kenar mm","",ApplicationType::Measurement,"file");refreshWorkspace();selectPage("editor");
     QImage fixture(1000,600,QImage::Format_Grayscale8);fixture.fill(20);{QPainter p(&fixture);p.fillRect(200,100,400,300,QColor(220,220,220));}const auto path=QDir(artifacts).filePath("edge-stripe.png");check(fixture.save(path) && loadEditorImage(path),"edge UI independent 400px stripe");const auto source=selectedToolId_;
-    QListWidgetItem* entry=nullptr;for(int i=0;i<toolbox_->count();++i)if(toolbox_->item(i)->data(Qt::UserRole)=="edge_point")entry=toolbox_->item(i);check(entry && toolbox_->count()==16,"sixteen Toolbox entries including pose tools");toolbox_->setCurrentItem(entry);findChild<QPushButton*>("addTool")->click();const auto left=selectedToolId_;findChild<QPushButton*>("addTool")->click();const auto right=selectedToolId_,measurement=service_.addTool("measurement");refreshWorkspace();
+    QListWidgetItem* entry=nullptr;bool industrialSource=false;
+    for(int i=0;i<toolbox_->count();++i) {
+        const auto kind=toolbox_->item(i)->data(Qt::UserRole).toString();
+        if(kind=="edge_point")entry=toolbox_->item(i);
+        if(kind=="industrial_camera")industrialSource=true;
+    }
+    check(entry && industrialSource && toolbox_->count()==17,"seventeen Toolbox entries including industrial source and pose tools");toolbox_->setCurrentItem(entry);findChild<QPushButton*>("addTool")->click();const auto left=selectedToolId_;findChild<QPushButton*>("addTool")->click();const auto right=selectedToolId_,measurement=service_.addTool("measurement");refreshWorkspace();
     auto bind=[&](QString target,QString input,QString upstream,QString output){selectTool(target);auto* c=propertiesBody_->findChild<QComboBox*>("input_"+input);check(c && c->findData(upstream+"/"+output)>0,"edge UI compatible binding");c->setCurrentIndex(c->findData(upstream+"/"+output));};
     bind(left,"image",source,"image");bind(right,"image",source,"image");bind(measurement,"p1",left,"point");bind(measurement,"p2",right,"point");
     selectTool(left);imageViewer_->fitImage();findChild<QPushButton*>("edgeDraw")->click();

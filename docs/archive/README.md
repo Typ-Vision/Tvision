@@ -6,6 +6,7 @@ görev” ifadeleri yazıldıkları tarihe aittir.
 
 | Dönem / görev | Kayıt |
 | --- | --- |
+| 18 Ekim 2026 — ICM-09a | [Birleşik Release yazılım kabulü; G2 kapalı](2026-10-18-icm-09a.md) |
 | 18 Ekim 2026 — ICM-08c | [Industrial Runtime/Logs sunumu ve offline Load](2026-10-18-icm-08c.md) |
 | 18 Ekim 2026 — ICM-08b | [Trusted industrial completion, terminal8/9 ve retry](2026-10-18-icm-08b.md) |
 | 18 Ekim 2026 — ICM-08a | [Immutable industrial Runtime admission ve actual worker denetimi](2026-10-18-icm-08a.md) |
