@@ -132,19 +132,36 @@ void ImageViewer::renderRoi(){
     if(!validDomain_.isEmpty()){QPainterPath domain;polygon(domain,validDomain_,true);add(domain,QColor("#56b4ff"),Qt::DashLine);}
     const auto shown=roiDraft_ ? roiDraft_:roi_;if(!shown)return;
     QPainterPath path;std::visit([&](const auto& g){using T=std::decay_t<decltype(g)>;
-        if constexpr(std::is_same_v<T,ScanSegment>){const auto d=g.end-g.start;const auto len=QLineF(g.start,g.end).length();if(len<1e-9)return;const auto n=QPointF(-d.y(),d.x())*(g.width/(2*len));polygon(path,{g.start+n,g.end+n,g.end-n,g.start-n},true);path.moveTo(g.start);path.lineTo(g.end);if(!roiToRaw_){const auto tip=angle(g.start,g.end);path.moveTo(polar(g.end,8,tip+150));path.lineTo(g.end);path.lineTo(polar(g.end,8,tip-150));}}
+        if constexpr(std::is_same_v<T,ScanSegment>){const auto d=g.end-g.start;const auto len=QLineF(g.start,g.end).length();if(len<1e-9)return;const auto n=QPointF(-d.y(),d.x())*(g.width/(2*len));polygon(path,{g.start+n,g.end+n,g.end-n,g.start-n},true);}
         else if constexpr(std::is_same_v<T,RotatedRectangle>){QVector<QPointF> p;for(auto v:QVector<QPointF>{{-g.size.width()/2,-g.size.height()/2},{g.size.width()/2,-g.size.height()/2},{g.size.width()/2,g.size.height()/2},{-g.size.width()/2,g.size.height()/2}})p<<g.centre+local(v,-g.angleDegrees);polygon(path,p,true);}
         else if constexpr(std::is_same_v<T,Annulus>){for(auto r:{g.innerRadius,g.outerRadius}){if(roiToRaw_){QVector<QPointF> p;for(int i=0;i<=180;++i)p<<polar(g.centre,r,i*2.);polygon(path,p,true);}else path.addEllipse(g.centre,r,r);}}
-        else if constexpr(std::is_same_v<T,ArcRoi>){QVector<QPointF> p;const int count=std::max(2,int(std::abs(g.sweepDegrees)/2)+1);for(int i=0;i<=count;++i)p<<polar(g.ring.centre,g.ring.outerRadius,g.startDegrees+g.sweepDegrees*i/count);for(int i=count;i>=0;--i)p<<polar(g.ring.centre,g.ring.innerRadius,g.startDegrees+g.sweepDegrees*i/count);polygon(path,p,true);}
+        else if constexpr(std::is_same_v<T,ArcRoi>){
+            if(std::abs(g.sweepDegrees)==360){for(auto r:{g.ring.innerRadius,g.ring.outerRadius}){QVector<QPointF> p;for(int i=0;i<180;++i)p<<polar(g.ring.centre,r,g.startDegrees+g.sweepDegrees*i/180);polygon(path,p,true);}return;}
+            QVector<QPointF> p;const int count=std::max(2,int(std::abs(g.sweepDegrees)/2)+1);for(int i=0;i<=count;++i)p<<polar(g.ring.centre,g.ring.outerRadius,g.startDegrees+g.sweepDegrees*i/count);for(int i=count;i>=0;--i)p<<polar(g.ring.centre,g.ring.innerRadius,g.startDegrees+g.sweepDegrees*i/count);polygon(path,p,true);}
         else polygon(path,g.vertices,std::is_same_v<T,PolygonRoi>);
     },shown->geometry);
     bool valid=false;try{if(roiToRaw_){QPainterPath mapped;for(int i=0;i<path.elementCount();++i){auto e=path.elementAt(i);auto p=roiToRaw_({e.x,e.y});if(e.isMoveTo())mapped.moveTo(p);else mapped.lineTo(p);}path=mapped;
-        if(const auto* scan=std::get_if<ScanSegment>(&shown->geometry)){
-            const auto a=roiToRaw_(scan->start),b=roiToRaw_(scan->end);const auto tip=angle(a,b);
-            path.moveTo(polar(b,8,tip+150));path.lineTo(b);path.lineTo(polar(b,8,tip-150));
-        }
         valid=true;}else valid=shown->inside(imageItem_->pixmap().size());}catch(const std::exception&){return;}
     add(path,valid ? QColor("#ffd166"):QColor("#ff8585"));
+    // Generate all nominal scans before drawing: a failed map yields no partial guide.
+    try {
+        QVector<QLineF> lines;
+        QVector<QLineF> nominal;
+        if(scanGuides_)nominal=scanGuides_(*shown);
+        else if(const auto* scan=std::get_if<ScanSegment>(&shown->geometry))nominal.append(QLineF(scan->start,scan->end));
+        if(roiToRaw_ || shown->frame.unit==LengthUnit::Pixel)for(const auto& line:nominal) {
+            const auto a=roiToRaw_ ? roiToRaw_(line.p1()):line.p1(),b=roiToRaw_ ? roiToRaw_(line.p2()):line.p2();
+            if(!std::isfinite(a.x()) || !std::isfinite(a.y()) || !std::isfinite(b.x()) || !std::isfinite(b.y()) ||
+               !QRectF(imageItem_->pixmap().rect()).contains(a) || !QRectF(imageItem_->pixmap().rect()).contains(b))throw std::runtime_error("Guide outside raw domain");
+            lines.append(QLineF(a,b));
+        }
+        QPen pen(QColor("#849aab"),1);pen.setCosmetic(true);
+        for(const auto& line:lines){auto* shaft=scene_->addLine(line,pen);shaft->setZValue(10);shaft->setData(0,"scanGuide");roiItems_<<shaft;
+            const double tip=angle(line.p1(),line.p2()),size=std::min(6.,line.length()*zoomFactor()*.3);
+            QPainterPath head;head.moveTo(polar({},size,tip+150));head.lineTo({});head.lineTo(polar({},size,tip-150));
+            auto* item=scene_->addPath(head,pen);item->setFlag(QGraphicsItem::ItemIgnoresTransformations);item->setPos(line.p2());item->setZValue(10);roiItems_<<item;
+        }
+    }catch(const std::exception&){}
     if(roiEditing_ && !roiDraft_){QPen pen(QColor("#66e3c4"),2);pen.setCosmetic(true);for(auto p:roiHandles(*shown)){auto* h=scene_->addRect(-4,-4,8,8,pen,QBrush(QColor("#101923")));h->setFlag(QGraphicsItem::ItemIgnoresTransformations);h->setPos(roiToRaw_ ? roiToRaw_(p):p);h->setZValue(11);roiItems_<<h;}}
     auto* label=scene_->addSimpleText(valid ? (roiRecipeBound_ ? (roi_ && std::holds_alternative<ScanSegment>(roi_->geometry) ? (roiToRaw_ ? "Reçete oku • A → B • mm → raw":"Reçete oku • A → B • raw px"):(roiToRaw_ ? "Reçete halka/yay • mm → raw":"Reçete ROI • raw px")):"Geçici ROI • raw px"):"Geçersiz / sınır dışında");label->setBrush(valid ? QColor("#ffd166"):QColor("#ff8585"));label->setFlag(QGraphicsItem::ItemIgnoresTransformations);label->setPos(0,0);label->setZValue(12);roiItems_<<label;
 }

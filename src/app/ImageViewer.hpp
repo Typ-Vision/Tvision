@@ -42,6 +42,8 @@ public:
     void setRoiEditable(bool editable);
     void setRoiFrame(const QString& id);
     void setRoiMapping(const CoordinateFrame&,std::function<QPointF(QPointF)> toRaw={},std::function<QPointF(QPointF)> fromRaw={});
+    void setScanGuides(std::function<QVector<QLineF>(const ToolRoi&)> generator) {scanGuides_=std::move(generator);renderRoi();}
+    void previewRoi(const std::optional<ToolRoi>& roi) {roiDraft_=roi;renderRoi();}
     void cancelRoi();
     bool roiGestureActive() const {return roiDrawing_>=0 || roiDragging_ || searchDragging_;}
     bool drawingActive() const {return drawing_ || roiGestureActive();}
@@ -99,6 +101,7 @@ private:
     QList<QGraphicsItem*> roiItems_;
     QVector<QPointF> roiVertices_,validDomain_;
     CoordinateFrame roiCoordinates_{"viewer/raw"};
+    std::function<QVector<QLineF>(const ToolRoi&)> scanGuides_;
     std::function<QPointF(QPointF)> roiToRaw_,roiFromRaw_;
     QString roiFrame_="viewer/raw",roiStatus_;
     int roiDrawing_=-1,roiHandle_=-1;

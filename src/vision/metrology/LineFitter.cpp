@@ -1,4 +1,5 @@
 #include "LineFitter.hpp"
+#include "ScanLayout.hpp"
 #include <opencv2/geometry.hpp>
 #include <algorithm>
 #include <cmath>
@@ -87,13 +88,12 @@ QVector<LineScanPoint> LineFitter::observationsMapped(const ImageFrame& image,co
     require(pixels<=16*1024*1024 && pixels*o.scanCount<=512*1024*1024,"Line image/hash work budget exceeded");
     // Preflight aggregate work before allocating profiles or hashing/reading pixels.
     const auto p=o.edge.profile;require(std::isfinite(p.stepPx) && p.stepPx>=.05 && p.stepPx<=16 && std::isfinite(p.widthStepPx) && p.widthStepPx>=.25 && p.widthStepPx<=16 && std::isfinite(p.sigmaPx) && p.sigmaPx>=0 && p.sigmaPx<=16,"Invalid line sampling options");
-    const double angle=box.angleDegrees*std::numbers::pi/180;const QPointF u(std::cos(angle),std::sin(angle)),n(-u.y(),u.x());
+    const auto layout=ScanLayout::line(box,o.scanCount,o.scanWidthPx);
     QVector<ToolRoi> scanRois;scanRois.reserve(o.scanCount);double totalTaps=0,totalConvolution=0;
-    for(int i=0;i<o.scanCount;++i){stop();const double t=(box.size.width()-o.scanWidthPx)*(double(i)/(o.scanCount-1)-.5);const auto centre=box.centre+u*t;
-        ToolRoi scan{roi.frame,ScanSegment{centre-n*(box.size.height()/2),centre+n*(box.size.height()/2),o.scanWidthPx}};
+    for(const auto& segment:layout){stop();ToolRoi scan{roi.frame,segment};
         // Use the actual endpoints, as the sampler does: rotated floating-point
         // lengths can cross a ceil boundary even when nominal height is integral.
-        const auto segment=std::get<ScanSegment>(scan.geometry);const double length=QLineF(segment.start,segment.end).length();
+        const double length=QLineF(segment.start,segment.end).length();
         const double count=std::ceil(length/p.stepPx)+1,across=std::ceil(o.scanWidthPx/p.widthStepPx)+1,step=length/(count-1),radius=p.sigmaPx==0 ? 0:std::ceil(3*p.sigmaPx/step);
         require(count<=65536 && across<=1024 && radius<=1024 && count>=2*radius+4 && count*across<=4*1024*1024,"Line profile budget/support exceeded");
         totalTaps+=count*across;totalConvolution+=(count-2*radius)*(2*radius+1);

@@ -106,7 +106,7 @@ int main(int argc,char** argv){QApplication app(argc,argv);QFontDatabase::addApp
                         ++labels;check(text->isVisible()==visible,"all result labels follow preference");
                         check(std::abs(text->scale()-std::min(zoom,1.5))<1e-9 && text->font().pointSizeF()==11,"text scales at 10/25/100/400 percent with 11pt base and 150 percent cap");
                     }else if(item->zValue()==5){check(item->isVisible()==visible && std::abs(item->scale()-std::min(zoom,1.5))<1e-9,"background shares text visibility and scale");}
-                    else check(item->isVisible()==geometryVisibility[item],"raster geometry mask and ROI visibility unchanged");
+                    else if(item->zValue()<10)check(item->isVisible()==geometryVisibility[item],"raster geometry mask and ROI visibility unchanged");
                 }check(labels>0,"fixture contains result labels");
                 if(visible){viewer.resize(1400,900);viewer.centerOn(320,240);app.processEvents();check(viewer.grab().save(dir.filePath(QString("eui03-kind%1-zoom%2.png").arg(kind).arg(int(zoom*100)))),"annotation zoom PNG");}
             }
@@ -114,5 +114,15 @@ int main(int argc,char** argv){QApplication app(argc,argv);QFontDatabase::addApp
     }
     viewer.setResultAnnotationsVisible(false);viewer.setImage(image);viewer.setToolOverlay({},{{300,240}}, {},"new result");
     for(auto* item:viewer.scene()->items())if(dynamic_cast<QGraphicsSimpleTextItem*>(item))check(!item->isVisible(),"hidden preference survives new image and Run overlay");
+    viewer.setRoiFrame("test/raw");viewer.setScanGuides([](const ToolRoi&){return QVector<QLineF>{{{200,200},{260,200}},{{200,220},{260,220}}};});
+    viewer.setRoi(ToolRoi{{"test/raw"},Annulus{{240,210},20,60}},false);
+    for(double zoom:{.1,1.,4.}){viewer.actualSize();viewer.zoomBy(zoom);int count=0;
+        for(auto* item:viewer.scene()->items())if(item->data(0)=="scanGuide"){++count;check(item->isVisible(),"guides independent of result visibility");}
+        check(count==2,"zoom retains all guide shafts");}
+    viewer.setRoiMapping({"world",LengthUnit::Millimetre},[](QPointF p){return QPointF(p.x()*2+10,p.y()*2+20);});
+    viewer.setRoi(ToolRoi{{"world",LengthUnit::Millimetre},Annulus{{100,100},10,20}},false);
+    int mapped=0;for(auto* item:viewer.scene()->items())if(item->data(0)=="scanGuide")++mapped;check(mapped==2,"world guides map through viewer mapping");
+    viewer.setScanGuides([](const ToolRoi&){return QVector<QLineF>{{{200,200},{260,200}},{{200,220},{1e6,220}}};});
+    mapped=0;for(auto* item:viewer.scene()->items())if(item->data(0)=="scanGuide")++mapped;check(mapped==0,"failed mapping publishes no partial guides");
     QTextStream(stdout)<<checks<<" viewer checks passed\n";return 0;
 }catch(const std::exception& e){QTextStream(stderr)<<e.what()<<" after "<<checks<<"\n";return 1;}}

@@ -8,6 +8,7 @@
 #include "application/ProductionResultCodec.hpp"
 #include "application/ToolResultCodec.hpp"
 #include <QGraphicsScene>
+#include <QGraphicsItem>
 #include <QSplitter>
 #include <QTabWidget>
 #include "ImageViewer.hpp"
@@ -38,6 +39,8 @@
 #include <QListWidget>
 #include <QMouseEvent>
 #include <QPainter>
+#include <QGraphicsScene>
+#include <QGraphicsItem>
 #include <QPushButton>
 #include <QLabel>
 #include <QComboBox>
@@ -613,6 +616,20 @@ bool MainWindow::verifyCircle(const QString& artifacts){
     auto geometry=[&](double cx,double cy,double inner,double outer,double sweep){selectTool(id);for(const auto& v:QVector<QPair<QString,double>>{{"cx",cx},{"cy",cy},{"inner",inner},{"outer",outer},{"start",17.3},{"sweep",sweep}})propertiesBody_->findChild<QDoubleSpinBox*>("mt_roi_"+v.first)->setValue(v.second);propertiesBody_->findChild<QPushButton*>("metrologyApplyRoi")->click();wait();check(imageViewer_->roi().has_value(),"Circle numeric ROI commit");};
     geometry(96.25,95.75,34,46,360);auto before=imageViewer_->roi();imageViewer_->undoRoi();wait();check(!imageViewer_->roi(),"Circle undo bound ROI");geometry(96.25,95.75,34,46,360);check(imageViewer_->roi()==before,"Circle exact subpixel numeric restore");
     propertiesBody_->findChild<QComboBox*>("mt_polarity")->setCurrentText("rising");runFlow();wait();auto result=[&]()->ToolResult{check(editorSession_.cycle.has_value(),"Circle cycle");for(const auto& r:editorSession_.cycle->tools)if(r.toolId==id)return r;throw std::runtime_error("Circle result missing");};check(result().state==ExecutionState::Done && std::abs(std::get<double>(result().outputs["diameterPx"].data)-80)<.3,"Circle UI actual px");
+    // EUI-04: preview changes nominal geometry immediately, commits only on finish.
+    {const auto original=imageViewer_->roi();const auto definition=service_.activeRecipe()->definition;
+        auto* sweep=propertiesBody_->findChild<QDoubleSpinBox*>("mt_roi_sweep");sweep->setValue(90);
+        check(service_.activeRecipe()->definition==definition && imageViewer_->roi()==original && !editorSession_.cycle,"preview preserves recipe and clears stale fit");
+        int arrows=0;for(auto* item:imageViewer_->scene()->items())if(item->data(0)=="scanGuide")++arrows;
+        check(arrows==72,"all scan guides visible before Run");
+        resize(1400,900);propertiesBody_->findChild<QComboBox*>("propertyDetailMode")->setCurrentIndex(0);QApplication::processEvents();findChild<QScrollArea*>("propertiesScroll")->ensureWidgetVisible(sweep);imageViewer_->fitImage();QApplication::processEvents();grab().save(QDir(artifacts).filePath("eui04-arc-preview-1400.png"));
+        resize(850,600);QApplication::processEvents();findChild<QScrollArea*>("propertiesScroll")->ensureWidgetVisible(sweep);imageViewer_->fitImage();grab().save(QDir(artifacts).filePath("eui04-arc-preview-850.png"));resize(1400,900);
+        QMetaObject::invokeMethod(sweep,"editingFinished",Qt::DirectConnection);wait();
+        check(std::get<ArcRoi>(imageViewer_->roi()->geometry).sweepDegrees==90,"angle finish commits ROI atomically");
+        const auto valid=service_.activeRecipe()->definition;sweep=propertiesBody_->findChild<QDoubleSpinBox*>("mt_roi_sweep");sweep->setValue(0);QMetaObject::invokeMethod(sweep,"editingFinished",Qt::DirectConnection);wait();
+        check(service_.activeRecipe()->definition==valid && std::get<ArcRoi>(imageViewer_->roi()->geometry).sweepDegrees==90,"invalid zero sweep preserves last valid geometry");
+        geometry(96.25,95.75,34,46,360);
+    }
     service_.setCalibrationSetup("lens","plane");const auto frame=*editorSession_.frame;const auto setup=CalibrationWorkflow::installation(*service_.activeRecipe(),frame);auto sample=[&](QString name,QPointF a,QPointF b,double mm){return CalibrationSample{name,{a,setup.source},{b,setup.source},mm};};const auto accepted=MeasurementService{}.validate(CalibrationWorkflow::teach(*service_.activeRecipe(),frame,"circle-scale",1,sample("teach",{0,0},{100,0},10)),{sample("x",{10,20},{110,20},10),sample("y",{30,10},{30,110},10)},.001);const auto catalog=service_.path()+".calibrations.json";CalibrationService(catalog).save(accepted);CalibrationWorkflow::bind(service_,frame,catalog,"circle-scale");refreshWorkspace();selectTool(id);propertiesBody_->findChild<QComboBox*>("mt_mode")->setCurrentText("calibrated");wait();check(!imageViewer_->roi(),"mode changes discard raw teaching");
     geometry(9.625,-9.575,3.4,4.6,360);for(auto t:service_.tools())if(t.id==id){t.parameters["scanWidth"]=.1;t.parameters["inlierDistance"]=.1;t.parameters["maxRms"]=.035;t.parameters["maxResidual"]=.1;t.parameters["diameterLower"]=7.97;t.parameters["diameterUpper"]=8.03;t.parameters["deviationUpper"]=.04;service_.updateTool(t);}refreshWorkspace();selectTool(id);runFlow();wait();check(result().state==ExecutionState::Done && result().outputs["circleMm"].valid && std::get<bool>(result().outputs["accepted"].data),"Circle UI calibrated tolerance");
     auto hash=editorSession_.frame->contentId();runExecution(id);wait();check(editorSession_.cycle->partial && editorSession_.cycle->acquisitions==0 && editorSession_.cycle->executedTools==QStringList{id} && editorSession_.frame->contentId()==hash,"Circle UI TargetOnly");

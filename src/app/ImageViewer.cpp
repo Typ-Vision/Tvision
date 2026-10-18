@@ -49,16 +49,16 @@ void ImageViewer::clearImage(const QString& message) {
 }
 void ImageViewer::fitImage() {
     if (!imageItem_) return;
-    fitMode_=true; fitInView(imageItem_->boundingRect(),Qt::KeepAspectRatio); updateResultAnnotations(); if (onZoom) onZoom(zoomFactor());
+    fitMode_=true; fitInView(imageItem_->boundingRect(),Qt::KeepAspectRatio); updateResultAnnotations(); renderRoi(); if (onZoom) onZoom(zoomFactor());
 }
 void ImageViewer::zoomBy(double factor) {
     if (!imageItem_ || !std::isfinite(factor) || factor<=0) return;
     fitMode_=false; const double target=std::clamp(zoomFactor()*factor,0.001,32.0);
-    scale(target/zoomFactor(),target/zoomFactor()); updateResultAnnotations(); if (onZoom) onZoom(zoomFactor());
+    scale(target/zoomFactor(),target/zoomFactor()); updateResultAnnotations(); renderRoi(); if (onZoom) onZoom(zoomFactor());
 }
 void ImageViewer::actualSize() {
     if (!imageItem_) return;
-    fitMode_=false; resetTransform(); updateResultAnnotations(); if (onZoom) onZoom(1.0);
+    fitMode_=false; resetTransform(); updateResultAnnotations(); renderRoi(); if (onZoom) onZoom(1.0);
 }
 QPoint ImageViewer::imagePixelAt(const QPoint& position) const {
     if (!imageItem_) return {-1,-1};

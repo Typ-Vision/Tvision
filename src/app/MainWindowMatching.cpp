@@ -1,4 +1,5 @@
 #include "application/CircleToolService.hpp"
+#include "application/MetrologyService.hpp"
 #include "application/CalibrationWorkflow.hpp"
 #include "MainWindow.hpp"
 #include "PoseMatchEditor.hpp"
@@ -29,11 +30,13 @@ void MainWindow::invalidateMatch() {if(edgeProfile_)edgeProfile_->setDiagnostics
 void MainWindow::refreshMatchOverlay() {
     if (editorSession_.matchOutcome && editorSession_.resultSignature!=matchSignature()) invalidateMatch();
     imageViewer_->onRoiEdited={};
+    imageViewer_->setScanGuides({});
     const auto* geometryDialog=findChild<QDialog*>("roiGeometryDialog");
     const bool geometryWorkspace=geometryDialog && geometryDialog->isVisible();
     bool bound=false;
     if(!geometryWorkspace && service_.activeRecipe() && editorSession_.frame)for(const auto& t:service_.tools())if(t.id==selectedToolId_ && (t.parameters.contains("referenceBinding") || t.parameters.contains("poseTracking") || t.kind=="edge_point" || t.kind=="edge_pair" || t.kind=="line_fit" || t.kind=="circle_fit")){
         bound=true;const auto id=t.id;
+        imageViewer_->setScanGuides([kind=t.kind,p=t.parameters](const ToolRoi& roi){return MetrologyService::scanGuides(kind,p,roi);});
         if(t.parameters.contains("referenceBinding")){
             imageViewer_->setRoi({},false);imageViewer_->setRoiEditable(false);
             try{

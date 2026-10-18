@@ -1,4 +1,5 @@
 #include "RadialScanner.hpp"
+#include "ScanLayout.hpp"
 #include <algorithm>
 #include <cmath>
 #include <numbers>
@@ -28,11 +29,10 @@ RadialSearch RadialScanner::findMapped(const ImageFrame& image,const ArcRoi& arc
     QVector<ScanSegment> synthetic;double taps=0,convolution=0;
     const double spacing=arc.sweepDegrees/(result.fullCircle ? o.scanCount:o.scanCount-1);
     auto raw=[&](QPointF q){auto r=map(q);require(std::isfinite(r.x()) && std::isfinite(r.y()) && r.x()>=0 && r.y()>=0 && r.x()<=image.size().width()-1 && r.y()<=image.size().height()-1,"Radial footprint outside raw domain");return r;};
+    const auto layout=ScanLayout::radial(arc,o.scanCount,o.scanWidth,o.direction==RadialDirection::Inward);
     for(int i=0;i<o.scanCount;++i){stop();RadialScanPoint s;s.scanId=i;s.angleDegrees=arc.startDegrees+i*spacing;
-        const double a=s.angleDegrees*std::numbers::pi/180;const QPointF u(std::cos(a),std::sin(a));
-        auto start=arc.ring.centre+u*arc.ring.innerRadius,end=arc.ring.centre+u*arc.ring.outerRadius;
-        if(o.direction==RadialDirection::Inward)std::swap(start,end);
-        s.nominalScan={start,end,o.scanWidth};ScanSegment scan{start/o.unitsPerSample,end/o.unitsPerSample,o.scanWidth/o.unitsPerSample};
+        const auto start=layout[i].start,end=layout[i].end;
+        s.nominalScan=layout[i];ScanSegment scan{start/o.unitsPerSample,end/o.unitsPerSample,o.scanWidth/o.unitsPerSample};
         ToolRoi{{"sampling"},scan}.validate();
         const double length=QLineF(scan.start,scan.end).length(),count=std::ceil(length/p.stepPx)+1,across=std::ceil(scan.width/p.widthStepPx)+1;
         const double step=length/(count-1),radius=p.sigmaPx==0 ? 0:std::ceil(3*p.sigmaPx/step);

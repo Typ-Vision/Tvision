@@ -312,7 +312,14 @@ void MainWindow::showToolProperties() {
     } else if(tool.kind=="edge_pair" || tool.kind=="line_fit" || tool.kind=="circle_fit") {
         const auto frame=editorSession_.frame;auto* settings=new MetrologyEditor(tool.kind,tool.parameters,frame ? frame->metadata().coordinateSystemId:QString{},frame.has_value() && !editorSession_.busy());form->addRow(settings);settings->onChanged=[this]{applyToolProperties();};
         settings->onDraw=[this,kind=tool.kind]{if(auto* dialog=findChild<QDialog*>("roiGeometryDialog"))dialog->close();refreshMatchOverlay();if(!editorSession_.busy() && applyToolProperties() && setDrawingImage()){if(kind=="circle_fit")for(const auto& t:service_.tools())if(t.id==selectedToolId_ && t.parameters["mode"]=="calibrated"){const auto ctx=calibrationResolver(*service_.activeRecipe())(*editorSession_.frame);if(!ctx.calibration || !ctx.current){displayError("Circle teaching requires current calibration");return;}}imageViewer_->beginRoi(kind=="circle_fit" ? 2:kind=="edge_pair" ? 0:1);}};
-        settings->onRoi=[this,kind=tool.kind](const ToolRoi& value){try{auto roi=value;if(editorSession_.busy() || !applyToolProperties())return;if(kind=="circle_fit")for(const auto& t:service_.tools())if(t.id==selectedToolId_ && t.parameters["mode"]=="calibrated"){auto ctx=calibrationResolver(*service_.activeRecipe())(*editorSession_.frame);if(!ctx.calibration || !ctx.current)throw std::runtime_error("Circle teaching requires current calibration");roi.frame=ctx.calibration->dependency().target;}if(!editorSession_.frame || (roi.frame.unit==LengthUnit::Pixel && !roi.inside(editorSession_.frame->size())))throw std::runtime_error("ROI görüntü sınırı dışında");imageViewer_->setRoi(roi);}catch(const std::exception& e){displayError(QString::fromUtf8(e.what()));}};
+        settings->onPreview=[this,id=tool.id](const ToolRoi& roi){
+            if(editorSession_.busy() || selectedToolId_!=id)return;
+            for(const auto& t:service_.tools())if(t.id==id && !t.parameters.contains("referenceBinding") && !t.parameters.contains("poseTracking")) {
+                if(!editorSession_.frame || (roi.frame.unit==LengthUnit::Pixel && !roi.inside(editorSession_.frame->size())))return;
+                invalidateMatch();imageViewer_->previewRoi(roi);
+            }
+        };
+        settings->onRoi=[this,id=tool.id,kind=tool.kind](const ToolRoi& value){try{if(selectedToolId_!=id)return;auto roi=value;for(const auto& t:service_.tools())if(t.id==selectedToolId_ && (t.parameters.contains("referenceBinding") || t.parameters.contains("poseTracking")))return;if(editorSession_.busy() || !applyToolProperties())return;if(kind=="circle_fit")for(const auto& t:service_.tools())if(t.id==selectedToolId_ && t.parameters["mode"]=="calibrated"){auto ctx=calibrationResolver(*service_.activeRecipe())(*editorSession_.frame);if(!ctx.calibration || !ctx.current)throw std::runtime_error("Circle teaching requires current calibration");roi.frame=ctx.calibration->dependency().target;}if(!editorSession_.frame || (roi.frame.unit==LengthUnit::Pixel && !roi.inside(editorSession_.frame->size())))throw std::runtime_error("ROI görüntü sınırı dışında");imageViewer_->setRoi(roi);}catch(const std::exception& e){displayError(QString::fromUtf8(e.what()));}};
         form->addRow("Kalibrasyon",note(calibrationSummary()));
         auto* calibration=new QPushButton("Calibration aç");form->addRow(calibration);connect(calibration,&QPushButton::clicked,this,[this]{selectPage("calibration");});
     } else if(tool.kind=="edge_point") {
@@ -458,6 +465,11 @@ void MainWindow::showToolProperties() {
             movePropertyRow(rows,settings,presentation);rows->insertRow(index,group);
         } else for(auto* widget:{static_cast<QWidget*>(manual),static_cast<QWidget*>(toggle),static_cast<QWidget*>(draw)}) {
             auto row=rows->takeRow(widget);delete row.labelItem;delete row.fieldItem;rows->insertRow(0,widget);
+        }
+        if(tool.kind=="circle_fit") {
+            int index=3;
+            for(const auto& key:{"start","sweep"}){auto* field=editor->findChild<QDoubleSpinBox*>(QString("mt_roi_")+key);auto row=rows->takeRow(field);
+                rows->insertRow(index++,row.labelItem->widget(),field);delete row.labelItem;delete row.fieldItem;}
         }
         auto* settings=tool.kind=="edge_point" ? panel->findChild<QWidget*>("edgePointSettings"):editor;
         auto* settingsRows=static_cast<QFormLayout*>(settings->layout());

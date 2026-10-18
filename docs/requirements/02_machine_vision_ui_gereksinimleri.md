@@ -194,6 +194,14 @@ ve kaynak/koordinat bilgisi ile Results sayıları görünür kalır. Tercih exe
 acquisition, recipe hash/dirty veya aktif Runtime'ı değiştirmez; Calibration ve
 Runtime viewer'ları bu Editor tercihine bağlı değildir.
 
+Seçili Line Fit/Circle için nominal kılavuz Run öncesi de N tarama oku gösterir;
+bulunan nokta sayısıyla azalmaz. Circle iç→dış veya dış→iç yönünü, Line Fit gerçek
+kutu scan eksenini kullanır. Saf yerleşim hesabı yürütücüyle ortaktır; world ROI
+mevcut raw dönüşümünden geçer. Tam dairede uç tekrarı yok, signed yayda iki uç dahil.
+Circle Basic Start/Sweep değişimi nominal geometriyi önizler; editingFinished ve
+Koordinatları uygula aynı doğrulamadan geçer. Geçersiz geçici sayı son geçerli ROI'yi
+bozmaz; önizleme reçeteyi değiştirmez ve eski fit göstermez. Yeni fit yalnız Run'dadır.
+
 ## 10. Tool Selection
 
 Image Viewer veya Flow üzerinde tool seçildiğinde Properties otomatik değişir. Seçim görüntü, flow ve sonuç tablosunda senkronize edilir.

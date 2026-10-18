@@ -1,4 +1,5 @@
 #include "MetrologyService.hpp"
+#include "vision/metrology/ScanLayout.hpp"
 #include "EdgePairService.hpp"
 #include "domain/ToolRegistry.hpp"
 #include "vision/metrology/LineFitter.hpp"
@@ -7,6 +8,20 @@
 #include <numbers>
 #include <stdexcept>
 namespace visionflow {
+QVector<QLineF> MetrologyService::scanGuides(const QString& kind,const QJsonObject& p,const ToolRoi& roi) {
+    roi.validate();QVector<ScanSegment> scans;
+    if(kind=="circle_fit") {
+        const auto arc=std::holds_alternative<Annulus>(roi.geometry) ? ArcRoi{std::get<Annulus>(roi.geometry),0,360}:std::get<ArcRoi>(roi.geometry);
+        scans=ScanLayout::radial(arc,p["scanCount"].toInt(),p["scanWidth"].toDouble(),p["direction"]=="inward");
+    } else if(kind=="line_fit") {
+        double unit=1;
+        if(roi.frame.unit==LengthUnit::Millimetre){const auto binding=p.contains("referenceBinding") ? p["referenceBinding"].toObject():p["poseTracking"].toObject();unit=binding["mmPerSample"].toDouble();
+            if(!std::isfinite(unit) || unit<=0)throw std::runtime_error("World guide sampling unit unavailable");}
+        scans=ScanLayout::line(std::get<RotatedRectangle>(roi.geometry),p["scanCount"].toInt(),p["scanWidthPx"].toDouble()*unit);
+    }
+    else if(kind=="edge_point" || kind=="edge_pair")scans.append(std::get<ScanSegment>(roi.geometry));
+    QVector<QLineF> lines;for(const auto& s:scans)lines.append(QLineF(s.start,s.end));return lines;
+}
 ToolResult MetrologyService::execute(const ToolDefinition& t,const QMap<QString,PortValue>& inputs,const QString&,const QString& frameId,const QString& cycleId,const std::shared_ptr<std::atomic_bool>& cancel,const MeasurementExecutionContext& context){
     ToolRegistry::validate(t);const auto p=t.parameters;const bool world=p["mode"]=="calibrated";
     if(p.contains("poseTracking"))throw std::runtime_error("Pose tracking requires DAG resolution");
