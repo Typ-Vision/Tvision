@@ -1,4 +1,5 @@
 #include "MetrologyService.hpp"
+#include "MeasurementDiagnostic.hpp"
 #include "vision/metrology/ScanLayout.hpp"
 #include "EdgePairService.hpp"
 #include "domain/ToolRegistry.hpp"
@@ -76,7 +77,7 @@ ToolResult MetrologyService::execute(const ToolDefinition& t,const QMap<QString,
         put("found",pair.found);put("first",pair.first.value_or(QPointF{}),pair.found);put("second",pair.second.value_or(QPointF{}),pair.found);put("centre",pair.centre.value_or(QPointF{}),pair.found);put("widthPx",pair.widthPx.value_or(0),pair.found);
         put("widthMm",pair.widthMm.value_or(0),pair.widthMm.has_value(),world ? "NOT_FOUND":"PIXEL_MODE");
         if(pair.found){const double width=world ? *pair.widthMm:*pair.widthPx;put("accepted",width>=p["lower"].toDouble() && width<=p["upper"].toDouble());r.points={*pair.first,*pair.second,*pair.centre};r.lines={QLineF(*pair.first,*pair.second)};r.message=QString("Width %1 %2 • accepted=%3").arg(width,0,'f',6).arg(world ? "mm":"px").arg(std::get<bool>(r.outputs["accepted"].data) ? "true":"false");r.calibration=pair.calibration;}
-        else {put("accepted",false,false);r.message="NOT_FOUND";}
+        else {put("accepted",false,false);r.fitDiagnostic=pair.diagnostic;r.message=r.fitDiagnostic ? presentMeasurementDiagnostic(*r.fitDiagnostic):QString("NOT_FOUND");}
     }else {
         LineScanOptions o;o.scanCount=p["scanCount"].toInt();o.scanWidthPx=p["scanWidthPx"].toDouble();o.edge.profile=profile;o.edge.selection=selection;o.edge.minContrast=p["minContrast"].toDouble();o.edge.subpixel=p["subpixel"].toBool();o.edge.polarity=p["polarity"]=="rising" ? EdgePolarity::Rising:p["polarity"]=="falling" ? EdgePolarity::Falling:EdgePolarity::Any;
         o.fit.minPoints=p["minPoints"].toInt();o.fit.minCoverage=p["minCoverage"].toDouble();o.fit.minSpanCoverage=p["minSpanCoverage"].toDouble();o.fit.ransac=p["ransac"].toBool();o.fit.minSpan=p["minSpanPx"].toDouble();o.fit.inlierDistance=p["inlierDistancePx"].toDouble();o.fit.maxRms=p["maxRmsPx"].toDouble();o.fit.maxResidual=p["maxResidualPx"].toDouble();

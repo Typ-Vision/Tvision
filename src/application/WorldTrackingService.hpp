@@ -22,9 +22,9 @@ public:
     static void preflight(const ToolDefinition&,const ImageFrame&,const WorldTrackingMap&,const std::shared_ptr<std::atomic_bool>& cancel={});
     static ToolResult execute(const ToolDefinition&,const ImageFrame&,const WorldTrackingMap&,const std::shared_ptr<std::atomic_bool>& cancel={});
     static std::optional<TrackedWorldPoint> edge(const ImageFrame&,const ToolRoi& nominalWorld,double mmPerSample,
-        const WorldTrackingMap&,const EdgeOptions& = {},const std::shared_ptr<std::atomic_bool>& cancel={});
+        const WorldTrackingMap&,const EdgeOptions& = {},const std::shared_ptr<std::atomic_bool>& cancel={},FitDiagnostic* diagnostic=nullptr);
     static std::optional<TrackedWorldPair> pair(const ImageFrame&,const ToolRoi& nominalWorld,double mmPerSample,
-        const WorldTrackingMap&,const EdgePairOptions& = {},const std::shared_ptr<std::atomic_bool>& cancel={});
+        const WorldTrackingMap&,const EdgePairOptions& = {},const std::shared_ptr<std::atomic_bool>& cancel={},FitDiagnostic* diagnostic=nullptr);
     // scanWidthPx and profile options use synthetic sample units; fit limits use mm.
     static TrackedWorldLine line(const ImageFrame&,const ToolRoi& nominalWorld,double mmPerSample,
         const WorldTrackingMap&,const LineScanOptions&,const std::shared_ptr<std::atomic_bool>& cancel={});

@@ -1,4 +1,5 @@
 #include "application/ToolResultCodec.hpp"
+#include "application/MeasurementDiagnostic.hpp"
 #include "application/ProductionResultCodec.hpp"
 #include "application/ProductionStore.hpp"
 #include <QTemporaryDir>
@@ -51,6 +52,17 @@ int main(int argc,char** argv) {
         wrong=record;wrong["cycleId"]="foreign";reject([&]{ProductionResultCodec::validate(wrong);},"foreign cycle replay rejected");
         wrong=record;wrong["evaluationId"]="foreign";reject([&]{ProductionResultCodec::validate(wrong);},"foreign evaluation rejected");
         tool=record["tools"].toArray().first().toObject();tool["decision"]="PASS";wrong=record;wrong["tools"]=QJsonArray{tool};reject([&]{ProductionResultCodec::validate(wrong);},"diagnostic cannot be PASS");
+        FitDiagnostic diagnostic{"CIRCLE_POINTS","edge_search",72,3,6,0,{2,7,1,12}};
+        diagnostic.toolId="failed";diagnostic.sourceId="source";diagnostic.frameId="frame";diagnostic.cycleId="cycle";diagnostic.evaluationId="evaluation";
+        QJsonObject failed{{"toolId","failed"},{"state","ERROR"},{"decision","NOT_EVALUATED"},{"outputs",QJsonObject{}},{"measurementDiagnostic",encodeMeasurementDiagnostic(diagnostic)}};
+        auto failure=record;failure["state"]="ERROR";failure["frames"]=QJsonArray{QJsonObject{{"sourceId","source"},{"frameId","frame"},{"cycleId","cycle"}}};failure["tools"]=QJsonArray{failed};
+        ProductionResultCodec::validate(failure);ProductionStore(dir.path()).append("cycles",QUuid::createUuid().toString(QUuid::WithoutBraces),failure);
+        bool replay=false;for(const auto& historical:ProductionStore(dir.path()).recent("cycles"))replay=replay || historical==failure;check(replay,"failed geometry evidence survives restart without result");
+        check(ProductionResultCodec::summary(failure).contains(presentMeasurementDiagnostic(diagnostic)),"Logs uses common presenter");check(ProductionResultCodec::csv({failure}).contains("CIRCLE_POINTS"),"CSV retains outputless diagnostic");
+        auto tamper=[&](const char* key,QJsonValue value){auto changed=failed;auto evidence=changed["measurementDiagnostic"].toObject();evidence[key]=value;changed["measurementDiagnostic"]=evidence;auto f=failure;f["tools"]=QJsonArray{changed};reject([&]{ProductionResultCodec::validate(f);},"malformed/foreign diagnostic rejected");};
+        tamper("found",73);tamper("found",1.5);tamper("requested",4097);tamper("contrast",-1);tamper("schemaVersion",2);tamper("profiles",QJsonArray{});tamper("stage","invented");tamper("cycleId","foreign");tamper("sourceId","foreign");tamper("frameId","foreign");tamper("toolId","foreign");tamper("evaluationId","foreign");
+        auto stop=failure;stop["state"]="SKIPPED";reject([&]{ProductionResultCodec::validate(stop);},"Stop cannot retain diagnostic");
+        auto passing=failed;passing["decision"]="PASS";stop=failure;stop["tools"]=QJsonArray{passing};reject([&]{ProductionResultCodec::validate(stop);},"diagnostic cannot confer PASS");
         QJsonObject legacy{{"schemaVersion",2},{"cycleId","old"},{"tools",QJsonArray{QJsonObject{{"outputs",QJsonObject{{"value",QJsonObject{{"type","Number"},{"value",1.0}}}}}}}}};ProductionResultCodec::validate(legacy);check(!ProductionResultCodec::csv({legacy}).isEmpty(),"legacy scalar evidence readable");
         wrong=record;wrong["error"]=QString(ProductionResultCodec::maxRecordBytes,'x');reject([&]{ProductionResultCodec::validate(wrong);},"total result limit rejected");
         QTextStream(stdout)<<checks<<" trace checks passed\n";return 0;

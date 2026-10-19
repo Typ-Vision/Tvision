@@ -1,4 +1,5 @@
 #include "CircleToolService.hpp"
+#include "MeasurementDiagnostic.hpp"
 #include "RadialScanService.hpp"
 #include "domain/ToolRegistry.hpp"
 #include "vision/metrology/CircleMetrics.hpp"
@@ -64,6 +65,7 @@ ToolResult CircleToolService::execute(const ToolDefinition& t,const QMap<QString
     QPointF previous=raw(polar(metrics.centre,metrics.radius,arc.startDegrees));
     for(int i=1;i<=180;++i){const auto next=raw(polar(metrics.centre,metrics.radius,arc.startDegrees+arc.sweepDegrees*i/180.));r.lines.append(QLineF(previous,next));previous=next;}
     r.message=QString("Diameter %1 %2 • deviation %3 • %4 • coverage %5 • %6").arg(metrics.diameter,0,'f',6).arg(unit).arg(qualified ? QString::number(metrics.deviation->peakToValley,'f',6):"NOT_EVALUATED").arg(scope).arg(metrics.coverage,0,'f',3).arg(qualified ? (diameterOk && deviationOk ? "accepted=true":"accepted=false"):"NOT_EVALUATED");
+    if(!qualified){r.fitDiagnostic=FitDiagnostic{"CIRCLE_CONTOUR","contour_quality",int(search.scans.size()),search.foundCount,p["minFoundPoints"].toInt(),fitted.usedCount,{}};}
     stop();return r;
 }
 void CircleToolService::validateCompletion(const ToolDefinition& t,const ToolResult& r,const std::optional<CalibrationDependency>& binding){

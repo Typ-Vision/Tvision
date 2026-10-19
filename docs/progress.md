@@ -5,10 +5,10 @@
 
 ## Devam noktası
 
-- **MUI-01/02 tamam.** [Tanı ve birim](archive/2026-10-19-mui-01.md),
-  [sade panel / ön kontrol](archive/2026-10-19-mui-02.md).
-  Yeni Release: seçili core **4/4**, UI **2 geçti + yerel shell 1/1**.
-  [Analiz / MUI-03–04](architecture/measurement-usability-analysis.md).
+- **MUI-01–03 tamam.** [01](archive/2026-10-19-mui-01.md),
+  [02](archive/2026-10-19-mui-02.md), [03 tanı/replay](archive/2026-10-19-mui-03.md).
+  Yeni Release: seçili core **19/19**, UI **4/4**; son Logs smoke **1/1**.
+  [Analiz](architecture/measurement-usability-analysis.md).
 - **EUI-01–08 yazılım/görsel kabul tamam.**
   [EUI-08 kapanış](archive/2026-10-18-eui-08.md): son Release UI **105/105**,
   core **89/89**; 1400×900/850×600 görselleri ve gerçek giriş olayları.
@@ -104,8 +104,8 @@ Görevler: [ana plan](architecture/industrial-camera-plan.md), seçili kart ve s
 
 ## Kapanış ve sonraki adım
 
-**Sonraki görev MUI-03: ortak tanı/öneriler ve kalıcı replay.**
-Gerçek kullanıcı rasteri kabulü MUI-04 kapsamında açık. Çok kaynak/kalibrasyon manuel kontrolleri ve backend G0/G1 açık.
+**Sonraki görev MUI-04: sert raster regresyonu ve gerçek görüntü kabulü.**
+Kullanıcı raster/reçete/ROI hazır değil; gerçek kabul açık. Manuel çok kaynak/kalibrasyon ve G0/G1 açık.
 [ICM-09b](archive/2026-10-18-icm-09b-start.md) G0/G1 bekliyor; H01–H08 açık.
 Basler/Daheng model/SDK 01→02 veya OECS belgeli pending-command bariyeri gerekir.
 Tamamlanan hazırlıklar tekrarlanmaz; ölçüm adayı configure girdisi değildir.

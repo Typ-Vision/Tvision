@@ -92,10 +92,10 @@ FittedCircle CircleFitter::fit(const QVector<CircleFitPoint>& scans,const Circle
     for(int i=1;i<angles.size();++i)gap=std::max(gap,angles[i]-angles[i-1]);
     r.angularSpanDegrees=360-gap*180/std::numbers::pi;r.rms=std::sqrt(sum/inliers.size());
     r.usedCount=inliers.size();r.rejectedCount=points.size()-inliers.size();r.missingCount=scans.size()-points.size();r.coverage=double(r.usedCount)/scans.size();
-    require(std::isfinite(r.condition) && r.condition<=o.maxCondition,"Ill-conditioned circle support");
-    require(r.angularSpanDegrees>=o.minAngularSpanDegrees,"Insufficient circle angular span");
-    require(r.coverage>=o.minCoverage,"Insufficient circle scan coverage");
-    require(std::isfinite(r.rms) && r.rms<=o.maxRms && r.maxResidual<=o.maxResidual,"Circle residual limits exceeded");
+    requireFitSupport(std::isfinite(r.condition) && r.condition<=o.maxCondition,"Ill-conditioned circle support","CIRCLE_SUPPORT","fit_support",scans,o.minPoints,int(inliers.size()));
+    requireFitSupport(r.angularSpanDegrees>=o.minAngularSpanDegrees,"Insufficient circle angular span","CIRCLE_SPAN","fit_support",scans,o.minPoints,int(inliers.size()));
+    requireFitSupport(r.coverage>=o.minCoverage,"Insufficient circle scan coverage","CIRCLE_COVERAGE","fit_support",scans,o.minPoints,int(inliers.size()));
+    requireFitSupport(std::isfinite(r.rms) && r.rms<=o.maxRms && r.maxResidual<=o.maxResidual,"Circle residual limits exceeded","CIRCLE_RESIDUAL","fit_quality",scans,o.minPoints,int(inliers.size()));
     stop();return r;
 }
 }

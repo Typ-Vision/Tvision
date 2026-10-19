@@ -1,3 +1,4 @@
+#include "MeasurementDiagnostic.hpp"
 #include "ExecutionService.hpp"
 #include "SourceFrameIndex.hpp"
 #include "ToolExecutors.hpp"
@@ -277,14 +278,13 @@ CycleResult ExecutionService::run(const QJsonObject& definition,const QString& d
                         catch(const std::exception& e){measurement={};measurement.error=QString::fromUtf8(e.what());}
                         if(multi)measurements[t.id]=measurement;
                     }
-                }catch(const std::exception& e) {r.edgeDiagnostics.reset();r.outputs.clear();r.regions.clear();r.mask={};r.searchRegion={};r.points.clear();r.rejectedPoints.clear();r.lines.clear();r.decision=PartDecision::NotEvaluated;r.calibration.reset();r.state=ExecutionState::Error;r.message=QString::fromUtf8(e.what());
+                }catch(const std::exception& e) {r.fitDiagnostic.reset();r.edgeDiagnostics.reset();r.outputs.clear();r.regions.clear();r.mask={};r.searchRegion={};r.points.clear();r.rejectedPoints.clear();r.lines.clear();r.decision=PartDecision::NotEvaluated;r.calibration.reset();r.state=ExecutionState::Error;r.message=QString::fromUtf8(e.what());
                     if(const auto* fit=dynamic_cast<const FitDiagnosticError*>(&e)) {
-                        r.fitDiagnostic=fit->evidence;const auto& d=*r.fitDiagnostic;r.errorCode=d.code;
-                        r.message=QString("%1 • %2 taramadan %3 kenar bulundu; en az %4 gerekli. %5").arg(d.code).arg(d.requested).arg(d.found).arg(d.required).arg(d.stage=="edge_search" ? "ROI ve ok yönüne göre kenar geçişini kontrol edin.":QString("Kenarlar bulundu; aynı geometriye uyan %1 nokta var. Noktaları ve fit'e katılma mesafesini inceleyin.").arg(d.used));
-                        const auto& x=d.rejections;
-                        r.message+=QString(" Aday retleri: geçiş=%1, eşik=%2, sınır desteği=%3; adaysız tarama=%4.").arg(x.polarity).arg(x.contrast).arg(x.border).arg(x.noCandidate);
+                        r.fitDiagnostic=fit->evidence;r.errorCode=fit->evidence.code;
+                        r.message=presentMeasurementDiagnostic(*r.fitDiagnostic);
                     }
                     error=true;}
+                if(r.fitDiagnostic){auto& d=*r.fitDiagnostic;d.toolId=t.id;d.sourceId=inputs.value("image").origin.sourceId;d.frameId=toolFrameId;d.cycleId=cycle.cycleId;d.evaluationId=cycle.evaluationId;}
             }
             if(r.state==ExecutionState::Done && industrialEvidence)cycle.industrialEvidence[id]=std::move(industrialEvidence);
             for(const auto& value:r.outputs)if(value.valid && std::holds_alternative<ImageFrame>(value.data) && (!multi || ToolRegistry::get(t.kind).acquisitionSource))cycle.frames.append(value.origin);
@@ -295,8 +295,8 @@ CycleResult ExecutionService::run(const QJsonObject& definition,const QString& d
         if(multi && !targetOnly && !stopped && !error && !graph.requiredSources.isEmpty()){SourceFrameIndex index(cycle.cycleId,graph.requiredSources,cycle.frames);cycle.frameId=index.legacyFrameId();}
         cycle.state=stopped ? ExecutionState::Skipped : error ? ExecutionState::Error : ExecutionState::Done;
         if(targetOnly && !stopped && cycle.tools.size()==1)cycle.state=cycle.tools.first().state;
-        if(stopped) {cycle.industrialEvidence.clear();cycle.frames.clear();cycle.error="Çevrim iptal edildi; sonuç yayımlanmaz.";for(auto& r:cycle.tools) {r.edgeDiagnostics.reset();r.outputs.clear();r.regions.clear();r.mask={};r.points.clear();r.rejectedPoints.clear();r.lines.clear();r.searchRegion={};r.decision=PartDecision::NotEvaluated;r.calibration.reset();}}
-    } catch(const std::exception& e) {cycle.state=ExecutionState::Error;cycle.error=QString::fromUtf8(e.what());if(multi){cycle.industrialEvidence.clear();cycle.frames.clear();for(auto& r:cycle.tools){r.state=ExecutionState::Skipped;r.outputs.clear();r.regions.clear();r.points.clear();r.lines.clear();r.mask={};r.edgeDiagnostics.reset();r.decision=PartDecision::NotEvaluated;r.calibration.reset();}}}
+        if(stopped) {cycle.industrialEvidence.clear();cycle.frames.clear();cycle.error="Çevrim iptal edildi; sonuç yayımlanmaz.";for(auto& r:cycle.tools) {r.state=ExecutionState::Skipped;r.message="İptal edildi";r.errorCode.clear();r.fitDiagnostic.reset();r.edgeDiagnostics.reset();r.outputs.clear();r.regions.clear();r.mask={};r.points.clear();r.rejectedPoints.clear();r.lines.clear();r.searchRegion={};r.decision=PartDecision::NotEvaluated;r.calibration.reset();}}
+    } catch(const std::exception& e) {cycle.state=ExecutionState::Error;cycle.error=QString::fromUtf8(e.what());if(multi){cycle.industrialEvidence.clear();cycle.frames.clear();for(auto& r:cycle.tools){r.state=ExecutionState::Skipped;r.outputs.clear();r.regions.clear();r.points.clear();r.lines.clear();r.mask={};r.fitDiagnostic.reset();r.edgeDiagnostics.reset();r.decision=PartDecision::NotEvaluated;r.calibration.reset();}}}
     cycle.milliseconds=total.nsecsElapsed()/1e6;return cycle;
 }
 }

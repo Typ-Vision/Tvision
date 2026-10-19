@@ -15,12 +15,17 @@ struct FitDiagnostic {
     QString code,stage;
     int requested=0,found=0,required=0,used=0;
     ScanRejections rejections;
+    // Bound by application execution; vision-only callers leave identity empty.
+    QString toolId,sourceId,frameId,cycleId,evaluationId;
 };
 class FitDiagnosticError:public std::runtime_error {
 public:
     FitDiagnostic evidence;
     FitDiagnosticError(const char* message,FitDiagnostic d):std::runtime_error(message),evidence(std::move(d)){}
 };
+inline void requireScanConfiguration(bool ok,const char* message,const char* code,const char* stage,int requested) {
+    if(!ok)throw FitDiagnosticError(message,FitDiagnostic{code,stage,requested});
+}
 template<class Scan> void requireFitSupport(bool ok,const char* message,const char* code,const char* stage,
                                           const QVector<Scan>& scans,int required,int used=0) {
     if(ok)return;

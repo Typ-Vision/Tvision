@@ -1,3 +1,4 @@
+#include "MeasurementDiagnostic.hpp"
 #include "CircleToolService.hpp"
 #include "GeometryMeasurementService.hpp"
 #include "ProductionRecipeService.hpp"
@@ -88,6 +89,7 @@ QByteArray ProductionRecipeService::completionDigest(const CycleResult& r) {
                 out<<image.contentId()<<image.processingId()<<image.size()<<int(image.format());
             }
         }
+        out<<bool(t.fitDiagnostic);if(t.fitDiagnostic)out<<QJsonDocument(encodeMeasurementDiagnostic(*t.fitDiagnostic)).toJson(QJsonDocument::Compact);
         out<<bool(t.edgeDiagnostics);if(t.edgeDiagnostics) {
             const auto& d=*t.edgeDiagnostics;out<<d.scan<<d.width<<d.length<<d.sampleCount<<d.derivativeCount<<d.candidateCount<<d.derivative;
             out<<d.profile.size();for(const auto& v:d.profile)out<<v.distance<<v.raw<<bool(v.smooth)<<v.smooth.value_or(0);
@@ -259,7 +261,7 @@ void ProductionRecipeService::finishCycle(quint64 ticket,const CycleResult& r) {
     for(const auto& f:r.frames)if(f.cycleId!=r.cycleId || f.frameId.isEmpty() || f.sourceId.isEmpty())fail(ProductionError::InvalidCompletion,"Çevrim frame kökeni uyumsuz.");
     for(const auto& log:records_)if(log["cycleId"]==r.cycleId)fail(ProductionError::InvalidCompletion,"Çevrim kimliği daha önce tamamlandı.");
     const auto configured=editorTools(cycle_.snapshot->recipe().definition);QSet<QString> seen;
-    const bool trusted=trustedCompletionRequired(configured) || cycle_.snapshot->dependencies().contains("systemCalibration") || cycle_.snapshot->dependencies().contains("measurementSource") || cycle_.snapshot->dependencies().contains("industrialSource");
+    const bool trusted=bool(r.completionSnapshot_) || std::any_of(r.tools.cbegin(),r.tools.cend(),[](const auto& t){return t.fitDiagnostic.has_value();}) || trustedCompletionRequired(configured) || cycle_.snapshot->dependencies().contains("systemCalibration") || cycle_.snapshot->dependencies().contains("measurementSource") || cycle_.snapshot->dependencies().contains("industrialSource");
     if(trusted)try {
         if(r.completionSnapshot_!=cycle_.snapshot || r.completionTicket_!=ticket || r.completionDigest_.isEmpty() ||
            r.completionDigest_!=completionDigest(r))fail(ProductionError::InvalidCompletion,"Runtime completion evidence missing, changed or foreign to lease");
@@ -344,6 +346,7 @@ void ProductionRecipeService::record(const CycleResult* r,const QString& error) 
             tools.append(QJsonObject{{"toolId",t.toolId},{"name",name},{"kind",kind},{"state",executionStateName(t.state)},{"message",t.message},{"milliseconds",t.milliseconds},{"outputs",outputs},{"errorCode",t.errorCode},
                 {"decision",t.decision==PartDecision::Pass ? "PASS" : t.decision==PartDecision::Fail ? "FAIL" : "NOT_EVALUATED"},
                 {"calibration",t.calibration ? QJsonValue(t.calibration->toJson()) : QJsonValue(QJsonValue::Null)}});
+            if(t.fitDiagnostic){auto item=tools.last().toObject();item["measurementDiagnostic"]=encodeMeasurementDiagnostic(*t.fitDiagnostic);tools.replace(tools.size()-1,item);}
         }
     }
     if(pendingRecord_.isEmpty())pendingRecord_=QJsonObject{{"schemaVersion",s.dependencies().contains("industrialSource") ? 8:s.dependencies().contains("measurementSource") ? 6:s.dependencies().contains("systemCalibration") ? 5:s.dependencies().contains("referenceBindings") ? 4:3},{"evaluationId",r ? r->evaluationId : QString{}},{"recordId",QUuid::createUuid().toString(QUuid::WithoutBraces)},{"beginEventId",cycleBeginId_},{"ticket",QString::number(cycle_.ticket)},{"principal",cyclePrincipal_},

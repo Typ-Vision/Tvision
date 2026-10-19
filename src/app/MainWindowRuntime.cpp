@@ -1,3 +1,4 @@
+#include "application/MeasurementDiagnostic.hpp"
 #include "application/CircleToolService.hpp"
 #include "application/CalibrationWorkflow.hpp"
 #include "MainWindow.hpp"
@@ -219,7 +220,7 @@ void MainWindow::showRuntimeResult() {
     const auto selected=runtimeTools_->currentData().toString();
     {QSignalBlocker blocker(runtimeTools_);runtimeTools_->clear();if(snapshot)for(const auto& t:editorTools(snapshot->recipe().definition))if(graph.toolSources.value(t.id)==selectedSource)runtimeTools_->addItem(t.name,t.id);runtimeTools_->setCurrentIndex(std::max(0,runtimeTools_->findData(selected)));}
     for(const auto& t:c.tools){if(graph.toolSources.value(t.toolId)!=selectedSource)continue;QString name=t.toolId;if(snapshot)for(const auto& tool:editorTools(snapshot->recipe().definition))if(tool.id==t.toolId)name=tool.name;
-        lines<<name+" • "+executionStateName(t.state)+" • "+t.errorCode+" "+t.message;
+        lines<<name+" • "+executionStateName(t.state)+" • "+(t.fitDiagnostic ? presentMeasurementDiagnostic(*t.fitDiagnostic):t.errorCode+" "+t.message);
         for(auto it=t.outputs.cbegin();it!=t.outputs.cend();++it)if(it->port.type!=PortType::Image) {
             const auto value=ToolResultCodec::display(*it);
             lines<<"  "+it.key()+(it->diagnostic ? " [diagnostic]: ":": ")+value+" "+it->port.unit;
@@ -245,7 +246,9 @@ void MainWindow::showRuntimeResult() {
             }
             runtimeViewer_->setRoiRecipeBound(true);runtimeViewer_->setRoiEditable(false);
         }catch(const std::exception&){}
-    runtimeSummary_->setText(lines.join("\n"));
+    QStringList diagnoses;
+    for(const auto& t:c.tools)if(t.fitDiagnostic && graph.toolSources.value(t.toolId)==selectedSource){QString name=t.toolId;if(snapshot)for(const auto& configured:editorTools(snapshot->recipe().definition))if(configured.id==t.toolId)name=configured.name;diagnoses<<name+" • "+executionStateName(t.state)<<presentMeasurementDiagnostic(*t.fitDiagnostic);}
+    runtimeSummary_->setText((diagnoses+lines).join("\n"));
 }
 void MainWindow::refreshLogs() {
     logTable_->setRowCount(0);findChild<QTextEdit*>("logDetail")->clear();

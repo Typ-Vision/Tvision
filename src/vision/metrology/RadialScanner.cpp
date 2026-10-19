@@ -22,7 +22,7 @@ RadialSearch RadialScanner::findMapped(const ImageFrame& image,const ArcRoi& arc
         std::isfinite(o.scanWidth) && o.scanWidth>0 && o.scanWidth/o.unitsPerSample<=1024 &&
         (o.direction==RadialDirection::Outward || o.direction==RadialDirection::Inward),"Invalid radial options");
     const qint64 pixels=qint64(image.size().width())*image.size().height();
-    require(pixels<=16*1024*1024 && pixels*o.scanCount<=512*1024*1024,"Radial image/hash work budget exceeded");
+    requireScanConfiguration(pixels<=16*1024*1024 && pixels*o.scanCount<=512*1024*1024,"Radial image/hash work budget exceeded","IMAGE_SCAN_BUDGET","work_budget",o.scanCount);
     const auto p=o.edge.profile;
     require(std::isfinite(p.stepPx) && p.stepPx>=.05 && p.stepPx<=16 && std::isfinite(p.widthStepPx) && p.widthStepPx>=.25 && p.widthStepPx<=16 && std::isfinite(p.sigmaPx) && p.sigmaPx>=0 && p.sigmaPx<=16,"Invalid radial sampling options");
     RadialSearch result;result.fullCircle=std::abs(arc.sweepDegrees)==360;result.origin=image.metadata();
@@ -36,7 +36,8 @@ RadialSearch RadialScanner::findMapped(const ImageFrame& image,const ArcRoi& arc
         ToolRoi{{"sampling"},scan}.validate();
         const double length=QLineF(scan.start,scan.end).length(),count=std::ceil(length/p.stepPx)+1,across=std::ceil(scan.width/p.widthStepPx)+1;
         const double step=length/(count-1),radius=p.sigmaPx==0 ? 0:std::ceil(3*p.sigmaPx/step);
-        require(count<=65536 && across<=1024 && radius<=1024 && count>=2*radius+4 && count*across<=4*1024*1024,"Radial profile budget/support exceeded");
+        requireScanConfiguration(count>=2*radius+4,"Radial profile support exceeded","SAMPLING_SUPPORT","sampling_support",o.scanCount);
+        requireScanConfiguration(count<=65536 && across<=1024 && radius<=1024 && count*across<=4*1024*1024,"Radial profile budget exceeded","SAMPLING_BUDGET","work_budget",o.scanCount);
         taps+=count*across;convolution+=(count-2*radius)*(2*radius+1);
         require(taps<=16*1024*1024 && convolution<=16*1024*1024,"Radial aggregate sampling budget exceeded");
         const auto d=(end-start)/QLineF(start,end).length();const QPointF n(-d.y(),d.x());

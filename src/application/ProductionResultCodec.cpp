@@ -1,3 +1,4 @@
+#include "MeasurementDiagnostic.hpp"
 #include "ProductionResultCodec.hpp"
 #include "IndustrialRuntime.hpp"
 #include "SourceStatusPresenter.hpp"
@@ -37,7 +38,7 @@ void validateMulti(const QJsonObject& r){
     for(const auto& v:r["frames"].toArray()){require(v.isObject(),"Invalid terminal frame");const auto f=v.toObject();const auto source=f["sourceId"].toString();require(graph.requiredSources.contains(source) && !bySource.contains(source),"Duplicate/foreign terminal source");FrameMetadata m;m.sourceId=source;m.frameId=f["frameId"].toString();m.cycleId=f["cycleId"].toString();m.coordinateSystemId=f["coordinateSystemId"].toString();m.completedAtUtc=QDateTime::fromString(f["completedAtUtc"].toString(),Qt::ISODateWithMs);require(m.completedAtUtc.isValid(),"Missing frame timestamp");frames.append(m);acquired.append(source);bySource[source]=f;}
     if(r["state"]=="DONE")require(acquired.size()==set.size(),"DONE terminal missing source");
     std::optional<SourceFrameIndex> index;if(!frames.isEmpty())index.emplace(r["cycleId"].toString(),acquired,frames);
-    for(const auto& v:r["tools"].toArray()){require(v.isObject(),"Invalid terminal tool");const auto t=v.toObject();const auto id=t["toolId"].toString();auto configured=std::find_if(tools.cbegin(),tools.cend(),[&](const auto& c){return c.id==id;});require(configured!=tools.cend() && !byTool.contains(id) && t["kind"]==configured->kind && t["outputs"].isObject(),"Foreign/duplicate terminal tool");byTool[id]=t;
+    for(const auto& v:r["tools"].toArray()){require(v.isObject(),"Invalid terminal tool");const auto t=v.toObject();const auto id=t["toolId"].toString();auto configured=std::find_if(tools.cbegin(),tools.cend(),[&](const auto& c){return c.id==id;});require(configured!=tools.cend() && !byTool.contains(id) && t["kind"]==configured->kind && t["outputs"].isObject(),"Foreign/duplicate terminal tool");byTool[id]=t;validateMeasurementDiagnostic(t,r);if(t.contains("measurementDiagnostic"))require(t["measurementDiagnostic"].toObject()["sourceId"]==graph.toolSources.value(id),"Diagnostic graph source differs");
         if(!graph.requiredSources.contains(graph.toolSources.value(id)))require(t["state"]=="SKIPPED" && t["outputs"].toObject().isEmpty() && t["decision"]=="NOT_EVALUATED" && t["calibration"].isNull(),"Disabled branch carried evidence");
         const auto outputs=t["outputs"].toObject();for(auto p=outputs.begin();p!=outputs.end();++p){const auto o=p->toObject();if(o.contains("typedPort")){auto value=ToolResultCodec::decode(o["typedPort"].toObject());if(value.valid){require(index.has_value(),"Output without frame");const auto ports=outputPorts(configured->kind);const auto port=std::find_if(ports.cbegin(),ports.cend(),[&](const auto& x){return x.id==p.key();});require(port!=ports.cend(),"Undeclared terminal port");index->validatePort(graph.toolSources.value(id),value,*port);}}else{require(o["type"]=="Image" && o["imageInfo"].isObject() && index.has_value(),"Missing image evidence");const auto& f=index->frame(graph.toolSources.value(id));require(o["sourceId"]==f.sourceId && o["frameId"]==f.frameId && o["cycleId"]==f.cycleId,"Terminal image source/frame swap");}}
     }
@@ -100,7 +101,7 @@ void ProductionResultCodec::validate(const QJsonObject& record) {
     const auto sourceFrames=record["frames"].toArray();
     if(schema==6){QString frame;const auto source=record["measurementSource"].toObject()["binding"].toObject()["sourceToolId"].toString();for(const auto& f:sourceFrames){const auto o=f.toObject();require(o["sourceId"]==source && o["cycleId"]==record["cycleId"] && !o["frameId"].toString().isEmpty() && (frame.isEmpty() || frame==o["frameId"].toString()),"Terminal physical frame provenance differs");frame=o["frameId"].toString();}}
     for(const auto& item:record["tools"].toArray()) {
-        require(item.isObject(),"Invalid terminal tool");const auto tool=item.toObject();
+        require(item.isObject(),"Invalid terminal tool");const auto tool=item.toObject();validateMeasurementDiagnostic(tool,record);
         if(schema==6)require(tool["kind"]==record["dependencies"].toObject()["tools"].toObject()[tool["toolId"].toString()].toObject()["kind"],"Terminal tool kind differs from snapshot");
         require(tool["outputs"].isObject(),"Invalid terminal outputs");const auto outputs=tool["outputs"].toObject();
         require(outputs.size()<=128,"Terminal port limit");
@@ -132,6 +133,8 @@ QString ProductionResultCodec::summary(const QJsonObject& record) {
     if(record["schemaVersion"]==8){const auto a=record["industrialAcquisition"].toObject();lines<<acquisitionStatus(a["status"]=="ACQUIRED" ? "DONE":record["state"].toString(),a["reason"].toString()+" "+a["errorCode"].toString());lines<<presentIndustrialSource({},record["industrialSource"].toObject(),record["industrialAcquisition"].toObject()).detail;lines<<(record.contains("systemCalibration") ? "Kaynağa bağlı ölçüm modeli • karar araç bazında":"Raw / px • ölçüm doğrulanmadı");}
     for(const auto& item:record["tools"].toArray()) {
         const auto t=item.toObject();lines<<t["name"].toString(t["toolId"].toString())+" • "+t["state"].toString()+" • "+t["decision"].toString();
+        if(t.contains("measurementDiagnostic"))lines<<"  "+presentMeasurementDiagnostic(decodeMeasurementDiagnostic(t["measurementDiagnostic"].toObject()));
+        else if(!t["message"].toString().isEmpty())lines<<"  "+t["message"].toString();
         const auto outputs=t["outputs"].toObject();
         for(auto it=outputs.begin();it!=outputs.end();++it)if(it->toObject().contains("typedPort")) {
             const auto v=ToolResultCodec::decode(it->toObject()["typedPort"].toObject());
@@ -159,6 +162,12 @@ QByteArray ProductionResultCodec::csv(const QVector<QJsonObject>& records) {
         const auto industrialCell=cell(QString::fromUtf8(QJsonDocument(industrialEvidence).toJson(QJsonDocument::Compact)));
         for(const auto& item:record["tools"].toArray()) {
             const auto t=item.toObject();const auto outputs=t["outputs"].toObject();
+            if(t.contains("measurementDiagnostic")){
+                QStringList row;for(int j=0;j<18;++j)row<<QString{};
+                row[0]=record["cycleId"].toString();row[1]=record["recipeId"].toString();row[2]=t["toolId"].toString();row[3]="measurementDiagnostic";row[4]="diagnostic/1";const auto evidence=decodeMeasurementDiagnostic(t["measurementDiagnostic"].toObject());row[8]=evidence.frameId;row[6]="false";row[7]="true";row[9]=record["evaluationId"].toString();row[13]=QString::fromUtf8(QJsonDocument(t["measurementDiagnostic"].toObject()).toJson(QJsonDocument::Compact));row[14]=record["configId"].toString();row[15]=record["validationId"].toString();row[16]=record["dependencyId"].toString();
+                QStringList quoted;for(const auto& value:row)quoted<<cell(value);if(system)quoted<<cell({});if(physical)quoted<<cell({});if(multi)quoted<<cell(record["state"].toString())<<cell(evidence.sourceId)<<cell(QString::fromUtf8(QJsonDocument(record["dependencies"].toObject()["sourceSet"].toObject()).toJson(QJsonDocument::Compact)))<<cell(QString::fromUtf8(QJsonDocument(record["frames"].toArray()).toJson(QJsonDocument::Compact)));if(industrial)quoted<<industrialCell;
+                data+=quoted.join(',')+"\r\n";emitted=true;
+            }
             for(auto it=outputs.begin();it!=outputs.end();++it) {
                 const auto o=it->toObject();const auto p=o["typedPort"].toObject();
                 const QStringList row{record["cycleId"].toString(),record["recipeId"].toString(),t["toolId"].toString(),it.key(),o["type"].toString(),o["unit"].toString(),p.isEmpty() ? "legacy":p["valid"].toBool() ? "true":"false",p["diagnostic"].toBool() ? "true":"false",o["frameId"].toString(),p["evaluationId"].toString(),p["method"].toString(),QString::number(p["methodVersion"].toInt()),QString::fromUtf8(QJsonDocument(QJsonArray{o.contains("value") ? o["value"]:o["imageInfo"]}).toJson(QJsonDocument::Compact)),p["invalidReason"].toString(),record["configId"].toString(),record["validationId"].toString(),record["dependencyId"].toString(),QString::fromUtf8(QJsonDocument(record["referenceBindings"].toObject()[t["toolId"].toString()].toObject()).toJson(QJsonDocument::Compact))};

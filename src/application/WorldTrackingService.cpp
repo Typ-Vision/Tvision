@@ -1,4 +1,5 @@
 #include "WorldTrackingService.hpp"
+#include "MeasurementDiagnostic.hpp"
 #include <cmath>
 #include "domain/ToolRegistry.hpp"
 #include "domain/ReferenceConfig.hpp"
@@ -22,16 +23,16 @@ TrackedWorldPoint point(const WorldTrackingMap& map,QPointF nominal){
     const auto raw=map.nominalToRaw(nominal);return {raw,map.rawToWorld(raw)};
 }
 }
-std::optional<TrackedWorldPoint> WorldTrackingService::edge(const ImageFrame& image,const ToolRoi& roi,double unit,const WorldTrackingMap& map,const EdgeOptions& o,const std::shared_ptr<std::atomic_bool>& cancel){
+std::optional<TrackedWorldPoint> WorldTrackingService::edge(const ImageFrame& image,const ToolRoi& roi,double unit,const WorldTrackingMap& map,const EdgeOptions& o,const std::shared_ptr<std::atomic_bool>& cancel,FitDiagnostic* diagnostic){
     validate(image,roi,map,unit);
     const auto found=EdgeFinder::findMapped(image,scan(roi,unit),[&](QPointF p){return map.nominalToRaw(p*unit);},o,cancel);
-    if(!found.selected)return {};
+    if(!found.selected){if(diagnostic)*diagnostic=FitDiagnostic{"EDGE_NOT_FOUND","edge_search",1,0,1,0,scanRejections(found)};return {};}
     return point(map,found.candidates[*found.selected].point*unit);
 }
-std::optional<TrackedWorldPair> WorldTrackingService::pair(const ImageFrame& image,const ToolRoi& roi,double unit,const WorldTrackingMap& map,const EdgePairOptions& o,const std::shared_ptr<std::atomic_bool>& cancel){
+std::optional<TrackedWorldPair> WorldTrackingService::pair(const ImageFrame& image,const ToolRoi& roi,double unit,const WorldTrackingMap& map,const EdgePairOptions& o,const std::shared_ptr<std::atomic_bool>& cancel,FitDiagnostic* diagnostic){
     validate(image,roi,map,unit);
     const auto found=EdgePairFinder::findMapped(image,scan(roi,unit),[&](QPointF p){return map.nominalToRaw(p*unit);},o,cancel);
-    if(!found.selected)return {};
+    if(!found.selected){if(diagnostic)*diagnostic=FitDiagnostic{"PAIR_NOT_FOUND","pair_search",1,0,1,0,scanRejections(found.edges)};return {};}
     const auto p=found.candidates[*found.selected];
     const auto a=point(map,found.edges.candidates[p.firstEdge].point*unit),b=point(map,found.edges.candidates[p.secondEdge].point*unit);
     return TrackedWorldPair{a,b,QLineF(a.world,b.world).length()};
@@ -134,10 +135,10 @@ ToolResult WorldTrackingService::execute(const ToolDefinition& t,const ImageFram
     for(const auto& port:outputPorts(t.kind)){PortValue v{port,false,false,m.frameId,m.cycleId,m};v.invalidReason="WORLD_TRACKING_UNAVAILABLE";v.method="world-raw-rigid-refit";v.methodVersion=2;r.outputs[port.id]=v;}
     auto put=[&](QString id,PortData data,bool valid=true,QString reason="NOT_EVALUATED"){require(r.outputs.contains(id),"Unknown world tracking output");auto& v=r.outputs[id];v.data=std::move(data);v.valid=valid;v.invalidReason=valid ? QString{}:reason;};
     if(t.kind=="edge_point"){
-        const auto hit=edge(image,roi,unit,map,edgeOptions(p),cancel);put("found",bool(hit));if(hit){put("point",hit->raw);put("pointMm",hit->world);r.points.append(hit->raw);}
+        FitDiagnostic d;const auto hit=edge(image,roi,unit,map,edgeOptions(p),cancel,&d);if(!hit){r.fitDiagnostic=d;r.message=presentMeasurementDiagnostic(d);}put("found",bool(hit));if(hit){put("point",hit->raw);put("pointMm",hit->world);r.points.append(hit->raw);}
     }else if(t.kind=="edge_pair"){
         EdgePairOptions o;o.profile=edgeOptions(p).profile;o.selection=edgeOptions(p).selection;o.minContrast=p["minContrast"].toDouble();o.subpixel=p["subpixel"].toBool();o.minWidthPx=p["minWidthPx"].toDouble();o.maxWidthPx=p["maxWidthPx"].toDouble();o.polarity=p["polarity"]=="bright" ? StripePolarity::Bright:p["polarity"]=="dark" ? StripePolarity::Dark:StripePolarity::Any;
-        const auto hit=pair(image,roi,unit,map,o,cancel);put("found",bool(hit));if(hit){put("first",hit->first.raw);put("second",hit->second.raw);put("centre",(hit->first.raw+hit->second.raw)/2);put("widthPx",QLineF(hit->first.raw,hit->second.raw).length());put("widthMm",hit->widthMm);put("accepted",hit->widthMm>=p["lower"].toDouble() && hit->widthMm<=p["upper"].toDouble());r.points={hit->first.raw,hit->second.raw};r.lines={QLineF(hit->first.raw,hit->second.raw)};}
+        FitDiagnostic d;const auto hit=pair(image,roi,unit,map,o,cancel,&d);if(!hit){r.fitDiagnostic=d;r.message=presentMeasurementDiagnostic(d);}put("found",bool(hit));if(hit){put("first",hit->first.raw);put("second",hit->second.raw);put("centre",(hit->first.raw+hit->second.raw)/2);put("widthPx",QLineF(hit->first.raw,hit->second.raw).length());put("widthMm",hit->widthMm);put("accepted",hit->widthMm>=p["lower"].toDouble() && hit->widthMm<=p["upper"].toDouble());r.points={hit->first.raw,hit->second.raw};r.lines={QLineF(hit->first.raw,hit->second.raw)};}
     }else if(t.kind=="line_fit"){
         const auto hit=line(image,roi,unit,map,lineOptions(p),cancel);const auto& f=hit.world;
         const CoordinateFrame raw{m.coordinateSystemId};PointSet obs{{},raw};for(const auto& s:hit.raw)if(s.point)obs.points.append(*s.point);put("observationsPx",obs);
@@ -155,7 +156,7 @@ ToolResult WorldTrackingService::execute(const ToolDefinition& t,const ImageFram
         put("observationsPx",raw);put("observationsMm",world);put("slots",scanRows);
         put("arcMm",measured.arc.value_or(Arc2D{}),measured.arc.has_value(),metric.fullCircle ? "FULL_CIRCLE":"CURRENT_ARC_UNAVAILABLE");
         const auto d=metric.observedDeviation;put("radialMinMm",d.minimumRadius);put("radialMaxMm",d.maximumRadius);put("maxInwardMm",d.maxInward);put("maxOutwardMm",d.maxOutward);put("observedDeviationMm",d.peakToValley);
-        const bool qualified=metric.deviation.has_value();put("qualified",qualified);put("deviationMm",qualified ? metric.deviation->peakToValley:0.,qualified);
+        const bool qualified=metric.deviation.has_value();if(!qualified)r.fitDiagnostic=FitDiagnostic{"CIRCLE_CONTOUR","contour_quality",int(hit.observations.scans.size()),hit.observations.foundCount,p["minFoundPoints"].toInt(),fit.usedCount,{}};put("qualified",qualified);put("deviationMm",qualified ? metric.deviation->peakToValley:0.,qualified);
         const bool diameterOk=metric.diameter>=p["diameterLower"].toDouble() && metric.diameter<=p["diameterUpper"].toDouble();
         const bool deviationOk=qualified && metric.deviation->peakToValley>=p["deviationLower"].toDouble() && metric.deviation->peakToValley<=p["deviationUpper"].toDouble();
         put("diameterAccepted",diameterOk,qualified);put("deviationAccepted",deviationOk,qualified);put("accepted",diameterOk && deviationOk,qualified);

@@ -55,7 +55,7 @@ FittedLine LineFitter::fit(const QVector<LineScanPoint>& scans,QPointF taught,co
     if(o.ransac){std::mt19937 rng(0x56464c31u);for(int iteration=0;iteration<o.ransacIterations;++iteration){stop();const int a=int(rng()%local.size()),b=int(rng()%local.size());if(a==b || norm(local[b]-local[a])<1e-9)continue;const auto candidate=orient({local[a],local[b]-local[a]});if(dot(candidate.tangent,taught)<.5)continue;auto list=members(candidate);const double e=error(candidate,list);if(list.size()>inliers.size() || (list.size()==inliers.size() && e<bestError)){best=candidate;inliers=std::move(list);bestError=e;}}}
     requireFitSupport(inliers.size()>=o.minPoints,"Insufficient line consensus","LINE_CONSENSUS","fit_consensus",scans,o.minPoints,int(inliers.size()));
     bool stable=false;for(int pass=0;pass<8;++pass){best=solve(inliers,cv::DIST_L2);auto next=members(best);requireFitSupport(next.size()>=o.minPoints,"Insufficient line refit consensus","LINE_CONSENSUS","fit_consensus",scans,o.minPoints,int(next.size()));if(next==inliers){stable=true;break;}inliers=std::move(next);}require(stable,"Unstable line consensus");
-    require(dot(best.tangent,taught)>=.5,"Line direction inconsistent with taught axis");
+    requireFitSupport(dot(best.tangent,taught)>=.5,"Line direction inconsistent with taught axis","LINE_DIRECTION","fit_support",scans,o.minPoints,int(inliers.size()));
     FittedLine r;r.tangent=best.tangent;r.origin=offset+best.centre*scale;r.scans=scans;
     double low=std::numeric_limits<double>::infinity(),high=-low,sum=0,maximum=0;int first=int(scans.size()),last=-1;
     QPointF centre;for(auto i:inliers)centre+=local[i];centre/=inliers.size();double xx=0,xy=0,yy=0;
@@ -63,11 +63,11 @@ FittedLine LineFitter::fit(const QVector<LineScanPoint>& scans,QPointF taught,co
     for(int i=0;i<points.size();++i)r.scans[ids[i]].signedResidual=cross(local[i]-best.centre,best.tangent)*scale;
     for(auto i:inliers){stop();auto& s=r.scans[ids[i]];s.used=true;s.reason.clear();first=std::min(first,ids[i]);last=std::max(last,ids[i]);const double t=dot(local[i]-best.centre,best.tangent)*scale;low=std::min(low,t);high=std::max(high,t);const double e=*s.signedResidual;sum+=e*e;maximum=std::max(maximum,std::abs(e));const auto q=local[i]-centre;xx+=q.x()*q.x();xy+=q.x()*q.y();yy+=q.y()*q.y();}
     const double trace=xx+yy,discriminant=std::hypot(xx-yy,2*xy),major=(trace+discriminant)/2,minor=std::max(0.,(trace-discriminant)/2);
-    require(major>0 && minor<=major/o.minVarianceRatio,"Ill-conditioned line distribution");
+    requireFitSupport(major>0 && minor<=major/o.minVarianceRatio,"Ill-conditioned line distribution","LINE_SUPPORT","fit_support",scans,o.minPoints,int(inliers.size()));
     r.varianceRatio=major/std::max(minor,major*1e-15);r.span=high-low;r.rms=std::sqrt(sum/inliers.size());r.maxResidual=maximum;
     r.usedCount=inliers.size();r.missingCount=scans.size()-points.size();r.rejectedCount=points.size()-inliers.size();r.coverage=double(r.usedCount)/scans.size();r.spanCoverage=double(last-first)/(scans.size()-1);
-    require(r.coverage>=o.minCoverage && r.spanCoverage>=o.minSpanCoverage,"Insufficient line scan coverage");
-    require(r.span>=o.minSpan,"Insufficient line spatial span");require(std::isfinite(r.rms) && r.rms<=o.maxRms && r.maxResidual<=o.maxResidual,"Line residual limits exceeded");
+    requireFitSupport(r.coverage>=o.minCoverage && r.spanCoverage>=o.minSpanCoverage,"Insufficient line scan coverage","LINE_COVERAGE","fit_support",scans,o.minPoints,int(inliers.size()));
+    requireFitSupport(r.span>=o.minSpan,"Insufficient line spatial span","LINE_SPAN","fit_support",scans,o.minPoints,int(inliers.size()));requireFitSupport(std::isfinite(r.rms) && r.rms<=o.maxRms && r.maxResidual<=o.maxResidual,"Line residual limits exceeded","LINE_RESIDUAL","fit_quality",scans,o.minPoints,int(inliers.size()));
     r.supportStart=r.origin+r.tangent*low;r.supportEnd=r.origin+r.tangent*high;r.angleDegrees=std::atan2(r.tangent.y(),r.tangent.x())*180/std::numbers::pi;if(r.angleDegrees>=180)r.angleDegrees-=360;
     stop();return r;
 }
@@ -85,7 +85,7 @@ QVector<LineScanPoint> LineFitter::observationsMapped(const ImageFrame& image,co
     require(bool(map),"Line requires a sampling map");
     require(o.scanCount>=3 && o.scanCount<=4096 && o.scanCount>=o.fit.minPoints && std::isfinite(o.scanWidthPx) && o.scanWidthPx>0 && o.scanWidthPx<=1024 && o.scanWidthPx<box.size.width(),"Invalid line scans");
     const qint64 pixels=qint64(image.size().width())*image.size().height();
-    require(pixels<=16*1024*1024 && pixels*o.scanCount<=512*1024*1024,"Line image/hash work budget exceeded");
+    requireScanConfiguration(pixels<=16*1024*1024 && pixels*o.scanCount<=512*1024*1024,"Line image/hash work budget exceeded","IMAGE_SCAN_BUDGET","work_budget",o.scanCount);
     // Preflight aggregate work before allocating profiles or hashing/reading pixels.
     const auto p=o.edge.profile;require(std::isfinite(p.stepPx) && p.stepPx>=.05 && p.stepPx<=16 && std::isfinite(p.widthStepPx) && p.widthStepPx>=.25 && p.widthStepPx<=16 && std::isfinite(p.sigmaPx) && p.sigmaPx>=0 && p.sigmaPx<=16,"Invalid line sampling options");
     const auto layout=ScanLayout::line(box,o.scanCount,o.scanWidthPx);
@@ -95,7 +95,8 @@ QVector<LineScanPoint> LineFitter::observationsMapped(const ImageFrame& image,co
         // lengths can cross a ceil boundary even when nominal height is integral.
         const double length=QLineF(segment.start,segment.end).length();
         const double count=std::ceil(length/p.stepPx)+1,across=std::ceil(o.scanWidthPx/p.widthStepPx)+1,step=length/(count-1),radius=p.sigmaPx==0 ? 0:std::ceil(3*p.sigmaPx/step);
-        require(count<=65536 && across<=1024 && radius<=1024 && count>=2*radius+4 && count*across<=4*1024*1024,"Line profile budget/support exceeded");
+        requireScanConfiguration(count>=2*radius+4,"Line profile support exceeded","SAMPLING_SUPPORT","sampling_support",o.scanCount);
+        requireScanConfiguration(count<=65536 && across<=1024 && radius<=1024 && count*across<=4*1024*1024,"Line profile budget exceeded","SAMPLING_BUDGET","work_budget",o.scanCount);
         totalTaps+=count*across;totalConvolution+=(count-2*radius)*(2*radius+1);
         const auto d=(segment.end-segment.start)/length;const QPointF normal(-d.y(),d.x());
         for(auto q:{segment.start,segment.end})for(double side:{-.5,.5}){const auto raw=map(q+normal*(segment.width*side));require(finite(raw) && raw.x()>=0 && raw.y()>=0 && raw.x()<=image.size().width()-1 && raw.y()<=image.size().height()-1,"Line strip outside raw domain");}

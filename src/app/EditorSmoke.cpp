@@ -45,6 +45,7 @@
 #include <QGraphicsItem>
 #include <QPushButton>
 #include <QLabel>
+#include <QTextEdit>
 #include <QComboBox>
 #include <QElapsedTimer>
 #include <QTimer>
@@ -676,7 +677,16 @@ bool MainWindow::verifyCircle(const QString& artifacts){
     selectPage("recipes");refreshRecipes();for(int row=0;row<recipeTable_->rowCount();++row)if(recipeTable_->item(row,0)->data(Qt::UserRole)==recipe)recipeTable_->selectRow(row);findChild<QPushButton*>("loadRecipe")->click();wait();findChild<QPushButton*>("runtime_run")->click();wait();check(runtime_ && runtime_->active(),"Circle Runtime prepared");for(auto t:service_.tools())if(t.id==id){t.parameters["minContrast"]=5100;service_.updateTool(t);}findChild<QPushButton*>("runtime_cycle")->click();wait();if(!runtimeResult_ || runtimeResult_->state!=ExecutionState::Done)QTextStream(stderr)<<"Circle runtime error: "<<runtimeCoordinator_->error()<<" summary="<<runtimeSummary_->text()<<"\n";check(runtimeResult_ && runtimeResult_->state==ExecutionState::Done,"Circle immutable Runtime");runtimeTools_->setCurrentIndex(runtimeTools_->findData(id));runtimeViewer_->fitImage();QApplication::processEvents();check(runtimeViewer_->roi().has_value(),"Circle readonly world ROI");grab().save(QDir(artifacts).filePath("circle-runtime.png"));findChild<QPushButton*>("runtime_stop")->click();check(!runtimeResult_ && !runtimeViewer_->hasImage(),"Circle Stop clears Runtime");check(ProductionResultCodec::csv(ProductionStore(service_.path()+".production").recent("cycles")).contains("radial-circle"),"Circle persisted typed CSV");
     refreshWorkspace();selectPage("editor");selectTool(id);runFlow();wait();check(result().state==ExecutionState::Error && result().outputs.isEmpty(),"Circle no fit clears old result");
     check(result().fitDiagnostic && result().errorCode=="CIRCLE_POINTS" && result().fitDiagnostic->rejections.contrast>0,"Circle visible failed scan summary");
+    for(const auto size:{QSize(1400,900),QSize(850,600)}){resize(size);QApplication::processEvents();vertical_->setSizes({330,240});imageViewer_->fitImage();QApplication::processEvents();check(grab().save(QDir(artifacts).filePath(QString("mui03-diagnostic-%1.png").arg(size.width()))),"failed-run guidance screenshot");}resize(1400,900);
     for(const auto size:{QSize(1400,900),QSize(850,600)}){resize(size);QApplication::processEvents();grab().save(QDir(artifacts).filePath(QString("mui01-circle-failure-%1.png").arg(size.width())));}
+    service_.save();selectPage("recipes");refreshRecipes();for(int row=0;row<recipeTable_->rowCount();++row)if(recipeTable_->item(row,0)->data(Qt::UserRole)==recipe)recipeTable_->selectRow(row);
+    findChild<QPushButton*>("loadRecipe")->click();wait();findChild<QPushButton*>("runtime_run")->click();wait();findChild<QPushButton*>("runtime_cycle")->click();wait();check(runtimeResult_ && runtimeResult_->state==ExecutionState::Error,"Runtime failed scan is ERROR");runtimeTools_->setCurrentIndex(runtimeTools_->findData(id));check(runtimeSummary_->text().startsWith("Circle_/_Arc_1 • ERROR") && runtimeSummary_->text().contains("CIRCLE_POINTS"),"blocking diagnosis precedes metadata");
+    for(const auto size:{QSize(1400,900),QSize(850,600)}){resize(size);QApplication::processEvents();grab().save(QDir(artifacts).filePath(QString("mui03-runtime-%1.png").arg(size.width())));}
+    const auto failedRecords=ProductionStore(service_.path()+".production").recent("cycles");check(ProductionResultCodec::summary(failedRecords.first()).contains("CIRCLE_POINTS") && ProductionResultCodec::csv({failedRecords.first()}).contains("measurementDiagnostic"),"persisted failure explanation");
+    findChild<QPushButton*>("runtimeHistory")->click();QApplication::processEvents();logTable_->setCurrentCell(0,0);check(findChild<QTextEdit*>("logDetail")->toPlainText().contains("CIRCLE_POINTS"),"Logs opens persisted failed-run explanation");
+    for(const auto size:{QSize(1400,900),QSize(850,600)}){resize(size);QApplication::processEvents();grab().save(QDir(artifacts).filePath(QString("mui03-logs-%1.png").arg(size.width())));}
+    selectPage("runtime");findChild<QPushButton*>("runtime_stop")->click();refreshWorkspace();selectPage("editor");selectTool(id);
+
 for(auto t:service_.tools())if(t.id==id){t.parameters["minContrast"]=20;service_.updateTool(t);}refreshWorkspace();runFlow();findChild<QPushButton*>("stopFlow")->click();wait();check(result().outputs.isEmpty() && result().lines.isEmpty(),"Circle late Stop clears overlays");service_.save();
     resize(1400,900);horizontal_->setSizes({155,750,300});vertical_->setSizes({540,240});QApplication::processEvents();
     auto projectPoint=[](QPointF q){double w=1+.004*q.x()+.002*q.y();return QPointF((3.5*q.x()+.4*q.y()+20)/w,(.2*q.x()+4*q.y()+20)/w);};

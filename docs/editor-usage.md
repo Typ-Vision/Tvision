@@ -82,7 +82,18 @@ istenen/bulunan/gerekli ve (consensus için) katılan nokta sayıları, adaylar�
 geçiş/eşik/sınır desteği ret sayıları ve adaysız tarama sayısı gösterilir.
 Aday ret sayıları tarama sayısı değildir; bir taramada birden fazla aday olabilir.
 Geçerli fit olmadığında ölçüm portu, PASS veya parça kararı üretilmez.
-Bu özet canlı tanıdır; ayrıntılı Runtime/Logs tanı modeli MUI-03 kapsamındadır.
+Editor ve Runtime aynı aşamaya göre çözüm önerisini gösterir. Edge Point'te
+kenar geçişi/eşik/sınır desteği; Caliper'da komşu kenar, açık/koyu şerit ve aranan
+genişlik; Geometry'de downstream refit ayrı açıklanır. Fit destek/kalite hatası ve
+Circle kontur değerlendirmesinin yapılamaması ürün toleransı aşımından ayrıdır.
+Öneri hiçbir ayarı otomatik değiştirmez. Kalibrasyon/bağlama gibi diğer hatalar
+özgün mesajıyla korunur; bu hatalarda eşik gevşetme önerilmez.
+
+Yeni Runtime kayıtları sınırlı tanı özetini gerçek kaynak/frame/cycle/evaluation
+kimliğiyle saklar. Logs yeniden açıldığında aynı açıklama gösterilir; CSV'de
+`measurementDiagnostic` satırı geçersiz scalar ve JSON neden hücresiyle taşınır.
+Bu satır ölçüm veya PASS değildir. Stop ve parametre/kaynak değişimi canlı eski
+tanıyı temizler; geçmiş kayıtları silmez. Eski kayıtlar okunur, eksik tanı türetilmez.
 
 ## Line / Circle sade ayarlar ve ön kontrol
 
