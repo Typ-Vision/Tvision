@@ -83,3 +83,30 @@ geçiş/eşik/sınır desteği ret sayıları ve adaysız tarama sayısı göste
 Aday ret sayıları tarama sayısı değildir; bir taramada birden fazla aday olabilir.
 Geçerli fit olmadığında ölçüm portu, PASS veya parça kararı üretilmez.
 Bu özet canlı tanıdır; ayrıntılı Runtime/Logs tanı modeli MUI-03 kapsamındadır.
+
+## Line / Circle sade ayarlar ve ön kontrol
+
+Temel kullanımda birim, tarama yönü/sayısı, **Kenar geçişi**, **Kenar seçimi**
+ve **Kenar eşiği** görünür. Geçiş ok yönünde Siyah → Beyaz / Beyaz → Siyah /
+Her ikisi; seçim İlk / Son / En güçlüdür. Eşik siyah-beyaz görüntü eşiği değildir;
+0–255 normalize profil değişimi / örnek koordinatı birimidir.
+
+- **Gelişmiş tarama:** ortalama şerit kalınlığı ve gürültü yumuşatma. Şerit,
+  kenar boyunca ortalamadır; ROI arama uzunluğu kenarı kestiği mesafedir.
+- **Fit / kontur kalitesi:** fit'e katılma mesafesi, RMS, en büyük residual,
+  nokta sayıları, ayrı fit/gözlem/destek yüzdeleri ve yay/boşluk sınırları.
+- **Ürün sınırları:** Line destek uzunluğu ve yönlü açı; Circle çap ve yüzey
+  sapması. Bu kontroller etkin kalır; paneli kapatmak değerlendirmeyi kapatmaz.
+- **Detailed → Uzman örnekleme / solver:** örnek adımları, subpixel, sağlam fit
+  override ve koşul sınırı. Basic/Detailed ve bölüm açılması reçeteyi değiştirmez.
+
+Bölümler başlangıçta kapalıdır; tercihler yerel INI'dedir. Basic görünümde özel
+ayar özeti korunmuş değerleri gösterir. Yüzdeler dosyada eski 0–1 oranlarıyla
+saklanır. Alanları gizlemek veya birimleri etiketlemek eski ayarları sıfırlamaz.
+
+Ön kontrol; tarama/nokta sayısı, nominal boşluk/yay desteği, Line nominal desteği,
+şerit/ROI genişliği ve filtre/tepe için kısa arama desteğini açıklar. Uyarı ölçüm
+sonucu değildir; çalıştırmayı veya kalite sınırlarını otomatik değiştirmez.
+World/reference dönüşümünde nominal açıdan gerçek current world kalite kararı
+çıkarılmaz. Görüntü alanı, kalibrasyon, iş bütçesi ve gerçek fit kapıları yürütmede
+ayrıca denetlenir. Bu kontrolün uyarı vermemesi başarılı fit garantisi değildir.

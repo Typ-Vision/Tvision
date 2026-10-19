@@ -36,6 +36,19 @@ int main(int argc,char** argv){QCoreApplication app(argc,argv);try {
     {auto p=defaultParameters("line_fit");p["scanCount"]=10;p["scanWidthPx"]=2;p["poseTracking"]=QJsonObject{{"mmPerSample",.1}};
         const auto lines=MetrologyService::scanGuides("line_fit",p,ToolRoi{{"world",LengthUnit::Millimetre},RotatedRectangle{{10,10},{8,4},90}});
         check(QLineF(lines.first().p1(),{12,6.1}).length()<1e-9,"world strip uses synthetic scan width in nominal mm");}
+    {
+        auto p=defaultParameters("circle_fit");auto roi=ring();p["scanRoi"]=roi.toJson();p["scanCount"]=12;
+        auto has=[](const QStringList& warnings,const char* code){for(const auto& w:warnings)if(w.startsWith(code))return true;return false;};
+        check(has(MetrologyService::configurationWarnings("circle_fit",p),"MUI_GAP"),"12 scans versus 15 degree gap explained");
+        p["scanCount"]=72;check(MetrologyService::configurationWarnings("circle_fit",p).isEmpty(),"normal ring configuration has no invented warning");
+        p["scanRoi"]=ToolRoi{{"raw"},ArcRoi{{{95,96},37,43},0,45}}.toJson();
+        const auto narrow=MetrologyService::configurationWarnings("circle_fit",p);check(has(narrow,"MUI_SUPPORT") && has(narrow,"MUI_SPAN"),"short search and narrow angular support distinct");
+        p["scanCount"]=5;check(has(MetrologyService::configurationWarnings("circle_fit",p),"MUI_COUNT"),"too few scans preflight");
+        p["referenceBinding"]=QJsonObject{{"mapping","world-reference-v1"}};const auto tracked=MetrologyService::configurationWarnings("circle_fit",p);check(!has(tracked,"MUI_SPAN") && !has(tracked,"MUI_GAP"),"nominal angles do not predict transformed world quality");
+        auto line=defaultParameters("line_fit");line["scanRoi"]=ToolRoi{{"raw"},RotatedRectangle{{95,96},{8,6},0}}.toJson();
+        const auto shortLine=MetrologyService::configurationWarnings("line_fit",line);check(has(shortLine,"MUI_SPAN") && has(shortLine,"MUI_SUPPORT"),"line support and scan length explained");
+        line["scanRoi"]=ToolRoi{{"raw"},RotatedRectangle{{95,96},{120,8},0}}.toJson();check(!has(MetrologyService::configurationWarnings("line_fit",line),"MUI_SUPPORT"),"8 px passes profile support preflight");
+    }
     QString report;QTextStream out(&report);double sum=0,maximum=0,nsum=0,nmax=0;int count=0,ncount=0;double narrowSum=0,narrowMax=0;int narrowCount=0;
     for(double radius:{24.,40.,60.})for(QPointF centre:{QPointF(95.2,96.35),QPointF(95.57,96.06)})for(bool dark:{false,true})for(bool inward:{false,true}) {
         auto o=options();o.direction=inward ? RadialDirection::Inward:RadialDirection::Outward;o.edge.polarity=(dark!=inward) ? EdgePolarity::Falling:EdgePolarity::Rising;

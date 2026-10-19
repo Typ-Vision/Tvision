@@ -179,11 +179,27 @@ bool MainWindow::verifyEditorUsability(const QString& artifacts) {
         findChild<QPushButton*>("stopFlow")->click();check(!imageViewer_->roiGestureActive() && selectedToolId_==id,"Stop preserves selection and cancels drawing");
         auto* mode=propertiesBody_->findChild<QComboBox*>("propertyDetailMode");auto* manual=propertiesBody_->findChild<QWidget*>(kind+"/manual");auto* outputs=propertiesBody_->findChild<QWidget*>(kind+"/outputs");
         check(mode && mode->currentIndex()==0 && manual->isHidden() && outputs->isHidden(),"Basic and collapsed sections default");
+        if(kind=="line_fit" || kind=="circle_fit") {
+            auto* quality=propertiesBody_->findChild<QWidget*>(kind+"/measurementGroup1");
+            auto* limits=propertiesBody_->findChild<QWidget*>(kind+"/measurementGroup2");
+            check(quality && limits && quality->isHidden() && limits->isHidden(),"fit quality and product limits are separate closed groups");
+            check(propertiesBody_->findChild<QDoubleSpinBox*>("mt_minPoints")->parentWidget()==quality,"quality fields grouped without reset");
+            check(propertiesBody_->findChild<QLabel*>("metrologyDirectionHelp") && propertiesBody_->findChild<QLabel*>("metrologyPreflight"),"basic has arrow explanation and preflight");
+            const auto state=service_.activeRecipe()->definition;propertiesBody_->findChild<QPushButton*>(kind+"/measurementGroup1Toggle")->click();
+            propertiesBody_->findChild<QPushButton*>(kind+"/measurementGroup1Toggle")->click();check(service_.activeRecipe()->definition==state,"opening quality section never changes recipe");
+        }
         service_.save();const auto definition=service_.activeRecipe()->definition;const auto signature=flowSignature();const auto generation=editorSession_.generation;
         auto* scroll=findChild<QScrollArea*>("propertiesScroll");
         for(const int detail:{0,1}) {
             mode->setCurrentIndex(detail);
             for(const auto size:{QSize(1400,900),QSize(850,600)}) {resize(size);horizontal_->setSizes({155,750,300});QApplication::processEvents();scroll->ensureWidgetVisible(mode);imageViewer_->fitImage();QApplication::processEvents();check(scroll->horizontalScrollBar()->maximum()==0,"properties fit without horizontal scroll");grab().save(QDir(artifacts).filePath(QString("u1-%1-%2-%3.png").arg(kind).arg(detail ? "detailed":"basic").arg(size.width())));}
+        }
+        if(kind=="line_fit" || kind=="circle_fit")for(int group:{0,1,2}) {
+            auto* toggle=propertiesBody_->findChild<QPushButton*>(kind+"/measurementGroup"+QString::number(group)+"Toggle");toggle->click();
+            auto* body=propertiesBody_->findChild<QWidget*>(kind+"/measurementGroup"+QString::number(group));
+            for(const auto size:{QSize(1400,900),QSize(850,600)}){resize(size);QApplication::processEvents();scroll->ensureWidgetVisible(body->findChild<QDoubleSpinBox*>());QApplication::processEvents();check(scroll->horizontalScrollBar()->maximum()==0,"measurement groups fit narrow panel");grab().save(QDir(artifacts).filePath(QString("mui02-%1-group%2-%3.png").arg(kind).arg(group).arg(size.width())));}
+            if(group==1){scroll->ensureWidgetVisible(body->findChild<QDoubleSpinBox*>("mt_minCoverage"));QApplication::processEvents();grab().save(QDir(artifacts).filePath(QString("mui02-%1-coverage-850.png").arg(kind)));}
+            toggle->click();
         }
         propertiesBody_->findChild<QPushButton*>(kind+"/manualToggle")->click();propertiesBody_->findChild<QPushButton*>(kind+"/outputsToggle")->click();
         check(!manual->isHidden() && !outputs->isHidden(),"manual and outputs accessible in Detailed");

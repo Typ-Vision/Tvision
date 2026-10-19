@@ -8,6 +8,40 @@
 #include <numbers>
 #include <stdexcept>
 namespace visionflow {
+QStringList MetrologyService::configurationWarnings(const QString& kind,const QJsonObject& p) {
+    QStringList warnings;
+    if(kind!="line_fit" && kind!="circle_fit")return warnings;
+    const int count=p["scanCount"].toInt(),minimum=std::max(p["minPoints"].toInt(),p["minFoundPoints"].toInt());
+    if(count<minimum)warnings<<QString("MUI_COUNT: %1 tarama, gerekli en az %2 nokta için yetersiz.").arg(count).arg(minimum);
+    if(p["scanRoi"].toObject().isEmpty())return warnings;
+    try {
+        const auto roi=ToolRoi::fromJson(p["scanRoi"].toObject());
+        const bool tracked=p.contains("poseTracking") || p["referenceBinding"].toObject()["mapping"]=="world-reference-v1";
+        double length=0,unit=1;
+        if(kind=="circle_fit") {
+            const auto arc=std::holds_alternative<Annulus>(roi.geometry) ? ArcRoi{std::get<Annulus>(roi.geometry),0,360}:std::get<ArcRoi>(roi.geometry);
+            length=arc.ring.outerRadius-arc.ring.innerRadius;unit=p["unitsPerSample"].toDouble();
+            const double sweep=std::abs(arc.sweepDegrees),spacing=count>1 ? sweep/(sweep==360 ? count:count-1):sweep;
+            // Current world angles can differ from nominal ROI angles. Do not
+            // claim a contradiction in the transformed metric plane.
+            if(!tracked && spacing>p["maxGapDegrees"].toDouble())warnings<<QString("MUI_GAP: Nominal tarama aralığı %1°, kontur boşluğu sınırı %2°. Tarama sayısı veya kalite sınırını inceleyin.").arg(spacing,0,'g',6).arg(p["maxGapDegrees"].toDouble());
+            const double span=sweep==360 ? sweep-spacing:sweep;
+            if(!tracked && span<p["minAngularSpan"].toDouble())warnings<<QString("MUI_SPAN: Nominal yay desteği en çok %1°, fit için %2° isteniyor. Daha geniş yay seçin.").arg(span,0,'g',6).arg(p["minAngularSpan"].toDouble());
+        } else {
+            const auto box=std::get<RotatedRectangle>(roi.geometry);length=box.size.height();
+            if(tracked){const auto binding=p.contains("referenceBinding") ? p["referenceBinding"].toObject():p["poseTracking"].toObject();unit=binding["mmPerSample"].toDouble();}
+            const double width=p["scanWidthPx"].toDouble()*unit;
+            if(width>=box.size.width())warnings<<"MUI_STRIP: Ortalama şerit kalınlığı ROI destek genişliğinden küçük olmalı.";
+            if(!tracked && box.size.width()-width<p["minSpanPx"].toDouble())warnings<<QString("MUI_SPAN: Nominal çizgi desteği %1 px; minimum %2 px. ROI genişliğini ve destek kalitesini inceleyin.").arg(box.size.width()-width,0,'g',6).arg(p["minSpanPx"].toDouble());
+        }
+        const double step=p["stepPx"].toDouble(),sigma=p["sigmaPx"].toDouble();
+        if(unit>0 && step>0 && length>0) {
+            const double samples=std::ceil(length/unit/step)+1,actual=length/unit/(samples-1),radius=sigma==0 ? 0:std::ceil(3*sigma/actual);
+            if(samples<2*radius+4)warnings<<QString("MUI_SUPPORT: Arama uzunluğu %1 %2; %3 örnek var, filtre/tepe desteği için %4 gerekli. ROI'yi kenarın iki tarafında pay bırakarak genişletin.").arg(length,0,'g',6).arg(roi.frame.unit==LengthUnit::Millimetre ? "mm":"px").arg(samples).arg(2*radius+4);
+        }
+    }catch(const std::exception&){warnings<<"MUI_ROI: Geçerli ROI öğretin.";}
+    return warnings;
+}
 QVector<QLineF> MetrologyService::scanGuides(const QString& kind,const QJsonObject& p,const ToolRoi& roi) {
     roi.validate();QVector<ScanSegment> scans;
     if(kind=="circle_fit") {

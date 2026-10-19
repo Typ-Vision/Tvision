@@ -6,6 +6,7 @@ görev” ifadeleri yazıldıkları tarihe aittir.
 
 | Dönem / görev | Kayıt |
 | --- | --- |
+| 19 Ekim 2026 — MUI-02 | [Sade ölçüm paneli, birim/yüzde etiketleri ve ön kontrol](2026-10-19-mui-02.md) |
 | 19 Ekim 2026 — MUI-01 | [Aşamalı fit tanısı ve açık pixel/birim başlangıcı](2026-10-19-mui-01.md) |
 | 19 Ekim 2026 — MUI-ANALYSIS-01 | [Line/Circle ön analizi, sade parametreler ve NOK önerileri](2026-10-19-mui-analysis-01.md) |
 | 18 Ekim 2026 — EUI-ACCEPT-01 | [Kullanıcı tekrar testlerinin tamamı başarılı](2026-10-18-eui-accept-01.md) |

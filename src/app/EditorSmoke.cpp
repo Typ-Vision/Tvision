@@ -594,7 +594,7 @@ bool MainWindow::verifyMetrology(const QString& artifacts){
     auto setGeometry=[&](const QString& id,const QVector<QPair<QString,double>>& coordinates){selectTool(id);for(const auto& v:coordinates)propertiesBody_->findChild<QDoubleSpinBox*>("mt_roi_"+v.first)->setValue(v.second);propertiesBody_->findChild<QPushButton*>("metrologyApplyRoi")->click();wait();check(imageViewer_->roi().has_value(),"numeric geometry commits");};
     setGeometry(pair,{{"ax",60.25},{"ay",250.25},{"bx",900.25},{"by",250.25},{"width",4}});
     const auto scan=imageViewer_->roi();imageViewer_->undoRoi();wait();check(!imageViewer_->roi(),"pair undo recipe geometry");setGeometry(pair,{{"ax",60.25},{"ay",250.25},{"bx",900.25},{"by",250.25},{"width",4}});check(imageViewer_->roi()==scan,"pair exact geometry restored");
-    setGeometry(line,{{"cx",200},{"cy",250},{"width",240},{"height",80},{"angle",90}});propertiesBody_->findChild<QComboBox*>("mt_polarity")->setCurrentText("falling");
+    setGeometry(line,{{"cx",200},{"cy",250},{"width",240},{"height",80},{"angle",90}});propertiesBody_->findChild<QComboBox*>("mt_polarity")->setCurrentIndex(propertiesBody_->findChild<QComboBox*>("mt_polarity")->findData("falling"));
     auto result=[&](const QString& id)->ToolResult{check(editorSession_.cycle.has_value(),"metrology cycle");for(const auto& r:editorSession_.cycle->tools)if(r.toolId==id)return r;throw std::runtime_error("metrology result absent");};
     runFlow();wait();check(result(pair).state==ExecutionState::Done && result(line).state==ExecutionState::Done,"new UI pixel tools");check(!result(pair).outputs["widthMm"].valid && result(line).outputs["linePx"].diagnostic,"pixel mode explicitly diagnostic");
     for(auto id:{pair,line}){selectTool(id);propertiesBody_->findChild<QComboBox*>("mt_mode")->setCurrentText("calibrated");propertiesBody_->findChild<QDoubleSpinBox*>("mt_lower")->setValue(id==pair ? 9.999:5.9);propertiesBody_->findChild<QDoubleSpinBox*>("mt_upper")->setValue(id==pair ? 10.001:6.1);check(applyToolProperties(),"calibrated Properties");}
@@ -620,6 +620,9 @@ bool MainWindow::verifyCircle(const QString& artifacts){
         auto changed=editor.parameters();
         if(changed["maxCondition"]!=p["maxCondition"])throw std::runtime_error("Circle unrelated high precision setting preserved");
         if(changed["inlierDistance"]!=.123 || changed["maxRms"]!=.047 || changed["unitsPerSample"]!=1.)throw std::runtime_error("Circle unit switch preserves custom limits");
+        if(editor.findChild<QDoubleSpinBox*>("mt_minCoverage")->value()!=90.)throw std::runtime_error("coverage displayed as percent");
+        editor.findChild<QDoubleSpinBox*>("mt_minCoverage")->setValue(85.);
+        if(editor.parameters()["minCoverage"]!=.85)throw std::runtime_error("coverage stored as original fraction");
         editor.findChild<QPushButton*>("metrologyUnitProfile")->click();changed=editor.parameters();
         if(changed["inlierDistance"]!=1. || changed["maxRms"]!=.35 || changed["scanWidth"]!=1.)throw std::runtime_error("Circle explicit pixel profile");
     }
@@ -631,7 +634,7 @@ bool MainWindow::verifyCircle(const QString& artifacts){
     QListWidgetItem* item=nullptr;for(int i=0;i<toolbox_->count();++i)if(toolbox_->item(i)->data(Qt::UserRole)=="circle_fit")item=toolbox_->item(i);check(item,"Circle Toolbox");toolbox_->setCurrentItem(item);findChild<QPushButton*>("addTool")->click();const auto id=selectedToolId_;check(propertiesBody_->findChild<QComboBox*>("mt_mode")->currentText()=="pixel","new Circle defaults to pixel");propertiesBody_->findChild<QComboBox*>("mt_mode")->setCurrentText("pixel");auto* input=propertiesBody_->findChild<QComboBox*>("input_image");input->setCurrentIndex(input->findData(source+"/image"));
     auto geometry=[&](double cx,double cy,double inner,double outer,double sweep){selectTool(id);for(const auto& v:QVector<QPair<QString,double>>{{"cx",cx},{"cy",cy},{"inner",inner},{"outer",outer},{"start",17.3},{"sweep",sweep}})propertiesBody_->findChild<QDoubleSpinBox*>("mt_roi_"+v.first)->setValue(v.second);propertiesBody_->findChild<QPushButton*>("metrologyApplyRoi")->click();wait();check(imageViewer_->roi().has_value(),"Circle numeric ROI commit");};
     geometry(96.25,95.75,34,46,360);auto before=imageViewer_->roi();imageViewer_->undoRoi();wait();check(!imageViewer_->roi(),"Circle undo bound ROI");geometry(96.25,95.75,34,46,360);check(imageViewer_->roi()==before,"Circle exact subpixel numeric restore");
-    propertiesBody_->findChild<QComboBox*>("mt_polarity")->setCurrentText("rising");runFlow();wait();auto result=[&]()->ToolResult{check(editorSession_.cycle.has_value(),"Circle cycle");for(const auto& r:editorSession_.cycle->tools)if(r.toolId==id)return r;throw std::runtime_error("Circle result missing");};check(result().state==ExecutionState::Done && std::abs(std::get<double>(result().outputs["diameterPx"].data)-80)<.3,"Circle UI actual px");
+    propertiesBody_->findChild<QComboBox*>("mt_polarity")->setCurrentIndex(propertiesBody_->findChild<QComboBox*>("mt_polarity")->findData("rising"));runFlow();wait();auto result=[&]()->ToolResult{check(editorSession_.cycle.has_value(),"Circle cycle");for(const auto& r:editorSession_.cycle->tools)if(r.toolId==id)return r;throw std::runtime_error("Circle result missing");};check(result().state==ExecutionState::Done && std::abs(std::get<double>(result().outputs["diameterPx"].data)-80)<.3,"Circle UI actual px");
     // EUI-04: preview changes nominal geometry immediately, commits only on finish.
     {const auto original=imageViewer_->roi();const auto definition=service_.activeRecipe()->definition;
         auto* sweep=propertiesBody_->findChild<QDoubleSpinBox*>("mt_roi_sweep");sweep->setValue(90);
@@ -655,6 +658,8 @@ bool MainWindow::verifyCircle(const QString& artifacts){
             geometry(96.25,95.75,34,46,angle);
             int arrows=0;for(auto* item:imageViewer_->scene()->items())if(item->data(0)=="scanGuide")++arrows;
             check(arrows==10 && !editorSession_.cycle,"ten nominal arrows with no stale fit");
+            if(angle==360.)check(propertiesBody_->findChild<QLabel*>("metrologyPreflight")->text().contains("MUI_GAP"),"sparse circle gap warning before Run");
+
             for(const auto size:{QSize(1400,900),QSize(850,600)}){
                 resize(size);QApplication::processEvents();imageViewer_->fitImage();QApplication::processEvents();
                 check(grab().save(QDir(artifacts).filePath(QString("eui08-circle-%1-%2-%3.png").arg(direction).arg(int(angle)).arg(size.width()))),"Circle direction and sweep PNG");

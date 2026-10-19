@@ -499,15 +499,43 @@ void MainWindow::showToolProperties() {
         auto* settingsRows=static_cast<QFormLayout*>(settings->layout());
         QList<QWidget*> advanced;
         const auto defaults=defaultParameters(tool.kind);
-        const QStringList basic{"mode","direction","selection","polarity","minContrast","scanCount","scanWidthPx","scanWidth","minWidthPx","maxWidthPx","lower","upper","angleLower","angleUpper","diameterLower","diameterUpper","deviationLower","deviationUpper"};
-        for(auto it=defaults.begin();it!=defaults.end();++it)if(!basic.contains(it.key()))if(auto* field=settings->findChild<QWidget*>((tool.kind=="edge_point" ? "ep_":"mt_")+it.key()))advanced.append(field);
-        // Technical help follows the same view preference.
-        for(auto* label:settings->findChildren<QLabel*>(QString{},Qt::FindDirectChildrenOnly))if(settingsRows->labelForField(label)==nullptr && label->wordWrap())advanced.append(label);
+        const bool fitTool=tool.kind=="line_fit" || tool.kind=="circle_fit";
+        const QStringList basic=fitTool ? QStringList{"mode","direction","selection","polarity","minContrast","scanCount"}:QStringList{"mode","direction","selection","polarity","minContrast","scanCount","scanWidthPx","scanWidth","minWidthPx","maxWidthPx","lower","upper","angleLower","angleUpper","diameterLower","diameterUpper","deviationLower","deviationUpper"};
+        if(fitTool) {
+            int index=tool.kind=="circle_fit" ? 5:3;
+            for(const auto& key:{"mode","direction","scanCount","polarity","selection","minContrast"})if(auto* field=settings->findChild<QWidget*>(QString("mt_")+key)) {
+                auto row=settingsRows->takeRow(field);settingsRows->insertRow(index++,row.labelItem->widget(),field);delete row.labelItem;delete row.fieldItem;
+            }
+            if(auto* warning=settings->findChild<QLabel*>("metrologyPreflight")){auto row=settingsRows->takeRow(warning);settingsRows->insertRow(index,warning);delete row.labelItem;delete row.fieldItem;}
+            const QVector<QPair<QString,QStringList>> groups{
+                {"Gelişmiş tarama",{"scanWidthPx","scanWidth","sigmaPx"}},
+                {"Fit / kontur kalitesi",{"inlierDistancePx","inlierDistanceMm","inlierDistance","maxRmsPx","maxRmsMm","maxRms","maxResidualPx","maxResidualMm","maxResidual","minPoints","minFoundPoints","minCoverage","minFitCoverage","minSpanCoverage","minSpanPx","minSpanMm","minAngularSpan","maxGapDegrees"}},
+                {"Ürün sınırları",{"lower","upper","angleLower","angleUpper","diameterLower","diameterUpper","deviationLower","deviationUpper"}},
+                {"Uzman örnekleme / solver",{"stepPx","widthStepPx","unitsPerSample","subpixel","ransac","maxCondition"}}
+            };
+            for(int i=0;i<groups.size();++i) {
+                const QString key=tool.kind+"/measurementGroup"+QString::number(i);
+                auto* groupHost=settingsRows;
+                if(i==3){auto* expert=new QWidget;groupHost=new QFormLayout(expert);groupHost->setContentsMargins(0,0,0,0);settingsRows->addRow(expert);advanced.append(expert);}
+                auto* body=propertySection(groupHost,groups[i].first,key,settingsFile_);auto* target=static_cast<QFormLayout*>(body->layout());
+                for(const auto& name:groups[i].second)if(auto* field=settings->findChild<QWidget*>("mt_"+name))movePropertyRow(settingsRows,field,target);
+                if(i==2)target->addRow(note("Bu sınırlar bulunan geometriyi değerlendirir; geometri bulmak için gevşetilmez. Line destek uzunluğu / yönlü açı; Circle çap / yüzey sapmasıdır."));
+            }
+        }
+        for(auto it=defaults.begin();it!=defaults.end();++it)if(!basic.contains(it.key()))if(auto* field=settings->findChild<QWidget*>((tool.kind=="edge_point" ? "ep_":"mt_")+it.key()))if(settingsRows->indexOf(field)>=0)advanced.append(field);
+        // Keep operational explanations and preflight visible in Basic.
+        for(auto* label:settings->findChildren<QLabel*>(QString{},Qt::FindDirectChildrenOnly))if(settingsRows->labelForField(label)==nullptr && label->wordWrap() && !label->objectName().startsWith("metrology"))advanced.append(label);
         propertyDetailMode(settingsRows,tool.kind,settingsFile_,advanced,[settings,defaults,basic]{
             const auto p=dynamic_cast<EdgePointEditor*>(settings) ? static_cast<EdgePointEditor*>(settings)->parameters():static_cast<MetrologyEditor*>(settings)->parameters();
             for(auto it=defaults.begin();it!=defaults.end();++it)if(!basic.contains(it.key()) && it.key()!="scanRoi" && p.value(it.key())!=it.value())return true;
             return false;
         },presentation);
+        if(fitTool)if(auto* customized=settings->findChild<QLabel*>("advancedCustomized")) {
+            QStringList values;for(auto it=defaults.begin();it!=defaults.end();++it)if(!basic.contains(it.key()) && it.key()!="scanRoi" && tool.parameters.value(it.key())!=it.value()) {
+                const auto value=tool.parameters.value(it.key());values<<it.key()+"="+(value.isDouble() ? QString::number(value.toDouble(),'g',12):value.isBool() ? (value.toBool() ? "true":"false"):value.toString());
+            }
+            customized->setText("Özel ayarlar korunuyor: "+values.join(", "));
+        }
     }
     if(auto* image=panel->findChild<QComboBox*>("input_image")) {
         auto row=form->takeRow(image);form->insertRow(3,row.labelItem->widget(),image);delete row.labelItem;delete row.fieldItem;
