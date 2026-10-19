@@ -1,21 +1,17 @@
 # VisionFlow — güncel devir
 
-18 Ekim 2026.
+19 Ekim 2026.
 [Arşiv](archive/README.md).
 
 ## Devam noktası
 
+- **MUI-ANALYSIS-01 ön analiz tamam; uygulama yapılmadı.** Kullanıcı pixel
+  Line/Circle'da sonuç alamıyor. [Bulgular ve önerilen MUI-01–04](architecture/measurement-usability-analysis.md),
+  [kapanış](archive/2026-10-19-mui-analysis-01.md). Kök neden açık; yeni seçili CTest **6/6**.
 - **EUI-01–08 yazılım/görsel kabul tamam.**
   [EUI-08 kapanış](archive/2026-10-18-eui-08.md): son Release UI **105/105**,
   core **89/89**; 1400×900/850×600 görselleri ve gerçek giriş olayları.
-  PLC testinin requestId korelasyonu düzeltildi; ayrıntı kapanışta.
-  [07 kompakt Editor](archive/2026-10-18-eui-07.md),
-  [06 Workspace](archive/2026-10-18-eui-06.md),
-  [05 Toolbox](archive/2026-10-18-eui-05.md),
-  [04 ok/yay](archive/2026-10-18-eui-04.md),
-  [03 açıklama](archive/2026-10-18-eui-03.md),
-  [02 sınır filtresi](archive/2026-10-18-eui-02.md),
-  [01 ROI](archive/2026-10-18-eui-01.md).
+  PLC requestId düzeltmesi ve EUI-01–07 bağlantıları kapanış/arşiv dizininde.
   Blob4 / engine28 / editor1–9 no-op korunur.
   **Kullanıcı tekrar testi: hepsi OK.** [Kabul](archive/2026-10-18-eui-accept-01.md).
 - [ICM-PLAN-02](archive/2026-10-18-icm-plan-02.md): ortak yazılım/donanım kabulü ayrı.
@@ -107,8 +103,8 @@ Görevler: [ana plan](architecture/industrial-camera-plan.md), seçili kart ve s
 
 ## Kapanış ve sonraki adım
 
-**EUI kullanıcı kabulü tamam.** Sıradaki: eksik çok kaynak/kalibrasyon manuel
-kontrollerini netleştirme ve seçili backend G0/G1 önkoşulları.
+**Güncel öncelik ölçüm kullanılabilirliği ön analizi.** Önerilen devam MUI-01;
+henüz uygulama yok. Çok kaynak/kalibrasyon manuel kontrolleri ve backend G0/G1 açık.
 [ICM-09b](archive/2026-10-18-icm-09b-start.md) G0/G1 bekliyor; H01–H08 açık.
 Basler/Daheng model/SDK 01→02 veya OECS belgeli pending-command bariyeri gerekir.
 Tamamlanan hazırlıklar tekrarlanmaz; ölçüm adayı configure girdisi değildir.
