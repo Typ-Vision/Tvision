@@ -26,7 +26,7 @@ FittedCircle CircleFitter::fit(const QVector<CircleFitPoint>& scans,const Circle
     for(int i=0;i<scans.size();++i){stop();if(scans[i].point){auto p=*scans[i].point;
         require(finite(p) && std::abs(p.x())<=1e12 && std::abs(p.y())<=1e12,"Invalid circle point");
         require(unique.emplace(p.x(),p.y()).second,"Duplicate circle observation");points.append(p);ids.append(i);}}
-    require(points.size()>=o.minPoints,"Insufficient found circle points");
+    requireFitSupport(points.size()>=o.minPoints,"Insufficient found circle points","CIRCLE_POINTS","edge_search",scans,o.minPoints,0);
     // Difference accumulation avoids summing large absolute coordinates.
     QPointF offset=points.front(),shift;for(auto p:points)shift+=p-offset;offset+=shift/points.size();
     double scale=0;for(auto p:points)scale=std::max(scale,norm(p-offset));
@@ -74,9 +74,9 @@ FittedCircle CircleFitter::fit(const QVector<CircleFitPoint>& scans,const Circle
     if(o.ransac){std::mt19937 rng(0x56464332u);for(int k=0;k<o.ransacIterations;++k){stop();
         int a=int(rng()%points.size()),b=int(rng()%points.size()),c=int(rng()%points.size());if(a==b || a==c || b==c)continue;
         consider(solve(QVector<int>{a,b,c},false));}}
-    require(best && inliers.size()>=o.minPoints,"Insufficient circle consensus");
+    requireFitSupport(best && inliers.size()>=o.minPoints,"Insufficient circle consensus","CIRCLE_CONSENSUS","fit_consensus",scans,o.minPoints,int(inliers.size()));
     bool stable=false;for(int pass=0;pass<8;++pass){auto model=solve(inliers,true);require(bool(model),"Circle refinement failed");best=model;
-        auto next=members(*best);require(next.size()>=o.minPoints,"Insufficient circle refit consensus");if(next==inliers){stable=true;break;}inliers=std::move(next);}
+        auto next=members(*best);requireFitSupport(next.size()>=o.minPoints,"Insufficient circle refit consensus","CIRCLE_CONSENSUS","fit_consensus",scans,o.minPoints,int(next.size()));if(next==inliers){stable=true;break;}inliers=std::move(next);}
     require(stable,"Unstable circle consensus");
     FittedCircle r;r.centre=offset+best->centre*scale;r.radius=best->radius*scale;r.scans=scans;
     require(finite(r.centre) && positive(r.radius),"Invalid fitted circle");

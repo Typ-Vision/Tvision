@@ -18,6 +18,11 @@ ImageFrame frame(const cv::Mat& m){return ImageFrame::fromBuffer(m.data,m.rows*m
 ToolRoi box(double angle=0,double width=120,double height=50){return {{"raw"},RotatedRectangle{{95.2,96.35},{width,height},angle}};}
 }
 int main(int argc,char** argv){QCoreApplication app(argc,argv);try {
+    {
+        QVector<LineScanPoint> missing(21);missing[0].rejections.polarity=2;
+        bool caught=false;try{LineFitter::fit(missing,{1,0});}catch(const FitDiagnosticError& e){caught=true;check(e.evidence.code=="LINE_POINTS" && e.evidence.stage=="edge_search" && e.evidence.requested==21 && e.evidence.found==0 && e.evidence.required==6 && e.evidence.rejections.polarity==2,"line structured missing evidence");}
+        check(caught,"line structured rejection");
+    }
     auto points=samples();LineFitOptions o;auto r=LineFitter::fit(points,{1,0},o);near(r.angleDegrees,0,1e-8,"horizontal angle");near(r.span,100,1e-8,"measured support span");near(r.supportStart.x(),0,1e-6,"support begins at observation");near(r.supportEnd.x(),100,1e-6,"support ends at observation");near(r.rms,0,1e-8,"exact line residual");check(r.usedCount==21 && r.rejectedCount==0 && r.missingCount==0 && r.coverage==1 && r.spanCoverage==1,"complete coverage");
     auto reverse=LineFitter::fit(points,{-1,0},o);near(reverse.angleDegrees,-180,1e-8,"directed angle [-180,180)");near(QLineF(reverse.supportStart,r.supportEnd).length(),0,1e-6,"reverse support orientation");
     for(int i:{4,10,17})points[i].point=*points[i].point+QPointF(0,8);

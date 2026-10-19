@@ -28,7 +28,7 @@ FittedLine LineFitter::fit(const QVector<LineScanPoint>& scans,QPointF taught,co
     require(scans.size()>=o.minPoints && scans.size()<=4096 && finite(taught) && std::isfinite(norm(taught)) && norm(taught)>1e-12,"Invalid line support/direction");taught/=norm(taught);
     QVector<QPointF> points;QVector<int> ids;std::set<std::pair<double,double>> unique;
     for(int i=0;i<scans.size();++i){stop();if(scans[i].point){const auto p=*scans[i].point;require(finite(p) && std::abs(p.x())<=1e12 && std::abs(p.y())<=1e12,"Invalid line point");require(unique.emplace(p.x(),p.y()).second,"Duplicate line observation");points.append(p);ids.append(i);}}
-    require(points.size()>=o.minPoints,"Insufficient found line points");
+    requireFitSupport(points.size()>=o.minPoints,"Insufficient found line points","LINE_POINTS","edge_search",scans,o.minPoints,0);
     // Shift/scale before OpenCV's float line representation; preserve large offsets.
     QPointF offset=points.front(),mean;for(auto p:points)mean+=p-offset;mean/=points.size();offset+=mean;
     double scale=0;for(auto p:points)scale=std::max(scale,norm(p-offset));require(std::isfinite(scale) && scale>1e-12,"Degenerate line points");
@@ -53,8 +53,8 @@ FittedLine LineFitter::fit(const QVector<LineScanPoint>& scans,QPointF taught,co
     auto best=solve(all,cv::DIST_HUBER);auto inliers=members(best);double bestError=error(best,inliers);
     // Local PRNG only: reproducible pair hypotheses, no global OpenCV RNG writes.
     if(o.ransac){std::mt19937 rng(0x56464c31u);for(int iteration=0;iteration<o.ransacIterations;++iteration){stop();const int a=int(rng()%local.size()),b=int(rng()%local.size());if(a==b || norm(local[b]-local[a])<1e-9)continue;const auto candidate=orient({local[a],local[b]-local[a]});if(dot(candidate.tangent,taught)<.5)continue;auto list=members(candidate);const double e=error(candidate,list);if(list.size()>inliers.size() || (list.size()==inliers.size() && e<bestError)){best=candidate;inliers=std::move(list);bestError=e;}}}
-    require(inliers.size()>=o.minPoints,"Insufficient line consensus");
-    bool stable=false;for(int pass=0;pass<8;++pass){best=solve(inliers,cv::DIST_L2);auto next=members(best);require(next.size()>=o.minPoints,"Insufficient line refit consensus");if(next==inliers){stable=true;break;}inliers=std::move(next);}require(stable,"Unstable line consensus");
+    requireFitSupport(inliers.size()>=o.minPoints,"Insufficient line consensus","LINE_CONSENSUS","fit_consensus",scans,o.minPoints,int(inliers.size()));
+    bool stable=false;for(int pass=0;pass<8;++pass){best=solve(inliers,cv::DIST_L2);auto next=members(best);requireFitSupport(next.size()>=o.minPoints,"Insufficient line refit consensus","LINE_CONSENSUS","fit_consensus",scans,o.minPoints,int(next.size()));if(next==inliers){stable=true;break;}inliers=std::move(next);}require(stable,"Unstable line consensus");
     require(dot(best.tangent,taught)>=.5,"Line direction inconsistent with taught axis");
     FittedLine r;r.tangent=best.tangent;r.origin=offset+best.centre*scale;r.scans=scans;
     double low=std::numeric_limits<double>::infinity(),high=-low,sum=0,maximum=0;int first=int(scans.size()),last=-1;
@@ -103,7 +103,7 @@ QVector<LineScanPoint> LineFitter::observationsMapped(const ImageFrame& image,co
     }
     QVector<LineScanPoint> scans;scans.reserve(o.scanCount);
     for(const auto& scan:scanRois){stop();
-        const auto edge=EdgeFinder::findMapped(image,std::get<ScanSegment>(scan.geometry),map,o.edge,cancel);LineScanPoint s;if(edge.selected)s.point=edge.candidates[*edge.selected].point;scans.append(s);
+        const auto edge=EdgeFinder::findMapped(image,std::get<ScanSegment>(scan.geometry),map,o.edge,cancel);LineScanPoint s;s.rejections=scanRejections(edge);if(edge.selected)s.point=edge.candidates[*edge.selected].point;scans.append(s);
     }
     stop();return scans;
 }

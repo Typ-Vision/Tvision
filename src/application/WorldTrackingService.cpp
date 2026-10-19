@@ -52,7 +52,7 @@ TrackedWorldCircle WorldTrackingService::circle(const ImageFrame& image,const To
     const auto arc=std::holds_alternative<Annulus>(roi.geometry) ? ArcRoi{std::get<Annulus>(roi.geometry),0,360}:std::get<ArcRoi>(roi.geometry);
     auto search=RadialScanner::findMapped(image,arc,map.nominalToRaw,o,cancel);
     QVector<CircleFitPoint> observations;
-    for(auto& s:search.scans){if(s.rawPoint)s.point=map.rawToWorld(*s.rawPoint);observations.append({s.point});}
+    for(auto& s:search.scans){if(s.rawPoint)s.point=map.rawToWorld(*s.rawPoint);observations.append({s.point,{},false,s.reason,s.rejections});}
     // A projective image of a nominal circle need not remain circular. Existing
     // fit quality limits reject it; no radius/angle conversion or scale fallback.
     return {search,CircleFitter::fit(observations,fit,cancel)};

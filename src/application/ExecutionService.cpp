@@ -277,7 +277,14 @@ CycleResult ExecutionService::run(const QJsonObject& definition,const QString& d
                         catch(const std::exception& e){measurement={};measurement.error=QString::fromUtf8(e.what());}
                         if(multi)measurements[t.id]=measurement;
                     }
-                }catch(const std::exception& e) {r.edgeDiagnostics.reset();r.outputs.clear();r.regions.clear();r.mask={};r.searchRegion={};r.points.clear();r.rejectedPoints.clear();r.lines.clear();r.decision=PartDecision::NotEvaluated;r.calibration.reset();r.state=ExecutionState::Error;r.message=QString::fromUtf8(e.what());error=true;}
+                }catch(const std::exception& e) {r.edgeDiagnostics.reset();r.outputs.clear();r.regions.clear();r.mask={};r.searchRegion={};r.points.clear();r.rejectedPoints.clear();r.lines.clear();r.decision=PartDecision::NotEvaluated;r.calibration.reset();r.state=ExecutionState::Error;r.message=QString::fromUtf8(e.what());
+                    if(const auto* fit=dynamic_cast<const FitDiagnosticError*>(&e)) {
+                        r.fitDiagnostic=fit->evidence;const auto& d=*r.fitDiagnostic;r.errorCode=d.code;
+                        r.message=QString("%1 • %2 taramadan %3 kenar bulundu; en az %4 gerekli. %5").arg(d.code).arg(d.requested).arg(d.found).arg(d.required).arg(d.stage=="edge_search" ? "ROI ve ok yönüne göre kenar geçişini kontrol edin.":QString("Kenarlar bulundu; aynı geometriye uyan %1 nokta var. Noktaları ve fit'e katılma mesafesini inceleyin.").arg(d.used));
+                        const auto& x=d.rejections;
+                        r.message+=QString(" Aday retleri: geçiş=%1, eşik=%2, sınır desteği=%3; adaysız tarama=%4.").arg(x.polarity).arg(x.contrast).arg(x.border).arg(x.noCandidate);
+                    }
+                    error=true;}
             }
             if(r.state==ExecutionState::Done && industrialEvidence)cycle.industrialEvidence[id]=std::move(industrialEvidence);
             for(const auto& value:r.outputs)if(value.valid && std::holds_alternative<ImageFrame>(value.data) && (!multi || ToolRegistry::get(t.kind).acquisitionSource))cycle.frames.append(value.origin);

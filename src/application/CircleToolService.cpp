@@ -35,7 +35,7 @@ ToolResult CircleToolService::execute(const ToolDefinition& t,const QMap<QString
     ToolResult r;r.toolId=t.id;r.state=ExecutionState::Done;
     auto put=[&](QString id,PortData data,bool valid=true,QString reason={}){for(const auto& port:outputPorts(t.kind))if(port.id==id){PortValue v{port,std::move(data),valid,frame,cycle,m};v.method="radial-circle";v.methodVersion=1;v.diagnostic=!world;if(!valid)v.invalidReason=reason.isEmpty() ? "NOT_EVALUATED":reason;r.outputs[id]=std::move(v);}};
     // Missing fit is an execution error; qualified metric failure below remains DONE.
-    QVector<CircleFitPoint> points;for(const auto& s:search.scans)points.append({s.point});
+    QVector<CircleFitPoint> points;for(const auto& s:search.scans)points.append({s.point,{},false,s.reason,s.rejections});
     CircleFitOptions f;f.minPoints=p["minPoints"].toInt();f.minCoverage=p["minFitCoverage"].toDouble();f.minAngularSpanDegrees=p["minAngularSpan"].toDouble();f.maxCondition=p["maxCondition"].toDouble();f.ransac=p["ransac"].toBool();f.inlierDistance=p["inlierDistance"].toDouble();f.maxRms=p["maxRms"].toDouble();f.maxResidual=p["maxResidual"].toDouble();
     const auto fitted=CircleFitter::fit(points,f,cancel);const auto metrics=CircleMetrics::measure(search,fitted,{p["minFoundPoints"].toInt(),p["minCoverage"].toDouble(),p["maxGapDegrees"].toDouble()},cancel);
     auto raw=[&](QPointF q){stop();return world ? mapPoint(image,ctx,q,true):q;};

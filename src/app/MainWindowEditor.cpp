@@ -582,7 +582,7 @@ void MainWindow::addSelectedTool() {
     if (!applyToolProperties()) return;
     if(editorSession_.busy())return;
     try {const auto previous=service_.tools();selectedToolId_=service_.addTool(toolbox_->currentItem()->data(Qt::UserRole).toString());
-        if(std::none_of(previous.begin(),previous.end(),[this](const auto& t){return t.id==selectedToolId_;}))for(auto tool:service_.tools())if(tool.id==selectedToolId_ && QStringList{"edge_pair","line_fit","circle_fit","geometry_measurement"}.contains(tool.kind)){tool.parameters["mode"]="calibrated";if(tool.kind=="circle_fit"){tool.parameters["unitsPerSample"]=.1;tool.parameters["scanWidth"]=.1;tool.parameters["inlierDistance"]=.1;tool.parameters["maxRms"]=.035;tool.parameters["maxResidual"]=.1;}service_.updateTool(tool);break;}
+        if(std::none_of(previous.begin(),previous.end(),[this](const auto& t){return t.id==selectedToolId_;}))for(auto tool:service_.tools())if(tool.id==selectedToolId_ && QStringList{"edge_pair","line_fit","geometry_measurement"}.contains(tool.kind)){tool.parameters["mode"]="calibrated";if(tool.kind=="circle_fit"){tool.parameters["unitsPerSample"]=.1;tool.parameters["scanWidth"]=.1;tool.parameters["inlierDistance"]=.1;tool.parameters["maxRms"]=.035;tool.parameters["maxResidual"]=.1;}service_.updateTool(tool);break;}
         imageViewer_->cancelRoi();pendingDrawTool_.clear();
         if(std::none_of(previous.begin(),previous.end(),[this](const auto& t){return t.id==selectedToolId_;})){pendingDrawTool_=selectedToolId_;pendingDrawRecipe_=service_.project().id+"/"+service_.activeRecipe()->id;}
         refreshWorkspace();}

@@ -27,6 +27,16 @@ cv::Mat raster(QPointF c,double radius,bool dark,double sigma,bool noisy){cv::Ma
 }
 }
 int main(int argc,char** argv){QCoreApplication app(argc,argv);try{
+    {
+        QVector<CircleFitPoint> missing(72);missing[0].rejections.contrast=3;
+        bool caught=false;try{CircleFitter::fit(missing);}catch(const FitDiagnosticError& e){caught=true;check(e.evidence.code=="CIRCLE_POINTS" && e.evidence.requested==72 && e.evidence.found==0 && e.evidence.required==6 && e.evidence.rejections.contrast==3,"circle missing evidence");}
+        check(caught,"circle typed rejection");
+        QVector<CircleFitPoint> scattered;for(int i=0;i<12;++i)scattered.append({QPointF(i*13,i*i*7)});
+        CircleFitOptions narrow;narrow.inlierDistance=1e-7;caught=false;
+        try{CircleFitter::fit(scattered,narrow);}catch(const FitDiagnosticError& e){caught=true;check(e.evidence.code=="CIRCLE_CONSENSUS" && e.evidence.stage=="fit_consensus" && e.evidence.found==12 && e.evidence.used<6,"circle found but no consensus");}
+        check(caught,"circle consensus typed rejection");
+    }
+
     QString report;QTextStream out(&report);auto points=samples();auto r=CircleFitter::fit(points);
     near(distance(r.centre,{12.3,-4.7}),0,1e-9,"analytic centre");near(r.radius,40,1e-9,"analytic radius");near(r.rms,0,1e-9,"analytic residual");near(r.condition,2,1e-9,"full circle normal-matrix condition");near(r.angularSpanDegrees,355,1e-9,"observed span excludes seam interval");
     check(r.usedCount==72 && r.rejectedCount==0 && r.missingCount==0 && r.coverage==1,"full support");

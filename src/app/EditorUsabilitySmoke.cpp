@@ -173,7 +173,7 @@ bool MainWindow::verifyEditorUsability(const QString& artifacts) {
     QString edge;
     for(const QString kind:{"edge_point","edge_pair","line_fit","circle_fit"}) {
         const auto id=add(kind);if(kind=="edge_point")edge=id;
-        if(kind=="circle_fit"){check(!imageViewer_->roiGestureActive(),"mm Circle requires current calibration before drawing");check(propertiesBody_->findChild<QComboBox*>("mt_mode")->currentText()=="calibrated","new Circle defaults to mm");propertiesBody_->findChild<QComboBox*>("mt_mode")->setCurrentText("pixel");propertiesBody_->findChild<QPushButton*>("metrologyDraw")->click();}
+        if(kind=="circle_fit")check(propertiesBody_->findChild<QComboBox*>("mt_mode")->currentText()=="pixel","new Circle uses pixel profile and immediate drawing");
         check(imageViewer_->roiGestureActive() && pendingDrawTool_.isEmpty(),"new tool immediately armed on current source");
         check(propertiesBody_->findChild<QComboBox*>("input_image")->currentData()==source+"/image","visible persisted default");
         findChild<QPushButton*>("stopFlow")->click();check(!imageViewer_->roiGestureActive() && selectedToolId_==id,"Stop preserves selection and cancels drawing");

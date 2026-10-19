@@ -47,6 +47,7 @@ RadialSearch RadialScanner::findMapped(const ImageFrame& image,const ArcRoi& arc
     }
     for(int i=0;i<o.scanCount;++i){stop();auto& s=result.scans[i];
         const auto edge=EdgeFinder::findMapped(image,synthetic[i],[&](QPointF p){return raw(p*o.unitsPerSample);},o.edge,cancel);
+        s.rejections=scanRejections(edge);
         if(edge.selected){const auto& c=edge.candidates[*edge.selected];s.point=c.point*o.unitsPerSample;s.rawPoint=raw(*s.point);s.strength=c.strength;s.signedStrength=c.signedStrength;s.refinement=c.refinement;++result.foundCount;}
         else s.reason="not_found";
     }

@@ -66,3 +66,20 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File "C:\Projects\Tvision\scr
 18 Ekim 2026: kullanıcı bu tekrar testlerini gerçekleştirdiğini ve hepsinin
 başarılı olduğunu bildirdi. [Kabul kaydı](archive/2026-10-18-eui-accept-01.md).
 Native DPI/çoklu monitör ve fiziksel kamera/kalibrasyon kabulü ayrı kontrollerdir.
+
+## Line / Circle birim başlangıcı ve hata tanısı
+
+Yeni Circle pixel modunda açılır. Circle birimi değişince eski ROI temizlenir;
+özel sayısal şerit/fit/ürün sınırları otomatik çevrilmez. **Birim başlangıcını uygula** düğmesi scanWidth, inlierDistance, maxRms, maxResidual
+ve unitsPerSample değerlerini açıkça px (1 / 1 / .35 / 1 / 1) veya mm
+(.1 / .1 / .035 / .1 / .1) başlangıcına getirir. Bunlar fiziksel doğruluk
+kabulü değildir; ürün toleranslarını seçili birimde ayrıca kontrol edin.
+
+Line/Circle fit başarısızlığında `LINE_POINTS` / `CIRCLE_POINTS` bulunan kenar
+sayısının yetersizliğini; `LINE_CONSENSUS` / `CIRCLE_CONSENSUS` bulunan
+kenarların aynı geometriye yeterince uymadığını belirtir. Canlı hata mesajında
+istenen/bulunan/gerekli ve (consensus için) katılan nokta sayıları, adayların
+geçiş/eşik/sınır desteği ret sayıları ve adaysız tarama sayısı gösterilir.
+Aday ret sayıları tarama sayısı değildir; bir taramada birden fazla aday olabilir.
+Geçerli fit olmadığında ölçüm portu, PASS veya parça kararı üretilmez.
+Bu özet canlı tanıdır; ayrıntılı Runtime/Logs tanı modeli MUI-03 kapsamındadır.
