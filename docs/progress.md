@@ -1,7 +1,7 @@
 # VisionFlow — güncel devir
 
 19 Ekim 2026.
-[Arşiv](archive/README.md).
+[Arşiv](archive/README.md). [Tapping araştırması](archive/2026-10-19-tap-res-01.md).
 
 ## Devam noktası
 
@@ -100,7 +100,7 @@ Görevler: [ana plan](architecture/industrial-camera-plan.md), seçili kart ve s
 - [07c](archive/2026-10-18-icm-07c.md) Editor profil seçimi/açık binding ve worker bağlantısı.
   [07b](archive/2026-10-18-icm-07b.md) execution/provider/TargetOnly tamam.
 - UI `build/reference-ui/visionflow.exe`; core `build/kmc9-core-off`.
-  Başlatma `.\scripts\run-local.ps1`; build/PATH komutları README'dedir.
+  Build/PATH/başlatma README'dedir.
 - ID'li tek commit, istekle push; yerel INI korunur, kanıtlar `build/`.
 
 ## Kapanış ve sonraki adım

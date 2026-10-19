@@ -6,6 +6,7 @@ görev” ifadeleri yazıldıkları tarihe aittir.
 
 | Dönem / görev | Kayıt |
 | --- | --- |
+| 19 Ekim 2026 — TAP-RES-01 | [Rigid tapping: enkoder/cetvel, tork izleme ve senkronizasyon araştırması](2026-10-19-tap-res-01.md) |
 | 19 Ekim 2026 — MUI-04 | [Sert raster corpus 190 kontrol; gerçek kullanıcı görüntüsü kabulü açık](2026-10-19-mui-04.md) |
 | 19 Ekim 2026 — MUI-03 | [Ortak ölçüm önerileri, bounded Runtime/Logs tanısı ve digest/Stop koruması](2026-10-19-mui-03.md) |
 | 19 Ekim 2026 — MUI-02 | [Sade ölçüm paneli, birim/yüzde etiketleri ve ön kontrol](2026-10-19-mui-02.md) |
