@@ -4,6 +4,8 @@ Her yeni oturumda `docs/progress.md` ve `README.md` dosyalarını oku; bu AGENTS
 
 Ardından seçili görev kartını ve görevle ilgili gereksinim/sözleşme bölümlerini oku. Büyük belgelerde önce `rg -n` ile başlık veya görev ID'sini bul, gerekli bölümü aç. Bütün gereksinim, mimari veya arşiv dosyalarını başlangıçta topluca okuma; belirsizlik, çelişki veya katmanlar arası değişiklik varsa okumayı bağımlılıklara genişlet. Eski kanıt gerektiğinde progress'teki arşiv dizininden ilgili kaydı bul. Tarihsel “sıradaki görev” ifadeleri güncel sıra değildir.
 
+CCUX işlerinde `docs/architecture/camera-setup/README.md`, ortak `contract.md` ve yalnız seçili kart başlangıç bağımlılığıdır; tüm kartları/robot taslağını yükleme. Tek oturumun varsayılan kapsamı bir karttır; kullanıcı açık sıra verirse onu izle.
+
 Her tamamlanan adımda progress'in güncel özetini güncelle; alta günlük ekleme. Kapsam, değişen dosyalar, doğrulama/kanıt yolları, bilinen sınırlamalar ve sonraki görevi `docs/archive/YYYY-MM-DD-gorev-id.md` kapanış kaydına yazıp progress ve `docs/archive/README.md` dizininden bağla. Yeni tarihte/görevde dosya oluştur; mevcut tarihsel kaydı değiştirme. Açık engelleri ve kalıcı kararları özetten kaybetme. Önceki test başarısını yeni koşum gibi sunma.
 
 README giriş/kullanım/build rehberidir; gereksinimler ürün kurallarını, mimari belgeleri teknik sözleşmeleri taşır. Bunları yalnız ilgili davranış/sözleşme değiştiğinde güncelle; teslim paragraflarını birden çok dosyaya kopyalama. Hazırlık ekranlarını çalışan ürün özelliği gibi sunma.

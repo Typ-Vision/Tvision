@@ -1,5 +1,9 @@
 # Kamera ve robot kalibrasyonu — revize ürün planı
 
+Güncel uygulama sırası: [CCUX kamera/kalibrasyon planı](camera-setup/README.md).
+Hand-eye/Eye-to-Hand bu paketin dışındadır; aşağıdaki tarihsel sıraları yeniden
+başlatmayın. CCUX henüz uygulanmadı; mevcut algoritma/sözleşmeler bağımlılık olarak kalır.
+
 21 Ekim 2026: kamera merkezli sade Setup ve reçete referans alanlarını kaldırma
 yönü kabul edildi; [güncel taslak](camera-calibration-ux-draft.md) robot ucunda
 plaka ile Eye-to-Hand önerisini ve ölçüm/robot yöntem ayrımını içerir. Robot

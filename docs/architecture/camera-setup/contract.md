@@ -1,0 +1,127 @@
+# CCUX ortak uygulama sözleşmesi
+
+Bu metin **hedef davranıştır**; uygulanmış API diye okunmaz. Mevcut KMC/ICM
+katmanları genişletilir. Değişen kuralın eski sözleşmesi ilgili kartta güncellenir;
+bütün kurallar her karta veya README'ye kopyalanmaz.
+
+## C1 — Kimlik ve varsayılanlar
+
+Kaydedilmiş proje gerekir, reçete gerekmez. Projedeki immutable CameraId ile
+kullanıcının CAM_01 gibi görünen kısa ID'si ayrılır; kısa ID benzersiz, düzenlenebilir,
+bağlar immutable ID ile kalıcıdır. Açıklama isteğe bağlıdır. Eski UUID yeniden
+üretilmez. Fiziksel kimlik vendor/model/seri; USB sırası/Device ID/IP değildir.
+Tek fiziksel kamerayı tekrar ekleme yeni kayıt üretmez; açıkça mevcut kayıt gösterilir.
+
+Yeni kamera için tek varsayılan setup/profile application katmanında otomatik
+oluşturulur. Lens/çalışma düzlemi kullanıcıya tekrar tekrar sorulmaz; bilinmeyen
+fiziksel değerler doğrulanmış gibi doldurulmaz. Geometri gerçek readback'ten gelir;
+eksikse kayıt “kurulum bilgisi bekleniyor” durumunda kalabilir, ölçüm etkinleşmez.
+Kayıt + varsayılan ilişki atomiktir. Eski çok profilli projede mevcut açık seçim
+korunur; belirsizlikte bir defalık seçim gerekir, ilk profile sessiz geçiş yok.
+
+Yeni alanlar yalnız gerekli yeni kayıt/explicit migration yolunda sürümlenir.
+Eski no-op encode/hash korunur. Import/Save As alias çakışması, varsayılan referans,
+arşivlenmiş kamera ve ilişki bütünlüğü kapsam içidir. Yerel DLL/producer yolları
+proje kimliği değildir. Bağlantı kurulumu/capability sonucu admission değildir.
+
+## C2 — Ayarlar ve canlı test
+
+Exposure/gain değerleri backend'in desteklediği aralık, birim ve geçerli başlangıç
+değerinden gelir; bütün cihazlara sabit değer uydurulmaz. İstenen ve gerçek
+uygulanan değer ayrıdır. Cihaza uygulama başarısızsa başarılı görünmez; rollback
+belirsizse durum açık hata olur. Otomatik pozlama/gain politikası destek/readback
+ile belirlenir. Yeni desteklenmeyen SDK eklemek bu paketin görevi değildir.
+
+Normal UI: tara, ID/ad, exposure/gain, ekle/kaydet, tek görüntü, canlı görüntü,
+durdur. Producer/rota/timeout/geometri ayrıntıları gerektiğinde açılır.
+Tek uygun rota veya hâlen exact eşleşen hatırlanmış rota otomatik çözülür;
+belirsizlikte anlaşılır seçim gösterilir. Deneysel OECS onayı açık ve oturumluk
+kalır; teknik ayrıntıların gizlenmesi bu onayı gizlemek değildir.
+
+Canlı görüntü test önizlemesidir, dosyaya video kaydı değildir. Provider'ın gerçek
+continuous desteği varsa kullanılır; yoksa tek bekleyen kareli sıralı edinimle
+önizleme yapılabilir ve destek türü doğru etiketlenir. FrameBurstStart sessiz
+FrameStart/FreeRun dönüşümü olmaz. En fazla bir bekleyen istek, en son kareyi tutan
+sınırlı tampon; FPS gerçek tamamlanan karelerden. Kamera değişimi/proje kapanışı/
+Stop/kopma eski generation'ı emekliye ayırır. UI SDK çağırmaz. Lease çakışması
+önlenir; aynı kamera Runtime/kalibrasyon tarafından kullanılırken preview açılmaz.
+
+## C3 — Model geçerliliği ve kullanıcı akışı
+
+Kalibrasyon sayfası kamera listesidir; alt bölüm seçili kameranın yöntemi, tarihi,
+temel değerleri ve durumudur. Ayrım: “Kalibrasyon yok”, “Kayıtlı / bağlantı
+bekleniyor”, “Geçerli”, “Yeniden kalibrasyon gerekli”, “Deneysel”.
+Çevrimdışı kayıt yokmuş gibi gösterilmez. Değişmiş geometride eski model etkin
+değer gibi gösterilmez; geçmişte kalır. Kamera A değişimi kamera B'yi bozmaz.
+
+Kamera seçimi sihirbaz hedefini sabitler. Bilinen ölçü ve mevcut chessboard/circle
+grid yöntemleri kullanılır; yeni solver gerekmez. Varsayılan kaynak kameradır.
+Dosya denemesi/legacy geçmiş kaybolmaz fakat normal akıştan ayrıntılara taşınır;
+dosya görüntüsü fiziksel edinim diye yeniden etiketlenmez.
+
+Kaydet ve kullan: hesaplanmış adayın kayıt + uyum/kullanılabilirlik kontrolü +
+etkin seçim işlemini tek kullanıcı komutu yapar. İptal, eski revision, yazma hatası
+ve başarısız kontrol önceki modeli korur. Matematiksel başarı ile bağımsız fiziksel
+kabul ayrı tutulur; doğrulama yapılmadıysa görünürdür. Mevcut model/holdout eşikleri
+sessiz gevşetilmez. Preview gerçek sonuç değildir; sahte mm/PASS yoktur.
+
+| Değişiklik | Hedef davranış |
+| --- | --- |
+| İsim/kısa ID | Bağ ve model korunur, no-op revision üretmez |
+| Exposure/gain | Matematik korunur; görüntü/cache ve edinim snapshot'ı yenilenir; gerçek readback/uyum sonrası tekrar kullanılabilir, yeniden öğretim zorunlu değil |
+| Lens/focus/konum/düzlem veya kritik geometri | İlgili model kullanımını kes; yeni kalibrasyon/uygunluk süreci, A→B→A eski izin canlandırmaz |
+| Kopma/restart | Kayıt korunur, kullanım izni düşer; exact yeniden bağlantı/uyumla aynı matematik kullanılabilir; aktif üretim kendiliğinden başlamaz |
+| Kalibrasyon değişimi | İlgili metrik downstream ve world ROI/reference yeniden denetlenir; başka kaynak etkilenmez |
+
+Fiziksel lens/konum değişimi yazılımla algılanamayabilir: ayrıntılarda “Optik /
+kamera konumu değişti” bildirimi bulunur. Geometriye etkili ayarlar sırf profil
+adı altında oldukları için exposure gibi ele alınmaz. Restart uyum kontrolü
+native capability/deneysel oturum onayı sınırlarını aşamaz.
+
+## C4 — Kaynak bağı ve immutable yürütme
+
+Editor'da kamera ID'si seçimi mevcut kayıtlı varsayılan setup/profile bağını
+application komutuyla atomik kurar. Reçete seçimi veya genel kalibrasyon metni
+gerekmez. Sıfır kaynaklı reçete DRAFT olarak açılabilir. Kamera yokken anlaşılır
+Setup yönlendirmesi vardır. Kaynak silme, kopyalama, import ve kamera değiştirme
+doğru bağı/cache'i günceller. Raw/px kalibrasyonsuz kalır; metrik araç aynı kaynağın
+uyumlu etkin modelini kullanır, başka/global modele fallback yapmaz.
+
+Kamera seçimi/değişimi serialized bağı değiştiriyorsa reçete DRAFT/dirty olur;
+otomatik disk kaydı yoktur. Aynı kameranın geometriyi değiştirmeyen ayar güncellemesi
+Editor Run Flow hazırlığında yeniden bağlanabilir; değişen serialized snapshot
+yine dirty gösterilir. Başka kamera, legacy belirsizliği veya değişmiş geometri
+otomatik onarılmaz. Yalnız belgeyi açmak tüm eski reçeteleri yeniden yazmaz.
+
+Reçetede kullanıcıya iki genel referans alanı kaldırılır, legacy JSON alanlarını
+topluca silmek ayrı bir hedef değildir. Eski kayıt metadata düzenlemesinde
+değişmez. Yeni reçete eski proje referanslarını miras almaz. Aktif Runtime
+yüklediği immutable snapshot'ı kullanır; kamera/model değişimi durdurma ve yeniden
+hazırlama ister. Yeni aktif modeli çalışan çevrime sessiz ekleme yoktur.
+
+## C5 — Deneysel mm, üretim ve kanıt
+
+EXP-02'nin eksik kalibrasyon kökeni ve EXP-03'ün Raw/px sınırı kontrollü genişletilir.
+Deneysel model/aktivasyon için ayrı tipli evidence/admission gerekir; trusted
+CameraAcquired probe veya production completion taklit edilmez. Yeni kayıt
+codec'i eski kayıtları aynı anlamla okur; eski Raw/px kayıtları mm kabulüne yükselmez.
+
+Canlı/PGM+JSON → aday → deneysel etkin seçim → Editor metrik sonuç → deneysel
+Runtime/Logs/CSV zincirinde raster hash, kamera/geometri, model ID/content/version
+ve experimental niteliği korunur. Replay kamera/kurulum/model eşleşmesi açık kanıt
+ister; bilinmeyen ilişki tahmin edilmez. Eksik/yanlış model, değiştirilmiş sidecar,
+geometri ve farklı kamera reddedilir. Deneysel mm sonucu da PLC/robota çıkamaz.
+
+OECS pending-command/cancel engeli, native Unavailable, G0–G4 sınırları değişmez.
+03c satır kırpma izni vardır fakat canlı yolu bu pakette sessiz değiştirmeyin;
+kullanılacak rasterin origin/geometry'si tüm zincirde aynı olmalıdır.
+Fiziksel mm doğruluğu bağımsız referansla ayrı kabul; fixture fiziksel kabul değildir.
+
+## C6 — Kapanış ve odak
+
+İlgili kartın testleri + değişen sözleşmenin negatifleri yeterlidir. Kapanışta
+komut, tarih, exit code, rapor/görsel yolları, yapılmayan fiziksel kontroller ve
+sonraki kart yazılır. Bir kart beklenenden büyürse önce tamamlanabilir servis/UI
+sınırında alt kart olarak bölün; kapsam genişlemesini gerekçesiyle plan indeksine
+işleyin. Tarihsel arşivi değiştirmeyin; AGENTS'ın tek görev/tek commit kuralını izleyin.
+

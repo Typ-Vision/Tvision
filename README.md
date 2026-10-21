@@ -57,65 +57,27 @@ OECS / GenTL probe komutları, sandbox sınırları ve kanıt bağlantıları
 
 ## Temel kullanım
 
-1. Project Manager'dan proje oluşturun/açın ve kaydedin. Recipe Manager'dan reçete
-   oluşturun; kaynak ve araçları ortak Editor'da bağlayın. Save taslağı kaydeder.
-2. Image File için gerçek görüntü açın; kamera kaynağında edinim yapın. **Run Flow**
-   akışı yürütür. **Run Tool** güncel girdilerle seçili aracı çalıştırır; eksik
-   upstream sonucu veya görüntü yerine değer üretmez.
-3. **Camera Manager** ile kamerayı projeye kaydedin; yerel producer hatırlanır.
-   **Setup → Calibration** aynı kamera kayıtlarını kullanır. Kalibrasyonda kayıtlı edinim
-   profilini seçin; aday kaydı etkin model değildir. Aktivasyon ve kaynak→kurulum bağı ayrıdır.
-   Editor’da Industrial Camera ekleyin, Properties üzerinden kayıtlı profili seçip
-   **Profili bağla / güncelle** düğmesine basın. **Görüntü al** yeni kare ister; seçim
-   tek başına edinim yapmaz. Profil düzenlenirse açıkça yeniden bağlayın.
-   Mevcut COE-050-M-USB-050-IR-C için Camera Manager’da **Deneysel OECS edinimini
-   kullan** seçimi ve kurulu x64 runtime ile **Önizleme** açılır. Tam sensör
-   Mono8 gerekir; SDK derlemesi [tanı rehberindedir](docs/windows-camera-diagnostics.md).
-   **Görünen kareyi kanıtıyla kaydet** yeni `.pgm` ve `.pgm.json` yazar.
-   Tetik eşleşmesi doğrulanmamıştır; Stop kareyi temizler. Tercih restart’ta kapalıdır.
-   Editor üstündeki **Deneysel OECS kamera / dosyayı Editor'da kullan** seçimi
-   canlı FrameBurstStart edinimini ve PGM+JSON replay’i açar; restart’ta kapanır.
-   Kullanım ve sınırlar [Editor rehberindedir](docs/editor-usage.md).
+1. Projeyi oluştur/aç ve kaydet; kamera/kalibrasyon için reçete gerekmez.
+2. Camera Manager'da kamerayı kaydet; Setup → Calibration aynı kayıtları kullanır.
+   Mevcut sürümde profil/kurulum seçimi ve aday/aktivasyon ayrıdır.
+3. Reçeteyi Editor'da kur; kaynak/araçları bağla, görüntü al ve Run Flow çalıştır.
+4. Kaydedilmiş reçete için Load Recipe → Run → Tek çevrim; sonuçlar Logs/CSV'de.
+   Load/Run hazırlığı tek başına sonuç değildir. Stop → yeniden Load sürümü değiştirir.
 
-4. Kaydedilmiş reçeteyi **Load Recipe → Run** ile Runtime'a hazırlayın.
-   **Tek çevrim** gerçek edinim/yürütmeyi başlatır; Run tek başına sonuç üretmez.
-   Stop eski sonucu bastırır; farklı sürüm için Stop → Load Recipe → Run kullanın.
-   Deneysel OECS için Runtime’da **Deneysel OECS Runtime / replay (Raw / px)**
-   seçimini Load öncesi açın; restart’ta kapalıdır. PLC/robot çıkışı engellidir.
-   [Kapsam ve kayıt sözleşmesi](docs/architecture/experimental-runtime.md).
-5. Kalıcı sonuçları **Logs/CSV** üzerinden inceleyin. Kayıt hatasında tekrar yazma
-   aynı sonucu kaydeder; yeni acquisition yapmaz. Restart geçmişi korur, aktif
-   üretim iznini geri yüklemez. Deneysel geçmişin CSV düğmesi ayrıdır.
+Mevcut OECS opt-in, profil bağlama, PGM+JSON, kalibrasyon, Runtime ve panel
+kullanımı [kısa kullanım rehberinde](docs/camera-runtime-usage.md). Deneysel
+seçimler restart'ta kapanır; PLC/robot çıkışı kapalıdır. Test INI/görselleri
+build altında, yerel panel ayarları config/local.ui.ini içindedir.
 
-Editor komutları, ROI, nominal tarama kılavuzları ve küçük ekran kullanımı
-[Editor kullanım rehberindedir](docs/editor-usage.md).
+## Göreve göre okuma
 
-Panel düzeni ve son seçimler `config/local.ui.ini` içindedir; bu proje autosave'i
-değildir. Test INI, fixture, görüntü ve raporlar `build/` altında tutulur.
-Sıfırlama: **View → Panel düzenini sıfırla**.
+- Güncel görev ve engeller: [progress](docs/progress.md).
+- Aktif geliştirme: [CCUX plan indeksi](docs/architecture/camera-setup/README.md),
+  ortak sözleşme ve yalnız seçili kart. Hand-eye bu paketin dışında.
+- Kamera backend/kimlik: [ICM](docs/architecture/industrial-camera-plan.md).
+- UI/ürün kuralları: [UI gereksinimleri](docs/requirements/02_machine_vision_ui_gereksinimleri.md).
+- Proje/katman: [proje formatı](docs/architecture/project-format.md),
+  [mimari](docs/architecture/architecture.md).
+- Geçmiş kanıt: [arşiv dizini](docs/archive/README.md); yalnız gereken kaydı açın.
 
-Workspace pin düğmesi veya **View → Workspace sabit** otomatik gizlemeyi açar.
-Sol şerit hover/tıklama veya Tab ve Space ile açılır; içerik üzerinde yüzer.
-Panelde klavye odağı varken açık kalır; Escape odağı şeride döndürür.
-İlk kullanım ve panel sıfırlama sabit moddur.
-
-## Göreve göre belge haritası
-
-Başlangıç: AGENTS + [progress](docs/progress.md) + README; ardından seçili görev
-kartı ve ilgili sözleşme. Güncel sıra progress'tedir.
-
-| Konu | Kaynak |
-| --- | --- |
-| Kamera geliştirme | [ICM ana planı](docs/architecture/industrial-camera-plan.md), [devir şablonu](docs/architecture/industrial-camera-handoff.md) |
-| Ürün/UI/teknik gereksinim | [Ürün](docs/requirements/01_machine_vision_yazilim_tanimi.md), [UI](docs/requirements/02_machine_vision_ui_gereksinimleri.md), [C++/Qt/OpenCV](docs/requirements/03_cpp_qt_opencv_gereksinimleri.md) |
-| Katmanlar ve persistence | [Mimari](docs/architecture/architecture.md), [proje formatı](docs/architecture/project-format.md) |
-| Editor ve yürütme | [Çok kaynaklı Editor](docs/architecture/multi-source-execution-editor.md), [DAG sözleşmesi](docs/architecture/multi-source-graph-contract.md) |
-| Kalibrasyon | [Sistem özeti](docs/architecture/calibration-overview.md), [kaynak bağlantısı](docs/architecture/scoped-calibration-integration.md), [taşıma/Save As](docs/architecture/measurement-setup-migration.md) |
-| Runtime ve kabul | [Runtime/terminal](docs/architecture/multi-source-runtime-terminal.md), [B kabulü](docs/architecture/multi-source-release-acceptance.md), [PLC socket](docs/architecture/plc-socket.md) |
-| Geçmiş karar ve teslim | [Arşiv dizini](docs/archive/README.md), [önceki README](docs/archive/2026-10-17/README.md) |
-
-Belge kontrolü:
-
-```powershell
-python scripts/check-context-docs.py
-```
+Belge kontrolü: `python scripts/check-context-docs.py`.

@@ -75,6 +75,8 @@ def check(root):
 
     files = {root / p for p in [*LIMITS, *ACTIVE]}
     files.update((root / "docs/requirements").glob("*.md"))
+    files.update((root / "docs/architecture/camera-setup").glob("*.md"))
+    files.add(root / "docs/camera-runtime-usage.md")
     files.update((root / "docs/archive").rglob("*.md"))
     for source in sorted(files):
         relative = source.relative_to(root).as_posix()

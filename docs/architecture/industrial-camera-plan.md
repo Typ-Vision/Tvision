@@ -1,12 +1,10 @@
 # Endüstriyel kamera entegrasyonu — ICM ana planı
 
-21 Ekim 2026. **Ortak yazılım/G2 tamam. Güncel öncelik mevcut OECS ile deneysel
-edinim → Editor/ölçüm → Runtime; iptal/boşaltma çalışma varsayımıdır.**
-[ICM-PLAN-03 ve EXP-01–03 görevleri](industrial-camera-oecs-experimental-plan.md)
-G1 beklemeden deneysel kullanım planlar; henüz uygulanmadı. Uygulayıcı hedefi:
-**GPT-6.1-sol / medium** (kullanıcının Sol6.1 medium tercihi). Bu belge model
-ayarını değiştirmez veya başka bir chat başlatmaz. Yeni kullanıcı yönlendirmesi,
-KMC-10e sonrasında fiziksel kalibrasyon kabulünden önce gerçek kamera entegrasyonudur.
+21 Ekim 2026. **Ortak yazılım/G2 ve EXP-01–03 Raw/px yolu hazır; fiziksel/native
+kabul açık. Güncel uygulama önceliği [CCUX](camera-setup/README.md).**
+Bu belge backend sözleşmeleri ve tarihsel ICM kartlarının indeksidir; tamamlanan
+EXP/KMC görevlerini yeniden başlatmayın. [EXP planı](industrial-camera-oecs-experimental-plan.md)
+deneysel yolun kapsamını taşır. Model/çalışma ayarı kullanıcıya aittir.
 
 ## Okuma ve uygulama sırası
 
@@ -22,7 +20,7 @@ KMC-10e sonrasında fiziksel kalibrasyon kabulünden önce gerçek kamera entegr
 
 Güncel görev sırası ve son kanıt [progress'tedir](../progress.md).
 21 Ekim kullanıcı kararıyla eldeki OECS önceliklidir; başka kamera beklenmez.
-Sıra **ICM-OECS-EXP-01 → EXP-02/MUI-04 → EXP-03**. Basler/Daheng gelecekteki
+Tarihsel sıra **ICM-OECS-EXP-01 → EXP-02/MUI-04 → EXP-03**. Basler/Daheng gelecekteki
 hedeflerdir. Tamamlanan 03c, 04e-a/b, 05a-a, 07a-a ve 04f–09a tekrar yapılmaz.
 Doğrulanmış production yeteneği backend bazında kapılıdır; deneysel politika bu
 yeteneği taklit etmez. Ayrıntılı sınır ve kabul yukarıdaki yeni plandadır.

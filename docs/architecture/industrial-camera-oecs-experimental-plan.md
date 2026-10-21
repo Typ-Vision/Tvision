@@ -1,6 +1,9 @@
 # ICM-PLAN-03 — Mevcut OECS kamera ile deneysel kullanım
 
 21 Ekim 2026. **EXP-02 px Editor teslimi hazır; gerçek mm/kalibrasyon kabulü açık.**
+EXP-03 deneysel Runtime da teslim edildi. Güncel robot dışı kalibrasyon/mm ve
+UI devamı [CCUX](camera-setup/README.md) kartlarıdır; aşağıdaki eski “sonraki”
+ifadeleri güncel görev sırası değildir.
 [Kısmi kapanış ve kanıt](../archive/2026-10-21-icm-oecs-exp-01.md).
 Güncel kanıt ve devam noktası [devir özetindedir](../progress.md).
 Bu belge native production capability açmaz.

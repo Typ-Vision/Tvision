@@ -1,5 +1,16 @@
 # Endüstriyel Machine Vision Yazılımı — UI Sayfa ve Ekran Gereksinimleri
 
+## 21 Ekim 2026 — kamera merkezli devreye alma hedefi
+
+Uygulama bekliyor: [CCUX planı](../architecture/camera-setup/README.md) ve
+[ortak hedef sözleşmesi](../architecture/camera-setup/contract.md) güncel yöndür.
+Setup Kameralar'da tara/ID/exposure/gain/tek-canlı görüntü; Kalibrasyon'da aynı
+kamera listesi, aktif değerler/kalibrasyon yok ve seçili kameradan iki yöntem
+sihirbazı. Kurulum/profil normal akışta otomatik; yeni reçetenin iki genel referansı
+kaldırılır. N kamera ve üç applicationType aynı altyapıyı kullanır. Hand-eye ve
+robot kalibrasyonu bu pakette uygulanmaz. Eski bölümlerin çelişen UI sırası bu
+hedefle değiştirilir; mevcut edinim/üretim kabul kapıları korunur.
+
 ## 18 Ekim 2026 — Editor iyileştirme talebi (plan)
 
 Kullanıcı beş talebi fiziksel kamera kabulünden önce önceliklendirdi:
