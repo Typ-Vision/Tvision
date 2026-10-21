@@ -166,6 +166,7 @@ void CameraManager::editProfile(){
     auto* height=size("İstenen sensör yüksekliği","draftHeight",setup?setup->geometry.resolution.height():0);
     auto* exposure=line("Exposure (µs)","draftExposure",old?QString::number(old->requested.exposureTimeUs):QString{});
     auto* gain=line("Gain (dB)","draftGain",old?QString::number(old->requested.gain):QString{});
+    auto* trigger=new QComboBox;trigger->setObjectName("draftTriggerSelector");trigger->addItems({"Off","FrameStart","FrameBurstStart"});if(old && old->requested.trigger.enabled && trigger->findText(old->requested.trigger.selector)<0)trigger->addItem(old->requested.trigger.selector);trigger->setCurrentText(old?(old->requested.trigger.enabled?old->requested.trigger.selector:"Off"):"FrameStart");form->addRow("Software trigger selector",trigger);
     auto* error=text({});layout->addWidget(error);auto* buttons=new QDialogButtonBox(QDialogButtonBox::Save|QDialogButtonBox::Cancel);layout->addWidget(buttons);
     connect(buttons,&QDialogButtonBox::rejected,&dialog,&QDialog::reject);
     connect(buttons,&QDialogButtonBox::accepted,&dialog,[&]{try{
@@ -176,7 +177,7 @@ void CameraManager::editProfile(){
         next.name=profileName->text();next.opticalProfile=lens->text();next.workingPlane=plane->text();next.geometry=g;next.deviceRevision=camera.device.revision;
         if(setup)next=setup->revised(next);else next.validate();
         auto profile=old.value_or(AcquisitionProfile{});if(!old){profile.id={QUuid::createUuid().toString(QUuid::WithoutBraces)};profile.camera=camera.id;profile.setup=next.id;}
-        profile.name=profileName->text();profile.requested={"Mono8",old?old->requested.trigger:TriggerSettings{true,"FrameStart","Software"},AutoMode::Off,us,AutoMode::Off,db,old?old->requested.illumination:QString{}};
+        profile.name=profileName->text();profile.requested={"Mono8",(trigger->currentText()=="Off"?TriggerSettings{}:old && old->requested.trigger.enabled && old->requested.trigger.selector==trigger->currentText()?old->requested.trigger:TriggerSettings{true,trigger->currentText(),"Software"}),AutoMode::Off,us,AutoMode::Off,db,old?old->requested.illumination:QString{}};
         if(old)profile=old->revised(profile);else profile.validate();
         auto candidate=e.current;
         if(setup){for(auto& s:candidate.setups)if(s.id==next.id)s=next;}else candidate.setups.append(next);

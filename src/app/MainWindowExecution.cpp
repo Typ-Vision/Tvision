@@ -1,6 +1,7 @@
 #include "application/MeasurementDiagnostic.hpp"
 #include "MainWindow.hpp"
 #include "application/IndustrialExecution.hpp"
+#include "application/ExperimentalOecsAcquisition.hpp"
 #include "application/CameraLocalConfiguration.hpp"
 #include "CalibrationHome.hpp"
 #include "application/SystemCalibration.hpp"
@@ -16,6 +17,7 @@
 #include <QLabel>
 #include <QPushButton>
 #include <QComboBox>
+#include <QCheckBox>
 #include <QDoubleSpinBox>
 #include <QTimer>
 #include <QListWidget>
@@ -106,6 +108,7 @@ void MainWindow::refreshFlow() {
     }
     findChild<QPushButton*>("addTool")->setEnabled(service_.activeRecipe() && !editorSession_.busy());
     showExecutionResult();
+    if(auto* experimental=findChild<QCheckBox*>("experimentalEditorReplay"))experimental->setEnabled(!editorSession_.busy());
     if(!pendingDrawTool_.isEmpty() && !drawPreparationQueued_){drawPreparationQueued_=true;QTimer::singleShot(0,this,[this]{drawPreparationQueued_=false;prepareNewToolDrawing();});}
 }
 void MainWindow::showExecutionResult() {
@@ -123,6 +126,7 @@ void MainWindow::showExecutionResult() {
         imageInfo_->setText(QString("%1 · bağlı kaynak: %2 · %3 × %4 px · Frame %5").arg(image.processing().isEmpty() ? "Ham görüntü":"İşlenmiş görüntü",source).arg(image.size().width()).arg(image.size().height()).arg(image.metadata().frameId));
     }catch(const std::exception&){}
     if(!editorSession_.frame && !drawingImage_){imageViewer_->clearImage("Bu kaynak için güncel kare yok.");imageInfo_->setText("Görüntü yok.");}
+    if(editorSession_.frame && !editorSession_.frame->metadata().experimentalAcquisition.isEmpty())imageInfo_->setText(imageInfo_->text()+"\n"+ExperimentalOecsAcquisition::notice());
     if(!editorSession_.cycle){matchInfo_->clear();return;}
     if(editorSession_.frame){const auto evidence=editorSession_.cycle->industrialEvidence.value(editorSession_.frame->metadata().sourceId);
         if(evidence)imageInfo_->setText(imageInfo_->text()+QString("\n%1 • %2 | Profil %3 r%4 | actual exposure %5 µs / gain %6 | offset %7,%8")
@@ -130,11 +134,13 @@ void MainWindow::showExecutionResult() {
             .arg(evidence->actual.settings.exposureTimeUs).arg(evidence->actual.settings.gain).arg(evidence->actual.geometry.offset.x()).arg(evidence->actual.geometry.offset.y()));
     }
     QStringList lines;if(editorSession_.cycle->partial)lines<<"Seçili araç değerlendirmesi • "+editorSession_.cycle->evaluationId;lines<<QString("%1 | Cycle %2 | Frame %3 | %4 ms").arg(executionStateName(editorSession_.cycle->state),editorSession_.cycle->cycleId,editorSession_.cycle->frameId).arg(editorSession_.cycle->milliseconds,0,'f',2);
+    if(editorSession_.frame && !editorSession_.frame->metadata().experimentalAcquisition.isEmpty())lines<<ExperimentalOecsAcquisition::notice();
     if(!editorSession_.cycle->error.isEmpty())lines<<editorSession_.cycle->error;
     auto ordered=editorSession_.cycle->tools;
     std::stable_sort(ordered.begin(),ordered.end(),[this](const auto& a,const auto& b){return a.toolId==selectedToolId_ && b.toolId!=selectedToolId_;});
     for(const auto& r:ordered) {
         QString name=r.toolId;for(const auto& t:service_.tools())if(t.id==r.toolId)name=t.name;
+        for(const auto& value:r.outputs)if(!value.origin.experimentalAcquisition.isEmpty()){name+=" • Deneysel";break;}
         lines<<name+" • "+executionStateName(r.state)+QString(" • %1 ms ").arg(r.milliseconds,0,'f',2)+(r.fitDiagnostic ? presentMeasurementDiagnostic(*r.fitDiagnostic):r.errorCode+" "+r.message);
         if(service_.activeRecipe()->definition["editor"].toObject()["schemaVersion"]==9)for(const auto& value:r.outputs)if(value.valid){QString source=value.origin.sourceId;for(const auto& t:service_.tools())if(t.id==source)source=t.name;lines<<"  Kaynak: "+source+" | Frame "+value.frameId+" | Cycle "+value.cycleId;break;}
         for(auto it=r.outputs.begin();it!=r.outputs.end();++it) {
@@ -159,6 +165,8 @@ void MainWindow::showExecutionResult() {
         }
     }
     matchInfo_->setText(lines.join("\n"));
+    // Preprocess/drawing may replace imageInfo above; keep provenance visible.
+    if(editorSession_.frame && !editorSession_.frame->metadata().experimentalAcquisition.isEmpty() && !imageInfo_->text().contains(ExperimentalOecsAcquisition::notice()))imageInfo_->setText(imageInfo_->text()+"\n"+ExperimentalOecsAcquisition::notice());
     statusBar()->showMessage((editorSession_.cycle->partial ? "Editor araç değerlendirmesi: " : "Editor çevrimi: ")+executionStateName(editorSession_.cycle->state)+" • "+editorSession_.cycle->cycleId);
 }
 void MainWindow::runFlow() {
@@ -166,6 +174,7 @@ void MainWindow::runFlow() {
 }
 void MainWindow::runExecution(const QString& targetTool) {
     if(runtimeJobs_.busy() || (runtime_ && runtime_->busy()) || editorSession_.busy(SessionJob::Execution) || editorSession_.busy(SessionJob::Teaching) || editorSession_.busy(SessionJob::Image) || !applyToolProperties() || !service_.activeRecipe())return;
+    const bool experimental=findChild<QCheckBox*>("experimentalEditorReplay")->isChecked();
     findChild<QTabWidget*>("editorTabs")->setCurrentWidget(findChild<QScrollArea*>("resultsScroll"));
     const auto recipe=*service_.activeRecipe();const auto definition=recipe.definition;const auto catalogPath=service_.path()+".calibrations.json";const auto resolver=calibrationResolver(recipe);QJsonObject acquisitionPlan;try{if(recipe.definition["editor"].toObject()["schemaVersion"]==9){QJsonObject sources;for(const auto& t:editorTools(definition))if(t.enabled && ToolRegistry::get(t.kind).acquisitionSource && (targetTool.isEmpty() || t.id==targetTool)){const auto branch=SystemCalibration::branch(recipe,t.id);if(branch.definition.contains("sourceSetup")){if(!measurementWorkspace_)throw std::runtime_error("Measurement workspace unavailable");sources[t.id]=measurementWorkspace_->acquisition(branch);}}acquisitionPlan["sources"]=sources;}else if(recipe.definition.contains("sourceSetup")){if(!measurementWorkspace_)throw std::runtime_error("Measurement workspace unavailable");acquisitionPlan=measurementWorkspace_->acquisition(recipe);}}catch(const std::exception& e){matchInfo_->setText(QString::fromUtf8(e.what()));return;}
     bool acquisition=false;for(const auto& t:editorTools(definition))if(t.id==targetTool)acquisition=ToolRegistry::get(t.kind).acquisitionSource;
@@ -189,7 +198,7 @@ void MainWindow::runExecution(const QString& targetTool) {
                 }else {editorSession_.matchOutcome.reset();matchInfo_->setText("Değişen girdi/ayar nedeniyle araç sonucu atıldı.");}
                 refreshMatchOverlay();refreshFlow();refreshCalibration();
             });
-            editorSession_.launch(watcher,[definition,directory,recipe,signature,cancel,targetTool,evaluation,resolver]{return ExecutionService{}.runTool(definition,directory,recipe.id,signature,cancel,targetTool,evaluation,resolver);});
+            editorSession_.launch(watcher,[definition,directory,recipe,signature,cancel,targetTool,evaluation,resolver,experimental]{return ExecutionService{}.withExperimentalEditorReplay(experimental).runTool(definition,directory,recipe.id,signature,cancel,targetTool,evaluation,resolver);});
         }catch(const std::exception& e){matchInfo_->setText(QString::fromUtf8(e.what()));}
         return;
     }
@@ -224,7 +233,7 @@ void MainWindow::runExecution(const QString& targetTool) {
         } else {editorSession_.cycle.reset();matchInfo_->setText("READY — değişen ayar/görüntü nedeniyle çevrim sonucu atıldı.");}
         refreshMatchOverlay();refreshFlow();refreshCalibration();
     });
-    editorSession_.launch(watcher,[definition,directory,id,signature,cancel,targetTool,resolver,acquisitionPlan,industrial]{return ExecutionService(industrial).run(definition,directory,id,signature,cancel,targetTool,{},resolver,nullptr,acquisitionPlan);});
+    editorSession_.launch(watcher,[definition,directory,id,signature,cancel,targetTool,resolver,acquisitionPlan,industrial,experimental]{return ExecutionService(industrial).withExperimentalEditorReplay(experimental).run(definition,directory,id,signature,cancel,targetTool,{},resolver,nullptr,acquisitionPlan);});
 }
 void MainWindow::loadImageAsync(const QString& path,bool commit) {
     editorSession_.references.clear();
@@ -245,7 +254,8 @@ void MainWindow::loadImageAsync(const QString& path,bool commit) {
         else displayError(result.error);
         refreshFlow();refreshMatchOverlay();
     });
-    editorSession_.launch(watcher,[path]{return EditorSession::load(path);});
+    const bool experimental=findChild<QCheckBox*>("experimentalEditorReplay")->isChecked();
+    editorSession_.launch(watcher,[path,experimental]{return EditorSession::load(path,experimental);});
     // Smoke assertions run synchronously, but decoding still takes place on the worker.
     if(smokeMode_) {QEventLoop loop;connect(watcher,&QFutureWatcher<ImageLoad>::finished,&loop,&QEventLoop::quit);loop.exec();}
 }

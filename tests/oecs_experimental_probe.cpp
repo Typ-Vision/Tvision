@@ -1,5 +1,7 @@
 // Explicit manual hardware run; never an automatic hardware CTest.
 #include "application/ExperimentalOecsAcquisition.hpp"
+#include "application/IndustrialExecution.hpp"
+#include "application/ProjectService.hpp"
 #include <QCoreApplication>
 #include <QDir>
 #include <QFile>
@@ -12,7 +14,7 @@ int main(int argc,char** argv){QCoreApplication app(argc,argv);QJsonObject out{{
     try{
         if(argc!=5 && argc!=6)throw std::runtime_error("usage: oecs_experimental_probe absolute-dll absolute-evidence-directory exposure-us count [--stop-in-flight|--timeout|--disconnect]");
         const QString scenario=argc==6?QString::fromLocal8Bit(argv[5]):QString{};
-        if(!scenario.isEmpty() && scenario!="--stop-in-flight" && scenario!="--timeout" && scenario!="--disconnect")throw std::runtime_error("unknown manual scenario");
+        if(!scenario.isEmpty() && scenario!="--stop-in-flight" && scenario!="--timeout" && scenario!="--disconnect" && scenario!="--editor-run")throw std::runtime_error("unknown manual scenario");
         const QString directory=QString::fromLocal8Bit(argv[2]);QDir().mkpath(directory);
         bool ok=false;const double exposure=QString::fromLocal8Bit(argv[3]).toDouble(&ok);if(!ok)throw std::runtime_error("numeric exposure required");
         const int count=QString::fromLocal8Bit(argv[4]).toInt();if(count<1 || count>1000)throw std::runtime_error("count 1..1000 required");
@@ -23,6 +25,24 @@ int main(int argc,char** argv){QCoreApplication app(argc,argv);QJsonObject out{{
         GeometryDescriptor g;g.resolution={2448,2048};g.sensorRoi=QRect(0,0,2448,2048);g.binning=QSize(1,1);g.decimation=QSize(1,1);g.reverse=GeometryMirror{};g.complete=true;
         r.setup={{"scene"},r.camera.id,"Experimental scene","Lens unidentified","Scene reference unverified",1,1,g};
         r.profile={{"experimental"},r.camera.id,r.setup.id,"Manual experimental",1,{"Mono8",{true,"FrameBurstStart","Software"},AutoMode::Off,exposure,AutoMode::Off,0,{}}};r.sourceId="manual-experimental-preview";
+        if(scenario=="--editor-run"){
+            if(QString::fromLocal8Bit(argv[1])!=ExperimentalOecsAcquisition::installedRuntime())throw std::runtime_error("Editor uses installed runtime");
+            IndustrialExecutionInputs inputs;inputs.contract={{r.camera},{r.setup},{r.profile}};
+            // Probe supplies a locator; the real runtime re-enumerates and exact-opens
+            // the identity. This is not a discovery acceptance measurement.
+            inputs.discover=[r](int,const auto&){return IndustrialDiscoverySnapshot{{r.device},{},false};};
+            ProjectService p;p.createProject("Experimental Editor","",QDir(directory).absoluteFilePath("editor.vfproject"),"file");
+            p.createRecipe("Experimental","",ApplicationType::Measurement,"file");const auto source=p.addTool("industrial_camera");p.bindIndustrialSource(source,inputs.contract,r.profile.id,3000);p.save();
+            QJsonArray samples;
+            for(int i=0;i<count;++i){const auto cycle=ExecutionService(inputs).withExperimentalEditorReplay().run(p.activeRecipe()->definition,directory,p.activeRecipe()->id,{}, {},source);
+                if(cycle.state!=ExecutionState::Done || !cycle.industrialEvidence.isEmpty())throw std::runtime_error(("Editor acquisition failed: "+cycle.error+(cycle.tools.isEmpty()?QString{}:cycle.tools.front().message)).toStdString());
+                bool found=false;for(const auto& tool:cycle.tools)if(tool.toolId==source){const auto image=std::get<ImageFrame>(tool.outputs["image"].data);const auto m=image.metadata();
+                    if(m.experimentalAcquisition.isEmpty())throw std::runtime_error("Editor lost provenance");samples.append(m.experimentalAcquisition);found=true;
+                    if(i==0 || i==count-1)ExperimentalOecsAcquisition::save({image,source,cycle.cycleId,m.frameId,m.completedAtUtc},QDir(directory).absoluteFilePath(QString("editor-frame-%1.pgm").arg(i)));
+                }if(!found)throw std::runtime_error("Editor source missing");
+            }
+            out["samples"]=samples;out["count"]=count;out["trustedEvidenceCount"]=0;out["status"]="EXPERIMENTAL_EDITOR_EXECUTION";QTextStream(stdout)<<QJsonDocument(out).toJson();return 0;
+        }
         auto worker=ExperimentalOecsAcquisition::open(r,QString::fromLocal8Bit(argv[1]));
         const auto wait=[&](CameraState desired){Deadline deadline(32000);for(;;){worker->poll();const auto state=worker->lifecycle().state();if(state==CameraState::Fault)throw std::runtime_error(worker->lifecycle().error().toStdString());if(state==desired)return;if(deadline.expired())throw std::runtime_error("controller wait timeout");QThread::msleep(1);}};
         const auto command=[&](CameraOperation op,CameraState state){worker->submit(op,3000);wait(state);};

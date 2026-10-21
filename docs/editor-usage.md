@@ -121,3 +121,23 @@ sonucu değildir; çalıştırmayı veya kalite sınırlarını otomatik değiş
 World/reference dönüşümünde nominal açıdan gerçek current world kalite kararı
 çıkarılmaz. Görüntü alanı, kalibrasyon, iş bütçesi ve gerçek fit kapıları yürütmede
 ayrıca denetlenir. Bu kontrolün uyarı vermemesi başarılı fit garantisi değildir.
+
+
+## Deneysel OECS Editor edinimi
+
+Editor üstündeki **Deneysel OECS kamera / dosyayı Editor'da kullan** seçimi
+yalnız mevcut oturum içindir. Canlı Industrial Camera kaynağında Camera Manager
+profil düzenleyicisinden FrameBurstStart / Software seçin ve profili Editor'a
+yeniden bağlayın. Görüntü al veya Run Flow ortak worker üzerinden edinir;
+FrameStart profili deneysel yola sessizce çevrilmez.
+
+Camera Manager’ın kaydettiği işaretli `.pgm` ve `.pgm.json` çiftini Open ile
+açabilirsiniz. JSON ve piksel hash/geometri uyuşmazlığı reddedilir. Dosya adını
+değiştirirken JSON'u yeni `.pgm.json` adına taşıyın. Save/reopen kaynak yolunu
+korur; restart seçimi kapatır. Politika değişikliği güncel kare/sonuçları temizler.
+Görüntü ve ölçümde deneysel uyarı kalır; Run Tool/TargetOnly yeni edinim yapmaz.
+
+Bağımsız ölçü referansı olmadan px tanısı kullanın. Fit/kenar eşiği ayarını
+sahneye göre açıkça inceleyin; toleransları sonucun geçmesi için gevşetmeyin.
+Deneysel kalibrasyon aday/aktivasyon akışı bu teslimde açılmadı; mm doğruluğu,
+tetik-parça eşleşmesi ve Runtime/PLC/robot kabulü bu görüntülerden çıkarılmaz.

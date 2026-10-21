@@ -5,18 +5,19 @@
 
 ## Devam noktası
 
+- **ICM-OECS-EXP-02 px geliştirme teslimi hazır.**
+  [Kayıt](archive/2026-10-21-icm-oecs-exp-02.md): canlı 1/1 ve PGM+JSON replay;
+  gerçek Line/Circle, TargetOnly, Stop/invalidation, Save/reopen/no-op.
+  Köken/etiket korunur; Runtime kapalı, trusted completion yok. mm referansı ve
+  deneysel kalibrasyon aday/aktivasyonu açık.
 - **ICM-OECS-EXP-01 yazılımı hazır; fiziksel kabul kısmi.**
-  [Kayıt](archive/2026-10-21-icm-oecs-exp-01.md),
-  [EXP planı](architecture/industrial-camera-oecs-experimental-plan.md).
-  Camera Manager preview/Stop/PGM hazır; Stop/deadline çıktıyı bastırdı.
-  [Işık açık seri](archive/2026-10-21-icm-oecs-exp-01b.md): 100/100, plaka görünür;
-  önceki kararma ışık kapalıyken.
-  [Fiziksel kopma/manuel açma](archive/2026-10-21-icm-oecs-exp-01c.md) tamam;
-  hata sonrası kare yok, kablosuz open reddedildi, yeniden takınca exact tek kare alındı.
-  [Odak](archive/2026-10-21-icm-oecs-exp-01d.md): üç ayar, 100/100;
-  raster EXP-02 px geliştirmesine hazır. Hassas optik/mm kabulü açık.
-  İptal/boşaltma varsayım; tetik eşleşmesi doğrulanmadı.
-  Native Unavailable; Editor/Runtime deneysel bağlantısı yok.
+  [Yazılım](archive/2026-10-21-icm-oecs-exp-01.md),
+  [ışık/100 seri](archive/2026-10-21-icm-oecs-exp-01b.md),
+  [kopma/manuel açma](archive/2026-10-21-icm-oecs-exp-01c.md),
+  [odak/100 seri](archive/2026-10-21-icm-oecs-exp-01d.md).
+  Preview/Stop/PGM hazır; Stop/deadline çıktıyı bastırdı, kopmada kare yok.
+  Görünür plaka px geliştirmesine yeterli; hassas optik/mm kabulü açık.
+  Tetik eşleşmesi ve iptal/boşaltma garantisi yok.
 - **MUI-01–03 tamam.** [03 tanı/replay](archive/2026-10-19-mui-03.md);
   01/02 ve tarihli test kanıtları arşivde.
 - **MUI-04 sentetik corpus tamam, gerçek kabul açık.**
@@ -105,15 +106,15 @@ Görevler: [ana plan](architecture/industrial-camera-plan.md), seçili kart ve s
 
 ## Kapanış ve sonraki adım
 
-**Devam: EXP-02 Editor/MUI-04; görünür rasterle yalnız px geliştirmesi.**
-EXP-01d odak karşılaştırması/100 seri tamam; hassas optik/mm kabulü açık.
-Sonra EXP-03 deneysel Runtime/Logs.
-EXP-01c Release/CTest **3/3**, EXP-01 UI kanıtı bağlı kayıtlarda;
-EXP-01d ürün/UI değiştirmedi, yeni build/CTest yok.
-Deneysel PGM işareti + JSON korunur; EXP-02’ye kadar normal Image File replay’i
-reddedilir. Varsayımlı edinim trusted completion veya PLC/robot çıkışı olmaz.
-MUI-04 özgün raster/reçete/ROI eksik; yeni sahne özgün problemi yeniden üretmez.
-Corpus tekrarlanmaz. Manuel çok kaynak/kalibrasyon ve [09b](archive/2026-10-18-icm-09b-start.md)
+**Devam: EXP-03 deneysel Runtime/Logs; EXP-02 mm kabulü açık.**
+EXP-02 Release ve 14 ilgili CTest geçti; koşum ayrıntıları bağlı kayıtta.
+Px UI 1400×900/850×600 incelendi; Line eşiği sahne için açıkça
+20→10 ayarlandı, fit/tolerans sınırları gevşetilmedi.
+PGM+JSON yalnız açık Editor politikasıyla açılır; restart seçimi kapatır.
+Canlı profil açık FrameBurstStart ister, varsayımlı edinim trusted completion
+veya PLC/robot çıkışı olmaz. EXP-01d optik/mm kabulü ve özgün MUI-04
+raster/reçete/ROI açık; yeni sahne özgün problemi yeniden üretmez.
+Manuel çok kaynak/kalibrasyon ve [09b](archive/2026-10-18-icm-09b-start.md)
 G0/G1/H01–H08 açıktır. Ölçüm adayı configure girdisi değildir.
 [Cancel incelemesi](archive/2026-10-18-icm-04d-cancel-audit.md): AcquisitionAbort yok;
 DeviceReset garantisiz, çalıştırılmadı. Üretici taslağı gönderilmedi.

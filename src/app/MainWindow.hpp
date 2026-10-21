@@ -51,6 +51,7 @@ public:
     bool verifyGeometry(const QString& artifacts);
     bool verifyPoseTracking(const QString& artifacts);
     bool verifyEditorUsability(const QString& artifacts);
+    bool verifyExperimentalEditor(const QString& artifacts);
     bool verifyCircle(const QString& artifacts);
     bool verifyCodeReading(const QString& artifacts);
     bool verifyCamera(const QString& artifacts);

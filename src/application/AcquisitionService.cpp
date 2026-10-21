@@ -7,7 +7,7 @@ AcquisitionCapabilities ImageFileAdapter::capabilities() const {
     return {"image_file",true,false,false,false,false};
 }
 ImageFrame ImageFileAdapter::acquire(const AcquisitionRequest&) const {
-    return ImageFileService{}.load(path_);
+    return ImageFileService{}.load(path_,experimentalEditorReplay_);
 }
 AcquisitionResult AcquisitionService::acquire(const AcquisitionAdapter& adapter,const AcquisitionRequest& request) const {
     AcquisitionResult result;

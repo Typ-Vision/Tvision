@@ -6,6 +6,7 @@ görev” ifadeleri yazıldıkları tarihe aittir.
 
 | Dönem / görev | Kayıt |
 | --- | --- |
+| 21 Ekim 2026 — ICM-OECS-EXP-02 | [Deneysel canlı Editor / kanıtlı replay, gerçek Line-Circle px ve kabul sınırları](2026-10-21-icm-oecs-exp-02.md) |
 | 21 Ekim 2026 — ICM-OECS-EXP-01d | [Elle odak karşılaştırması ve seçili konumda 100/100; EXP-02 px rasteri](2026-10-21-icm-oecs-exp-01d.md) |
 | 21 Ekim 2026 — ICM-OECS-EXP-01c | [Fiziksel USB kopma, kablosuz open reddi ve exact manuel yeniden açma](2026-10-21-icm-oecs-exp-01c.md) |
 | 21 Ekim 2026 — ICM-OECS-EXP-01b | [Işık açık 100/100 kare; ilk/son plaka görünür, kopma/odak açık](2026-10-21-icm-oecs-exp-01b.md) |

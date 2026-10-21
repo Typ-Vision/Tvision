@@ -1,4 +1,5 @@
 #include "IndustrialExecution.hpp"
+#include "ExperimentalOecsAcquisition.hpp"
 #include <QThread>
 #include <stdexcept>
 
@@ -16,7 +17,8 @@ IndustrialCameraRequest industrialExecutionRequest(const IndustrialExecutionInpu
     return request;
 }
 IndustrialExecutionFrame acquireIndustrial(const IndustrialExecutionInputs& inputs,IndustrialCameraRequest request,
-    const QString& cycle,const QString& frame,int timeout,const std::shared_ptr<std::atomic_bool>& cancel){
+    const QString& cycle,const QString& frame,int timeout,const std::shared_ptr<std::atomic_bool>& cancel,bool experimentalEditor){
+    require(!experimentalEditor || (inputs.leaseUse==CameraLeaseUse::Editor && inputs.admittedDevices.isEmpty()),"Experimental acquisition requires Editor lease without production admission");
     Deadline deadline(timeout);
     auto live=[&]{require(!(cancel && cancel->load()) && !deadline.expired(),"Industrial execution cancelled/deadline exceeded");};
     live();
@@ -26,7 +28,7 @@ IndustrialExecutionFrame acquireIndustrial(const IndustrialExecutionInputs& inpu
         CameraService::industrialSnapshot(CameraService{}.discover(route && !route->producer.isEmpty() ? QStringList{route->producer}:QStringList{},deadline.remainingMs(),cancel));
     live();request.device=CameraService::resolveIndustrial(request.camera,discovery,route);
     if(inputs.admittedDevices.contains(request.sourceId))require(request.device==inputs.admittedDevices[request.sourceId],"Industrial Runtime device/backend changed; prepare again");
-    auto session=inputs.factory.open(request,inputs.leaseUse,FrameQueueMode::ProductionFifo,1);
+    auto session=experimentalEditor ? ExperimentalOecsAcquisition::open(request,ExperimentalOecsAcquisition::installedRuntime()):inputs.factory.open(request,inputs.leaseUse,FrameQueueMode::ProductionFifo,1);
     try {
         auto command=[&](CameraOperation op,CameraState expected){
             live();session->submit(op,deadline.remainingMs());
@@ -47,7 +49,9 @@ IndustrialExecutionFrame acquireIndustrial(const IndustrialExecutionInputs& inpu
         require(original.sourceId==request.sourceId && !original.frameId.isEmpty() && !original.cycleId.isEmpty() &&
             original.completedAtUtc.isValid() && image.processing().isEmpty(),"Invalid industrial raw frame identity");
         auto mapped=original;mapped.frameId=frame;mapped.cycleId=cycle;mapped.coordinateSystemId=request.sourceId+"/image";
-        auto evidence=std::make_shared<const IndustrialExecutionEvidence>(IndustrialExecutionEvidence{request,*applied,original,mapped,image.contentId()});
+        if(experimentalEditor){mapped.experimentalAcquisition["contentId"]=QString::fromLatin1(image.contentId().toHex());mapped.experimentalAcquisition["frameId"]=original.frameId;mapped.experimentalAcquisition["sourceId"]=original.sourceId;mapped.experimentalAcquisition["completedAtUtc"]=original.completedAtUtc.toString(Qt::ISODateWithMs);}
+        require(experimentalEditor==!original.experimentalAcquisition.isEmpty(),"Industrial acquisition policy/provenance mismatch");
+        auto evidence=experimentalEditor ? std::shared_ptr<const IndustrialExecutionEvidence>{}:std::make_shared<const IndustrialExecutionEvidence>(IndustrialExecutionEvidence{request,*applied,original,mapped,image.contentId()});
         // Cleanup and lease release precede publication. A delayed SDK cannot publish after Stop.
         session.reset();live();return {image.withMetadata(mapped),std::move(evidence)};
     }catch(...){if(session)session->requestStop();throw;}

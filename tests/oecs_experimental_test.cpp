@@ -1,6 +1,8 @@
 #include "application/ExperimentalOecsAcquisition.hpp"
 #include "application/IndustrialCameraConfiguration.hpp"
 #include "application/IndustrialRuntime.hpp"
+#include "application/EditorSession.hpp"
+#include "application/ProjectService.hpp"
 #include "vision/ImageAccess.hpp"
 #include <QCoreApplication>
 #include <QDir>
@@ -92,6 +94,39 @@ int main(int argc,char** argv){QCoreApplication app(argc,argv);try{
         rejects([&]{ImageFileService{}.load(path);}); // No silent replay as an ordinary source.
         QFile file(path+".json");check(file.open(QIODevice::ReadOnly),"sidecar exists");auto saved=QJsonDocument::fromJson(file.readAll()).object();
         check(saved["contentId"]==QString::fromLatin1(frame->image.contentId().toHex()) && saved["triggerAssociationVerified"]==false,"saved hash and unverified provenance");
+        file.close();
+        const auto replay=ImageFileService{}.load(path,true);
+        check(replay.contentId()==frame->image.contentId() && replay.metadata().experimentalAcquisition==saved,"explicit replay preserves exact owned raster and evidence");
+        int replayIndex=0;
+        for(const auto type:{ApplicationType::Measurement,ApplicationType::DefectInspection,ApplicationType::RobotGuidance}){
+            ProjectService project;project.createProject("Experimental","",directory.filePath(QString("replay-%1.vfproject").arg(replayIndex++)),"file");project.createRecipe("Replay","",type,"file");
+            const auto source=project.setImageFile(path);project.enableMultiSource();const auto blob=project.addTool("blob");project.setConnections({{source,"image",blob,"image"}});
+            project.save();const auto recipe=project.activeRecipe()->id;const auto version=project.activeRecipe()->recipeVersion;const auto definition=project.activeRecipe()->definition;
+            project.openProject(project.path());project.selectRecipe(recipe);project.save();check(project.activeRecipe()->recipeVersion==version && project.activeRecipe()->definition==definition,"experimental replay no-op reopen");
+            EditorSession editor;const EditorContext ctx{project.project().id,project.path(),recipe,definition,{}};const auto signature=editor.signature(ctx);
+            auto execution=ExecutionService{}.withExperimentalEditorReplay();const auto ticket=editor.begin(SessionJob::Execution);
+            auto cycle=execution.run(definition,directory.path(),recipe,signature,{});check(cycle.state==ExecutionState::Done && cycle.industrialEvidence.isEmpty() && editor.acceptCycle(cycle,signature,ctx),"three application types share experimental flow");editor.finish(ticket);
+            auto target=execution.runTool(definition,directory.path(),recipe,signature,{},blob,editor.evaluation(ctx,blob));
+            check(target.state==ExecutionState::Done && target.acquisitions==0 && target.tools.front().outputs["area"].origin.experimentalAcquisition==saved,"TargetOnly retains experimental origin without acquisition");
+            {QFile sidecar(path+".json");check(sidecar.open(QIODevice::WriteOnly|QIODevice::Truncate),"change cached evidence");auto changed=saved;changed["notice"]="changed fixture evidence";sidecar.write(QJsonDocument(changed).toJson());sidecar.close();
+                check(editor.evaluation(ctx,blob).cache.isEmpty(),"JSON change invalidates source and dependent TargetOnly cache");
+                check(sidecar.open(QIODevice::WriteOnly|QIODevice::Truncate),"restore cached evidence");sidecar.write(QJsonDocument(saved).toJson());}
+            auto calibrationContext=ctx;calibrationContext.systemCalibration={{source,QJsonObject{{"revision",2}}}};
+            check(editor.evaluation(calibrationContext,blob).cache.isEmpty(),"calibration identity change invalidates experimental cache");
+            check(ExecutionService{}.runTool(definition,directory.path(),recipe,signature,{},blob,editor.evaluation(ctx,blob)).state==ExecutionState::Error,"default policy denies experimental cached input");
+            const auto pending=editor.begin(SessionJob::Execution);editor.stop(SessionJob::Execution);check(editor.acceptCycle(cycle,signature,ctx) && !editor.frame && editor.cycle->state==ExecutionState::Skipped,"Stop suppresses late experimental cycle");editor.finish(pending);
+            check(ExecutionService{}.run(definition,directory.path(),recipe,signature,{}).state==ExecutionState::Error,"default execution denies marked replay");
+            ExecutionService injected([&](const ToolDefinition& t)->std::unique_ptr<AcquisitionAdapter>{if(t.kind=="image_file")return std::make_unique<ImageFileAdapter>(path,true);return {};});
+            check(injected.run(definition,directory.path(),recipe,signature,{}).state==ExecutionState::Error,"injected experimental pixels cannot bypass default execution policy");
+        }
+        {IndustrialExecutionInputs inputs;inputs.leaseUse=CameraLeaseUse::Runtime;rejects([&]{acquireIndustrial(inputs,request(),"cycle","frame",1000,{},true);});}
+        auto writeEvidence=[&](const QJsonObject& e){QFile f(path+".json");check(f.open(QIODevice::WriteOnly|QIODevice::Truncate),"rewrite fixture evidence");f.write(QJsonDocument(e).toJson());};
+        for(const auto& field:QStringList{"triggerAssociationVerified","productionAdmission","contentId","width","serial","schema","readback","profileSnapshot"}){
+            auto bad=saved;if(field=="triggerAssociationVerified" || field=="productionAdmission")bad[field]=true;else if(field=="width")bad[field]=1;else if(field=="readback" || field=="profileSnapshot")bad[field]=QJsonObject{{"schemaVersion",1}};else bad[field]=field=="serial"?QString{}:QString("tampered");
+            writeEvidence(bad);rejects([&]{ImageFileService{}.load(path,true);});
+        }
+        writeEvidence(saved);check(QFile::rename(path+".json",path+".backup"),"hide fixture evidence");rejects([&]{ImageFileService{}.load(path,true);});check(QFile::rename(path+".backup",path+".json"),"restore fixture evidence");
+        QFile raster(path);check(raster.open(QIODevice::ReadOnly),"read fixture raster");auto bytes=raster.readAll();raster.close();bytes[bytes.size()-1]=char(bytes.back()^1);check(raster.open(QIODevice::WriteOnly|QIODevice::Truncate),"tamper fixture raster");raster.write(bytes);raster.close();rejects([&]{ImageFileService{}.load(path,true);});
         rejects([&]{ExperimentalOecsAcquisition::save(*frame,path);});
         auto next=open(s);start(*next);check(next->lifecycle().state()==CameraState::Streaming,"manual reopen after shutdown");close(*next);
     }

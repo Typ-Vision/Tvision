@@ -88,7 +88,7 @@ public:
     void calibrationChanged(const EditorContext&,const QString& source={});
     bool acceptCycle(CycleResult result,const QByteArray& captured,const EditorContext& current);
     bool accepts(const QByteArray& captured,const EditorContext& current) const {return captured==signature(current);}
-    static ImageLoad load(const QString& path);
+    static ImageLoad load(const QString& path,bool experimentalEditorReplay=false);
     static ModelTeaching teach(const ImageFrame& frame,const QRect& roi);
     static PoseTeaching teachPose(const ToolDefinition&,const ImageFrame&,const QRect&,QPointF anchor);
     ImageFrame toolImage(const EditorContext&,const QString& tool) const;

@@ -19,17 +19,15 @@ UI algoritma veya donanım SDK'sını doğrudan çağırmaz.
   kare isteği ortak worker/provider yolundadır. Industrial Load çevrimdışı beyanı
   gösterir; Run tam native kabul ister. Native production kapalıdır; mevcut COE-U için Camera Manager’da açık deneysel önizleme yolu vardır.
 
-Hazırlık veya keşif sonucu üretim kabulü değildir. Gerçek sonuç olmadan PASS, skor
-veya robot pose gösterilmez. Robot hazırlık ekranları çalışan robot entegrasyonu
-değildir. Yazılım/fixture kabulü fiziksel kamera, ölçüm, PLC/robot, lens, native DPI,
-CUDA performansı veya ürün kurulum/dağıtım kabulünün yerine geçmez.
+Hazırlık/keşif üretim kabulü değildir; gerçek sonuç olmadan PASS, skor veya
+robot pose gösterilmez. Robot ekranları hazırlıktır. Yazılım testleri fiziksel
+kamera/ölçüm, PLC/robot, lens, native DPI, CUDA veya dağıtım kabulünü kapatmaz.
 
 ## Yerel derleme ve test — PowerShell
 
 Yerel toolchain: Qt 6.12.0 / MinGW 13.1.0 ve MinGW OpenCV 5.0.0.
 Ayrıntılı kurulum/yeniden hazırlama
 ve ZXing bağımlılığı [Windows ortamı belgesindedir](docs/windows-workstation.md).
-
 
 ```powershell
 $env:PATH = 'C:\OpenCV\5.0.0\x64\mingw\bin;C:\Qt\6.12.0\mingw_64\bin;C:\Qt\Tools\mingw1310_64\bin;C:\Qt\Tools\CMake_64\bin;C:\Qt\Tools\Ninja;' + $env:PATH
@@ -76,8 +74,10 @@ OECS / GenTL probe komutları, sandbox sınırları ve kanıt bağlantıları
    Mono8 gerekir; SDK derlemesi [tanı rehberindedir](docs/windows-camera-diagnostics.md).
    **Görünen kareyi kanıtıyla kaydet** yeni `.pgm` ve `.pgm.json` yazar.
    Tetik eşleşmesi doğrulanmamıştır; Stop kareyi temizler. Tercih restart’ta kapalıdır.
-   Deneysel dosyanın Editor/replay bağlantısı EXP-02’yi bekler; normal Image File
-   yolundan açılıp doğrulanmış kaynağa yükseltilemez.
+   Editor üstündeki **Deneysel OECS kamera / dosyayı Editor'da kullan** seçimi
+   canlı FrameBurstStart edinimini ve PGM+JSON replay’i açar; restart’ta kapanır.
+   Kullanım ve sınırlar [Editor rehberindedir](docs/editor-usage.md).
+
 4. Kaydedilmiş reçeteyi **Load Recipe → Run** ile Runtime'a hazırlayın.
    **Tek çevrim** gerçek edinim/yürütmeyi başlatır; Run tek başına sonuç üretmez.
    Stop eski sonucu bastırır; farklı sürüm için Stop → Load Recipe → Run kullanın.
@@ -85,10 +85,8 @@ OECS / GenTL probe komutları, sandbox sınırları ve kanıt bağlantıları
    aynı sonucu kaydeder; yeni acquisition yapmaz. Restart geçmişi korur, aktif
    üretim iznini geri yüklemez.
 
-Editor'de reçete adı ve draft/dirty durumu üst satırdadır. **...** reçete bilgilerini
-ve çok kaynaklı geçişi açar. Viewer **...** menüsünde Reload, zoom ve ROI geometrisi
-bulunur. Ayrıntılı [Editor kullanım rehberi](docs/editor-usage.md): ROI, açıklamalar,
-Toolbox, nominal tarama kılavuzları ve küçük ekran komutları.
+Editor komutları, ROI, nominal tarama kılavuzları ve küçük ekran kullanımı
+[Editor kullanım rehberindedir](docs/editor-usage.md).
 
 Panel düzeni ve son seçimler `config/local.ui.ini` içindedir; bu proje autosave'i
 değildir. Test INI, fixture, görüntü ve raporlar `build/` altında tutulur.
@@ -113,7 +111,6 @@ kartı ve ilgili sözleşme. Güncel sıra progress'tedir.
 | Kalibrasyon | [Sistem özeti](docs/architecture/calibration-overview.md), [kaynak bağlantısı](docs/architecture/scoped-calibration-integration.md), [taşıma/Save As](docs/architecture/measurement-setup-migration.md) |
 | Runtime ve kabul | [Runtime/terminal](docs/architecture/multi-source-runtime-terminal.md), [B kabulü](docs/architecture/multi-source-release-acceptance.md), [PLC socket](docs/architecture/plc-socket.md) |
 | Geçmiş karar ve teslim | [Arşiv dizini](docs/archive/README.md), [önceki README](docs/archive/2026-10-17/README.md) |
-
 
 Belge kontrolü:
 

@@ -1,6 +1,6 @@
 # ICM-PLAN-03 — Mevcut OECS kamera ile deneysel kullanım
 
-21 Ekim 2026. **EXP-01 yazılımı uygulandı; fiziksel sahne/kopma kabulü açık.**
+21 Ekim 2026. **EXP-02 px Editor teslimi hazır; gerçek mm/kalibrasyon kabulü açık.**
 [Kısmi kapanış ve kanıt](../archive/2026-10-21-icm-oecs-exp-01.md).
 Güncel kanıt ve devam noktası [devir özetindedir](../progress.md).
 Bu belge native production capability açmaz.
@@ -75,8 +75,8 @@ Native provider'a ayrı deneysel politika, configure/readback ve owned capture
 bağlanır. Camera Manager preview/Stop ve tek kareyi dosyaya kaydetme eklenir.
 EXP-01 yalnız metadata bankalarının tamamı kapalı 2448×2048 rasteri kabul eder;
 gömülü metadata/ilk satır çıkarma yolu bu teslimde açılmaz. PGM içi deneysel işaret
-ve JSON sidecar kullanılır. EXP-02 açık provenance/etiket desteği bağlanana kadar
-normal Image File replay’i bu rasteri reddeder.
+ve JSON sidecar kullanılır. EXP-02 Editor opt-in ile kanıtı doğrulayarak replay
+açar; varsayılan Image File/Runtime yolu bu rasteri reddetmeye devam eder.
 Dosya piksel hash/geometri ve doğrulanmamış eşleşme kaydıyla korunur; bu gerçek
 raster MUI-04'ün Image File incelemesinde kullanılabilir. Önceki isteğe bağlı
 ICM-OECS-P1 işi bu göreve alınır; ayrıca tekrar uygulanmaz.
@@ -111,7 +111,17 @@ Gerçek referans yokken yalnız px/raster incelemesi kabul edilir.
 
 Kabul: ilgili Release/CTest, normal/küçük görseller, gerçek Line/Circle tanıları,
 Save/reopen/no-op, Stop/invalidation ve yanlış kalibrasyon negatifleri.
-Kanıt: `build/icm/oecs-exp-02/`. Sonraki: EXP-03.
+Uygulanan px geliştirme yolu: Editor oturumuna özel açık politika, canlı
+FrameBurstStart edinimi ve işaretli PGM + JSON replay. Politika reçeteye/INI’ye
+yazılmaz; restart ve varsayılan execution kapalıdır. Dosya kanıtı piksel hash,
+geometri, kimlik ve false admission/eşleşme alanlarıyla denetlenir; eksik/bozuk
+kanıt reddedilir. JSON değişikliği TargetOnly cache imzasını da değiştirir.
+Canlı deneysel istek Editor lease ister, production admission taşıyamaz ve
+IndustrialExecutionEvidence/trusted completion oluşturmaz. Profil seçicisi
+FrameBurstStart’ı açıkça sunar; FrameStart sessizce dönüştürülmez.
+
+Kanıt: `build/icm/oecs-exp-02/`; [px teslim/kabul sınırı](../archive/2026-10-21-icm-oecs-exp-02.md).
+Gerçek mm referansı/deneysel kalibrasyon aktivasyonu açık; sonraki geliştirme EXP-03.
 
 ### ICM-OECS-EXP-03 — Deneysel Runtime ve kayıt
 

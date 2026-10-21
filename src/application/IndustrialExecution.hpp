@@ -26,5 +26,5 @@ struct IndustrialExecutionFrame {
 };
 IndustrialCameraRequest industrialExecutionRequest(const IndustrialExecutionInputs&,const ToolDefinition&);
 IndustrialExecutionFrame acquireIndustrial(const IndustrialExecutionInputs&,IndustrialCameraRequest,
-    const QString& cycle,const QString& frame,int timeout,const std::shared_ptr<std::atomic_bool>&);
+    const QString& cycle,const QString& frame,int timeout,const std::shared_ptr<std::atomic_bool>&,bool experimentalEditor=false);
 }

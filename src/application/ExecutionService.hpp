@@ -65,6 +65,8 @@ public:
     using SourceAdapterFactory=std::function<std::unique_ptr<AcquisitionAdapter>(const ToolDefinition&)>;
     explicit ExecutionService(SourceAdapterFactory factory={}):sourceAdapterFactory_(std::move(factory)){}
     explicit ExecutionService(const IndustrialExecutionInputs&,SourceAdapterFactory factory={});
+    // Ephemeral Editor opt-in; never persisted in recipes or used by Runtime.
+    ExecutionService withExperimentalEditorReplay(bool enabled=true) const {auto service=*this;service.experimentalEditorReplay_=enabled;return service;}
     // Bump when execution semantics change; validation records bind this identity.
     static QString version() { return QStringLiteral("visionflow.execution/28"); }
     static QByteArray toolSignature(const QJsonObject&,const QString& directory,const QString& tool,const QByteArray& scope);
@@ -76,5 +78,6 @@ public:
 private:
     SourceAdapterFactory sourceAdapterFactory_;
     std::shared_ptr<const IndustrialExecutionInputs> industrial_;
+    bool experimentalEditorReplay_=false;
 };
 }

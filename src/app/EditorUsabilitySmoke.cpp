@@ -2,6 +2,10 @@
 #include "ImageViewer.hpp"
 #include "Toolbox.hpp"
 #include "WorkspacePanel.hpp"
+#include "application/ExperimentalOecsAcquisition.hpp"
+#include "domain/ToolRoi.hpp"
+#include <QJsonDocument>
+#include <QTextStream>
 #include <QAction>
 #include <QDialog>
 #include <QEnterEvent>
@@ -37,6 +41,51 @@
 #include <algorithm>
 
 namespace visionflow {
+bool MainWindow::verifyExperimentalEditor(const QString& artifacts) {
+    auto check=[](bool ok,const char* why){if(!ok)throw std::runtime_error(why);};
+    auto wait=[&]{QElapsedTimer timer;timer.start();do{QApplication::processEvents();QThread::msleep(1);}while(editorSession_.busy() && timer.elapsed()<20000);QApplication::processEvents();check(!editorSession_.busy(),"experimental Editor worker timeout");};
+    const auto path=qEnvironmentVariable("VISIONFLOW_EXP_RASTER");check(!path.isEmpty(),"VISIONFLOW_EXP_RASTER required");
+    auto* policy=findChild<QCheckBox*>("experimentalEditorReplay");check(policy && !policy->isChecked(),"restart policy defaults off");
+    const auto raw=ImageFileService{}.load(path,true);
+    service_.createProject("Experimental raster","",QDir(artifacts).filePath("experimental-editor-"+QUuid::createUuid().toString(QUuid::WithoutBraces)+".vfproject"),"file");
+    service_.createRecipe("Real raster px","",ApplicationType::Measurement,"file");
+    const auto source=service_.setImageFile(path);service_.enableMultiSource();
+    const auto line=service_.addTool("line_fit"),circle=service_.addTool("circle_fit");
+    for(auto t:service_.tools())if(t.id==line || t.id==circle){
+        t.parameters["mode"]="pixel";t.parameters["polarity"]=t.id==line ? "falling":"rising";
+        // The real top border's raw central-difference peaks are 14.5–18.5
+        // Gray8/px at x=900..1500; default 20 rejects every scan. Keep all fit
+        // quality/tolerance defaults and explicitly select edge threshold 10.
+        if(t.id==line)t.parameters["minContrast"]=10.;
+        t.parameters["scanRoi"]=(t.id==line ? ToolRoi{{source+"/image"},RotatedRectangle{{1200,645},{600,45},0}}:ToolRoi{{source+"/image"},Annulus{{1200,975},22,52}}).toJson();
+        service_.updateTool(t);
+    }
+    service_.setConnections({{source,"image",line,"image"},{source,"image",circle,"image"}});
+    policy->setChecked(true);refreshWorkspace();selectPage("editor");selectTool(circle);wait();runFlow();wait();
+    if(!editorSession_.cycle || editorSession_.cycle->state!=ExecutionState::Done){QString error=editorSession_.cycle?editorSession_.cycle->error:"No cycle";if(editorSession_.cycle)for(const auto& t:editorSession_.cycle->tools)error+="\n"+t.toolId+": "+t.message;throw std::runtime_error(("real raster flow: "+error).toStdString());}
+    auto result=[&](const QString& id)->ToolResult{for(const auto& r:editorSession_.cycle->tools)if(r.toolId==id)return r;throw std::runtime_error("missing real measurement");};
+    const auto l=result(line),c=result(circle);
+    check(l.outputs["linePx"].valid && c.outputs["circlePx"].valid,"actual Line/Circle pixel fits");
+    check(!l.outputs["lineMm"].valid && !c.outputs["circleMm"].valid && l.decision==PartDecision::NotEvaluated && c.decision==PartDecision::NotEvaluated,"no mm or part acceptance without reference");
+    for(const auto& r:{l,c})for(const auto& v:r.outputs)check(v.origin.experimentalAcquisition==raw.metadata().experimentalAcquisition,"measurement provenance retained");
+    check(findChild<QLabel*>("experimentalEditorNotice")->isVisible() && imageInfo_->text().contains(ExperimentalOecsAcquisition::notice()) && matchInfo_->text().contains(ExperimentalOecsAcquisition::notice()),"persistent image/result notice");
+    QFile report(QDir(artifacts).filePath("real-raster-report.txt"));check(report.open(QIODevice::WriteOnly),"report open");QTextStream out(&report);out<<"Real saved experimental raster only; no physical mm oracle\nLine edge threshold explicitly 20 -> 10 after default rejected 0/21; observed raw peaks 14.5..18.5 Gray8/px. Fit/tolerance defaults unchanged.\n"<<path<<"\ncontentId="<<raw.contentId().toHex()<<"\n"<<matchInfo_->text()<<"\n";out.flush();
+    const auto cycle=editorSession_.cycle->cycleId;runExecution(circle);wait();
+    check(editorSession_.cycle && editorSession_.cycle->partial && editorSession_.cycle->cycleId==cycle && result(circle).outputs["circlePx"].valid,"real TargetOnly without acquisition");
+    service_.save();const auto project=service_.path(),recipe=service_.activeRecipe()->id;const auto version=service_.activeRecipe()->recipeVersion;const auto definition=service_.activeRecipe()->definition;
+    service_.openProject(project);service_.selectRecipe(recipe);service_.save();check(service_.activeRecipe()->recipeVersion==version && service_.activeRecipe()->definition==definition,"save reopen no-op");
+    refreshWorkspace();selectTool(circle);wait();runFlow();wait();check(editorSession_.cycle && editorSession_.cycle->state==ExecutionState::Done,"reopen real flow");
+    for(const auto size:{QSize(1400,900),QSize(850,600)}){resize(size);QApplication::processEvents();imageViewer_->fitImage();QApplication::processEvents();check(grab().save(QDir(artifacts).filePath(QString("experimental-editor-%1.png").arg(size.width()))),"experimental screenshot");}
+    // Bad calibration leaves pixel diagnostics but cannot create physical values.
+    for(auto t:service_.tools())if(t.id==circle){t.parameters["mode"]="calibrated";t.parameters["scanRoi"]=ToolRoi{{"plane",LengthUnit::Millimetre,AxisConvention::XRightYUp},Annulus{{12,10},2,5}}.toJson();service_.updateTool(t);}
+    refreshWorkspace();selectTool(circle);runFlow();wait();const auto invalid=result(circle);
+    check(!invalid.outputs.value("circleMm").valid && invalid.decision!=PartDecision::Pass,"missing calibration cannot pass");
+    policy->setChecked(false);check(!editorSession_.frame && !editorSession_.cycle,"policy change clears pixels/results");
+    check(ExecutionService{}.run(definition,QFileInfo(project).absolutePath(),recipe,{},{}).state==ExecutionState::Error,"default execution/restart rejects experimental replay");
+    {MainWindow restarted(settingsFile_);check(!restarted.findChild<QCheckBox*>("experimentalEditorReplay")->isChecked(),"restart cannot restore experimental permission");}
+    out<<"TargetOnly, Save/reopen/no-op, invalid calibration, policy invalidation and restart/default isolation passed\n";out.flush();
+    return true;
+}
 bool MainWindow::verifyEditorUsability(const QString& artifacts) {
     auto check=[](bool ok,const char* message){if(!ok)throw std::runtime_error(message);};
     auto wait=[&]{QElapsedTimer timer;timer.start();do{QApplication::processEvents();QThread::msleep(1);}while(editorSession_.busy() && timer.elapsed()<20000);QApplication::processEvents();check(!editorSession_.busy(),"usability worker deadline");};

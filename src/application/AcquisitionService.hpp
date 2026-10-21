@@ -42,11 +42,12 @@ public:
 };
 class ImageFileAdapter final : public AcquisitionAdapter {
 public:
-    explicit ImageFileAdapter(QString absolutePath):path_(std::move(absolutePath)) {}
+    explicit ImageFileAdapter(QString absolutePath,bool experimentalEditorReplay=false):path_(std::move(absolutePath)),experimentalEditorReplay_(experimentalEditorReplay) {}
     AcquisitionCapabilities capabilities() const override;
     ImageFrame acquire(const AcquisitionRequest& request) const override;
 private:
     QString path_;
+    bool experimentalEditorReplay_=false;
 };
 class AcquisitionService {
 public:
