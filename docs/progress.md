@@ -5,10 +5,11 @@
 
 ## Devam noktası
 
-- **EXP-03 yazılım/500 seri hazır; fiziksel kopma açık.**
+- **EXP-03 deneysel e2e / 500 seri hazır.**
   [Kayıt](archive/2026-10-21-icm-oecs-exp-03.md): ayrı Runtime/Logs/CSV,
   Raw/px; 21 ilgili CTest, UI, Stop/deadline/restart. PLC/robot kapalı.
-  1000 hedefi kullanıcı isteğiyle 500 oldu; son süreç zorunlu sonlandırıldı.
+  [03b kopma/manuel açma](archive/2026-10-21-icm-oecs-exp-03b.md) doğrulandı.
+  1000→500 kullanıcı kararı; uzun süreç sonu zorunlu sonlandırmadır.
 
 - **ICM-OECS-EXP-02 px geliştirme teslimi hazır.**
   [Kayıt/kanıt](archive/2026-10-21-icm-oecs-exp-02.md): canlı Editor ve px replay.
@@ -110,7 +111,7 @@ Görevler: [ana plan](architecture/industrial-camera-plan.md), seçili kart ve s
 
 ## Kapanış ve sonraki adım
 
-**Devam: fiziksel kopma kabulü; EXP-02 deneysel kalibrasyon/mm açık.**
+**Devam: kullanıcı yönlendirmesiyle EXP-02 deneysel kalibrasyon/mm.**
 EXP-03 deneysel yol native production izni değildir. PGM+JSON açık Editor veya
 Runtime seçimi ister; restart kapatır. EXP-01d optik/mm ve özgün MUI-04
 raster/reçete/ROI açık; yeni sahne özgün problemi yeniden üretmez.
