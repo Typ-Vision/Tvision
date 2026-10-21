@@ -6,7 +6,8 @@
 #include <mutex>
 
 namespace visionflow {
-enum class CameraLeaseUse { Calibration, Editor, Runtime };
+enum class CameraLeaseUse { Calibration, Editor, Runtime, Preview };
+enum class PreviewAcquisitionKind { SequentialSingleFrame, NativeContinuous };
 struct CameraWorkerResult {
     bool success=false;
     QString error;
@@ -27,7 +28,8 @@ class CameraWorkerSession {
 public:
     using Factory=std::function<std::unique_ptr<CameraWorkerBackend>()>;
     CameraWorkerSession(PhysicalDeviceIdentity,CameraLeaseUse,QString source,
-                        FrameQueueMode,Factory,size_t capacity=2);
+                        FrameQueueMode,Factory,size_t capacity=2,
+                        PreviewAcquisitionKind kind=PreviewAcquisitionKind::SequentialSingleFrame);
     ~CameraWorkerSession(); // cancels then joins; can block on an uninterruptible SDK
     CameraWorkerSession(const CameraWorkerSession&)=delete;
     CameraWorkerSession& operator=(const CameraWorkerSession&)=delete;
@@ -41,6 +43,10 @@ public:
     ShutdownState shutdownState();
     const CameraLifecycle& lifecycle() const {return lifecycle_;}
     std::optional<AcquiredFrame> take();
+    PreviewAcquisitionKind acquisitionKind() const {owner();return kind_;}
+    bool previewCompatible() const {owner();return previewCompatible_;}
+    std::optional<bool> cleanShutdown() const;
+    std::optional<Deadline::Clock::time_point> lastFrameCompletedAt() const {owner();return frameCompletedAt_;}
     std::optional<AcquisitionReadback> readback() const {owner();return readback_;}
 private:
     void owner() const;
@@ -48,6 +54,8 @@ private:
     void releaseLease();
     const std::thread::id owner_=std::this_thread::get_id();
     QByteArray leaseKey_;
+    PreviewAcquisitionKind kind_;
+    bool previewCompatible_=false;
     bool leaseHeld_=true;
     CameraLifecycle lifecycle_;
     JobSession jobs_;
@@ -55,10 +63,11 @@ private:
     std::mutex mutex_;
     std::condition_variable wake_;
     std::optional<CameraTicket> command_;
-    struct Completion {CameraTicket ticket;CameraWorkerResult result;};
+    struct Completion {CameraTicket ticket;CameraWorkerResult result;Deadline::Clock::time_point completedAt;};
     std::optional<Completion> completion_;
     bool pending_=false,closing_=false,exited_=false,clean_=false;
     std::optional<AcquisitionReadback> readback_;
+    std::optional<Deadline::Clock::time_point> frameCompletedAt_;
     QString startupError_,cleanupError_;
     std::thread worker_;
 };

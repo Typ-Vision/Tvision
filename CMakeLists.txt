@@ -58,6 +58,7 @@ endif()
 add_library(visionflow_acquisition src/application/IndustrialSoftwareCapture.cpp src/application/IndustrialFrameProbe.cpp src/application/IndustrialCameraConfiguration.cpp src/vision/ImageFrame.cpp src/vision/ImageAccess.cpp src/application/ImageFileService.cpp src/application/AcquisitionService.cpp src/application/CameraService.cpp src/application/CameraLifecycle.cpp src/application/MatchService.cpp src/application/ExecutionService.cpp src/application/ToolExecutors.cpp src/application/EditorSession.cpp)
 target_sources(visionflow_acquisition PRIVATE src/application/IndustrialMeasurementRaster.cpp src/application/ExperimentalOecsAcquisition.cpp)
 target_sources(visionflow_acquisition PRIVATE src/application/CameraWorkerSession.cpp)
+target_sources(visionflow_acquisition PRIVATE src/application/CameraPreviewSession.cpp)
 target_sources(visionflow_acquisition PRIVATE src/application/IndustrialCameraProvider.cpp)
 target_sources(visionflow_acquisition PRIVATE src/application/IndustrialExecution.cpp
   src/application/IndustrialRuntime.cpp

@@ -17,6 +17,7 @@ struct IndustrialCameraCapabilities {
     bool open=false, configure=false, preview=false, softwareTrigger=false;
     bool exposure=false, gain=false;
     QString unavailableReason;
+    bool continuous=false; // Start runs native continuous; Grab retrieves its next owned frame.
     // Runtime trust is deliberately absent: provider frames cannot mint terminal results.
 };
 class IndustrialCameraBackend : public CameraWorkerBackend {

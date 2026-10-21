@@ -1,4 +1,5 @@
 #include "application/CameraWorkerSession.hpp"
+#include "application/CameraPreviewSession.hpp"
 #include <QCoreApplication>
 #include <QTextStream>
 #include <future>
@@ -15,6 +16,7 @@ struct Probe {
     std::atomic_bool entered=false,closed=false,destroyed=false,wrongThread=false;
     bool failCleanup=false,failGrab=false,missingFrame=false,foreignFrame=false;
     std::shared_future<void> gate;
+    std::shared_future<void> cleanupGate;
 };
 class Backend final:public CameraWorkerBackend {
     std::shared_ptr<Probe> p;
@@ -22,7 +24,7 @@ class Backend final:public CameraWorkerBackend {
 public:
     explicit Backend(std::shared_ptr<Probe> probe):p(std::move(probe)){p->worker=std::this_thread::get_id();}
     ~Backend() override{thread();p->destroyed=true;}
-    void shutdown() override{thread();p->closed=true;if(p->failCleanup)throw std::runtime_error("cleanup failed");}
+    void shutdown() override{thread();p->closed=true;if(p->cleanupGate.valid())p->cleanupGate.wait();if(p->failCleanup)throw std::runtime_error("cleanup failed");}
     CameraWorkerResult execute(const CameraTicket& ticket) override{
         thread();++p->calls;
         if(ticket.operation!=CameraOperation::Grab)return {true,{},{}};
@@ -39,6 +41,57 @@ CameraWorkerSession::Factory factory(std::shared_ptr<Probe> p){return [p]{return
 void command(CameraWorkerSession& s,CameraOperation op){s.submit(op);until([&]{return s.poll();});}
 void streaming(CameraWorkerSession& s){for(auto op:{CameraOperation::Connect,CameraOperation::Configure,CameraOperation::Start})command(s,op);}
 void shutdown(CameraWorkerSession& s){s.requestShutdown();until([&]{return s.shutdownState()==ShutdownState::Ready;});}
+CameraPreviewSession::Opener previewOpener(std::shared_ptr<Probe> p,QString serial="preview-session",
+    PreviewAcquisitionKind kind=PreviewAcquisitionKind::SequentialSingleFrame){
+    return [p,serial,kind]{return std::make_unique<CameraWorkerSession>(identity(serial),CameraLeaseUse::Preview,
+        "source",FrameQueueMode::PreviewLatest,factory(p),1,kind);};
+}
+void previewContract(){
+    CameraPreviewSession s;
+    auto p=std::make_shared<Probe>();
+    s.start(previewOpener(p),true);const auto firstGeneration=s.generation();
+    until([&]{s.poll();return s.stats().completed>=30;});
+    check(s.stats().replaced==s.stats().completed-1 && s.stats().fps>0 && s.stats().completedAtUtc.isValid(),"bounded latest frame and measured FPS");
+    auto frame=s.takeLatest();check(frame && frame->generation==firstGeneration && frame->kind==PreviewAcquisitionKind::SequentialSingleFrame,"sequential acquisition label");
+    s.stop();s.stop();check(!s.takeLatest() && s.generation()>firstGeneration,"Stop clears generation/latest");
+    until([&]{s.poll();return s.drained();});check(s.state()==PreviewState::Idle && p->destroyed,"Stop drains worker");
+    for(int i=0;i<20;++i){
+        s.start(previewOpener(std::make_shared<Probe>()),true);s.stop();
+        until([&]{s.poll();return s.drained();});check(!s.takeLatest(),"immediate Start/Stop late completion suppressed");
+    }
+    auto single=std::make_shared<Probe>();
+    s.start(previewOpener(single,"camera-B",PreviewAcquisitionKind::NativeContinuous),false);
+    until([&]{s.poll();return s.drained();});frame=s.takeLatest();
+    check(frame && frame->generation>firstGeneration && frame->kind==PreviewAcquisitionKind::NativeContinuous && s.stats().completed==1 && single->calls==4,"single native continuous frame/camera switch");
+    for(int scenario=0;scenario<4;++scenario){
+        auto blocked=std::make_shared<Probe>();std::promise<void> release;blocked->gate=release.get_future().share();
+        s.start(previewOpener(blocked),true,scenario==0 ? 100 : 5000);
+        until([&]{s.poll();return blocked->entered.load();});const int calls=blocked->calls;
+        if(scenario==0)until([&]{s.poll();return s.state()==PreviewState::Error;});
+        if(scenario==1)s.transportLost("unplugged");
+        if(scenario==2){s.requestShutdown(1);until([&]{s.poll();return s.state()==PreviewState::Error;});}
+        if(scenario==3){s.stop(1);check(s.state()==PreviewState::Stopping,"blocked Stop remains Stopping");until([&]{s.poll();return s.state()==PreviewState::Error;});}
+        check(!s.drained() && !s.takeLatest() && blocked->calls==calls,"hung operation stays exclusive and stops scheduling");
+        rejects([&]{s.start(previewOpener(std::make_shared<Probe>(),"camera-B"),true);});
+        for(auto use:{CameraLeaseUse::Editor,CameraLeaseUse::Runtime,CameraLeaseUse::Calibration,CameraLeaseUse::Preview})
+            rejects([&]{CameraWorkerSession rival(identity("preview-session"),use,"source",FrameQueueMode::PreviewLatest,factory(blocked),1);});
+        release.set_value();until([&]{s.poll();return s.drained();});
+        check(!s.takeLatest() && blocked->destroyed && blocked->calls==calls && s.state()==PreviewState::Error,"late callback discarded after timeout/disconnect/shutdown");
+    }
+    s.start(previewOpener(std::make_shared<Probe>()),false);until([&]{s.poll();return s.drained();});
+    check(s.state()==PreviewState::Idle && s.takeLatest().has_value(),"explicit restart after drain");
+    {auto cleanup=std::make_shared<Probe>();std::promise<void> release;cleanup->cleanupGate=release.get_future().share();
+        s.start(previewOpener(cleanup),false);const auto generation=s.generation();
+        until([&]{s.poll();return cleanup->closed.load();});
+        until([&]{s.poll();return s.state()==PreviewState::Error;});
+        check(!s.takeLatest() && !s.drained() && s.generation()>generation,"hung single cleanup retires held frame/generation");
+        rejects([&]{CameraWorkerSession rival(identity("preview-session"),CameraLeaseUse::Runtime,"source",FrameQueueMode::PreviewLatest,factory(cleanup),1);});
+        release.set_value();until([&]{s.poll();return s.drained();});
+    }
+    auto bad=std::make_shared<Probe>();bad->failCleanup=true;
+    s.start(previewOpener(bad,"preview-cleanup-fault"),false);until([&]{s.poll();return s.drained();});
+    check(s.state()==PreviewState::Error && s.error()=="cleanup failed" && !s.takeLatest(),"cleanup fault does not publish single frame");
+}
 void stress(){
     // Reuse the exact identity after every joined teardown; both queue policies
     // must clear pending images across every explicit Stop/Start generation.
@@ -79,6 +132,7 @@ int main(int argc,char** argv){
         if(app.arguments().contains("--stress")){
             stress();QTextStream(stdout)<<"PASS: 1000 fixture cycles, 2000 owned grabs, 100 teardown/release and 20 blocked-grab shutdowns\n";return 0;
         }
+        previewContract();
         auto p=std::make_shared<Probe>();
         auto invalid=identity();invalid.confidence=DeviceIdentityConfidence::ProviderReported;invalid.serial.clear();
         rejects([&]{CameraWorkerSession s(invalid,CameraLeaseUse::Editor,"source",FrameQueueMode::PreviewLatest,factory(p));});
@@ -128,6 +182,6 @@ int main(int argc,char** argv){
         {CameraWorkerSession latest(identity("preview"),CameraLeaseUse::Editor,"source",FrameQueueMode::PreviewLatest,factory(preview),1);
             streaming(latest);command(latest,CameraOperation::Grab);command(latest,CameraOperation::Grab);
             check(latest.lifecycle().stats().dropped==1 && latest.lifecycle().stats().depth==1,"worker preview drops oldest");shutdown(latest);}
-        QTextStream(stdout)<<"PASS: persistent worker, exclusive leases, Stop/shutdown budgets, late frames, fault and cleanup quarantine\n";return 0;
+        QTextStream(stdout)<<"PASS: preview single/live, sequential/continuous labels, bounded latest/FPS, 20 Start/Stop, A to B, hung deadline/disconnect/shutdown and shared leases; persistent worker, late frames and cleanup quarantine\n";return 0;
     }catch(const std::exception& e){QTextStream(stderr)<<"FAIL: "<<e.what()<<'\n';return 1;}
 }

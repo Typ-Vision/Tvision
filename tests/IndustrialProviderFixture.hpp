@@ -21,6 +21,7 @@ struct State {
     bool foreign=false,geometry=false,settings=false,cleanup=false,triggerUnavailable=false;
     QImage raster;
     int delayMs=0;
+    bool continuous=false;
 };
 class Backend final:public IndustrialCameraBackend {
     IndustrialCameraRequest r;
@@ -68,7 +69,7 @@ class Provider final:public IndustrialCameraProvider {
 public:
     explicit Provider(std::shared_ptr<State> s):state(std::move(s)){}
     IndustrialCameraCapabilities capabilities(const DiscoveredDevice& d) const override {
-        if(d.identity!=request().device.identity)return {false,false,false,false,false,false,"Synthetic test provider: unsupported device"};return {true,true,true,!state->triggerUnavailable,true,true,{}};
+        if(d.identity!=request().device.identity)return {false,false,false,false,false,false,"Synthetic test provider: unsupported device"};return {true,true,true,!state->triggerUnavailable,true,true,{},state->continuous};
     }
     std::unique_ptr<IndustrialCameraBackend> create(const IndustrialCameraRequest& r) const override {return std::make_unique<Backend>(r,state);}
 };

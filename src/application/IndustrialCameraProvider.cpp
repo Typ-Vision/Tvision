@@ -87,6 +87,7 @@ std::unique_ptr<CameraWorkerSession> CameraProviderFactory::open(const Industria
             (request.profile.requested.trigger.enabled && request.profile.requested.trigger.source=="Software"),
             "Preview and software capture require separate profile/session admission.");
     return std::make_unique<CameraWorkerSession>(request.device.identity,use,request.sourceId,mode,
-        [provider=injected_,request]{return std::make_unique<CheckedBackend>(provider,request);},capacity);
+        [provider=injected_,request]{return std::make_unique<CheckedBackend>(provider,request);},capacity,
+        mode==FrameQueueMode::PreviewLatest && caps.continuous ? PreviewAcquisitionKind::NativeContinuous : PreviewAcquisitionKind::SequentialSingleFrame);
 }
 }

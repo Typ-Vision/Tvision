@@ -106,7 +106,7 @@ std::unique_ptr<CameraWorkerSession> ExperimentalOecsAcquisition::open(const Ind
     require(QFileInfo(dll).isAbsolute() && bool(api),"Absolute OECS runtime and API required");
     require(request.profile.requested.trigger==TriggerSettings{true,"FrameBurstStart","Software"},"Explicit experimental FrameBurstStart profile required");
     return std::make_unique<CameraWorkerSession>(request.device.identity,CameraLeaseUse::Editor,request.sourceId,FrameQueueMode::PreviewLatest,
-        [request,dll,api=std::move(api)]{return std::make_unique<Backend>(request,dll,api);});
+        [request,dll,api=std::move(api)]{return std::make_unique<Backend>(request,dll,api);},1);
 }
 void ExperimentalOecsAcquisition::save(const AcquiredFrame& frame,const QString& path){
     const auto& image=frame.image;auto evidence=image.metadata().experimentalAcquisition;

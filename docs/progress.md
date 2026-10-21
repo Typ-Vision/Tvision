@@ -4,14 +4,16 @@
 
 ## Devam noktası
 
-**Sonraki görev: [CCUX-04](architecture/camera-setup/04-preview-service.md).**
-**CCUX-03 tamamlandı:** tek kamera listesi, kısa ID/ad, tara/seç/ekle ile otomatik
-varsayılanlar; CCUX-02 üzerinden ayar oku/uygula/doğrula/kaydet. Teknik alanlar
-Ayrıntılar'da; eski profil/rota belirsizliği görünür seçim ister. Proje yönlendirmesi
-reçete istemez. Mevcut önizleme ve oturumluk deneysel onay korunur; yeni canlı
-kontroller CCUX-05'tedir. Yeni Release/4 CTest ve 1400×900 / 850×600 ürün temalı
-fixture görselleri [kapanışta](archive/2026-10-21-ccux-03.md);
-`build/ccux/ccux-03/`. Fiziksel kamera/UI donanım kabulü yapılmadı.
+**Sonraki görev: [CCUX-05](architecture/camera-setup/05-preview-ui.md).**
+**CCUX-04 tamamlandı:** UI bağımsız tek/canlı `CameraPreviewSession`, bir pending
+komut ve tek latest-frame yuvası; worker tamamlanma zamanından FPS, deadline ve
+generation. Stop/kopma/shutdown geç kareyi bastırır; worker bitmeden yeni Start
+ve ortak cihaz lease'i açılmaz. Continuous capability ayrı etiketlenir; deneysel
+OECS sıralı FrameBurstStart kalır. Yeni Release/CTest kanıtı ve sınırlar
+[kapanışta](archive/2026-10-21-ccux-04.md), `build/ccux/ccux-04/`.
+UI bağlantısı CCUX-05'tedir; fiziksel uzun video kabulü yapılmadı.
+**CCUX-03:** sade kayıt/ayar ekranı, rota/profil belirsizliğinde açık seçim ve
+oturumluk deneysel onay korunur; [yazılım/görsel kabul](archive/2026-10-21-ccux-03.md).
 Native backend hâlâ Unavailable; eksik settings desteği açık unsupported kalır.
 Pending optik kurulum tamamlanmış sayılmaz. Önkoşullar
 [CCUX-01](archive/2026-10-21-ccux-01.md) ve

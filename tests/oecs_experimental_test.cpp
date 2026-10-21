@@ -1,4 +1,5 @@
 #include "application/ExperimentalOecsAcquisition.hpp"
+#include "application/CameraPreviewSession.hpp"
 #include "application/IndustrialCameraConfiguration.hpp"
 #include "application/IndustrialRuntime.hpp"
 #include "application/EditorSession.hpp"
@@ -86,6 +87,17 @@ int main(int argc,char** argv){QCoreApplication app(argc,argv);try{
     check(makeOecsCApi()->softwareTriggerCorrelation()==OecsTriggerCorrelation::Unavailable,"native trusted capability stays unavailable");
     CameraProviderFactory native;check(!native.capabilities(request().device).softwareTrigger && !native.capabilities(request().device).preview,"production factory unchanged");
     {auto r=request();r.profile.requested.trigger.selector="FrameStart";rejects([&]{ExperimentalOecsAcquisition::open(r,"C:/fake.dll");});}
+    {auto s=state();CameraPreviewSession preview;
+        preview.start([s]{return open(s);},true,3000);
+        until([&]{preview.poll();return preview.stats().completed>=2 || preview.state()==PreviewState::Error;});
+        auto frame=preview.takeLatest();
+        check(frame && frame->kind==PreviewAcquisitionKind::SequentialSingleFrame,"OECS preview remains sequential");
+        const auto evidence=frame->frame.image.metadata().experimentalAcquisition;
+        check(evidence["productionAdmission"]==false && evidence["triggerAssociationVerified"]==false &&
+              evidence["profileSnapshot"].toObject()==request().profile.toJson(),"preview preserves explicit FrameBurstStart and experimental provenance");
+        preview.stop();until([&]{preview.poll();return preview.drained();});
+        check(!preview.takeLatest() && preview.state()==PreviewState::Idle && !s->running && !s->held,"OECS preview Stop drains resources without late raster");
+    }
     {auto s=state();auto r=request();r.profile.requested.exposureAuto=AutoMode::Continuous;rejects([&]{ExperimentalOecsAcquisition::open(r,"C:/fake.dll",[s]{return std::make_unique<Api>(s);});});}
     {auto s=state();auto worker=open(s);rejects([&]{open(s);});start(*worker);check(worker->lifecycle().state()==CameraState::Streaming,"experimental configured");
         command(*worker,CameraOperation::Grab,CameraState::Streaming);auto frame=worker->take();check(frame.has_value(),"owned experimental frame");

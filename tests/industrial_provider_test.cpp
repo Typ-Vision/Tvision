@@ -1,4 +1,5 @@
 #include "IndustrialProviderFixture.hpp"
+#include "application/CameraPreviewSession.hpp"
 using namespace industrial_provider_fixture;
 int main(int argc,char** argv){QCoreApplication app(argc,argv);try{
     auto r=request();CameraProviderFactory product;
@@ -36,6 +37,16 @@ int main(int argc,char** argv){QCoreApplication app(argc,argv);try{
     // Preview has its own idle profile/session; transition drains the worker and lease.
     auto state=std::make_shared<State>();auto factory=CameraProviderFactory::forTests(std::make_shared<Provider>(state));
     auto preview=r;preview.profile.requested.trigger={false,{},{}};
+    for(bool continuous:{false,true}){
+        state->continuous=continuous;
+        CameraPreviewSession session;
+        session.start([&]{return factory.open(preview,CameraLeaseUse::Preview,FrameQueueMode::PreviewLatest,1);},true);
+        until([&]{session.poll();return session.stats().completed>=10;});
+        auto frame=session.takeLatest();
+        check(frame && frame->kind==(continuous ? PreviewAcquisitionKind::NativeContinuous : PreviewAcquisitionKind::SequentialSingleFrame)
+            && state->hardware->commands==0,"provider preview kind and no software trigger conversion");
+        session.stop();until([&]{session.poll();return session.drained();});check(!session.takeLatest(),"provider preview stops publishing");
+    }
     {auto s=factory.open(preview,CameraLeaseUse::Editor,FrameQueueMode::PreviewLatest);start(*s);command(*s,CameraOperation::Grab);
      check(state->hardware->commands==0 && s->lifecycle().stats().depth==1,"preview event without trigger");
      s->requestStop();command(*s,CameraOperation::Stop);check(!s->take(),"preview Stop clears raster");}
