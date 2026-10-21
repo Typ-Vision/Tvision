@@ -2,7 +2,13 @@
 
 Güncel uygulama durumu ve görev sırası [devir özetindedir](../progress.md). Bu belge gereksinimleri taşır; aşağıdaki tarihli planlar tek başına uygulama kabulü değildir. Üç belgede birebir tekrarlanan teslim paragrafları [taşıma öncesi tam kayıtta](../archive/2026-10-17/03_cpp_qt_opencv_gereksinimleri.md) korunmuştur. Yalnız görevle ilgili bölümleri okuyun; yeni teslim günlüğü eklemeyin.
 
-18 Ekim plan kararı: [ICM hedef sözleşmeleri](../architecture/industrial-camera-contract-plan.md) marka bağımsız device/transport/profile, owner worker/lease, owned frame ve trusted Runtime kanıtını tanımlar. ICM-02'nin OECS C API kararı COE-U kapsamındadır; Basler/Daheng SDK/ABI seçimi ayrı backend görevlerindedir. [Görev planı](../architecture/industrial-camera-plan.md) uygulama değildir; ortak yazılım kabulü native capability açmaz, test adaptörü normal ürün yolundan seçilemez.
+ICM teknik hedefi: [ortak sözleşmeler](../architecture/industrial-camera-contract-plan.md)
+marka bağımsız device/profile, owner worker/lease, owned frame ve trusted Runtime
+kanıtını tanımlar. OECS C API kararı COE-U kapsamındadır; diğer SDK/ABI kararları ayrıdır.
+21 Ekim [deneysel politika](../architecture/industrial-camera-oecs-experimental-plan.md)
+bu ortak yolda ayrı capability/provenance ve kayıt ayrımı ister; ActualCounterEpoch
+ve trusted completion taklit edilmez. Test adaptörü normal ürün yolundan seçilemez.
+Plan uygulama değildir; varsayım native production capability açmaz.
 
 16 Ekim — **KMC-0–9 A yazılım kabulü tamamlandı; B teslimi açık:** [KMC sözleşmesi](../architecture/independent-calibration-implementation-plan.md)
 kalıcı camera/setup kimliğini recipe tool kimliğinden ayırır; application-owned

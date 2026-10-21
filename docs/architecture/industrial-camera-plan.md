@@ -1,6 +1,9 @@
 # Endüstriyel kamera entegrasyonu — ICM ana planı
 
-18 Ekim 2026. **Ortak ürün geliştirmesi donanım kabulünden ayrıldı; OECS native trigger ertelendi, application edinimi ve Editor profil seçimi hazır; immutable Runtime admission hazır; trusted terminal sırası açık.** Uygulayıcı hedefi:
+21 Ekim 2026. **Ortak yazılım/G2 tamam. Güncel öncelik mevcut OECS ile deneysel
+edinim → Editor/ölçüm → Runtime; iptal/boşaltma çalışma varsayımıdır.**
+[ICM-PLAN-03 ve EXP-01–03 görevleri](industrial-camera-oecs-experimental-plan.md)
+G1 beklemeden deneysel kullanım planlar; henüz uygulanmadı. Uygulayıcı hedefi:
 **GPT-6.1-sol / medium** (kullanıcının Sol6.1 medium tercihi). Bu belge model
 ayarını değiştirmez veya başka bir chat başlatmaz. Yeni kullanıcı yönlendirmesi,
 KMC-10e sonrasında fiziksel kalibrasyon kabulünden önce gerçek kamera entegrasyonudur.
@@ -18,11 +21,11 @@ KMC-10e sonrasında fiziksel kalibrasyon kabulünden önce gerçek kamera entegr
    belirsizlik/çelişkide okumayı genişletin. [Devir şablonu](industrial-camera-handoff.md).
 
 Güncel görev sırası ve son kanıt [progress'tedir](../progress.md).
-18 Ekim kullanıcı kararıyla ana hedef Basler/Daheng PoE kameralardır. Ortak ürün
-geliştirmesi test adaptörüyle ilerler; OECS/COE-U fiziksel engeli bu sırayı durdurmaz.
-Tamamlanan 03c, 04e-a/b, 05a-a ve 07a-a tekrar yapılmaz. Ortak sıra **ICM-04f**,
-ardından **05a → 05b → 06a → 06b → 07a → 07b → 07c → 08a → 08b → 08c → 09a**.
-Bu sıra yazılım kabulüdür; gerçek edinim ve üretim yeteneği backend bazında kapılıdır.
+21 Ekim kullanıcı kararıyla eldeki OECS önceliklidir; başka kamera beklenmez.
+Sıra **ICM-OECS-EXP-01 → EXP-02/MUI-04 → EXP-03**. Basler/Daheng gelecekteki
+hedeflerdir. Tamamlanan 03c, 04e-a/b, 05a-a, 07a-a ve 04f–09a tekrar yapılmaz.
+Doğrulanmış production yeteneği backend bazında kapılıdır; deneysel politika bu
+yeteneği taklit etmez. Ayrıntılı sınır ve kabul yukarıdaki yeni plandadır.
 [ICM-00 başlangıç kaydı](industrial-camera-baseline.md) tamamlandı. Bir oturumun varsayılan kapsamı bir görevdir; kullanıcı
 bir sıra verirse aynı sırada devam edilir. Tamamlanan KMC paketleri tekrarlanmaz.
 Bu plan 6B/industrial acquisition açığını devralır; ayrı ikinci kamera mimarisi kurmaz.
@@ -51,14 +54,16 @@ kopyalanmaz; yerel SDK keşfi isteğe bağlı bağımlılık olarak tutulur.
 
 NI Vision Builder/HALCON benzeri genel kullanım hedefi için marka bağımsız cihaz,
 özellik ve acquisition sözleşmesi korunur. OECS/COE-U mevcut deney backend'idir;
-ilk ürün backend'i olma zorunluluğu kaldırılmıştır. Basler ve Daheng entegrasyonları
+mevcut cihazla deneysel kullanım önceliklidir. Basler ve Daheng entegrasyonları
 [ayrı görev paketleridir](industrial-camera-tasks-backends.md). Model/SDK seçimi
 ve fiziksel kabul her paket içinde yapılır; PoE bir trigger doğruluğu garantisi değildir.
 Opto'ya özel widget, kalibrasyon matematiği veya ayrı Runtime yaratılmaz.
 
-İlk sürüm: tek fiziksel endüstriyel kamera, Mono8 tam sensör, sabit geometri,
+İlk sürüm: tek fiziksel endüstriyel kamera, Mono8, sabit geometri,
 manual exposure/gain (destekleniyorsa), seçili kamera preview ve gerçek software
 trigger ile tek çevrim. Preview free-run ile production trigger farklı oturumlardır.
+OECS deneysel profili tam sensör veya açık ICM-03c crop politikasını kullanır;
+gömülü metadata ve tetik eşleşmesi sınırları EXP planında tanımlıdır.
 Sıralı N-source çekirdek korunur; tek fiziksel kamera + dosya/webcam karışımı sınanır.
 Aynı kameranın iki source'a atanması mevcut konservatif politikayla reddedilir.
 
@@ -89,13 +94,14 @@ Bir backend'in kabulü diğer backend/model/firmware'e otomatik taşınmaz.
 
 **ICM-00, ICM-01a, ICM-03a, ICM-03b ve ICM-04a–c yazılımı tamamlandı; ICM-01b açık; ICM-02 offline/koşullu tamamlandı.**
 [Backend kararı](industrial-camera-backend-decision.md): OECS C API;
-gerçek cihaz readback/owned Mono8 probe başarılı; ICM-04d çekirdek/fixture kısmi, native trigger açık. Diğer satırlar PLANLANDI.
+gerçek cihaz readback/owned Mono8 probe başarılı; ICM-04d çekirdek/fixture kısmi,
+doğrulanmış native trigger kabulü bekliyor.
 [ICM-01a tanı kabulü](../archive/2026-10-17-icm-01a.md) fiziksel kapıları kapatmaz.
 Bağımlılıklar görevin başlatılabilmesini ifade eder; fiziksel kapı ayrıca belirtilir.
 04d/04e native OECS bölümü **açık/ertelenmiş**; ortak yazılım yolunun önkoşulu değildir.
-04f–07b ortak provider, keşif/kayıt, Camera Manager, reçetesiz kalibrasyon/aktivasyon,
-industrial source codec ve execution/TargetOnly tamam; native capability açmaz.
-Sıradaki 07c; güncel kanıt progress'tedir.
+04f–09a ortak yazılım, Runtime/terminal/Logs ve G2 tamam; native capability açmaz.
+Sıradaki EXP-01; güncel kanıt progress'tedir. Aşağıdaki envanter tarihsel
+bağımlılıkları gösterir; EXP görevleri ayrı güncel kartta tanımlıdır.
 
 | ID | Tek teslim | Önkoşul |
 | --- | --- | --- |

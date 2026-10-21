@@ -4,6 +4,12 @@
 [Görev sırası](industrial-camera-plan.md), [hedef sözleşmeler](industrial-camera-contract-plan.md).
 KMC-10e 87/87 UI ve 73/73 core tarihsel baseline'dır, ICM sonucu değildir.
 
+21 Ekim: [EXP-01–03 kabul kartları](industrial-camera-oecs-experimental-plan.md)
+eldeki OECS ile deneysel edinim, ölçüm ve Runtime için güncel sıradır. Başka
+kamera/üretici yanıtı beklenmez. Gerçek görüntü ve test sonuçları kaydedilir;
+iptal/boşaltma varsayımı G1/G3/G4 kanıtı sayılmaz. Aşağıdaki matris doğrulanmış
+production kabulü içindir; EXP sonuçları bu kapıları otomatik kapatmaz.
+
 ## 1. Kanıt düzeni
 
 Her görev `build/icm/<id>/` altında configure/build/test logu, JUnit XML, varsa raster,

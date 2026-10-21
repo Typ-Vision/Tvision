@@ -6,6 +6,7 @@ görev” ifadeleri yazıldıkları tarihe aittir.
 
 | Dönem / görev | Kayıt |
 | --- | --- |
+| 21 Ekim 2026 — ICM-PLAN-03 | [Mevcut OECS ile deneysel edinim → Editor/ölçüm → Runtime planı](2026-10-21-icm-plan-03.md) |
 | 19 Ekim 2026 — TAP-RES-01 | [Rigid tapping: enkoder/cetvel, tork izleme ve senkronizasyon araştırması](2026-10-19-tap-res-01.md) |
 | 19 Ekim 2026 — MUI-04 | [Sert raster corpus 190 kontrol; gerçek kullanıcı görüntüsü kabulü açık](2026-10-19-mui-04.md) |
 | 19 Ekim 2026 — MUI-03 | [Ortak ölçüm önerileri, bounded Runtime/Logs tanısı ve digest/Stop koruması](2026-10-19-mui-03.md) |

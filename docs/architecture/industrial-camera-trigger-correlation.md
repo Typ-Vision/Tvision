@@ -1,5 +1,12 @@
 # ICM-04d — tetik korelasyonu kararı
 
+21 Ekim 2026 kapsam eklemesi: kullanıcı mevcut kamera ile iptal/boşaltmayı
+çalışıyor varsayarak ilerlemek istedi. [EXP-01–03 planı](industrial-camera-oecs-experimental-plan.md)
+bu varsayımı açık deneysel politika olarak kullanır; aşağıdaki karşı örnekleri
+ve doğrulanmış production şartlarını değiştirmez. "Native başlamaz" sınırları
+trusted yola aittir; deneysel edinim için G1/üretici yanıtı beklenmez. Bu belge
+güncellemesi kodda Unavailable durumunu veya ActualCounterEpoch stratejisini değiştirmez.
+
 18 Ekim 2026. **Uygulanan yol ActualCounterEpoch; native capability Unavailable.
 Bu strateji tek olası çözüm değildir. Yeni timestamp deneyi doğrudan saat
 kıyaslamasını çürüttü; alternatif stratejilerin kanıt koşulları aşağıdadır.**

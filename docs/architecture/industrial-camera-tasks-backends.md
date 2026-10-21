@@ -1,13 +1,15 @@
 # ICM — marka ve model bazlı kamera entegrasyonları
 
-18 Ekim 2026 kullanıcı kararı. **PLANLANDI; hiçbir yeni native destek açılmadı.**
+21 Ekim 2026: **Basler/Daheng cihaz bekliyor; öncelik eldeki OECS ile
+[EXP-01–03 deneysel kullanım](industrial-camera-oecs-experimental-plan.md).**
+18 Ekim backend paketleri korunur; hiçbir yeni native destek açılmadı.
 Ortak uygulama ve G2 yazılım zinciri [ana plandadır](industrial-camera-plan.md).
 Bu paketler aynı application adapter/worker/lease sözleşmesine bağlanır.
 Ajanlar sıralı çalışır; paketlerin ayrı olması paralel ajan çalışması anlamına gelmez.
 
 ## Kapsam ve kabul birimi
 
-Hedef Basler/Daheng PoE kameralardır. Exact model, firmware, seri, SDK sürümü,
+Gelecek hedef Basler/Daheng PoE kameralardır. Exact model, firmware, seri, SDK sürümü,
 transport ve gerekli Mono8/software-trigger yetenekleri seçilmeden destek ilan edilmez.
 PoE güç beslemesidir; GigE Vision transport veya vendor SDK desteği tek başına
 tetik–kare eşleşmesi garantisi değildir. Ortak kod belirli node/sayaç isimlerini
@@ -68,13 +70,18 @@ Model/firmware/SDK değişiminde etkilenen kabul yeniden değerlendirilir.
 - Sonraki: ölçüm gerekiyorsa ilgili kurulum için ICM-10/G4; bağımsız referans ve
   tolerans olmadan fiziksel doğruluk beyan edilmez.
 
-## OECS ertelenen iş ve isteğe bağlı önizleme
+## OECS deneysel öncelik ve ertelenen doğrulanmış kullanım
+
+Güncel sıra EXP-01 → EXP-02/MUI-04 → EXP-03'tür; kartlar yukarıdaki plandadır.
+Üretici yanıtı ve G1 bu deneysel sıranın önkoşulu değildir. Aşağıdaki P1 kapsamı
+EXP-01'e alındı; bağımsız görev olarak tekrar uygulanmaz. EXP-02/03 daha önce
+P1 dışında tutulan Editor/ölçüm/Runtime'ı açık deneysel politika ile ele alır.
 
 - **ICM-04d native / 04e native:** açık/ertelenmiş; mevcut karşı örnekler korunur.
   Belgeli pending-command cancel/completion/drain/reset veya başka doğrulanmış
   korelasyon yolu gelince devam edilir. Aynı sessizlik/Stop→Start deneyi tekrarlanmaz.
   [Korelasyon kararı](industrial-camera-trigger-correlation.md) geçerlidir.
-- **ICM-OECS-P1 — sınırlı gerçek preview (PLANLANDI, ortak sırayı durdurmaz):**
+- **ICM-OECS-P1 — sınırlı gerçek preview (EXP-01'e alındı; tarihsel kapsam):**
   önkoşul 04f/05a, mevcut 04c ve 04e-a/b; UI bağlantısı için 05b.
   Gerçek owned Mono8 probe'u exclusive lease ve bounded preview akışına bağla;
   normal Stop/cleanup, incomplete payload, unplug ve geç kare bastırmayı test et.

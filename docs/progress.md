@@ -1,19 +1,23 @@
 # VisionFlow — güncel devir
 
-19 Ekim 2026.
+21 Ekim 2026.
 [Arşiv](archive/README.md). [Tapping araştırması](archive/2026-10-19-tap-res-01.md).
 
 ## Devam noktası
 
+- **ICM-PLAN-03 tamam; sıradaki OECS-EXP-01.** Başka kamera beklenmez.
+  [Kapanış](archive/2026-10-21-icm-plan-03.md),
+  [EXP-01–03 planı](architecture/industrial-camera-oecs-experimental-plan.md).
+  İptal/boşaltma kullanıcı çalışma varsayımı; doğrulanmış tazelik değildir.
+  Deneysel edinim → Editor/MUI-04 → Runtime planlandı; henüz uygulanmadı.
 - **MUI-01–03 tamam.** [03 tanı/replay](archive/2026-10-19-mui-03.md);
-  önceki 01/02 arşivde. Yeni Release: core **19/19**, UI **4/4**.
+  01/02 arşivde. 19 Ekim Release: core **19/19**, UI **4/4**.
 - **MUI-04 sentetik corpus tamam, gerçek kabul açık.**
   [190 kontrol / sınırlar](archive/2026-10-19-mui-04.md),
   [kabul matrisi](architecture/measurement-usability-acceptance.md).
 - **EUI-01–08 yazılım/görsel kabul tamam.**
   [EUI-08 kapanış](archive/2026-10-18-eui-08.md): son Release UI **105/105**,
-  core **89/89**; 1400×900/850×600 görselleri ve gerçek giriş olayları.
-  PLC requestId düzeltmesi ve EUI-01–07 bağlantıları kapanış/arşiv dizininde.
+  core **89/89**; görseller, giriş olayları ve PLC requestId kanıtı kapanışta.
   Blob4 / engine28 / editor1–9 no-op korunur.
   **Kullanıcı tekrar testi: hepsi OK.** [Kabul](archive/2026-10-18-eui-accept-01.md).
 - [ICM-PLAN-02](archive/2026-10-18-icm-plan-02.md): ortak yazılım/donanım kabulü ayrı.
@@ -22,12 +26,9 @@
   09a/G2 tamam; 09b native G0/G1 bekliyor. [Backend kartları](architecture/industrial-camera-tasks-backends.md).
   OECS native 04d/04e açık/ertelenmiş; ortak yazılımı engellemez. Test adaptörü normal
   ürüne açılamaz; G2 yazılım, G0/G1/G3 backend, G4 kurulum kabulüdür.
-- Hazır: [04e-a](archive/2026-10-18-icm-04e-a.md),
-  [04e-b stress](archive/2026-10-18-icm-04e-b.md),
-  [05a-a resolve](archive/2026-10-18-icm-05a-a.md),
-  [07a codec](archive/2026-10-18-icm-07a.md).
-  [03c ölçüm rasteri](archive/2026-10-18-icm-03c.md) canlı ürün yoluna bağlı değil;
-  native 04e/G1, 04d'ye bağlı.
+- 04e-a/b, 05a-a, 07a hazır; [kapanışlar](archive/README.md).
+  [03c ölçüm rasteri](archive/2026-10-18-icm-03c.md) canlı ürün yoluna bağlı değil.
+  Doğrulanmış native 04e/G1, 04d'ye bağlı; deneysel yol ayrı planlandı.
 - **ICM-04d kısmi: gecikmiş command Stop/Start'ı aşıyor; native Unavailable**.
   [Gecikme deneyi](archive/2026-10-18-icm-04d-pending.md): delay=500 ms iken
   Clear→Stop→Start sonrası yeni command olmadan **8/8 eski kare** geldi.
@@ -38,8 +39,7 @@
   aynı anda zorunlu değil. **İlk sensör satırını ölçümden çıkarma izni
   kalıcıdır**: 2448×2047, origin (0,1); dönüşüm servisi hazır, canlı ürün bağlantısı
   açık. FrameBurstStart sessiz FrameStart alias'ı olmaz.
-  [Timestamp](archive/2026-10-17-icm-04d-timestamp.md) admission yok;
-  [metadata/semantik](archive/2026-10-17-icm-04d-semantics.md) sınırları korunur.
+  Timestamp/metadata sınırları bağlı korelasyon kararında korunur.
 - [04c](archive/2026-10-17-icm-04c.md): owned tight Mono8 2448×2048;
   native stride/completion yok. [Baseline](architecture/industrial-camera-baseline.md)
   şema/hash kaynağıdır. [REVIEW-01](archive/2026-10-17-icm-review-01-fix.md) kapalı;
@@ -47,8 +47,9 @@
 - **ICM-01b fiziksel başlangıç açık**; [deneme](archive/2026-10-17-icm-01b.md).
   [Görev kartları](architecture/industrial-camera-tasks-foundation.md).
   ICM-00 veya tamamlanmış KMC görevlerini yeniden başlatmayın.
-- Ana hedef Basler/Daheng PoE; deney cihazı COE-U USB3/OECS. Tanı probe'u üretim
-  admission/tazelik garantisi değildir. Editor/Runtime bağlantısı hazır; native edinim bekliyor. Native/production kapıları korunur.
+- Öncelik eldeki COE-U USB3/OECS; Basler/Daheng PoE cihaz bekliyor.
+  Tanı probe'u üretim/tazelik garantisi değildir. Editor/Runtime bağlantısı hazır;
+  native edinim bekliyor. Deneysel kullanım production kabulü olmayacak.
 
 Görevler: [ana plan](architecture/industrial-camera-plan.md), seçili kart ve sözleşme.
 
@@ -91,26 +92,24 @@ Görevler: [ana plan](architecture/industrial-camera-plan.md), seçili kart ve s
 
 ## Son doğrulama ve çalışma ortamı
 
-- **ICM-09a/G2 tarihsel kabulü:** [kapanış](archive/2026-10-18-icm-09a.md).
-  [Birleşik rapor](architecture/industrial-camera-release-acceptance.md),
-  kanıt `build/icm/09a/`; native G1/G3/G4 ve dağıtım açık.
-- **08b/08c tamam:** trusted completion/terminal8–9 ve Runtime/Logs/CSV.
-  [08b](archive/2026-10-18-icm-08b.md), [08c](archive/2026-10-18-icm-08c.md).
-  [08a admission](archive/2026-10-18-icm-08a.md): Load beyan, Run kabul ister; native kapalı.
-- [07c](archive/2026-10-18-icm-07c.md) Editor profil seçimi/açık binding ve worker bağlantısı.
-  [07b](archive/2026-10-18-icm-07b.md) execution/provider/TargetOnly tamam.
+- **09a/G2 tarihsel kabul:** [rapor](architecture/industrial-camera-release-acceptance.md),
+  `build/icm/09a/`; native G1/G3/G4 ve dağıtım açık.
+- 07b/c execution/Editor binding, 08a/b/c admission/trusted terminal/Logs tamam;
+  [kapanışlar](archive/README.md). Load beyan, production Run kabul ister.
 - UI `build/reference-ui/visionflow.exe`; core `build/kmc9-core-off`.
   Build/PATH/başlatma README'dedir.
 - ID'li tek commit, istekle push; yerel INI korunur, kanıtlar `build/`.
 
 ## Kapanış ve sonraki adım
 
-**Devam: MUI-04 gerçek görüntü kabulü; raster/reçete/ROI hazır değil.**
-Tamamlanmış corpus tekrarlanmaz. Manuel çok kaynak/kalibrasyon ve G0/G1 açık.
-[ICM-09b](archive/2026-10-18-icm-09b-start.md) G0/G1 bekliyor; H01–H08 açık.
-Basler/Daheng model/SDK 01→02 veya OECS belgeli pending-command bariyeri gerekir.
-Tamamlanan hazırlıklar tekrarlanmaz; ölçüm adayı configure girdisi değildir.
+**Devam: ICM-OECS-EXP-01 gerçek edinim/preview/Stop ve sahne kaydı.**
+Ardından EXP-02/Editor/MUI-04, sonra EXP-03 deneysel Runtime/Logs.
+Üretici yanıtı/G1 bu sırayı durdurmaz; varsayımlı sonuç trusted completion veya
+PLC/robot çıkışı olmaz. MUI-04 özgün raster/reçete/ROI hâlâ eksik; yeni kamera
+örneği özgün problemin yeniden üretimi sayılmaz. Corpus tekrarlanmaz.
+Manuel çok kaynak/kalibrasyon ve [09b](archive/2026-10-18-icm-09b-start.md)
+G0/G1/H01–H08 açık. Ölçüm adayı configure girdisi değildir.
 [04d cancel incelemesi](archive/2026-10-18-icm-04d-cancel-audit.md): AcquisitionAbort
 yok; DeviceReset garantisiz, çalıştırılmadı. Üretici taslağı gönderilmedi.
-Delay=0, close/open/sessizlik kanıt değil; aynı deneyi tekrarlamayın. Native Unavailable.
+Delay=0, close/open/sessizlik kanıt değil. Native Unavailable; EXP kodu henüz yok.
 [Bağlam bakımı](archive/2026-10-17-context-maintenance.md).

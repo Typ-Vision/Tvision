@@ -4,6 +4,11 @@
 bu sözleşmeler mevcut ürün özelliği sayılmaz. Sınıf adları öneridir; mevcut servisleri
 genişletmek yeterliyse ikinci registry/controller oluşturulmaz.
 
+21 Ekim plan eki: [OECS deneysel politika sözleşmesi](industrial-camera-oecs-experimental-plan.md)
+G1 beklemeden gerçek edinim/Editor/Runtime geliştirmesini tanımlar. Aşağıdaki
+doğrulanmış production/trigger şartları korunur; deneysel sonuç bu kanıta
+yükseltilmez. Yeni politika, provenance ve kayıt ayrımı henüz uygulanmadı.
+
 ## 1. Katmanlar ve backend kararı
 
 `Qt UI → application camera service/session → acquisition adapter → hardware backend`.
