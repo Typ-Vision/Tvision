@@ -10,8 +10,8 @@
   [EXP planı](architecture/industrial-camera-oecs-experimental-plan.md).
   Camera Manager deneysel preview/Stop/PGM hazır; exact tek/100 alındı.
   Pending Stop ve 1 ms deadline çıktıyı bastırdı.
-  [Yeni sahne denemesi](archive/2026-10-21-icm-oecs-exp-01a.md): tek karede plaka
-  görünür; sonraki seri/tekrar siyah. Sahne sürekliliği ve kopma açık.
+  [Işık açık seri](archive/2026-10-21-icm-oecs-exp-01b.md): 100/100 kare;
+  ilk/son plaka görünür. Önceki kararma ışık kapalıyken; kopma/odak açık.
   İptal/boşaltma varsayım; tetik eşleşmesi doğrulanmadı.
   Native Unavailable; Editor/Runtime deneysel bağlantısı yok.
 - **MUI-01–03 tamam.** [03 tanı/replay](archive/2026-10-19-mui-03.md);
@@ -104,7 +104,7 @@ Görevler: [ana plan](architecture/industrial-camera-plan.md), seçili kart ve s
 
 ## Kapanış ve sonraki adım
 
-**Devam: EXP-01 sahne kararmasını ayır; sonra fiziksel kopma/yeniden açma kabulü.**
+**Devam: EXP-01 fiziksel kopma/yeniden açma ve odak/ölçüme uygun sahne kabulü.**
 Ardından EXP-02/Editor/MUI-04, sonra EXP-03 deneysel Runtime/Logs.
 21 Ekim Release CTest **25/25** + son değişim **3/3**, localhost terminal **1/1**;
 `build/icm/oecs-exp-01/`. Normal/küçük UI fixture görselleri kontrol edildi.
