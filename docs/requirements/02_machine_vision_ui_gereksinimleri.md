@@ -143,9 +143,16 @@ Komutlar: New, Open Editor, Copy, Delete, Import, Export, Version History. Delet
 | Defect Inspection | Bölgesel kusurları incele ve PASS/FAIL üret | Image → Reference → Inspection ROI → Defect → Result |
 | Measurement | Mesafe, çap, açı ve özellikleri ölç | Image → Features → Calculate → Limits → Result |
 
-Recipe Name ve Camera girilir. Gerekliyse Calibration Reference ayrıca seçilir. **Create & Open Editor** ortak Recipe Editor'e geçer. Reçete türü `applicationType` alanında saklanır.
+21 Ekim 2026 kullanıcı kararı (uygulama bekliyor): ad, açıklama ve uygulama türü
+kalır; yeni/düzenlenen reçete penceresinden Görüntü kaynağı referansı ve Kalibrasyon
+referansı kaldırılır. Kamera Editor kaynak düğümünde seçilir; ilgili kalibrasyon
+kaynak üzerinden çözülür. **Create & Open Editor** ortak Recipe Editor'e geçer.
+Reçete türü `applicationType` alanında saklanır. Eski kayıt uyumluluğu ve kamera/
+kalibrasyon sadeleştirmesi [taslakta](../architecture/camera-calibration-ux-draft.md).
 
-İsim benzersizliği, gerekli alanlar ve donanım referansları doğrulanır. Yeni reçete DRAFT durumunda oluşur; yalnızca oluşturulmuş olması onu VALID yapmaz.
+İsim benzersizliği ve gerekli alanlar doğrulanır. Kamera henüz seçilmeden yeni
+reçete DRAFT oluşabilir; yalnızca oluşturulması onu VALID yapmaz. Donanım/model
+uyumluluğu kaynak bağlama ve yürütme hazırlığında doğrulanır.
 
 Mevcut satır açıldığında uygulama türü otomatik yüklenir. Tür değiştirme komutu başlangıç flow'unu sessizce sıfırlamaz; var olan akışın uyumluluğunu doğrular.
 

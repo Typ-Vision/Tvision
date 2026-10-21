@@ -6,6 +6,7 @@ görev” ifadeleri yazıldıkları tarihe aittir.
 
 | Dönem / görev | Kayıt |
 | --- | --- |
+| 21 Ekim 2026 — CCUX-PLAN-01 | [Kamera/kalibrasyon sadeleştirme, reçete alanları ve robot taslağı](2026-10-21-ccux-plan-01.md) |
 | 21 Ekim 2026 — ICM-OECS-EXP-03b | [Runtime fiziksel USB kopma ve exact manuel yeniden açma](2026-10-21-icm-oecs-exp-03b.md) |
 | 21 Ekim 2026 — ICM-OECS-EXP-03 | [Deneysel Runtime/Logs/CSV; 500 seri, Stop/deadline; fiziksel kopma açık](2026-10-21-icm-oecs-exp-03.md) |
 | 21 Ekim 2026 — ICM-OECS-EXP-03 ara | [Kullanıcı arası; commit edilmemiş uygulama, başarısız test ve devam noktası](2026-10-21-icm-oecs-exp-03-ara.md) |

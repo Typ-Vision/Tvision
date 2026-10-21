@@ -111,10 +111,11 @@ Görevler: [ana plan](architecture/industrial-camera-plan.md), seçili kart ve s
 
 ## Kapanış ve sonraki adım
 
-**Devam: kullanıcı yönlendirmesiyle EXP-02 deneysel kalibrasyon/mm.**
-EXP-03 deneysel yol native production izni değildir. PGM+JSON açık Editor veya
-Runtime seçimi ister; restart kapatır. EXP-01d optik/mm ve özgün MUI-04
-raster/reçete/ROI açık; yeni sahne özgün problemi yeniden üretmez.
+**Devam: kamera/kalibrasyon taslağını değerlendirme.**
+[CCUX-PLAN-01](archive/2026-10-21-ccux-plan-01.md): yeni reçete referanslarını
+kaldırma dahil; robot önerisi taslak, uygulama yok. EXP-02 mm açık.
+EXP-03 native izin değildir; PGM+JSON açık opt-in ister, restart kapatır.
+EXP-01d optik/mm ve özgün MUI-04 raster/reçete/ROI açık.
 Manuel çok kaynak/kalibrasyon ve [09b](archive/2026-10-18-icm-09b-start.md)
 G0/G1/H01–H08 açıktır. Ölçüm adayı configure girdisi değildir.
 [Cancel incelemesi](archive/2026-10-18-icm-04d-cancel-audit.md): AcquisitionAbort yok;
