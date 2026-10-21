@@ -6,6 +6,7 @@ görev” ifadeleri yazıldıkları tarihe aittir.
 
 | Dönem / görev | Kayıt |
 | --- | --- |
+| 21 Ekim 2026 — CCUX-05 | [Tek/canlı görüntü UI, Stop/drain geçişleri ve görünen kareden kanıt kaydı](2026-10-21-ccux-05.md) |
 | 21 Ekim 2026 — CCUX-04 | [Sınırlı tek/canlı önizleme servisi, deadline/generation ve worker lease kabulü](2026-10-21-ccux-04.md) |
 | 21 Ekim 2026 — CCUX-03 | [Sade Kameralar ekranı, kayıt/ayar akışı ve iki boyutta UI kabulü](2026-10-21-ccux-03.md) |
 | 21 Ekim 2026 — CCUX-02 | [Kamera ayarı/readback servisi, worker işlemi ve doğrulanan rollback](2026-10-21-ccux-02.md) |

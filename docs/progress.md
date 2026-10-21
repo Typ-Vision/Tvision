@@ -4,14 +4,19 @@
 
 ## Devam noktası
 
-**Sonraki görev: [CCUX-05](architecture/camera-setup/05-preview-ui.md).**
-**CCUX-04 tamamlandı:** UI bağımsız tek/canlı `CameraPreviewSession`, bir pending
-komut ve tek latest-frame yuvası; worker tamamlanma zamanından FPS, deadline ve
-generation. Stop/kopma/shutdown geç kareyi bastırır; worker bitmeden yeni Start
-ve ortak cihaz lease'i açılmaz. Continuous capability ayrı etiketlenir; deneysel
-OECS sıralı FrameBurstStart kalır. Yeni Release/CTest kanıtı ve sınırlar
-[kapanışta](archive/2026-10-21-ccux-04.md), `build/ccux/ccux-04/`.
-UI bağlantısı CCUX-05'tedir; fiziksel uzun video kabulü yapılmadı.
+**Sonraki görev: [CCUX-06](architecture/camera-setup/06-validity.md).**
+**CCUX-05 tamamlandı:** Tek görüntü / Canlı görüntü / Durdur ortak application
+session’ına bağlandı. Gerçek FPS ve edinim türü, generation ile eski kareyi
+silme, worker drain sonrası sayfa/proje/pencere geçişi ve yalnız geçerli görünen
+kareden deneysel PGM+JSON kaydı var. Yeni kabul sonuçları ve sınırlar
+[kapanışta](archive/2026-10-21-ccux-05.md), `build/ccux/ccux-05/`.
+Release + kartın 3 CTest’i geçti. Ek shell smoke temiz dizinde de eski Runtime
+Stop/retry sonuç beklentisinde başarısız; bu kapsam dışı test/sözleşme uyumsuzluğu
+kapanışta açık bırakıldı.
+**CCUX-04:** tek pending komut/latest-frame yuvası, deadline/generation ve cihaz
+lease’i korunur; [servis kabulü](archive/2026-10-21-ccux-04.md).
+Continuous capability ayrı etiketlenir; deneysel OECS sıralı FrameBurstStart
+kalır. Fiziksel uzun video kabulü yapılmadı.
 **CCUX-03:** sade kayıt/ayar ekranı, rota/profil belirsizliğinde açık seçim ve
 oturumluk deneysel onay korunur; [yazılım/görsel kabul](archive/2026-10-21-ccux-03.md).
 Native backend hâlâ Unavailable; eksik settings desteği açık unsupported kalır.

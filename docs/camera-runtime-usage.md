@@ -28,10 +28,17 @@ kartlar halinde uygulanır; güncel tamamlanma durumu [devir özetindedir](progr
    **Profili bağla / güncelle** düğmesine basın. **Görüntü al** yeni kare ister; seçim
    tek başına edinim yapmaz. Profil düzenlenirse açıkça yeniden bağlayın.
    Mevcut COE-050-M-USB-050-IR-C için Camera Manager’da **Deneysel OECS edinimini
-   kullan** seçimi ve kurulu x64 runtime ile **Önizleme** açılır. Mevcut **Önizleme** korunur; yeni tek/canlı kontrol akışı sonraki CCUX
-   kartlarındadır. Tam sensör Mono8 ve tamamlanmış açık optik/geometri taslağı gerekir; SDK derlemesi [tanı rehberindedir](windows-camera-diagnostics.md).
+   kullan** seçimi ve kurulu x64 runtime ile **Tek görüntü** veya **Canlı görüntü** açılır.
+   Tek görüntü bir kareden sonra cihazı kapatır; canlı görüntü Durdur’a kadar sürer.
+   Durumda gerçek tamamlanma FPS’si ve continuous/sıralı edinim türü gösterilir;
+   bu bir test önizlemesidir, video dosyası kaydı değildir. Kamera/ayar değişimi
+   canlıyken kilitlidir. Sayfa/proje değişimi ve pencere kapanışı önce session’ı
+   durdurup bekleyen çağrının kapanmasını bekler; UI bu sırada çalışmaya devam eder.
+   Tam sensör Mono8 ve tamamlanmış açık optik/geometri taslağı gerekir; SDK derlemesi [tanı rehberindedir](windows-camera-diagnostics.md).
    **Görünen kareyi kanıtıyla kaydet** yeni `.pgm` ve `.pgm.json` yazar.
-   Tetik eşleşmesi doğrulanmamıştır; Stop kareyi temizler. Tercih restart’ta kapalıdır.
+   Dosya seçimi sırasında görünen kare sabit kalır; Stop/kopma/kamera değişimi
+   kareyi emekliye ayırır ve kaydı iptal eder. Tetik eşleşmesi doğrulanmamıştır;
+   Stop kareyi temizler. Tercih restart’ta kapalıdır.
    Editor üstündeki **Deneysel OECS kamera / dosyayı Editor'da kullan** seçimi
    canlı FrameBurstStart edinimini ve PGM+JSON replay’i açar; restart’ta kapanır.
    Kullanım ve sınırlar [Editor rehberindedir](editor-usage.md).

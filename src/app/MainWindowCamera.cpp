@@ -10,6 +10,7 @@
 #include <QThread>
 #include <QStatusBar>
 #include <QTableWidget>
+#include <QStackedWidget>
 #include <stdexcept>
 namespace visionflow {
 QWidget* MainWindow::makeCameraManager(){
@@ -40,6 +41,12 @@ bool MainWindow::verifyCamera(const QString& artifacts){
     check(status->text().contains("Cihaz kontrol sonunda kapatıldı"),"UI read-only check closes device");
     QApplication::processEvents();grab().save(QDir(artifacts).filePath("step6-camera-test.png"));
     cameraManager_->scan();cameraManager_->stop();wait();check(cameraManager_->inventory().cancelled,"UI cancel clears discovery");
+    cameraManager_->scan();selectPage("calibration");
+    check(pages_->currentIndex()==pageIds_.indexOf("camera"),"navigation waits pending camera work");
+    wait();QApplication::processEvents();
+    // The continuation runs on a timer after the shared job token is released.
+    QElapsedTimer navigationWait;navigationWait.start();while(pages_->currentIndex()!=pageIds_.indexOf("calibration") && navigationWait.elapsed()<1000){QApplication::processEvents();QThread::msleep(1);}
+    check(pages_->currentIndex()==pageIds_.indexOf("calibration"),"calibration opens after camera drain");selectPage("camera");
     producer->setText(QDir(artifacts).filePath("missing-producer.cti"));cameraManager_->scan();wait();
     QApplication::processEvents();grab().save(QDir(artifacts).filePath("step6-camera-no-producer.png"));return true;
 }

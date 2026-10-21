@@ -136,6 +136,9 @@ void MainWindow::selectPage(const QString& id) {
     // Operator history is read-only and has an explicit return to Runtime.
     if(operatorMode_ && id!="runtime" && id!="logs")return;
     const int index = pageIds_.indexOf(id); if (index<0) return;
+    if(id!="camera" && cameraManager_ && (cameraSession_.busy() || cameraManager_->hasPreview()) && pages_->currentIndex()==pageIds_.indexOf("camera")){
+        cameraManager_->leave([this,id]{selectPage(id);});return;
+    }
     if (id!="editor" && pages_->currentIndex()==pageIds_.indexOf("editor") && !applyToolProperties()) {
         const QSignalBlocker blocker(navigation_);
         for (int i=0;i<navigation_->count();++i) if (navigation_->item(i)->data(Qt::UserRole).toString()=="recipes") navigation_->setCurrentRow(i);
@@ -214,6 +217,9 @@ void MainWindow::restoreLayout() {
 }
 void MainWindow::closeEvent(QCloseEvent* event) {
     if(plc_ && plc_->blocking()){displayError("PLC çevrim kaydı ve ACK tamamlanmadan pencere kapatılamaz.");event->ignore();return;}
+    if(cameraManager_ && cameraManager_->hasPreview()){
+        cameraManager_->leave([this]{close();});event->ignore();return;
+    }
     if (editorSession_.busy(SessionJob::Teaching) || editorSession_.busy(SessionJob::Execution) || editorSession_.busy(SessionJob::Image) || cameraSession_.busy() || runtimeJobs_.busy() || (runtime_ && runtime_->busy())) {displayError("Arka plan işi tamamlandıktan sonra pencereyi kapatın."); event->ignore(); return;}
     if (!resolveUnsavedChanges()) { event->ignore(); return; }
     saveLayout(); QMainWindow::closeEvent(event);

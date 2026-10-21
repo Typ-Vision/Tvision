@@ -1,3 +1,4 @@
+#include "CameraManager.hpp"
 #include "MainWindow.hpp"
 #include <QAction>
 #include <QApplication>
@@ -107,6 +108,7 @@ QWidget* MainWindow::makeRecipeManager() {
     return page;
 }
 void MainWindow::showProjectDialog(bool edit) {
+    if(cameraManager_ && (cameraSession_.busy() || cameraManager_->hasPreview())){cameraManager_->leave([this,edit]{showProjectDialog(edit);});return;}
     if (edit && !service_.hasProject()) return;
     QDialog dialog(this); dialog.setObjectName("projectDialog");
     dialog.setWindowTitle(edit ? "Project Settings" : "New Project"); dialog.setMinimumWidth(640);
@@ -149,6 +151,7 @@ void MainWindow::showProjectDialog(bool edit) {
     dialog.exec();
 }
 void MainWindow::openProjectDialog() {
+    if(cameraManager_ && (cameraSession_.busy() || cameraManager_->hasPreview())){cameraManager_->leave([this]{openProjectDialog();});return;}
     const auto path=QFileDialog::getOpenFileName(this,"Open Project",QDir::currentPath(),"VisionFlow Project (*.vfproject)");
     if (path.isEmpty()) return;
     try {

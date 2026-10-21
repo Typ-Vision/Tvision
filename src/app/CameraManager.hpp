@@ -1,6 +1,8 @@
 #pragma once
 #include "application/MeasurementWorkspace.hpp"
 #include "application/CameraLocalConfiguration.hpp"
+#include "application/CameraPreviewSession.hpp"
+#include "application/ExperimentalOecsAcquisition.hpp"
 #include <QWidget>
 class QCheckBox;class QTableWidget;class QLabel;class QLineEdit;class QPushButton;class QComboBox;class QSpinBox;class QTimer;
 namespace visionflow {
@@ -8,12 +10,17 @@ class CameraManager final:public QWidget {
 public:
     using Scanner=std::function<CameraInventory(const QStringList&,const std::shared_ptr<std::atomic_bool>&)>;
     CameraManager(std::function<MeasurementWorkspace*()>,std::function<bool()>,CameraSession&,QString localSettings,
-                  QWidget* parent=nullptr,Scanner scanner={},CameraProviderFactory factory={});
+                  QWidget* parent=nullptr,Scanner scanner={},CameraProviderFactory factory={},
+                  ExperimentalOecsAcquisition::ApiFactory experimentalApi=makeOecsCApi,
+                  std::function<QString(QWidget*)> framePathChooser={});
     ~CameraManager() override;
     void refresh();
     void scan();
     void checkConnection();
     void stop();
+    // Latest exit intent runs on the UI timer only after the shared job and worker drain.
+    void leave(std::function<void()>);
+    bool hasPreview() const {return previewActive_ || lastFrame_.has_value();}
     const CameraInventory& inventory() const {return inventory_;}
     std::function<void()> onChanged, onProject;
 private:
@@ -23,8 +30,10 @@ private:
     void editProfile();
     void settings(bool apply);
     void settingsReadback();
-    void start(bool preview);
+    void start(bool live);
     void tick();
+    void pollJobs();
+    void clearFrame();
     void controls();
     void saveFrame();
     IndustrialCameraRequest request() const;
@@ -34,11 +43,13 @@ private:
     CameraLocalConfiguration local_;
     Scanner scanner_;
     CameraProviderFactory factory_;
+    ExperimentalOecsAcquisition::ApiFactory experimentalApi_;
+    std::function<QString(QWidget*)> framePathChooser_;
     CameraInventory inventory_;
     struct Row {std::optional<MeasurementCamera> camera;std::optional<CameraDiscoveryEntry> discovery;};
     QVector<Row> rows_;
     QTableWidget* table_;
-    QLabel *status_,*detail_,*image_,*readback_;
+    QLabel *status_,*detail_,*image_,*readback_,*previewStatus_;
     QLineEdit *producer_,*shortId_,*name_,*exposure_,*gain_;
     QWidget *advancedBody_;
     QPushButton *settingsRead_;
@@ -48,7 +59,7 @@ private:
     QString selectedKey_;
     QComboBox *routes_,*profiles_;
     QSpinBox* timeout_;
-    QPushButton *scan_,*register_,*apply_,*preview_,*stop_,*check_;
+    QPushButton *scan_,*register_,*apply_,*preview_,*live_,*stop_,*check_;
     QTimer* timer_;
     QCheckBox* experimental_;
     QLineEdit* runtime_;
@@ -56,8 +67,12 @@ private:
     QPushButton* save_;
     bool experimentalSession_=false;
     std::optional<AcquiredFrame> lastFrame_;
-    std::unique_ptr<CameraWorkerSession> worker_;
+    CameraPreviewSession previewSession_;
+    bool previewActive_=false, liveMode_=false;
+    quint64 frameRevision_=0;
+    bool frameDialogOpen_=false;
+    std::function<void()> afterStop_;
     quint64 job_=0;
-    bool previewing_=false,closing_=false;
+    bool closing_=false;
 };
 }
