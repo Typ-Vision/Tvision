@@ -52,6 +52,7 @@ public:
     QJsonObject exportBundle() const;
     void importBundle(const QJsonObject&) const; // fresh destination only
     QString path() const {return projectPath_+".measurement-environment.json";}
+    QString projectPath() const {return projectPath_;}
     QString catalogPath() const {return projectPath_+".active-calibrations.json";}
 private:
     void validateDependencies(const MeasurementEnvironment&) const;

@@ -6,6 +6,7 @@
 #include "MultiSourceRuntimeService.hpp"
 #include "IndustrialCameraProvider.hpp"
 #include "IndustrialExecution.hpp"
+#include "CameraSettingsService.hpp"
 #include <QUuid>
 #include <stdexcept>
 #include <QFileInfo>
@@ -53,6 +54,13 @@ public:
         if(before.operational.value(id.value)!=setup.value || previous.setup!=setup || previous.profile!=profile)active_.disconnect(id);
     }
     CameraDefaults cameraDefaults(const CameraId& id){return environment().defaults(id);}
+    std::unique_ptr<CameraSettingsSession> cameraSettings(const CameraId& id,int expectedRevision,
+        const CameraLocalConfiguration& local,const CameraProviderFactory& factory){
+        if(!QFileInfo(path_).isFile())throw std::runtime_error("Saved project required");
+        if(!inventoryDone_ || inventory_.cancelled || !inventory_.errors.isEmpty())throw std::runtime_error("Complete discovery required");
+        return CameraSettingsService::open(MeasurementEnvironmentRepository(path_,project_),id,expectedRevision,
+            inventory_.industrial,local,factory,gate_,[this,id]{active_.disconnect(id);});
+    }
     QString availability(const MeasurementCamera& c) const {
         if(c.physical){
             if(!inventoryDone_)return "Keşif yapılmadı • kayıtlı endüstriyel kamera";

@@ -4,12 +4,16 @@
 
 ## Devam noktası
 
-**Sonraki görev: [CCUX-02](architecture/camera-setup/02-settings.md).**
-**CCUX-01 tamamlandı:** application atomik kamera + pending varsayılan setup/profile,
-kısa ID/ad, duplicate cihaz, legacy çözüm ve taşıma. Yeni kanıt ve API/şema kararları
-[kapanışta](archive/2026-10-21-ccux-01.md); `build/ccux/ccux-01/`.
+**Sonraki görev: [CCUX-03](architecture/camera-setup/03-camera-ui.md).**
+**CCUX-02 tamamlandı:** kamera ID'sinden ayar oturumu, yerel rota çözümü, typed
+aralık/birim/readback, worker + lease altında uygula/doğrula/kaydet; hata/disk/CAS
+rollback ve açık unusable durumu. Yeni Release/5 CTest kanıtı ve API sınırları
+[kapanışta](archive/2026-10-21-ccux-02.md); `build/ccux/ccux-02/`.
+Native backend hâlâ Unavailable; eksik settings desteği açık unsupported döner.
+Pending optik kurulum tamamlanmış sayılmaz. Önkoşul
+[CCUX-01](archive/2026-10-21-ccux-01.md) kayıt/varsayılanları korunur.
 [CCUX planı](architecture/camera-setup/README.md) sırasıyla sürer; **Hand-eye kapsam
-dışı.** Bu teslim servis kapsamıdır; sade UI/native ayar uygulaması sonraki kartlarda.
+dışı.** Bu teslim servis kapsamıdır; sade UI CCUX-03'tedir.
 Tamamlanmış KMC/ICM/EXP işleri yeniden başlatılmadı.
 
 ## Hazır olanlar
@@ -66,5 +70,5 @@ Tamamlanmış KMC/ICM/EXP işleri yeniden başlatılmadı.
 UI: build/reference-ui/visionflow.exe; core: build/kmc9-core-off.
 PATH/build/test/başlatma README'de; mevcut UI kullanımı
 [kullanım rehberinde](camera-runtime-usage.md). Her kartta yalnız değişen kapsamı
-kanıtla. CCUX-01 yeni Release servis hedefleri ve ilgili CTest kanıtını içerir;
+kanıtla. CCUX-02 yeni Release servis hedefleri ve ilgili CTest kanıtını içerir;
 fiziksel kamera/UI kabulü sayılmaz. Detay ve kalıcı kanıt kapanışta, sonraki tek görev bu özetin başında tutulur.

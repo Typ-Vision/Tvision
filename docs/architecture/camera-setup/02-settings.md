@@ -1,6 +1,6 @@
 # CCUX-02 — Kamera ayarı ve readback application servisi
 
-Durum: planlandı. Önkoşul: CCUX-01. Uygulayıcı hedefi: GPT-6.1 Sol / medium.
+Durum: uygulandı; [kapanış ve kanıt](../../archive/2026-10-21-ccux-02.md). Önkoşul: CCUX-01. Uygulayıcı hedefi: GPT-6.1 Sol / medium.
 [Plan ve ortak çalışma kuralları](README.md). Güncel durum progress'tedir.
 
 ## Oku
@@ -26,4 +26,41 @@ Aralık dışı/NaN, unsupported gain, readback uyuşmazlığı, disconnect/appl
 
 Sade ekran CCUX-03'te; kalibrasyon geçerliliği CCUX-06'da. Mevcut invalidation henüz gevşetilmez.
 Kanıt: `build/ccux/ccux-02/`. AGENTS ve ortak sözleşme C6 ile kapat.
+
+## Uygulanan servis sözleşmesi
+
+`MeasurementWorkspace::cameraSettings(CameraId, expectedRevision, local, factory)`
+reçetesiz, kaydedilmiş projeden varsayılan setup/profile ve exact fiziksel rotayı
+çözer. Exact hatırlanan rota önceliklidir; artık eşleşmeyen ipucunda yalnız tek
+exact rota otomatik seçilir, çoklu rota açık seçim ister. Yerel yol projeye yazılmaz.
+
+Dönen `CameraSettingsSession`: `connect()` → owner thread'de `poll()` →
+`Connected` sonrasında `snapshot()` ile typed exposure/gain/auto feature DTO'ları
+(erişim, gerçek aralık, increment, birim, başlangıç değeri) ve acquisition readback;
+`apply({exposureUs, gainDb})` → `poll()` → `Configured`/`Fault`.
+İstenen optional değerler `snapshot.requested`, uygulananlar `snapshot.actual`
+içindedir; profil istenen değeri korur, cihazın float gösterimi ayrı kalır.
+Başarısız işlemde `error()` esas alınır; DTO'nun eski değeri başarı kanıtı değildir.
+Tek oturum tek apply içindir; tekrar ayarlamak için kapatıp yeniden okuyun.
+
+Provider'ın worker-only `createSettings(camera, device)` / `setting` /
+`writeSetting` desteği acquisition `create(request)` admission yolundan ayrıdır.
+Eski backend varsayılanı açık unsupported hatasıdır. Ürün factory'si native
+Unavailable kalır; test enjeksiyonu ürün ayarı değildir. Kamera ayarı oturumu
+Start/Grab sunmaz. Oturum workspace'ten önce kapanır; destructor worker'ı join eder.
+
+Mevcut profil sözleşmesi manual-only kalır. Auto kapalı olduğu readback ile
+kanıtlanır veya backend'in desteklediği `Off` yazılıp tekrar okunur; destek yoksa
+işlem reddedilir. Sayısal aralık/access her yazımda yeniden kontrol edilir.
+Tam readback ve kimlik doğrulanmadan repository CAS commit yapılmaz. Disk/stale/
+cihaz hatası önceki cihaz değerlerine rollback ve tam readback kontrolü ister;
+doğrulanamıyorsa `unusable` + Fault, yeni oturumda yeniden kontrol gerekir.
+Donanım ve disk arasında atomiklik veya SDK çağrısını zorla kesme garantisi yoktur.
+
+`profileChanged`, `geometryChanged`, `deviceChanged` ayrı bildirilir. Gerçek no-op
+donanım yazımı, revision ve invalidation üretmez. Diğer değişiklik/hatalarda mevcut
+conservative kamera invalidation korunur; uyum gevşetmesi CCUX-06'dadır.
+Pending setup lens/düzlem iddiası üretmez ve pending kalır; gerçek geometri DTO'da
+bulunur, profil gerçek readback sonrası doldurulabilir. Hazır setup'ın değişen
+geometrisi yeni revision/history ile kaydedilir. Matematik etkinleştirilmez.
 
