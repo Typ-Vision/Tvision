@@ -8,10 +8,12 @@
 - **ICM-OECS-EXP-01 yazılımı hazır; fiziksel kabul kısmi.**
   [Kayıt](archive/2026-10-21-icm-oecs-exp-01.md),
   [EXP planı](architecture/industrial-camera-oecs-experimental-plan.md).
-  Camera Manager deneysel preview/Stop/PGM hazır; exact tek/100 alındı.
-  Pending Stop ve 1 ms deadline çıktıyı bastırdı.
-  [Işık açık seri](archive/2026-10-21-icm-oecs-exp-01b.md): 100/100 kare;
-  ilk/son plaka görünür. Önceki kararma ışık kapalıyken; kopma/odak açık.
+  Camera Manager preview/Stop/PGM hazır; Stop/deadline çıktıyı bastırdı.
+  [Işık açık seri](archive/2026-10-21-icm-oecs-exp-01b.md): 100/100, plaka görünür;
+  önceki kararma ışık kapalıyken.
+  [Fiziksel kopma/manuel açma](archive/2026-10-21-icm-oecs-exp-01c.md) tamam;
+  hata sonrası kare yok, kablosuz open reddedildi, yeniden takınca exact tek kare alındı.
+  Odak/ölçüme uygun sahne kabulü açık.
   İptal/boşaltma varsayım; tetik eşleşmesi doğrulanmadı.
   Native Unavailable; Editor/Runtime deneysel bağlantısı yok.
 - **MUI-01–03 tamam.** [03 tanı/replay](archive/2026-10-19-mui-03.md);
@@ -62,11 +64,9 @@ Görevler: [ana plan](architecture/industrial-camera-plan.md), seçili kart ve s
   kaynak başına immutable model ve çok kaynaklı Editor/Runtime.
   [B kabulü](architecture/multi-source-release-acceptance.md),
   [Runtime/terminal sözleşmesi](architecture/multi-source-runtime-terminal.md).
-- editor9, engine/28, terminal8–9 ve vf.socket2 yolları mevcut. Kalıcı Runtime hazırlığı gerçek
-  çevrim sonucu değildir; restart aktif kullanım iznini geri yüklemez. Şema/codec
-  değişiminde numaraları baseline ve kaynakla doğrulayın.
-- UI application servislerini kullanır. Üç applicationType ortak Editor/Runtime'dır.
-  Reçete, execution ve parça kararı ayrıdır; gerçek sonuç olmadan PASS/skor/pose yoktur.
+- editor9/engine28/terminal8–9/vf.socket2 mevcut; sürümleri baseline/kaynakla doğrulayın.
+  Runtime hazırlığı sonuç değildir; restart aktif izin vermez.
+- UI/application ve sonuç ayrımı AGENTS/README sözleşmesidir.
 - Kaynak/model/kalibrasyon invalidation, legacy no-op/hash davranışı korunur.
   Standalone Pattern/Shape ve eski poseTracking production kabulünün açık sınırları
   T8.4.2b.3c kapsamındadır; yeni teslimler bunları topluca kapatmaz.
@@ -81,9 +81,9 @@ Görevler: [ana plan](architecture/industrial-camera-plan.md), seçili kart ve s
   PnP: OE USB3 Machine Vision Camera, Status OK. Actual vendor/model/seri:
   Opto Engineering Srl / COE-050-M-USB-050-IR-C / **02A2220000627**.
   Device ID=1 seri değildir. Lens tam modeli/kurulum eksik.
-- `build/icm/04d/real-mono8.{pgm,png}`: piksel **0–12**, sahne neredeyse siyah;
-  sahne/ölçüm/tazelik kabulü değil. GenTL discovery 1, read-only open **-1007**;
-  C API başarısından ayrı. Ayrıntı bağlı 04d kayıtlarında.
+- Eski 04d rasteri karanlık, sahne/tazelik kabulü değil.
+  GenTL discovery 1, read-only open **-1007**; C API başarısından ayrı.
+  Ayrıntı bağlı 04d kayıtlarında.
 - TriggerSelector **FrameBurstStart**, burst=1, cache=false; ready/epoch açık.
   Sayaç/node sınırları [korelasyon kararında](architecture/industrial-camera-trigger-correlation.md).
   ClearImageBuffer **stream çalışırken**, sonra Stop; ters sıra CALLORDER verdi.
@@ -104,10 +104,11 @@ Görevler: [ana plan](architecture/industrial-camera-plan.md), seçili kart ve s
 
 ## Kapanış ve sonraki adım
 
-**Devam: EXP-01 fiziksel kopma/yeniden açma ve odak/ölçüme uygun sahne kabulü.**
+**Devam: EXP-01 odak/ölçüme uygun sahne kabulü; fiziksel kopma/manuel açma tamam.**
 Ardından EXP-02/Editor/MUI-04, sonra EXP-03 deneysel Runtime/Logs.
-21 Ekim Release CTest **25/25** + son değişim **3/3**, localhost terminal **1/1**;
-`build/icm/oecs-exp-01/`. Normal/küçük UI fixture görselleri kontrol edildi.
+21 Ekim EXP-01c Release probe build + ilgili CTest **3/3**;
+`build/icm/oecs-exp-01-disconnect/`. UI değişmedi; yeni UI görsel koşumu yok.
+Önceki EXP-01 Release/CTest ve normal/küçük UI kanıtı bağlı kapanıştadır.
 Deneysel PGM işareti + JSON korunur; EXP-02’ye kadar normal Image File replay’i
 reddedilir. Varsayımlı edinim trusted completion veya PLC/robot çıkışı olmaz.
 MUI-04 özgün raster/reçete/ROI eksik; yeni sahne özgün problemi yeniden üretmez.

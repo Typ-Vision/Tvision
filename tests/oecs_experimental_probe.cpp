@@ -10,9 +10,9 @@
 using namespace visionflow;
 int main(int argc,char** argv){QCoreApplication app(argc,argv);QJsonObject out{{"productionAdmission",false},{"triggerAssociationVerified",false}};int rc=0;
     try{
-        if(argc!=5 && argc!=6)throw std::runtime_error("usage: oecs_experimental_probe absolute-dll absolute-evidence-directory exposure-us count [--stop-in-flight|--timeout]");
+        if(argc!=5 && argc!=6)throw std::runtime_error("usage: oecs_experimental_probe absolute-dll absolute-evidence-directory exposure-us count [--stop-in-flight|--timeout|--disconnect]");
         const QString scenario=argc==6?QString::fromLocal8Bit(argv[5]):QString{};
-        if(!scenario.isEmpty() && scenario!="--stop-in-flight" && scenario!="--timeout")throw std::runtime_error("unknown manual scenario");
+        if(!scenario.isEmpty() && scenario!="--stop-in-flight" && scenario!="--timeout" && scenario!="--disconnect")throw std::runtime_error("unknown manual scenario");
         const QString directory=QString::fromLocal8Bit(argv[2]);QDir().mkpath(directory);
         bool ok=false;const double exposure=QString::fromLocal8Bit(argv[3]).toDouble(&ok);if(!ok)throw std::runtime_error("numeric exposure required");
         const int count=QString::fromLocal8Bit(argv[4]).toInt();if(count<1 || count>1000)throw std::runtime_error("count 1..1000 required");
@@ -32,7 +32,34 @@ int main(int argc,char** argv){QCoreApplication app(argc,argv);QJsonObject out{{
             auto evidence=f->image.metadata().experimentalAcquisition;evidence["contentId"]=QString::fromLatin1(f->image.contentId().toHex());samples.append(evidence);
             if(i==0 || i==count-1)ExperimentalOecsAcquisition::save(*f,QDir(directory).absoluteFilePath(QString("frame-%1.pgm").arg(i)));
         }
-        if(scenario=="--stop-in-flight"){
+        out["samples"]=samples;out["count"]=count;
+        if(scenario=="--disconnect"){
+            // Physical unplug is performed by the operator. Do not inject a
+            // transportLost event or reconnect: observe the actual SDK fault.
+            QFile ready(QDir(directory).absoluteFilePath("disconnect-ready.txt"));
+            if(!ready.open(QIODevice::WriteOnly|QIODevice::NewOnly))throw std::runtime_error("cannot create disconnect readiness marker");
+            ready.write("Initial owned frame saved. Acquisition active; unplug USB now.\n");ready.close();
+            QTextStream(stderr)<<"DISCONNECT_READY: initial owned frame saved; unplug USB now.\n"<<Qt::flush;
+            int additionalFrames=0;bool faultObserved=false;Deadline observation(180000);
+            while(!observation.expired()){
+                try{
+                    command(CameraOperation::Grab,CameraState::Streaming);
+                    if(!worker->take())throw std::runtime_error("missing owned frame during disconnect observation");
+                    ++additionalFrames;
+                }catch(const std::exception& e){
+                    if(worker->lifecycle().state()!=CameraState::Fault)throw;
+                    out["acquisitionFault"]=QString::fromUtf8(e.what());faultObserved=true;break;
+                }
+                QThread::msleep(100);
+            }
+            out["acquisitionFaultObserved"]=faultObserved;
+            out["additionalFramesBeforeFault"]=additionalFrames;
+            out["automaticReconnectAttempted"]=false;
+            out["physicalUnplugRequiresOperatorConfirmation"]=true;
+            out["frameAvailableAfterFault"]=bool(worker->take());
+            if(!faultObserved)throw std::runtime_error("no acquisition fault observed within physical unplug window");
+            if(out["frameAvailableAfterFault"].toBool())throw std::runtime_error("frame escaped faulted request");
+        }else if(scenario=="--stop-in-flight"){
             worker->submit(CameraOperation::Grab,3000);QThread::msleep(10);worker->requestStop();
             out["stopRequestedDuringPendingGrab"]=true;
             out["physicalCommandInFlightProven"]=false;
@@ -43,7 +70,7 @@ int main(int argc,char** argv){QCoreApplication app(argc,argv);QJsonObject out{{
         }
         worker->requestStop();worker->requestShutdown();Deadline cleanup(5000);while(worker->shutdownState()!=ShutdownState::Ready){if(cleanup.expired())throw std::runtime_error("cleanup wait timeout");QThread::msleep(1);}
         if(worker->take())throw std::runtime_error("frame escaped stopped/expired request");out["stoppedQueueEmpty"]=true;out["shutdownReady"]=true;
-        out["samples"]=samples;out["count"]=count;out["status"]="EXPERIMENTAL_OWNED_FRAMES";
+        out["status"]=scenario=="--disconnect"?"EXPERIMENTAL_ACQUISITION_FAULT_OBSERVED":"EXPERIMENTAL_OWNED_FRAMES";
     }catch(const std::exception& e){rc=1;out["status"]="ERROR";out["error"]=QString::fromUtf8(e.what());}
     QTextStream(stdout)<<QJsonDocument(out).toJson();return rc;
 }

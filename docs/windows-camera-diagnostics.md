@@ -38,3 +38,14 @@ yazılmaz. Gerçek sonuçlar `build/icm/oecs-exp-01/` altında tutulur; fiziksel
 probe içinde açıkça 02A2220000627 olarak sabittir. Bu probe tazelik kanıtı üretmez. İsteğe bağlı son argüman `--stop-in-flight`
 bekleyen Grab’a Stop, `--timeout` 1 ms yazılım deadline gözlemi ekler; ikisi de
 fiziksel command’ın gönderildiğini veya donanımsal iptal bariyerini kanıtlamaz.
+
+`--disconnect` ilk gerçek kareyi kaydeder, kanıt dizininde `disconnect-ready.txt`
+oluşturur ve stderr'e `DISCONNECT_READY` yazar. Bundan sonra kullanıcı USB'yi
+çıkarırken en fazla 180 saniye boyunca tek bekleyen istekle, kareler arasında
+100 ms bekleyerek edinir. İlk gerçek acquisition fault'ta durur; hata, kuyruk ve
+shutdown durumunu raporlar, otomatik yeniden bağlanmaz. Fault tek başına fiziksel
+kopma kanıtı değildir; kullanıcı çıkarma/takma bildirimiyle birlikte değerlendirin.
+Kablo çıkarılmışken ayrı normal probe isteğiyle open reddini kaydedin; kullanıcı
+geri taktıktan sonra yeni kanıt dizininde normal tek kare isteğiyle manuel reopen
+gözlemi alın. Aradaki başarılı kare sayısı, USB çıkarıldıktan sonraki kare sayısı
+veya kopma algılama süresi olarak yorumlanamaz.
