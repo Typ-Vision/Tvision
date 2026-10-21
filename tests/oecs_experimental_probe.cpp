@@ -2,6 +2,8 @@
 #include "application/ExperimentalOecsAcquisition.hpp"
 #include "application/IndustrialExecution.hpp"
 #include "application/ProjectService.hpp"
+#include "application/RuntimeCoordinator.hpp"
+#include "application/ExperimentalRuntime.hpp"
 #include <QCoreApplication>
 #include <QDir>
 #include <QFile>
@@ -9,12 +11,14 @@
 #include <QJsonDocument>
 #include <QTextStream>
 #include <QThread>
+#include <QElapsedTimer>
+#include <future>
 using namespace visionflow;
 int main(int argc,char** argv){QCoreApplication app(argc,argv);QJsonObject out{{"productionAdmission",false},{"triggerAssociationVerified",false}};int rc=0;
     try{
         if(argc!=5 && argc!=6)throw std::runtime_error("usage: oecs_experimental_probe absolute-dll absolute-evidence-directory exposure-us count [--stop-in-flight|--timeout|--disconnect]");
         const QString scenario=argc==6?QString::fromLocal8Bit(argv[5]):QString{};
-        if(!scenario.isEmpty() && scenario!="--stop-in-flight" && scenario!="--timeout" && scenario!="--disconnect" && scenario!="--editor-run")throw std::runtime_error("unknown manual scenario");
+        if(!scenario.isEmpty() && scenario!="--stop-in-flight" && scenario!="--timeout" && scenario!="--disconnect" && scenario!="--editor-run" && scenario!="--runtime-run" && scenario!="--runtime-stop" && scenario!="--runtime-timeout" && scenario!="--runtime-disconnect")throw std::runtime_error("unknown manual scenario");
         const QString directory=QString::fromLocal8Bit(argv[2]);QDir().mkpath(directory);
         bool ok=false;const double exposure=QString::fromLocal8Bit(argv[3]).toDouble(&ok);if(!ok)throw std::runtime_error("numeric exposure required");
         const int count=QString::fromLocal8Bit(argv[4]).toInt();if(count<1 || count>1000)throw std::runtime_error("count 1..1000 required");
@@ -25,6 +29,35 @@ int main(int argc,char** argv){QCoreApplication app(argc,argv);QJsonObject out{{
         GeometryDescriptor g;g.resolution={2448,2048};g.sensorRoi=QRect(0,0,2448,2048);g.binning=QSize(1,1);g.decimation=QSize(1,1);g.reverse=GeometryMirror{};g.complete=true;
         r.setup={{"scene"},r.camera.id,"Experimental scene","Lens unidentified","Scene reference unverified",1,1,g};
         r.profile={{"experimental"},r.camera.id,r.setup.id,"Manual experimental",1,{"Mono8",{true,"FrameBurstStart","Software"},AutoMode::Off,exposure,AutoMode::Off,0,{}}};r.sourceId="manual-experimental-preview";
+        if(scenario.startsWith("--runtime-")){
+            IndustrialExecutionInputs inputs;inputs.contract={{r.camera},{r.setup},{r.profile}};inputs.discover=[r](int,const auto&){return IndustrialDiscoverySnapshot{{r.device},{},false};};
+            ProjectService p;p.createProject("Experimental Runtime","",QDir(directory).absoluteFilePath("runtime.vfproject"),"file");p.createRecipe("Experimental","",ApplicationType::Measurement,"file");const auto source=p.addTool("industrial_camera");p.bindIndustrialSource(source,inputs.contract,r.profile.id,scenario=="--runtime-timeout" ? int(exposure/1000)+1:3000);const auto blob=p.addTool("blob");p.setConnections({{source,"image",blob,"image"}});p.save();
+            RuntimeService runtime(p.path()+".production",{},RuntimeIdentity::localEngineer());runtime.setExperimental(true,[inputs,source](const Recipe&){MultiSourceDependencies set;set.sources[source]={};set.industrial=std::make_shared<const IndustrialExecutionInputs>(inputs);return set;});RuntimeCoordinator coordinator(runtime);coordinator.load(*p.activeRecipe(),directory);coordinator.start();
+            QJsonArray samples;QElapsedTimer timer;timer.start();
+            for(int i=0;i<count;++i){const auto lease=coordinator.begin(RuntimeTrigger::Manual);auto cancel=coordinator.cancellation();std::future<void> stopper;if(scenario=="--runtime-stop")stopper=std::async(std::launch::async,[cancel]{QThread::msleep(10);cancel->store(true);});auto result=RuntimeService::execute(lease,{},cancel);
+                if(stopper.valid()){stopper.get();coordinator.stop();RuntimeService::suppressCancelled(lease,result);}
+                if(scenario=="--runtime-timeout" && result.state!=ExecutionState::Error)throw std::runtime_error("deadline did not fail");
+                if(scenario=="--runtime-run" && result.state!=ExecutionState::Done)throw std::runtime_error(("Runtime capture failed: "+result.error+([&]{QString details;for(const auto& t:result.tools)details+="\n"+t.toolId+": "+t.errorCode+" "+t.message;return details;})()).toStdString());coordinator.finish(lease.ticket,result);
+                samples.append(QJsonObject{{"cycleId",result.cycleId},{"milliseconds",result.milliseconds},{"frames",int(result.frames.size())},{"state",executionStateName(result.state)},{"error",result.error},{"trustedEvidenceCount",int(result.industrialEvidence.size())}});
+                if(result.state==ExecutionState::Done && (i==0 || i==count-1))for(const auto& t:result.tools)if(t.toolId==source){const auto image=std::get<ImageFrame>(t.outputs["image"].data);const auto m=image.metadata();ExperimentalOecsAcquisition::save({image,source,result.cycleId,m.frameId,m.completedAtUtc},QDir(directory).absoluteFilePath(QString("runtime-frame-%1.pgm").arg(i)));}
+                if((i+1)%25==0){QFile progress(QDir(directory).absoluteFilePath("runtime-progress.json"));if(progress.open(QIODevice::WriteOnly|QIODevice::Truncate))progress.write(QJsonDocument(QJsonObject{{"completed",i+1},{"elapsedMs",double(timer.elapsed())}}).toJson());}
+            }
+            if(scenario=="--runtime-disconnect"){
+                QFile ready(QDir(directory).absoluteFilePath("runtime-disconnect-ready.txt"));if(!ready.open(QIODevice::WriteOnly|QIODevice::NewOnly))throw std::runtime_error("disconnect readiness marker failed");ready.write("Runtime initial cycle committed. Unplug USB now; do not replug until fault observed.\n");ready.close();
+                bool observed=false;int additional=0;Deadline observation(180000);
+                while(!observation.expired()){
+                    const auto lease=coordinator.begin(RuntimeTrigger::Manual);const auto result=RuntimeService::execute(lease,{},coordinator.cancellation());coordinator.finish(lease.ticket,result);
+                    if(result.state==ExecutionState::Error){out["acquisitionFault"]=result.error;QJsonArray errors;for(const auto& t:result.tools)if(t.state==ExecutionState::Error)errors.append(t.errorCode+" "+t.message);out["toolErrors"]=errors;out["framesAfterFault"]=int(result.frames.size());observed=true;break;}
+                    ++additional;QThread::msleep(100);
+                }
+                if(!observed)throw std::runtime_error("Runtime physical disconnect not observed in 180s");
+                bool nextDenied=false;try{coordinator.begin(RuntimeTrigger::Manual);}catch(const std::exception&){nextDenied=true;}
+                out["faultObserved"]=true;out["additionalFramesBeforeFault"]=additional;out["newCycleDeniedAfterFault"]=nextDenied;out["automaticReconnectAttempted"]=false;out["physicalUnplugRequiresOperatorConfirmation"]=true;
+                if(!nextDenied || out["framesAfterFault"].toInt()!=0)throw std::runtime_error("Runtime disconnect leaked frame/admission");
+            }
+            const auto stateBeforeStop=coordinator.state();coordinator.stop();const auto history=ProductionStore(p.path()+".production").recent("experimental_cycles");QFile csv(QDir(directory).absoluteFilePath("recent-experimental.csv"));if(!csv.open(QIODevice::WriteOnly))throw std::runtime_error("CSV open failed");csv.write(ExperimentalRuntime::csv(history));
+            RuntimeService restarted(p.path()+".production",{},RuntimeIdentity::localEngineer());out["samples"]=samples;out["count"]=count;out["elapsedMs"]=double(timer.elapsed());out["restartPassive"]=!restarted.active() && !restarted.experimental();out["productionRecordCount"]=ProductionStore(p.path()+".production").recent("cycles").size();out["experimentalRecordFiles"]=QDir(p.path()+".production/experimental_cycles").entryList({"*.json"},QDir::Files).size();out["scenario"]=scenario;out["physicalCommandInFlightProven"]=false;out["coordinatorStateBeforeStop"]=int(stateBeforeStop);out["status"]="EXPERIMENTAL_RUNTIME_COMPLETED";QTextStream(stdout)<<QJsonDocument(out).toJson();return 0;
+        }
         if(scenario=="--editor-run"){
             if(QString::fromLocal8Bit(argv[1])!=ExperimentalOecsAcquisition::installedRuntime())throw std::runtime_error("Editor uses installed runtime");
             IndustrialExecutionInputs inputs;inputs.contract={{r.camera},{r.setup},{r.profile}};

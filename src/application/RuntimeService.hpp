@@ -5,6 +5,7 @@
 #include "SystemCalibration.hpp"
 namespace visionflow {
 class MultiSourceRuntimeService;
+class ExperimentalRuntime;
 struct RuntimeIdentity {
     QString principal;
     ProductionRecipeService::Authorize authorize;
@@ -31,6 +32,8 @@ public:
     void observeInstallation(const Recipe&);
     std::shared_ptr<const ProductionSnapshot> active() const;
     bool busy() const;
+    void setExperimental(bool enabled,MultiProvider provider={});
+    bool experimental() const {return bool(experimental_);}
     QString principal() const {return identity_.principal;}
     const std::optional<RecipeValidation>& validation() const {return validation_;}
     QVector<QJsonObject> records() const {return store_.recent("cycles");}
@@ -63,5 +66,7 @@ private:
     MultiProvider multiProvider_;
     std::unique_ptr<MultiSourceRuntimeService> multi_;
     bool multiMode_=false;
+    std::unique_ptr<ExperimentalRuntime> experimental_;
+    bool policyReset_=false;
 };
 }

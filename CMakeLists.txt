@@ -99,6 +99,7 @@ target_sources(visionflow_acquisition PRIVATE src/application/CalibrationReportS
 target_include_directories(visionflow_acquisition PUBLIC src ${OpenCV_INCLUDE_DIRS})
 target_sources(visionflow_acquisition PRIVATE src/application/ProductionRecipeService.cpp)
 target_sources(visionflow_acquisition PRIVATE src/application/ProductionStore.cpp src/application/RuntimeService.cpp)
+target_sources(visionflow_acquisition PRIVATE src/application/ExperimentalRuntime.cpp)
 target_sources(visionflow_acquisition PRIVATE src/application/RuntimeCoordinator.cpp)
 target_sources(visionflow_acquisition PRIVATE src/application/PlcRuntimeSocket.cpp)
 target_link_libraries(visionflow_acquisition PUBLIC Qt6::Network)

@@ -5,10 +5,14 @@
 
 ## Devam noktası
 
+- **EXP-03 yazılım/500 seri hazır; fiziksel kopma açık.**
+  [Kayıt](archive/2026-10-21-icm-oecs-exp-03.md): ayrı Runtime/Logs/CSV,
+  Raw/px; 21 ilgili CTest, UI, Stop/deadline/restart. PLC/robot kapalı.
+  1000 hedefi kullanıcı isteğiyle 500 oldu; son süreç zorunlu sonlandırıldı.
+
 - **ICM-OECS-EXP-02 px geliştirme teslimi hazır.**
-  [Kayıt](archive/2026-10-21-icm-oecs-exp-02.md): canlı 1/1 ve PGM+JSON replay;
-  gerçek Line/Circle, TargetOnly, Stop/invalidation, Save/reopen/no-op.
-  Köken/etiket korunur; Runtime kapalı, trusted completion yok. mm referansı ve
+  [Kayıt/kanıt](archive/2026-10-21-icm-oecs-exp-02.md): canlı Editor ve px replay.
+  Köken/etiket korunur; trusted completion yok. mm referansı ve
   deneysel kalibrasyon aday/aktivasyonu açık.
 - **ICM-OECS-EXP-01 yazılımı hazır; fiziksel kabul kısmi.**
   [Yazılım](archive/2026-10-21-icm-oecs-exp-01.md),
@@ -106,13 +110,9 @@ Görevler: [ana plan](architecture/industrial-camera-plan.md), seçili kart ve s
 
 ## Kapanış ve sonraki adım
 
-**Devam: EXP-03 deneysel Runtime/Logs; EXP-02 mm kabulü açık.**
-EXP-02 Release ve 14 ilgili CTest geçti; koşum ayrıntıları bağlı kayıtta.
-Px UI 1400×900/850×600 incelendi; Line eşiği sahne için açıkça
-20→10 ayarlandı, fit/tolerans sınırları gevşetilmedi.
-PGM+JSON yalnız açık Editor politikasıyla açılır; restart seçimi kapatır.
-Canlı profil açık FrameBurstStart ister, varsayımlı edinim trusted completion
-veya PLC/robot çıkışı olmaz. EXP-01d optik/mm kabulü ve özgün MUI-04
+**Devam: fiziksel kopma kabulü; EXP-02 deneysel kalibrasyon/mm açık.**
+EXP-03 deneysel yol native production izni değildir. PGM+JSON açık Editor veya
+Runtime seçimi ister; restart kapatır. EXP-01d optik/mm ve özgün MUI-04
 raster/reçete/ROI açık; yeni sahne özgün problemi yeniden üretmez.
 Manuel çok kaynak/kalibrasyon ve [09b](archive/2026-10-18-icm-09b-start.md)
 G0/G1/H01–H08 açıktır. Ölçüm adayı configure girdisi değildir.

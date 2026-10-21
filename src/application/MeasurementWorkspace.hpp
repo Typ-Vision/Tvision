@@ -56,14 +56,14 @@ public:
     void archive(const CameraId& id){if(!gate_())throw std::runtime_error("Runtime/worker/pending kayıt/ACK meşgul");registry_.reload();registry_.archiveCamera(id);active_.disconnect(id);}
     void archiveSetup(const SetupId& id){if(!gate_())throw std::runtime_error("Runtime/worker/pending kayıt/ACK meşgul");registry_.reload();auto e=registry_.snapshot();registry_.archiveSetup(id);for(const auto& s:e.current.setups)if(s.id==id)active_.disconnect(s.camera);}
     std::optional<ActiveCalibrationSnapshot> forRecipe(const Recipe& r) const {const auto ref=SystemCalibration::setupReference(r);if(!ref){if(r.definition.contains("calibrationPolicy"))throw std::runtime_error("Scoped recipe requires explicit setup binding");return {};}return active_.snapshots({*ref}).first().calibration;}
-    MultiSourceDependencies productionSources(const Recipe& recipe,const std::optional<IndustrialExecutionInputs>& industrial={}) const {
+    MultiSourceDependencies productionSources(const Recipe& recipe,const std::optional<IndustrialExecutionInputs>& industrial={},bool experimental=false) const {
         const auto before=active_.environment();const auto graph=validateSourceGraph(editorTools(recipe.definition),editorConnections(recipe.definition));if(!graph.valid() || graph.requiredSources.isEmpty())throw std::runtime_error("Invalid required source graph");
         QVector<SetupReference> refs;QMap<QString,Recipe> branches;
         for(const auto& source:graph.requiredSources){const auto branch=SystemCalibration::branch(recipe,source);branches[source]=branch;if(SystemCalibration::requestsCalibration(branch,false)){const auto ref=SystemCalibration::setupReference(branch);if(!ref)throw std::runtime_error("Metric source requires exact setup binding");refs.append(*ref);}}
         const auto models=active_.snapshots(refs);MultiSourceDependencies set;
         for(const auto& source:graph.requiredSources)if(SystemCalibration::source(branches[source]).kind=="industrial_camera"){
             if(!industrial)throw std::runtime_error("Industrial Runtime unavailable: admitted native backend composition required");
-            auto frozen=*industrial;frozen.contract=before.current;frozen.admittedDevices.clear();frozen.leaseUse=CameraLeaseUse::Runtime;
+            auto frozen=*industrial;frozen.contract=before.current;frozen.admittedDevices.clear();frozen.leaseUse=experimental ? CameraLeaseUse::Editor:CameraLeaseUse::Runtime;
             set.industrial=std::make_shared<const IndustrialExecutionInputs>(std::move(frozen));break;
         }
         for(const auto& source:graph.requiredSources){const auto branch=branches[source];ProductionDependencies d;const auto ref=SystemCalibration::setupReference(branch);

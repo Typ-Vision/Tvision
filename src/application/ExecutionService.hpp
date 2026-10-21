@@ -49,6 +49,10 @@ private:
     friend class RuntimeService;
     friend class ProductionRecipeService;
     friend class MultiSourceRuntimeService;
+    friend class ExperimentalRuntime;
+    QByteArray experimentalDigest_;
+    quint64 experimentalTicket_=0;
+    std::shared_ptr<const ProductionSnapshot> experimentalSnapshot_;
     // In-process capability issued only after Runtime executes its immutable lease.
     // Disk records and Editor results cannot recreate this authority.
     QByteArray completionDigest_;
@@ -65,7 +69,8 @@ public:
     using SourceAdapterFactory=std::function<std::unique_ptr<AcquisitionAdapter>(const ToolDefinition&)>;
     explicit ExecutionService(SourceAdapterFactory factory={}):sourceAdapterFactory_(std::move(factory)){}
     explicit ExecutionService(const IndustrialExecutionInputs&,SourceAdapterFactory factory={});
-    // Ephemeral Editor opt-in; never persisted in recipes or used by Runtime.
+    // Ephemeral unverified acquisition policy shared with ExperimentalRuntime.
+    // Never persisted and never issues production completion authority.
     ExecutionService withExperimentalEditorReplay(bool enabled=true) const {auto service=*this;service.experimentalEditorReplay_=enabled;return service;}
     // Bump when execution semantics change; validation records bind this identity.
     static QString version() { return QStringLiteral("visionflow.execution/28"); }

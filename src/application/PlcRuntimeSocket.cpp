@@ -32,6 +32,7 @@ void PlcRuntimeSocket::setMapping(QString mapping) {
 }
 QString PlcRuntimeSocket::unavailableReason() const {
     if(!runtime_ || (coordinator_ && !coordinator_->loaded()))return "NO_RECIPE_LOADED";
+    if(runtime_->experimental())return "EXPERIMENTAL_OUTPUT_BLOCKED";
     if(coordinator_) {
         if(coordinator_->recordingPending())return "RECORDING_PENDING";
         if(coordinator_->deliveryPending())return "DELIVERY_PENDING";

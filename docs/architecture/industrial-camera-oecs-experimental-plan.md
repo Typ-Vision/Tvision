@@ -130,12 +130,14 @@ modu ve provenance korunarak Load/Run/tek çevrim/Stop ile Logs/CSV tamamlanır.
 Mevcut trusted terminal codec'ine sahte kanıt yazmak yerine deneysel kaydın
 admission/completion/persistence ayrımı uygulanır; gerekirse şema sürümlenir.
 
-Kabul: gerçek 1000 sıralı çevrim/teardown raporu, kopma/timeout/Stop,
+Kabul: kullanıcı 21 Ekim 2026 yönlendirmesiyle **500** gerçek sıralı çevrim/teardown
+raporu (önceki 1000 hedefi azaltıldı), kopma/timeout/Stop,
 restart sonrası pasif durum, replay'de deneysel niteliğin korunması; PLC/robot
 çıkışının ve trusted production yükseltmesinin engellendiği testler. Üç
 applicationType aynı akışı kullanır. Sonuç deneysel e2e kabulüdür, ICM-09b/G3
 veya fiziksel doğruluk G4 kapanışı değildir.
-Kanıt: `build/icm/oecs-exp-03/`.
+Kanıt: `build/icm/oecs-exp-03/`. Uygulama/kayıt sözleşmesi:
+[deneysel Runtime](experimental-runtime.md).
 
 ## Daha sonra
 

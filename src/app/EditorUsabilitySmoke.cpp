@@ -36,6 +36,8 @@
 #include <QTabWidget>
 #include <QToolButton>
 #include <QTimer>
+#include <QTableWidget>
+#include <QLockFile>
 #include <QUuid>
 #include <stdexcept>
 #include <algorithm>
@@ -76,13 +78,23 @@ bool MainWindow::verifyExperimentalEditor(const QString& artifacts) {
     service_.openProject(project);service_.selectRecipe(recipe);service_.save();check(service_.activeRecipe()->recipeVersion==version && service_.activeRecipe()->definition==definition,"save reopen no-op");
     refreshWorkspace();selectTool(circle);wait();runFlow();wait();check(editorSession_.cycle && editorSession_.cycle->state==ExecutionState::Done,"reopen real flow");
     for(const auto size:{QSize(1400,900),QSize(850,600)}){resize(size);QApplication::processEvents();imageViewer_->fitImage();QApplication::processEvents();check(grab().save(QDir(artifacts).filePath(QString("experimental-editor-%1.png").arg(size.width()))),"experimental screenshot");}
+    {
+        auto* runtimePolicy=findChild<QCheckBox*>("experimentalRuntime");check(runtimePolicy && !runtimePolicy->isChecked(),"Runtime restart policy off");runtimePolicy->setChecked(true);check(runtime_ && runtime_->experimental(),"explicit experimental Runtime policy");
+        runtimeCoordinator_->load(*service_.activeRecipe(),QFileInfo(project).absolutePath());selectPage("runtime");runtimeAction("run");check(runtimeCoordinator_->state()==RuntimeState::Running,"experimental Runtime prepared");runtimeAction("cycle");
+        QElapsedTimer timer;timer.start();while(runtimeJobs_.busy() && timer.elapsed()<20000){QApplication::processEvents();QThread::msleep(1);}QApplication::processEvents();check(runtimeResult_ && runtimeResult_->state==ExecutionState::Done,"experimental Runtime replay completion");
+        runtimeTools_->setCurrentIndex(runtimeTools_->findData(circle));check(runtimeSummary_->text().contains(ExperimentalOecsAcquisition::notice()) && runtimeViewer_->hasImage(),"Runtime image/result notice");
+        setWindowState(Qt::WindowNoState);for(const auto size:{QSize(1400,900),QSize(850,600)}){resize(size);QApplication::processEvents();runtimeViewer_->fitImage();QApplication::processEvents();check(grab().save(QDir(artifacts).filePath(QString("experimental-runtime-%1.png").arg(size.width()))),"Runtime screenshot");}
+        runtimeAction("stop");check(!runtimeResult_ && !runtimeViewer_->hasImage(),"Runtime Stop clears image");selectPage("logs");refreshLogs();check(logTable_->rowCount()==1 && logTable_->item(0,2)->text().contains("Deneysel"),"experimental Logs row");logTable_->selectRow(0);QApplication::processEvents();check(grab().save(QDir(artifacts).filePath("experimental-logs-850.png")),"Logs screenshot");
+        selectPage("runtime");runtimeAction("run");QLockFile lock(project+".production/archive.lock");check(lock.tryLock(0),"Runtime archive fixture lock");runtimeAction("cycle");timer.restart();while(runtimeJobs_.busy() && timer.elapsed()<20000){QApplication::processEvents();QThread::msleep(1);}QApplication::processEvents();check(runtimePending_ && !runtimeResult_ && !runtimeViewer_->hasImage(),"failed recording does not publish");runtimeAction("stop");lock.unlock();runtimeAction("retry");check(!runtimePending_ && !runtimeResult_ && !runtimeViewer_->hasImage() && runtimeCoordinator_->state()==RuntimeState::LoadedStopped,"record retry after Stop must not restore live pixels/results");
+        runtimePolicy->setChecked(false);
+    }
     // Bad calibration leaves pixel diagnostics but cannot create physical values.
     for(auto t:service_.tools())if(t.id==circle){t.parameters["mode"]="calibrated";t.parameters["scanRoi"]=ToolRoi{{"plane",LengthUnit::Millimetre,AxisConvention::XRightYUp},Annulus{{12,10},2,5}}.toJson();service_.updateTool(t);}
     refreshWorkspace();selectTool(circle);runFlow();wait();const auto invalid=result(circle);
     check(!invalid.outputs.value("circleMm").valid && invalid.decision!=PartDecision::Pass,"missing calibration cannot pass");
     policy->setChecked(false);check(!editorSession_.frame && !editorSession_.cycle,"policy change clears pixels/results");
     check(ExecutionService{}.run(definition,QFileInfo(project).absolutePath(),recipe,{},{}).state==ExecutionState::Error,"default execution/restart rejects experimental replay");
-    {MainWindow restarted(settingsFile_);check(!restarted.findChild<QCheckBox*>("experimentalEditorReplay")->isChecked(),"restart cannot restore experimental permission");}
+    {MainWindow restarted(settingsFile_);check(!restarted.findChild<QCheckBox*>("experimentalEditorReplay")->isChecked() && !restarted.findChild<QCheckBox*>("experimentalRuntime")->isChecked(),"restart cannot restore experimental permission");}
     out<<"TargetOnly, Save/reopen/no-op, invalid calibration, policy invalidation and restart/default isolation passed\n";out.flush();
     return true;
 }

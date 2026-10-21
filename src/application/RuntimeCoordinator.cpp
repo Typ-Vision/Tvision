@@ -12,6 +12,7 @@ void RuntimeCoordinator::replaceable() const {
 void RuntimeCoordinator::load(const Recipe& recipe,const QString& directory,RuntimeTrigger mode) {
     replaceable();
     runtime_.checkConfiguration(recipe,directory); // failure preserves previous load
+    if(runtime_.experimental() && mode!=RuntimeTrigger::Manual)throw ProductionException(ProductionError::InvalidConfiguration,"Experimental Runtime permits manual cycles only");
     loaded_=recipe;directory_=directory;mode_=mode;
     ++generation_;error_.clear();state_=RuntimeState::LoadedStopped;
 }
@@ -52,6 +53,7 @@ void RuntimeCoordinator::finish(quint64 ticket,const CycleResult& result) {
     try {runtime_.finish(ticket,result);}
     catch(const ProductionException& e){if(e.code()==ProductionError::PersistenceFailure)recordingPending_=true;throw;}
     recordingPending_=false;cancel_.reset();
+    if(runtime_.experimental() && result.state==ExecutionState::Error){error_=result.error;state_=RuntimeState::Fault;}
     if(state_==RuntimeState::Stopping)state_=RuntimeState::LoadedStopped;
 }
 void RuntimeCoordinator::setDeliveryPending(bool pending){owner();deliveryPending_=pending;}

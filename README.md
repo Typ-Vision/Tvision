@@ -26,8 +26,7 @@ kamera/ölçüm, PLC/robot, lens, native DPI, CUDA veya dağıtım kabulünü ka
 ## Yerel derleme ve test — PowerShell
 
 Yerel toolchain: Qt 6.12.0 / MinGW 13.1.0 ve MinGW OpenCV 5.0.0.
-Ayrıntılı kurulum/yeniden hazırlama
-ve ZXing bağımlılığı [Windows ortamı belgesindedir](docs/windows-workstation.md).
+[Toolchain/ZXing rehberi](docs/windows-workstation.md).
 
 ```powershell
 $env:PATH = 'C:\OpenCV\5.0.0\x64\mingw\bin;C:\Qt\6.12.0\mingw_64\bin;C:\Qt\Tools\mingw1310_64\bin;C:\Qt\Tools\CMake_64\bin;C:\Qt\Tools\Ninja;' + $env:PATH
@@ -45,8 +44,8 @@ cmake --build build/kmc9-core-off -j 6
 ctest --test-dir build/kmc9-core-off --output-on-failure
 ```
 
-`ctest --test-dir build/reference-ui -N` testleri listeler; `-R` seçimi tam suite değildir.
-Socket testleri localhost erişimi gerektirir. UI değişikliğinde Release build,
+`ctest --test-dir build/reference-ui -N` testleri listeler; `-R` tam suite değildir.
+Socket testleri localhost ister. UI değişikliğinde Release build,
 ilgili CTest ve normal/küçük ekran görsel kontrolü yapılır.
 
 `run-local.ps1` DLL yollarını yalnız başlattığı sürece ekler. Başka build için
@@ -81,9 +80,12 @@ OECS / GenTL probe komutları, sandbox sınırları ve kanıt bağlantıları
 4. Kaydedilmiş reçeteyi **Load Recipe → Run** ile Runtime'a hazırlayın.
    **Tek çevrim** gerçek edinim/yürütmeyi başlatır; Run tek başına sonuç üretmez.
    Stop eski sonucu bastırır; farklı sürüm için Stop → Load Recipe → Run kullanın.
+   Deneysel OECS için Runtime’da **Deneysel OECS Runtime / replay (Raw / px)**
+   seçimini Load öncesi açın; restart’ta kapalıdır. PLC/robot çıkışı engellidir.
+   [Kapsam ve kayıt sözleşmesi](docs/architecture/experimental-runtime.md).
 5. Kalıcı sonuçları **Logs/CSV** üzerinden inceleyin. Kayıt hatasında tekrar yazma
    aynı sonucu kaydeder; yeni acquisition yapmaz. Restart geçmişi korur, aktif
-   üretim iznini geri yüklemez.
+   üretim iznini geri yüklemez. Deneysel geçmişin CSV düğmesi ayrıdır.
 
 Editor komutları, ROI, nominal tarama kılavuzları ve küçük ekran kullanımı
 [Editor kullanım rehberindedir](docs/editor-usage.md).

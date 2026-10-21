@@ -3,6 +3,12 @@
 #include "application/IndustrialRuntime.hpp"
 #include "application/EditorSession.hpp"
 #include "application/ProjectService.hpp"
+#include "application/ExperimentalRuntime.hpp"
+#include "application/RuntimeCoordinator.hpp"
+#include "application/ProductionResultCodec.hpp"
+#include "application/PlcRuntimeSocket.hpp"
+#include <QLockFile>
+#include <QJsonArray>
 #include "vision/ImageAccess.hpp"
 #include <QCoreApplication>
 #include <QDir>
@@ -71,7 +77,7 @@ public:
     int releaseBuffer(void*) override{s->calls<<"release";s->held=false;s->pixels.fill(char(99));return 0;}
 };
 std::unique_ptr<CameraWorkerSession> open(std::shared_ptr<State> s){return ExperimentalOecsAcquisition::open(request(),QDir::temp().absoluteFilePath("experimental.dll"),[s]{return std::make_unique<Api>(s);});}
-template<class F> void until(F f){Deadline d(5000);while(!f()){check(!d.expired(),"controller timeout");QThread::msleep(1);}}
+template<class F> void until(F f,const char* why="controller timeout"){Deadline d(5000);while(!f()){check(!d.expired(),why);QThread::msleep(1);}}
 void command(CameraWorkerSession& worker,CameraOperation op,CameraState desired){worker.submit(op,3000);until([&]{worker.poll();return worker.lifecycle().state()==desired || worker.lifecycle().state()==CameraState::Fault;});}
 void start(CameraWorkerSession& w){command(w,CameraOperation::Connect,CameraState::Connected);if(w.lifecycle().state()==CameraState::Fault)return;command(w,CameraOperation::Configure,CameraState::Configured);if(w.lifecycle().state()!=CameraState::Fault)command(w,CameraOperation::Start,CameraState::Streaming);}
 void close(CameraWorkerSession& w){w.requestShutdown();until([&]{return w.shutdownState()==ShutdownState::Ready;});}
@@ -103,6 +109,28 @@ int main(int argc,char** argv){QCoreApplication app(argc,argv);try{
             const auto source=project.setImageFile(path);project.enableMultiSource();const auto blob=project.addTool("blob");project.setConnections({{source,"image",blob,"image"}});
             project.save();const auto recipe=project.activeRecipe()->id;const auto version=project.activeRecipe()->recipeVersion;const auto definition=project.activeRecipe()->definition;
             project.openProject(project.path());project.selectRecipe(recipe);project.save();check(project.activeRecipe()->recipeVersion==version && project.activeRecipe()->definition==definition,"experimental replay no-op reopen");
+            {
+                const auto archive=project.path()+".production";RuntimeService runtime(archive,{},RuntimeIdentity::localEngineer());runtime.setExperimental(true);RuntimeCoordinator coordinator(runtime);
+                rejects([&]{coordinator.load(*project.activeRecipe(),directory.path(),RuntimeTrigger::SoftwareTrigger);});
+                coordinator.load(*project.activeRecipe(),directory.path());check(!runtime.active() && coordinator.state()==RuntimeState::LoadedStopped,"experimental Load grants no admission");coordinator.start();
+                check(runtime.active()->validation().scope=="experimental_runtime/1","separate experimental admission");
+                rejects([&]{runtime.validate(*project.activeRecipe(),directory.path(),replay);});rejects([&]{runtime.activate(*project.activeRecipe(),directory.path());});rejects([&]{runtime.rollback("foreign-production-history");});
+                {PlcRuntimeSocket server(runtime,archive,{});PlcSocketOptions options;options.port=0;server.listen(options);QTcpSocket peer;peer.connectToHost(QHostAddress::LocalHost,server.port());QByteArray input;until([&]{QCoreApplication::processEvents();input+=peer.readAll();return input.contains('\n');},"experimental socket HELLO timeout");auto hello=QJsonDocument::fromJson(input.left(input.indexOf('\n'))).object();check(hello["ready"]==false,"experimental socket never READY");input.clear();peer.write(QJsonDocument(QJsonObject{{"v",2},{"sessionId",server.sessionId()},{"type","TRIGGER"},{"requestId","experimental-block"},{"recipeId",recipe},{"configId",QString::fromLatin1(runtime.active()->validation().contentId)}}).toJson(QJsonDocument::Compact)+'\n');until([&]{QCoreApplication::processEvents();input+=peer.readAll();return input.contains('\n');},"experimental socket rejection timeout");check(input.contains("EXPERIMENTAL_OUTPUT_BLOCKED"),input.constData());check(!server.working() && !server.blocking() && !runtime.busy() && !input.contains("\"type\":\"DONE\""),"PLC trigger cannot acquire/publish experimental scalar");server.stop();}
+                rejects([&]{runtime.begin({{"plc",true}});});const auto lease=coordinator.begin(RuntimeTrigger::Manual);
+                auto result=RuntimeService::execute(lease,{},coordinator.cancellation());check(result.state==ExecutionState::Done && result.industrialEvidence.isEmpty(),"experimental Runtime actual replay");
+                rejects([&]{coordinator.begin(RuntimeTrigger::Manual);});check(coordinator.state()==RuntimeState::Running,"busy rejection preserves Running");rejects([&]{runtime.setExperimental(false);});
+                auto changed=result;changed.frames[0].experimentalAcquisition["productionAdmission"]=true;rejects([&]{runtime.finish(lease.ticket,changed);});
+                auto editorResult=ExecutionService{}.withExperimentalEditorReplay().run(definition,directory.path(),recipe,lease.snapshot->validation().contentId,{});rejects([&]{runtime.finish(lease.ticket,editorResult);});
+                QDir().mkpath(archive);QLockFile lock(archive+"/archive.lock");check(lock.tryLock(0),"fixture archive lock");rejects([&]{coordinator.finish(lease.ticket,result);});check(coordinator.recordingPending() && runtime.busy(),"experimental persistence failure blocks admission");lock.unlock();
+                changed=result;changed.error="changed pending completion";rejects([&]{coordinator.finish(lease.ticket,changed);});coordinator.finish(lease.ticket,result);check(!runtime.busy(),"retry uses unchanged completion");
+                const auto records=ProductionStore(archive).recent("experimental_cycles");check(records.size()==1 && ProductionStore(archive).recent("cycles").isEmpty(),"experimental archive isolated from trusted terminal");
+                const auto record=records.front();ExperimentalRuntime::validateRecord(record);rejects([&]{ProductionResultCodec::validate(record);});check(ExperimentalRuntime::csv(records).contains("BLOCKED_EXPERIMENTAL") && ExperimentalRuntime::summary(record).contains(ExperimentalOecsAcquisition::notice()),"offline Logs/CSV preserve experimental state");
+                for(const auto& field:{"productionAdmission","triggerAssociationVerified","communicationState","schema","configId"}){auto bad=record;bad[field]=true;rejects([&]{ExperimentalRuntime::validateRecord(bad);});}
+                auto bad=record;auto frames=bad["frames"].toArray();auto frame=frames[0].toObject();frame["experimentalAcquisition"]=QJsonObject{};frames[0]=frame;bad["frames"]=frames;rejects([&]{ExperimentalRuntime::validateRecord(bad);});
+                const auto stopLease=coordinator.begin(RuntimeTrigger::Manual);auto stopped=RuntimeService::execute(stopLease,{},coordinator.cancellation());coordinator.stop();RuntimeService::suppressCancelled(stopLease,stopped);check(stopped.frames.isEmpty(),"late Stop clears experimental frames");coordinator.finish(stopLease.ticket,stopped);check(coordinator.state()==RuntimeState::LoadedStopped,"Stop returns passive");
+                RuntimeService restarted(archive,{},RuntimeIdentity::localEngineer());check(!restarted.experimental() && !restarted.active() && ProductionStore(archive).recent("experimental_cycles").size()==2,"restart reads history without permission");rejects([&]{restarted.begin();});
+                coordinator.start();const auto errorLease=coordinator.begin(RuntimeTrigger::Manual);check(QFile::rename(path,path+".hidden"),"hide source after begin");auto failed=RuntimeService::execute(errorLease,{},coordinator.cancellation());check(QFile::rename(path+".hidden",path),"restore source");check(failed.state==ExecutionState::Error,"real acquisition error");coordinator.finish(errorLease.ticket,failed);check(coordinator.state()==RuntimeState::Fault,"experimental failure closes admission");rejects([&]{coordinator.begin(RuntimeTrigger::Manual);});
+            }
             EditorSession editor;const EditorContext ctx{project.project().id,project.path(),recipe,definition,{}};const auto signature=editor.signature(ctx);
             auto execution=ExecutionService{}.withExperimentalEditorReplay();const auto ticket=editor.begin(SessionJob::Execution);
             auto cycle=execution.run(definition,directory.path(),recipe,signature,{});check(cycle.state==ExecutionState::Done && cycle.industrialEvidence.isEmpty() && editor.acceptCycle(cycle,signature,ctx),"three application types share experimental flow");editor.finish(ticket);
@@ -118,6 +146,15 @@ int main(int argc,char** argv){QCoreApplication app(argc,argv);try{
             check(ExecutionService{}.run(definition,directory.path(),recipe,signature,{}).state==ExecutionState::Error,"default execution denies marked replay");
             ExecutionService injected([&](const ToolDefinition& t)->std::unique_ptr<AcquisitionAdapter>{if(t.kind=="image_file")return std::make_unique<ImageFileAdapter>(path,true);return {};});
             check(injected.run(definition,directory.path(),recipe,signature,{}).state==ExecutionState::Error,"injected experimental pixels cannot bypass default execution policy");
+        }
+        {
+            ProjectService project;project.createProject("Two source experimental","",directory.filePath("two-source.vfproject"),"file");project.createRecipe("Two files","",ApplicationType::Measurement,"file");
+            const auto first=project.setImageFile(path);project.enableMultiSource();const auto second=project.addTool("image_file");for(auto t:project.tools())if(t.id==second){t.parameters["path"]=path;project.updateTool(t);}const auto blob=project.addTool("blob");project.setConnections({{second,"image",blob,"image"}});project.save();
+            RuntimeService runtime(project.path()+".production",{},RuntimeIdentity::localEngineer());runtime.setExperimental(true);runtime.prepare(*project.activeRecipe(),directory.path());const auto lease=runtime.begin();const auto result=RuntimeService::execute(lease,{},{});check(result.state==ExecutionState::Done && result.frames.size()==2 && result.frameId.isEmpty(),"experimental Runtime has distinct N source frames");runtime.finish(lease.ticket,result);const auto record=ProductionStore(project.path()+".production").recent("experimental_cycles").front();
+            auto bad=record;auto frames=bad["frames"].toArray();frames[1]=frames[0];bad["frames"]=frames;rejects([&]{ExperimentalRuntime::validateRecord(bad);});
+            bad=record;auto tools=bad["tools"].toArray();for(int i=0;i<tools.size();++i){auto t=tools[i].toObject();if(t["toolId"]!=blob)continue;auto outputs=t["outputs"].toObject();auto area=outputs["area"].toObject();area["value"]=123456.;outputs["area"]=area;t["outputs"]=outputs;tools[i]=t;}bad["tools"]=tools;rejects([&]{ExperimentalRuntime::validateRecord(bad);});
+            runtime.setExperimental(false);check(!runtime.active(),"policy change discards admission");rejects([&]{runtime.begin();});
+            runtime.setExperimental(true);const auto circle=project.addTool("circle_fit");for(auto t:project.tools())if(t.id==circle){t.parameters["mode"]="calibrated";project.updateTool(t);}project.setConnections({{second,"image",blob,"image"},{first,"image",circle,"image"}});project.save();rejects([&]{runtime.prepare(*project.activeRecipe(),directory.path());});
         }
         {IndustrialExecutionInputs inputs;inputs.leaseUse=CameraLeaseUse::Runtime;rejects([&]{acquireIndustrial(inputs,request(),"cycle","frame",1000,{},true);});}
         auto writeEvidence=[&](const QJsonObject& e){QFile f(path+".json");check(f.open(QIODevice::WriteOnly|QIODevice::Truncate),"rewrite fixture evidence");f.write(QJsonDocument(e).toJson());};

@@ -43,6 +43,7 @@ public:
 private:
     friend class ProductionRecipeService;
     friend class MultiSourceRuntimeService;
+    friend class ExperimentalRuntime;
     Recipe recipe_;
     QString directory_;
     RecipeValidation validation_;
@@ -76,6 +77,7 @@ public:
 private:
     friend class RuntimeService;
     friend class MultiSourceRuntimeService;
+    friend class ExperimentalRuntime;
     static QJsonObject validateMultiSourceCompletion(const ProductionCycle&,const CycleResult&,const QMap<QString,std::shared_ptr<const ProductionSnapshot>>&);
     static QByteArray recipeContent(const Recipe&,const QString& directory);
     static QByteArray completionDigest(const CycleResult&);

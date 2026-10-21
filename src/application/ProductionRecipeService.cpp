@@ -74,7 +74,7 @@ QByteArray ProductionRecipeService::completionDigest(const CycleResult& r) {
        <<r.acquisitions<<r.configId<<int(r.state)<<r.milliseconds<<r.error;
     auto metadata=[&](const FrameMetadata& m){out<<m.sourceId<<m.frameId<<m.cycleId<<m.coordinateSystemId<<m.completedAtUtc
         <<bool(m.exposureAtUtc)<<m.exposureAtUtc.value_or(QDateTime{})<<bool(m.deviceTimestampTicks)
-        <<quint64(m.deviceTimestampTicks.value_or(0))<<m.deviceClockId;};
+        <<quint64(m.deviceTimestampTicks.value_or(0))<<m.deviceClockId<<QJsonDocument(m.experimentalAcquisition).toJson(QJsonDocument::Compact);};
     out<<r.industrialEvidence.size();for(auto it=r.industrialEvidence.cbegin();it!=r.industrialEvidence.cend();++it){out<<it.key()<<bool(it.value());if(it.value())out<<QJsonDocument(industrialCompletionEvidence(*it.value())).toJson(QJsonDocument::Compact);}
     out<<r.frames.size();for(const auto& f:r.frames)metadata(f);
     out<<r.tools.size();for(const auto& t:r.tools) {
