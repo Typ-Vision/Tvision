@@ -13,7 +13,8 @@
   önceki kararma ışık kapalıyken.
   [Fiziksel kopma/manuel açma](archive/2026-10-21-icm-oecs-exp-01c.md) tamam;
   hata sonrası kare yok, kablosuz open reddedildi, yeniden takınca exact tek kare alındı.
-  Odak/ölçüme uygun sahne kabulü açık.
+  [Odak](archive/2026-10-21-icm-oecs-exp-01d.md): üç ayar, 100/100;
+  raster EXP-02 px geliştirmesine hazır. Hassas optik/mm kabulü açık.
   İptal/boşaltma varsayım; tetik eşleşmesi doğrulanmadı.
   Native Unavailable; Editor/Runtime deneysel bağlantısı yok.
 - **MUI-01–03 tamam.** [03 tanı/replay](archive/2026-10-19-mui-03.md);
@@ -104,11 +105,11 @@ Görevler: [ana plan](architecture/industrial-camera-plan.md), seçili kart ve s
 
 ## Kapanış ve sonraki adım
 
-**Devam: EXP-01 odak/ölçüme uygun sahne kabulü; fiziksel kopma/manuel açma tamam.**
-Ardından EXP-02/Editor/MUI-04, sonra EXP-03 deneysel Runtime/Logs.
-21 Ekim EXP-01c Release probe build + ilgili CTest **3/3**;
-`build/icm/oecs-exp-01-disconnect/`. UI değişmedi; yeni UI görsel koşumu yok.
-Önceki EXP-01 Release/CTest ve normal/küçük UI kanıtı bağlı kapanıştadır.
+**Devam: EXP-02 Editor/MUI-04; görünür rasterle yalnız px geliştirmesi.**
+EXP-01d odak karşılaştırması/100 seri tamam; hassas optik/mm kabulü açık.
+Sonra EXP-03 deneysel Runtime/Logs.
+EXP-01c Release/CTest **3/3**, EXP-01 UI kanıtı bağlı kayıtlarda;
+EXP-01d ürün/UI değiştirmedi, yeni build/CTest yok.
 Deneysel PGM işareti + JSON korunur; EXP-02’ye kadar normal Image File replay’i
 reddedilir. Varsayımlı edinim trusted completion veya PLC/robot çıkışı olmaz.
 MUI-04 özgün raster/reçete/ROI eksik; yeni sahne özgün problemi yeniden üretmez.
