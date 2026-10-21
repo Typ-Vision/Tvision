@@ -43,6 +43,7 @@ QJsonObject frameEvidence(const FrameMetadata& f){return {{"sourceId",f.sourceId
     {"deviceTimestampTicks",f.deviceTimestampTicks ? QJsonValue(QString::number(*f.deviceTimestampTicks)):QJsonValue(QJsonValue::Null)},{"deviceClockId",f.deviceClockId}};}
 }
 QJsonObject industrialCompletionEvidence(const IndustrialExecutionEvidence& e){
+    require(e.acquired.experimentalAcquisition.isEmpty() && e.execution.experimentalAcquisition.isEmpty(),"Experimental frame cannot mint trusted completion");
     e.request.validate();return {{"schemaVersion",1},{"status","ACQUIRED"},{"sourceToolId",e.request.sourceId},
         {"camera",e.request.camera.toJson()},{"setup",e.request.setup.toJson()},{"profile",e.request.profile.toJson()},
         {"physical",e.request.device.identity.toJson()},{"backend",e.request.device.backend.toJson()},{"route",e.request.device.route.toJson()},

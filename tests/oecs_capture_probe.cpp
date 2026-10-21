@@ -16,9 +16,10 @@ int main(int argc,char** argv){QCoreApplication app(argc,argv);
         const auto info=session.open({QString::fromLocal8Bit(argv[2]),QString::fromLocal8Bit(argv[3]),QString::fromLocal8Bit(argv[4])});
         out["vendor"]=info.vendor;out["model"]=info.model;out["serial"]=info.serial;
         QJsonArray nodes;
-        for(const QString& name: {"TriggerSelector","TriggerMode","TriggerSource","AcquisitionStatusSelector","AcquisitionStatus","TriggerCounter","FrameCounter","ChunkModeActive","ChunkSelector","EventSelector"}){
+        auto names=acquisitionFeatureNames();names.append({"TriggerDelay","AcquisitionBurstFrameCount","TriggerCacheEnable","AcquisitionStatusSelector","AcquisitionStatus","TriggerCounter","FrameCounter","ChunkModeActive","ChunkSelector","EventSelector"});
+        for(const QString& name:names){
             QJsonObject node{{"name",name}};
-            try{const auto f=session.feature(name);node["access"]=int(f.access);
+            try{const auto f=session.feature(name);node["access"]=int(f.access);node["type"]=int(f.type);node["unit"]=f.unit;
                 if(f.readable())node["value"]=std::visit([](const auto& v)->QJsonValue{return QVariant::fromValue(v).toJsonValue();},f.value);
                 QJsonArray entries;for(const auto& entry:f.entries.keys())entries.append(entry);node["entries"]=entries;
             }catch(const OecsSessionError& e){node["error"]=e.what();node["stage"]=e.stage();node["code"]=QString::number(quint32(e.code()),16);}

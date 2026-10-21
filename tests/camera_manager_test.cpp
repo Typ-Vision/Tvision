@@ -2,6 +2,7 @@
 #include "app/CalibrationOverview.hpp"
 #include "IndustrialProviderFixture.hpp"
 #include <QApplication>
+#include <QCheckBox>
 #include <QElapsedTimer>
 #include <QDialog>
 #include <QDialogButtonBox>
@@ -89,5 +90,13 @@ int main(int argc,char** argv){QApplication app(argc,argv);try{
     check(view.findChild<QLabel*>("cameraPreviewImage")->pixmap().isNull(),"late preview suppressed after joined shutdown");
     {CameraSession nativeJobs;CameraManager native([&]{return &workspace;},[]{return true;},nativeJobs,dir.path()+"/native.ini",nullptr,scanner);
      native.scan();waitUi([&]{return !nativeJobs.busy();});check(!native.findChild<QPushButton*>("cameraPreview")->isEnabled() && !native.findChild<QPushButton*>("cameraApply")->isEnabled(),"normal composition rejects synthetic native capability");}
+    const auto expEvidence=QDir::currentPath()+"/../icm/oecs-exp-01";QDir().mkpath(expEvidence);
+    view.findChild<QCheckBox*>("cameraExperimental")->setChecked(true);
+    view.findChild<QLabel*>("cameraTitle")->setText("Sentetik UI • deneysel mod / edinim yok");
+    view.resize(1100,950);QApplication::processEvents();view.grab().save(expEvidence+"/camera-experimental-normal.png");
+    view.resize(620,600);QApplication::processEvents();view.grab().save(expEvidence+"/camera-experimental-small.png");
+    view.findChild<QScrollArea*>()->verticalScrollBar()->setValue(view.findChild<QScrollArea*>()->verticalScrollBar()->maximum());QApplication::processEvents();view.grab().save(expEvidence+"/camera-experimental-small-bottom.png");
+    check(view.findChild<QLabel*>("cameraExperimentalNotice")->isVisible() && !view.findChild<QPushButton*>("cameraSaveFrame")->isEnabled(),"persistent experimental notice; no raster means no save");
+    check(view.findChild<QScrollArea*>()->horizontalScrollBar()->maximum()==0,"experimental controls fit small window");
     QTextStream(stdout)<<"PASS: synthetic 0/1/8/10, shared CameraId, readback/preview, busy/Stop, offline/error, normal factory isolation\n";return 0;
 }catch(const std::exception& e){QTextStream(stderr)<<"FAIL: "<<e.what()<<'\n';return 1;}}

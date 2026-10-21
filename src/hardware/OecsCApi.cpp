@@ -51,6 +51,7 @@ public:
         if(!bind(free_,"MV_CC_FreeImageBuffer"))return fail("MV_CC_FreeImageBuffer");
         if(!bind(stop_,"MV_CC_StopGrabbing"))return fail("MV_CC_StopGrabbing");
         if(!bind(clear_,"MV_CC_ClearImageBuffer"))return fail("MV_CC_ClearImageBuffer");
+        if(!bind(command_,"MV_CC_SetCommandValue"))return fail("MV_CC_SetCommandValue");
         return true;
     }
     bool unload() override {
@@ -129,7 +130,7 @@ public:
     }
     int writeFeature(void* h,const QString& name,const FeatureValue& value) override {
         // No command/string writes, including UserSetSave, cross this boundary.
-        if(!acquisitionFeatureNames().contains(name))return oecs::errorParameter;
+        if(!acquisitionFeatureNames().contains(name) && !QStringList{"TriggerDelay","AcquisitionBurstFrameCount","TriggerCacheEnable","FrameSpecInfoSelector"}.contains(name))return oecs::errorParameter;
         CameraFeature f;const int status=readFeature(h,name,f);if(status!=0)return status;
         try{validateFeatureWrite(f,value);}catch(...){return oecs::errorParameter;}
         if(featureEquivalent(f,value))return 0;
@@ -137,6 +138,7 @@ public:
         switch(f.type){case FeatureType::Integer:return setInt_(h,key.constData(),std::get<qint64>(value));case FeatureType::Float:return setFloat_(h,key.constData(),float(std::get<double>(value)));case FeatureType::Boolean:return setBool_(h,key.constData(),std::get<bool>(value));case FeatureType::Enumeration:return setEnum_(h,key.constData(),f.entries.value(std::get<QString>(value)));default:return oecs::errorParameter;}
     }
     int setBufferCount(void* h,quint32 count) override {return setNodes_?setNodes_(h,count):oecs::errorLoadLibrary;}
+    int executeSoftwareTrigger(void* h) override {return h && command_?command_(h,"TriggerSoftware"):oecs::errorUnsupported;}
     int startStream(void* h) override {return start_?start_(h):oecs::errorLoadLibrary;}
     int stopStream(void* h) override {return stop_?stop_(h):oecs::errorLoadLibrary;}
     int flushStream(void* h) override {return clear_?clear_(h):oecs::errorLoadLibrary;}
@@ -208,7 +210,7 @@ private:
         xmlCache_.insert(h,result);return 0;
     }
     template<class F> bool bind(F& pointer,const char* name){pointer=reinterpret_cast<F>(library_.resolve(name));return pointer!=nullptr;}
-    void unbind(){setNodes_=nullptr;start_=nullptr;wait_=nullptr;free_=nullptr;stop_=nullptr;clear_=nullptr;version_=nullptr;enum_=nullptr;create_=nullptr;open_=nullptr;close_=nullptr;destroy_=nullptr;accessMode_=nullptr;interfaceType_=nullptr;getXml_=nullptr;getInt_=nullptr;setInt_=nullptr;getFloat_=nullptr;setFloat_=nullptr;getEnum_=nullptr;setEnum_=nullptr;getBool_=nullptr;setBool_=nullptr;getString_=nullptr;}
+    void unbind(){command_=nullptr;setNodes_=nullptr;start_=nullptr;wait_=nullptr;free_=nullptr;stop_=nullptr;clear_=nullptr;version_=nullptr;enum_=nullptr;create_=nullptr;open_=nullptr;close_=nullptr;destroy_=nullptr;accessMode_=nullptr;interfaceType_=nullptr;getXml_=nullptr;getInt_=nullptr;setInt_=nullptr;getFloat_=nullptr;setFloat_=nullptr;getEnum_=nullptr;setEnum_=nullptr;getBool_=nullptr;setBool_=nullptr;getString_=nullptr;}
     decltype(&::MV_XML_GetNodeAccessMode) accessMode_=nullptr;
     decltype(&::MV_XML_GetNodeInterfaceType) interfaceType_=nullptr;
     decltype(&::MV_XML_GetGenICamXML) getXml_=nullptr;
@@ -229,6 +231,7 @@ private:
     decltype(&::MV_CC_FreeImageBuffer) free_=nullptr;
     decltype(&::MV_CC_StopGrabbing) stop_=nullptr;
     decltype(&::MV_CC_ClearImageBuffer) clear_=nullptr;
+    decltype(&::MV_CC_SetCommandValue) command_=nullptr;
     QLibrary library_;
     decltype(&::MV_CC_GetSDKVersion) version_=nullptr;
     decltype(&::MV_CC_EnumDevices) enum_=nullptr;

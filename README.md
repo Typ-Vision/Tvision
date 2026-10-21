@@ -17,7 +17,7 @@ UI algoritma veya donanım SDK'sını doğrudan çağırmaz.
 - Image File/Webcam edinimi; Camera Manager'da keşif, kamera kaydı ve Mono8 profil
   taslağı. Industrial Editor kaynağına kayıtlı kamera/kurulum/profil bağlanır;
   kare isteği ortak worker/provider yolundadır. Industrial Load çevrimdışı beyanı
-  gösterir; Run tam native kabul ister. Native industrial edinim/üretim kapalıdır.
+  gösterir; Run tam native kabul ister. Native production kapalıdır; mevcut COE-U için Camera Manager’da açık deneysel önizleme yolu vardır.
 
 Hazırlık veya keşif sonucu üretim kabulü değildir. Gerçek sonuç olmadan PASS, skor
 veya robot pose gösterilmez. Robot hazırlık ekranları çalışan robot entegrasyonu
@@ -71,6 +71,13 @@ OECS / GenTL probe komutları, sandbox sınırları ve kanıt bağlantıları
    Editor’da Industrial Camera ekleyin, Properties üzerinden kayıtlı profili seçip
    **Profili bağla / güncelle** düğmesine basın. **Görüntü al** yeni kare ister; seçim
    tek başına edinim yapmaz. Profil düzenlenirse açıkça yeniden bağlayın.
+   Mevcut COE-050-M-USB-050-IR-C için Camera Manager’da **Deneysel OECS edinimini
+   kullan** seçimi ve kurulu x64 runtime ile **Önizleme** açılır. Tam sensör
+   Mono8 gerekir; SDK derlemesi [tanı rehberindedir](docs/windows-camera-diagnostics.md).
+   **Görünen kareyi kanıtıyla kaydet** yeni `.pgm` ve `.pgm.json` yazar.
+   Tetik eşleşmesi doğrulanmamıştır; Stop kareyi temizler. Tercih restart’ta kapalıdır.
+   Deneysel dosyanın Editor/replay bağlantısı EXP-02’yi bekler; normal Image File
+   yolundan açılıp doğrulanmış kaynağa yükseltilemez.
 4. Kaydedilmiş reçeteyi **Load Recipe → Run** ile Runtime'a hazırlayın.
    **Tek çevrim** gerçek edinim/yürütmeyi başlatır; Run tek başına sonuç üretmez.
    Stop eski sonucu bastırır; farklı sürüm için Stop → Load Recipe → Run kullanın.

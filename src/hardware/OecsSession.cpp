@@ -146,6 +146,29 @@ QString OecsSession::cleanupStream(){
 void OecsSession::probeFrame(const OecsStreamLimits& limits,const std::function<void(const OecsBuffer&)>& copy){
     captureFrame(limits,copy);
 }
+void OecsSession::experimentalFrame(const OecsStreamLimits& limits,const std::function<int()>& remaining,
+                                   const std::function<void(const OecsBuffer&)>& copy){
+    requireOpen();
+    if(!remaining)throw OecsSessionError(OecsFailure::ConfigurationFailed,"deadline",0,"Monotonic budget required");
+    for(const auto& pair:{std::pair{"TriggerSelector","FrameBurstStart"},std::pair{"TriggerMode","On"},std::pair{"TriggerSource","Software"}})
+        if(!featureEquivalent(feature(pair.first),QString(pair.second)))
+            throw OecsSessionError(OecsFailure::ConfigurationFailed,"experimental-settings",0,"Actual FrameBurstStart/On/Software required");
+    const auto delay=feature("TriggerDelay");
+    if(!featureEquivalent(feature("AcquisitionBurstFrameCount"),qint64(1)) ||
+       !featureEquivalent(feature("TriggerCacheEnable"),false) ||
+       !featureEquivalent(delay,delay.type==FeatureType::Float?FeatureValue(0.0):FeatureValue(qint64(0))))
+        throw OecsSessionError(OecsFailure::ConfigurationFailed,"experimental-settings",0,"Actual burst=1/cache=false/delay=0 required");
+    const auto budget=[&]{const int ms=remaining();if(ms<=0)throw std::runtime_error("Experimental camera deadline exceeded");return ms;};
+    captureFrame(limits,copy,budget,[&]{
+        budget();
+        const int clear=api_->flushStream(handle_);
+        if(clear!=0)throw OecsSessionError(OecsFailure::ApiError,"experimental-clear",clear,"Experimental clear failed");
+        budget();
+        const int command=api_->executeSoftwareTrigger(handle_);
+        if(command!=0)throw OecsSessionError(OecsFailure::ApiError,"experimental-command",command,"Experimental command failed");
+        budget();
+    });
+}
 OecsTriggerArm OecsSession::softwareFrame(const OecsStreamLimits& limits,const std::function<int()>& remaining,
                                         const std::function<void(const OecsBuffer&)>& copy){
     requireOpen();

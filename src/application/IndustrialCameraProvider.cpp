@@ -31,6 +31,7 @@ public:
         if(ticket.operation==CameraOperation::Grab){
             require(result.frame.has_value(),"Industrial grab has no owned frame.");
             const auto& f=*result.frame;
+            require(f.image.metadata().experimentalAcquisition.isEmpty(),"Experimental frame cannot enter admitted acquisition.");
             require(f.sourceId==request_.sourceId && f.image.size()==request_.setup.geometry.resolution &&
                     f.image.format()==PixelFormat::Gray8,"Industrial frame source/geometry/format mismatch.");
         }

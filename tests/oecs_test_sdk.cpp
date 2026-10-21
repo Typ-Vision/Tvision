@@ -17,6 +17,7 @@ int streamMode=0,borrowed=0,running=0;
 std::atomic<int> active{0},overlap{0},sequence{0};
 }
 extern "C" {
+MV_CAMCTRL_API int __stdcall MV_CC_SetCommandValue(void*,const char* n){return std::strcmp(n,"TriggerSoftware")==0?0:int(0x80000004u);}
 MV_CAMCTRL_API unsigned int __stdcall MV_CC_GetSDKVersion(){return 0x3050200;}
 MV_CAMCTRL_API int __stdcall MV_CC_EnumDevices(unsigned int,MV_CC_DEVICE_INFO_LIST* list){
     if(active.fetch_add(1)!=0)++overlap;

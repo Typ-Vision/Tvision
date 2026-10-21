@@ -16,3 +16,25 @@ Probe üretim admission değildir; native production kapalıdır. Ayrı
 [100-trigger/metadata tanısı](archive/2026-10-17-icm-04d-correlation.md)
 geçici ayarları geri yükler.
 
+
+## Deneysel Camera Manager (EXP-01)
+
+Üretim yolu açılmadan yerel x64 OECS SDK ile Release derleyin:
+
+```powershell
+cmake -S . -B build/reference-ui -DVISIONFLOW_OECS_INCLUDE_DIR="C:/Program Files (x86)/OECS/Development/Includes" -DVISIONFLOW_OECS_RUNTIME_DLL="C:/Program Files (x86)/Common Files/OECS/Runtime/Win64_x64/MvCameraControl.dll"
+cmake --build build/reference-ui -j 6
+```
+
+Camera Manager’da kayıtlı kamera/kurulum/profil ve yerel rota seçin; **Deneysel
+OECS edinimini kullan** işaretini açıkça seçip **Önizleme** başlatın. Günlük kullanım
+[README](../README.md) içindedir. Derleme seçeneği otomatik edinim veya production
+izni değildir. Gerçek kullanılabilir sahne ve fiziksel Stop/kopma kabulü ayrıca gerekir.
+
+Elle çalıştırılan `oecs_experimental_probe.exe absolute-dll absolute-output-directory
+exposure-us count` aynı application worker yolunu kullanır; otomatik hardware CTest
+değildir. `count` 1–1000; her komutun monoton bütçesi 3 saniyedir. Dosyalar üzerine
+yazılmaz. Gerçek sonuçlar `build/icm/oecs-exp-01/` altında tutulur; fiziksel kimlik
+probe içinde açıkça 02A2220000627 olarak sabittir. Bu probe tazelik kanıtı üretmez. İsteğe bağlı son argüman `--stop-in-flight`
+bekleyen Grab’a Stop, `--timeout` 1 ms yazılım deadline gözlemi ekler; ikisi de
+fiziksel command’ın gönderildiğini veya donanımsal iptal bariyerini kanıtlamaz.

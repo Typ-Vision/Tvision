@@ -1,6 +1,9 @@
 # ICM-PLAN-03 — Mevcut OECS kamera ile deneysel kullanım
 
-21 Ekim 2026. **PLANLANDI; bu belge native capability açmaz.**
+21 Ekim 2026. **EXP-01 yazılımı uygulandı; fiziksel sahne/kopma kabulü açık.**
+[Kısmi kapanış ve kanıt](../archive/2026-10-21-icm-oecs-exp-01.md).
+Güncel kanıt ve devam noktası [devir özetindedir](../progress.md).
+Bu belge native production capability açmaz.
 Kullanıcı başka kamera bulamayacağını, mevcut kamera için iptal/boşaltmayı
 çalışıyor varsayarak ilerlemek istediğini belirtti. Basler/Daheng cihazı veya
 üretici yanıtı aşağıdaki geliştirme sırasının önkoşulu değildir.
@@ -70,9 +73,21 @@ maddelerine gerçek kanıt eklemektir; eski neredeyse siyah raster yeterli deği
 
 Native provider'a ayrı deneysel politika, configure/readback ve owned capture
 bağlanır. Camera Manager preview/Stop ve tek kareyi dosyaya kaydetme eklenir.
+EXP-01 yalnız metadata bankalarının tamamı kapalı 2448×2048 rasteri kabul eder;
+gömülü metadata/ilk satır çıkarma yolu bu teslimde açılmaz. PGM içi deneysel işaret
+ve JSON sidecar kullanılır. EXP-02 açık provenance/etiket desteği bağlanana kadar
+normal Image File replay’i bu rasteri reddeder.
 Dosya piksel hash/geometri ve doğrulanmamış eşleşme kaydıyla korunur; bu gerçek
 raster MUI-04'ün Image File incelemesinde kullanılabilir. Önceki isteğe bağlı
 ICM-OECS-P1 işi bu göreve alınır; ayrıca tekrar uygulanmaz.
+
+Uygulamada binning/decimation çiftinin SDK `AM_NI` sonucu açıkça
+`NotApplicable` olarak taşınır; `NA`, bilinmeyen veya karışık çift reddedilir.
+Okunabilir enum geometride XML’deki factor-one entry/raw=1 doğrulanır.
+ExposureAuto/GainAuto gerçek Off readback’i TriggerMode Off iken alınır;
+XML’de trigger açıkken unavailable olan auto kontrolü uydurma final değerle
+sunulmaz. Kanıtta readback aşaması ayrıca kayıtlıdır. Genel native configuration
+ve production factory bu deneysel istisnayı seçmez.
 
 Kabul: Release build, ilgili CTest, normal/küçük UI görselleri; gerçek sahnede
 tek/100 sıralı çekim, Stop/geç kare, timeout, kopma ve yeniden açma gözlemleri.

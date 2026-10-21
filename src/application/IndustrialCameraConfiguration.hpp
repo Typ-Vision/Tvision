@@ -12,5 +12,7 @@ class IndustrialCameraConfiguration {
 public:
     static IndustrialConfigurationResult apply(OecsSession&,const PhysicalDeviceIdentity&,
         const MeasurementSetupDescriptor&,const AcquisitionProfile&);
+    static IndustrialConfigurationResult applyExperimental(OecsSession&,const PhysicalDeviceIdentity&,
+        const MeasurementSetupDescriptor&,const AcquisitionProfile&);
 };
 }

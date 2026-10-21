@@ -44,6 +44,9 @@ public:
     // remaining() checks monotonic deadline/cancel; throws on expiry. No IDs supplied by UI.
     OecsTriggerArm softwareFrame(const OecsStreamLimits&,const std::function<int()>& remaining,
                                 const std::function<void(const OecsBuffer&)>& copy);
+    // Explicit experimental policy: next arrival has NO proven trigger association.
+    void experimentalFrame(const OecsStreamLimits&,const std::function<int()>& remaining,
+                           const std::function<void(const OecsBuffer&)>& copy);
     OecsSessionStage stage() const;
     // A handle or library cleanup failed: the DLL is never unloaded by this session again.
     bool libraryPinned() const;

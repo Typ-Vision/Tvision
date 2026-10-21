@@ -10,6 +10,8 @@ ImageFrame ImageFileService::load(const QString& path) const {
     if (!file.open(QIODevice::ReadOnly)) throw std::runtime_error(("Görüntü açılamadı: "+file.errorString()).toUtf8().constData());
     if (file.size()<=0 || file.size()>256*1024*1024) throw std::runtime_error("Görüntü dosyası boş veya 256 MB sınırını aşıyor.");
     const auto bytes=file.readAll();
+    if(bytes.startsWith("P5\n# VisionFlow-OECS-Experimental-Unverified\n"))
+        throw std::runtime_error("Deneysel OECS rasteri: Editor/replay bağlantısı EXP-02 kapsamındadır; tetik eşleşmesi doğrulanmadı.");
     if (file.error()!=QFileDevice::NoError) throw std::runtime_error("Görüntü dosyası okunamadı.");
     ImageFrame frame;
     try {

@@ -2,7 +2,7 @@
 #include "application/MeasurementWorkspace.hpp"
 #include "application/CameraLocalConfiguration.hpp"
 #include <QWidget>
-class QTableWidget;class QLabel;class QLineEdit;class QPushButton;class QComboBox;class QSpinBox;class QTimer;
+class QCheckBox;class QTableWidget;class QLabel;class QLineEdit;class QPushButton;class QComboBox;class QSpinBox;class QTimer;
 namespace visionflow {
 class CameraManager final:public QWidget {
 public:
@@ -24,6 +24,7 @@ private:
     void start(bool preview);
     void tick();
     void controls();
+    void saveFrame();
     IndustrialCameraRequest request() const;
     std::function<MeasurementWorkspace*()> context_;
     std::function<bool()> gate_;
@@ -41,6 +42,12 @@ private:
     QSpinBox* timeout_;
     QPushButton *scan_,*register_,*apply_,*preview_,*stop_,*check_;
     QTimer* timer_;
+    QCheckBox* experimental_;
+    QLineEdit* runtime_;
+    QLabel* experimentalNotice_;
+    QPushButton* save_;
+    bool experimentalSession_=false;
+    std::optional<AcquiredFrame> lastFrame_;
     std::unique_ptr<CameraWorkerSession> worker_;
     quint64 job_=0;
     bool previewing_=false,closing_=false;

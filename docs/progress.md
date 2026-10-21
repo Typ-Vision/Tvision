@@ -1,25 +1,27 @@
 # VisionFlow — güncel devir
 
 21 Ekim 2026.
-[Arşiv](archive/README.md). [Tapping araştırması](archive/2026-10-19-tap-res-01.md).
+[Arşiv](archive/README.md).
 
 ## Devam noktası
 
-- **ICM-PLAN-03 tamam; sıradaki OECS-EXP-01.** Başka kamera beklenmez.
-  [Kapanış](archive/2026-10-21-icm-plan-03.md),
-  [EXP-01–03 planı](architecture/industrial-camera-oecs-experimental-plan.md).
-  İptal/boşaltma kullanıcı çalışma varsayımı; doğrulanmış tazelik değildir.
-  Deneysel edinim → Editor/MUI-04 → Runtime planlandı; henüz uygulanmadı.
+- **ICM-OECS-EXP-01 yazılımı hazır; fiziksel kabul kısmi.**
+  [Kayıt](archive/2026-10-21-icm-oecs-exp-01.md),
+  [EXP planı](architecture/industrial-camera-oecs-experimental-plan.md).
+  Camera Manager deneysel preview/Stop ve kanıtlı PGM kaydı eklendi.
+  Gerçek exact tek/100 kare alındı; pending Stop ve 1 ms deadline çıktıyı bastırdı.
+  Kullanıcı sahneyi henüz hazırlamadı; raster **0–6/siyaha yakın**. Kopma açık.
+  İptal/boşaltma çalışma varsayımıdır; tetik eşleşmesi doğrulanmadı.
+  Native production Unavailable; Editor/Runtime deneysel bağlantısı henüz yok.
 - **MUI-01–03 tamam.** [03 tanı/replay](archive/2026-10-19-mui-03.md);
-  01/02 arşivde. 19 Ekim Release: core **19/19**, UI **4/4**.
+  01/02 ve tarihli test kanıtları arşivde.
 - **MUI-04 sentetik corpus tamam, gerçek kabul açık.**
   [190 kontrol / sınırlar](archive/2026-10-19-mui-04.md),
   [kabul matrisi](architecture/measurement-usability-acceptance.md).
-- **EUI-01–08 yazılım/görsel kabul tamam.**
-  [EUI-08 kapanış](archive/2026-10-18-eui-08.md): son Release UI **105/105**,
-  core **89/89**; görseller, giriş olayları ve PLC requestId kanıtı kapanışta.
+- **EUI-01–08 tamam; kullanıcı tekrar testleri OK.**
+  [EUI-08 kanıtı](archive/2026-10-18-eui-08.md),
+  [kullanıcı kabulü](archive/2026-10-18-eui-accept-01.md).
   Blob4 / engine28 / editor1–9 no-op korunur.
-  **Kullanıcı tekrar testi: hepsi OK.** [Kabul](archive/2026-10-18-eui-accept-01.md).
 - [ICM-PLAN-02](archive/2026-10-18-icm-plan-02.md): ortak yazılım/donanım kabulü ayrı.
   [06a](archive/2026-10-18-icm-06a.md)/[06b](archive/2026-10-18-icm-06b.md)
   kalibrasyon/profil/aktivasyon tamam; 04f–05b kapanışları [arşivde](archive/README.md).
@@ -49,7 +51,7 @@
   ICM-00 veya tamamlanmış KMC görevlerini yeniden başlatmayın.
 - Öncelik eldeki COE-U USB3/OECS; Basler/Daheng PoE cihaz bekliyor.
   Tanı probe'u üretim/tazelik garantisi değildir. Editor/Runtime bağlantısı hazır;
-  native edinim bekliyor. Deneysel kullanım production kabulü olmayacak.
+  doğrulanmış native edinim bekliyor. Deneysel kullanım production kabulü değildir.
 
 Görevler: [ana plan](architecture/industrial-camera-plan.md), seçili kart ve sözleşme.
 
@@ -92,24 +94,24 @@ Görevler: [ana plan](architecture/industrial-camera-plan.md), seçili kart ve s
 
 ## Son doğrulama ve çalışma ortamı
 
-- **09a/G2 tarihsel kabul:** [rapor](architecture/industrial-camera-release-acceptance.md),
-  `build/icm/09a/`; native G1/G3/G4 ve dağıtım açık.
+- [09a/G2 kabul raporu](architecture/industrial-camera-release-acceptance.md);
+  native G1/G3/G4 ve dağıtım açık.
 - 07b/c execution/Editor binding, 08a/b/c admission/trusted terminal/Logs tamam;
   [kapanışlar](archive/README.md). Load beyan, production Run kabul ister.
 - UI `build/reference-ui/visionflow.exe`; core `build/kmc9-core-off`.
   Build/PATH/başlatma README'dedir.
-- ID'li tek commit, istekle push; yerel INI korunur, kanıtlar `build/`.
 
 ## Kapanış ve sonraki adım
 
-**Devam: ICM-OECS-EXP-01 gerçek edinim/preview/Stop ve sahne kaydı.**
+**Devam: EXP-01 kullanılabilir aydınlık sahne ve fiziksel kopma/yeniden açma kabulü.**
 Ardından EXP-02/Editor/MUI-04, sonra EXP-03 deneysel Runtime/Logs.
-Üretici yanıtı/G1 bu sırayı durdurmaz; varsayımlı sonuç trusted completion veya
-PLC/robot çıkışı olmaz. MUI-04 özgün raster/reçete/ROI hâlâ eksik; yeni kamera
-örneği özgün problemin yeniden üretimi sayılmaz. Corpus tekrarlanmaz.
-Manuel çok kaynak/kalibrasyon ve [09b](archive/2026-10-18-icm-09b-start.md)
-G0/G1/H01–H08 açık. Ölçüm adayı configure girdisi değildir.
-[04d cancel incelemesi](archive/2026-10-18-icm-04d-cancel-audit.md): AcquisitionAbort
-yok; DeviceReset garantisiz, çalıştırılmadı. Üretici taslağı gönderilmedi.
-Delay=0, close/open/sessizlik kanıt değil. Native Unavailable; EXP kodu henüz yok.
-[Bağlam bakımı](archive/2026-10-17-context-maintenance.md).
+21 Ekim Release CTest **25/25** + son değişim **3/3**, localhost terminal **1/1**;
+`build/icm/oecs-exp-01/`. Normal/küçük UI fixture görselleri kontrol edildi.
+Deneysel PGM işareti + JSON korunur; EXP-02’ye kadar normal Image File replay’i
+reddedilir. Varsayımlı edinim trusted completion veya PLC/robot çıkışı olmaz.
+MUI-04 özgün raster/reçete/ROI eksik; yeni sahne özgün problemi yeniden üretmez.
+Corpus tekrarlanmaz. Manuel çok kaynak/kalibrasyon ve [09b](archive/2026-10-18-icm-09b-start.md)
+G0/G1/H01–H08 açıktır. Ölçüm adayı configure girdisi değildir.
+[Cancel incelemesi](archive/2026-10-18-icm-04d-cancel-audit.md): AcquisitionAbort yok;
+DeviceReset garantisiz, çalıştırılmadı. Üretici taslağı gönderilmedi.
+Delay=0, close/open/sessizlik tazelik kanıtı değildir. Native Unavailable korunur.
