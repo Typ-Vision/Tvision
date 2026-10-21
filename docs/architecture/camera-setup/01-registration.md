@@ -1,6 +1,6 @@
 # CCUX-01 — Kamera kimliği ve otomatik varsayılan kayıt
 
-Durum: planlandı. Önkoşul: Yok. Uygulayıcı hedefi: GPT-6.1 Sol / medium.
+Durum: uygulandı; [kapanış ve kanıt](../../archive/2026-10-21-ccux-01.md). Önkoşul: Yok. Uygulayıcı hedefi: GPT-6.1 Sol / medium.
 [Plan ve ortak çalışma kuralları](README.md). Güncel durum progress'tedir.
 
 ## Oku

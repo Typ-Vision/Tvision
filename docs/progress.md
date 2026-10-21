@@ -4,12 +4,13 @@
 
 ## Devam noktası
 
-**Sonraki görev: [CCUX-01](architecture/camera-setup/01-registration.md).**
-[CCUX planı](architecture/camera-setup/README.md): GPT-6.1 Sol / medium için
-15 sıralı kart; ortak sözleşme + yalnız seçili kart okunur. **Hand-eye/Eye-to-Hand
-kapsam dışı.** Kamera/kalibrasyon sadeleştirme, reçete genel referanslarını kaldırma
-ve deneysel mm hedeflenir. Kartlar henüz uygulanmadı; planlama tamamlandı.
-[CCUX-PLAN-02 kapanışı](archive/2026-10-21-ccux-plan-02.md).
+**Sonraki görev: [CCUX-02](architecture/camera-setup/02-settings.md).**
+**CCUX-01 tamamlandı:** application atomik kamera + pending varsayılan setup/profile,
+kısa ID/ad, duplicate cihaz, legacy çözüm ve taşıma. Yeni kanıt ve API/şema kararları
+[kapanışta](archive/2026-10-21-ccux-01.md); `build/ccux/ccux-01/`.
+[CCUX planı](architecture/camera-setup/README.md) sırasıyla sürer; **Hand-eye kapsam
+dışı.** Bu teslim servis kapsamıdır; sade UI/native ayar uygulaması sonraki kartlarda.
+Tamamlanmış KMC/ICM/EXP işleri yeniden başlatılmadı.
 
 ## Hazır olanlar
 
@@ -65,5 +66,5 @@ ve deneysel mm hedeflenir. Kartlar henüz uygulanmadı; planlama tamamlandı.
 UI: build/reference-ui/visionflow.exe; core: build/kmc9-core-off.
 PATH/build/test/başlatma README'de; mevcut UI kullanımı
 [kullanım rehberinde](camera-runtime-usage.md). Her kartta yalnız değişen kapsamı
-kanıtla. Son kapanış plan/belge kontrolüdür; yeni ürün build/CTest/donanım koşumu
-sayılmaz. Detay ve kalıcı kanıt kapanışta, sonraki tek görev bu özetin başında tutulur.
+kanıtla. CCUX-01 yeni Release servis hedefleri ve ilgili CTest kanıtını içerir;
+fiziksel kamera/UI kabulü sayılmaz. Detay ve kalıcı kanıt kapanışta, sonraki tek görev bu özetin başında tutulur.

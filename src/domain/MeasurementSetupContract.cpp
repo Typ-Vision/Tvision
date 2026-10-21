@@ -115,14 +115,23 @@ MeasurementCamera MeasurementCamera::rebound(const MeasurementCamera& next) cons
     validate();next.validate();require(id==next.id,"Camera identity cannot change");auto result=next;result.device.revision=device.revision;auto before=device;before.revision=next.device.revision;
     if(before!=next.device || physical!=next.physical){require(device.revision<1000000000,"Device revision exhausted");++result.device.revision;}return result;
 }
-void MeasurementSetupDescriptor::validate() const {id.validate();camera.validate();text(name);text(opticalProfile);text(workingPlane);requireRevision(this->revision);requireRevision(deviceRevision);geometry.validate();}
-QJsonObject MeasurementSetupDescriptor::toJson() const {validate();return {{"schemaVersion",1},{"id",id.value},{"cameraId",camera.value},{"name",name},{"opticalProfile",opticalProfile},{"workingPlane",workingPlane},{"revision",this->revision},{"deviceRevision",deviceRevision},{"geometry",geometry.toJson()}};}
-MeasurementSetupDescriptor MeasurementSetupDescriptor::fromJson(const QJsonObject& o){keys(o,{"schemaVersion","id","cameraId","name","opticalProfile","workingPlane","revision","deviceRevision","geometry"});schema(o);MeasurementSetupDescriptor s{{string(o,"id")},{string(o,"cameraId")},string(o,"name"),string(o,"opticalProfile"),string(o,"workingPlane"),integer(o,"revision"),integer(o,"deviceRevision"),GeometryDescriptor::fromJson(object(o,"geometry"))};s.validate();return s;}
+void MeasurementSetupDescriptor::validate() const {
+    id.validate();camera.validate();text(name);requireRevision(revision);requireRevision(deviceRevision);
+    if(pending){require(opticalProfile.isEmpty() && workingPlane.isEmpty() && geometry==GeometryDescriptor{},"Pending setup cannot claim physical geometry");return;}
+    text(opticalProfile);text(workingPlane);geometry.validate();
+}
+QJsonObject MeasurementSetupDescriptor::toJson() const {validate();return {{"schemaVersion",pending ? 2:1},{"id",id.value},{"cameraId",camera.value},{"name",name},{"opticalProfile",opticalProfile},{"workingPlane",workingPlane},{"revision",revision},{"deviceRevision",deviceRevision},{"geometry",pending ? QJsonValue():QJsonValue(geometry.toJson())}};}
+MeasurementSetupDescriptor MeasurementSetupDescriptor::fromJson(const QJsonObject& o){
+    keys(o,{"schemaVersion","id","cameraId","name","opticalProfile","workingPlane","revision","deviceRevision","geometry"});
+    const int version=integer(o,"schemaVersion");require(version==1 || version==2,"Unsupported setup schema");
+    MeasurementSetupDescriptor s{{string(o,"id")},{string(o,"cameraId")},string(o,"name"),string(o,"opticalProfile"),string(o,"workingPlane"),integer(o,"revision"),integer(o,"deviceRevision"),{}};
+    s.pending=version==2;if(s.pending)require(o["geometry"].isNull(),"Pending geometry must be null");else s.geometry=GeometryDescriptor::fromJson(object(o,"geometry"));s.validate();return s;
+}
 MeasurementSetupDescriptor MeasurementSetupDescriptor::revised(const MeasurementSetupDescriptor& next) const {
     validate();next.validate();require(id==next.id && camera==next.camera,"Setup cannot silently change camera/identity");require(next.deviceRevision>=deviceRevision,"Setup cannot restore an older device mapping");auto result=next;result.revision=this->revision;
-    if(setupFieldsChanged(*this,next) || geometry!=next.geometry){require(this->revision<1000000000,"Setup revision exhausted");++result.revision;}return result;
+    if(pending!=next.pending || setupFieldsChanged(*this,next) || geometry!=next.geometry){require(this->revision<1000000000,"Setup revision exhausted");++result.revision;}return result;
 }
-QString MeasurementSetupDescriptor::geometryId() const {validate();require(geometry.complete,"Unknown critical geometry is not compatible");auto o=toJson();o.remove("name");return digest(o);}
+QString MeasurementSetupDescriptor::geometryId() const {validate();require(!pending && geometry.complete,"Unknown critical geometry is not compatible");auto o=toJson();o.remove("name");return digest(o);}
 QString MeasurementSetupDescriptor::cacheId(const QJsonObject& settings) const {return digest({{"geometryId",geometryId()},{"acquisitionSettings",settings}});}
 void ProfileId::validate() const {text(value);}
 void AcquisitionSettings::validate() const {
@@ -136,16 +145,22 @@ AcquisitionSettings AcquisitionSettings::fromJson(const QJsonObject& o){
     AcquisitionSettings s{string(o,"pixelFormat"),{boolean(t,"enabled"),string(t,"selector"),string(t,"source")},parseAuto(string(o,"exposureAuto")),number(o,"exposureTimeUs"),parseAuto(string(o,"gainAuto")),number(o,"gain"),string(o,"illumination")};s.validate();return s;
 }
 void AcquisitionProfile::validate() const {
-    id.validate();camera.validate();setup.validate();text(name);requireRevision(this->revision);requested.validate();
+    id.validate();camera.validate();setup.validate();text(name);requireRevision(this->revision);
+    if(pending){require(requested==AcquisitionSettings{},"Pending profile cannot claim settings");return;}
+    requested.validate();
     require(requested.pixelFormat=="Mono8","First industrial profile is Mono8 only");require(requested.exposureAuto==AutoMode::Off && requested.gainAuto==AutoMode::Off,"Industrial profile requires manual exposure/gain");
 }
-QJsonObject AcquisitionProfile::toJson() const {validate();return {{"schemaVersion",1},{"id",id.value},{"cameraId",camera.value},{"setupId",setup.value},{"name",name},{"revision",this->revision},{"requested",requested.toJson()}};}
-AcquisitionProfile AcquisitionProfile::fromJson(const QJsonObject& o){keys(o,{"schemaVersion","id","cameraId","setupId","name","revision","requested"});schema(o);AcquisitionProfile p{{string(o,"id")},{string(o,"cameraId")},{string(o,"setupId")},string(o,"name"),integer(o,"revision"),AcquisitionSettings::fromJson(object(o,"requested"))};p.validate();return p;}
+QJsonObject AcquisitionProfile::toJson() const {validate();return {{"schemaVersion",pending ? 2:1},{"id",id.value},{"cameraId",camera.value},{"setupId",setup.value},{"name",name},{"revision",this->revision},{"requested",pending ? QJsonValue():QJsonValue(requested.toJson())}};}
+AcquisitionProfile AcquisitionProfile::fromJson(const QJsonObject& o){
+    keys(o,{"schemaVersion","id","cameraId","setupId","name","revision","requested"});const int version=integer(o,"schemaVersion");require(version==1 || version==2,"Unsupported profile schema");
+    AcquisitionProfile p{{string(o,"id")},{string(o,"cameraId")},{string(o,"setupId")},string(o,"name"),integer(o,"revision"),{}};p.pending=version==2;
+    if(p.pending)require(o["requested"].isNull(),"Pending settings must be null");else p.requested=AcquisitionSettings::fromJson(object(o,"requested"));p.validate();return p;
+}
 AcquisitionProfile AcquisitionProfile::revised(const AcquisitionProfile& next) const {
     validate();next.validate();require(id==next.id && camera==next.camera && setup==next.setup,"Profile cannot silently change camera/setup/identity");auto result=next;result.revision=this->revision;
-    AcquisitionChange change;settingsRows(requested,next.requested,change);if(!change.cacheCompatible()){require(this->revision<1000000000,"Profile revision exhausted");++result.revision;}return result;
+    AcquisitionChange change;settingsRows(requested,next.requested,change);if(pending!=next.pending || !change.cacheCompatible()){require(this->revision<1000000000,"Profile revision exhausted");++result.revision;}return result;
 }
-QString AcquisitionProfile::acquisitionId(const MeasurementSetupDescriptor& s) const {validate();require(s.id==setup && s.camera==camera,"Profile/setup mismatch");return s.cacheId(requested.toJson());}
+QString AcquisitionProfile::acquisitionId(const MeasurementSetupDescriptor& s) const {validate();require(!pending,"Acquisition settings await readback");require(s.id==setup && s.camera==camera,"Profile/setup mismatch");return s.cacheId(requested.toJson());}
 void GeometryReadback::validate() const {
     require(resolution.width()>0 && resolution.height()>0 && resolution.width()<=1000000 && resolution.height()<=1000000,"Invalid readback resolution");
     for(auto e:{offsetEvidence,binningEvidence,decimationEvidence,reverseEvidence})evidenceName(e);
@@ -196,9 +211,10 @@ void MeasurementSetupContract::validate(int capacity) const {
         if(c.physical && c.physical->usable()){const auto key=digest(c.physical->toJson());require(!devices.contains(key),"Ambiguous physical camera mapping");devices.insert(key);}}
     for(const auto& s:setups){s.validate();require(!setupIds.contains(s.id.value) && ids.contains(s.camera.value),"Duplicate/dangling setup ID");setupIds.insert(s.id.value);for(const auto& c:cameras)if(c.id==s.camera){require(s.deviceRevision==c.device.revision,"Stale setup device revision");
             // Industrial geometry is proven by readback evidence, not by webcam adapter capabilities.
+            if(s.pending)continue;
             if(c.physical){require(!s.geometry.complete || s.geometry.critical(),"Industrial geometry must state every critical feature");continue;}
             require(!s.geometry.critical(),"Legacy setup geometry is schema 1");require(!s.geometry.complete || c.device.capabilities.resolution,"Unverified adapter resolution");require((!s.geometry.sensorRoi || c.device.capabilities.sensorRoi) && (!s.geometry.binning || c.device.capabilities.binning),"Unsupported adapter geometry");}}
-    for(const auto& p:profiles){p.validate();require(!profileIds.contains(p.id.value),"Duplicate profile ID");profileIds.insert(p.id.value);bool bound=false;for(const auto& c:cameras)for(const auto& s:setups)if(c.id==p.camera && s.id==p.setup && s.camera==c.id && c.physical)bound=true;require(bound,"Profile requires an industrial camera setup");}
+    for(const auto& p:profiles){p.validate();require(!profileIds.contains(p.id.value),"Duplicate profile ID");profileIds.insert(p.id.value);bool bound=false;for(const auto& c:cameras)for(const auto& s:setups)if(c.id==p.camera && s.id==p.setup && s.camera==c.id && (c.physical || p.pending))bound=true;require(bound,"Profile requires an industrial camera setup");}
 }
 QJsonObject MeasurementSetupContract::toJson(int capacity) const {
     validate(capacity);QJsonArray cs,ss,ps;for(const auto& c:cameras)cs.append(c.toJson());for(const auto& s:setups)ss.append(s.toJson());for(const auto& p:profiles)ps.append(p.toJson());

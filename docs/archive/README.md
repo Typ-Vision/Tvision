@@ -6,6 +6,7 @@ görev” ifadeleri yazıldıkları tarihe aittir.
 
 | Dönem / görev | Kayıt |
 | --- | --- |
+| 21 Ekim 2026 — CCUX-01 | [Atomik kamera kaydı, kısa ID ve pending varsayılanlar](2026-10-21-ccux-01.md) |
 | 21 Ekim 2026 — CCUX-PLAN-02 | [Robot dışı 15 uygulama kartı ve kısa başlangıç paketi](2026-10-21-ccux-plan-02.md) |
 | 21 Ekim 2026 — CCUX-PLAN-02 öncesi | [Önceki devir ayrıntıları; tarihsel kanıt ve açık bağımlılıklar](2026-10-21-ccux-plan-02-oncesi.md) |
 | 21 Ekim 2026 — CCUX-PLAN-01 | [Kamera/kalibrasyon sadeleştirme, reçete alanları ve robot taslağı](2026-10-21-ccux-plan-01.md) |

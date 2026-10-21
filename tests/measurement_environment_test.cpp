@@ -69,5 +69,76 @@ int main(int argc,char** argv){QCoreApplication app(argc,argv);try{
         MeasurementEnvironmentRepository profileCopy(dir.path()+"/industrial-profile-copy.vfproject","project-P-copy",10);profileCopy.importBundle(plantRepo.exportBundle());const auto copied=profileCopy.load();
         check(copied.current.profiles==plant.snapshot().current.profiles && copied.current.profiles[0].acquisitionId(copied.current.setups[0])==plant.snapshot().current.profiles[0].acquisitionId(lineSetup),"Save As carries profile and acquisition identity");
         const auto copiedBytes=bytes(profileCopy.path());check(copiedBytes.contains("line-profile") && !copiedBytes.contains("producer") && !copiedBytes.contains(".cti") && !copiedBytes.contains("evidence") && !copied.current.cameras[0].device.capabilities.softwareCapture,"copied profile carries no route, readback or capture permission");}
+    { // CCUX-01: registration is a single transaction, never an acquisition admission.
+        MeasurementEnvironmentRepository r(dir.path()+"/ccux.vfproject","ccux",10);MeasurementEnvironmentRegistry reg(r);
+        auto camera=[](int i){return MeasurementCamera{{"new-"+QString::number(i)},"Camera",{"webcam","device-"+QString::number(i),DeviceIdentityConfidence::ProviderReported,1,{true,true,false,false}}};};
+        const auto legacyEmpty=r.load().encode(10);
+        for(auto fault:{MeasurementEnvironmentRepository::Fault::BeforeWrite,MeasurementEnvironmentRepository::Fault::BeforeCommit}){
+            reject([&]{reg.registerCamera(camera(0),"CAM_01",0,fault);},"registration write failure");
+            check(r.load().encode(10)==legacyEmpty && reg.snapshot().current.cameras.isEmpty() && !QFile::exists(r.path()),"failed initial registration leaves no partial relationship");
+        }
+        for(int i=0;i<5;++i){const auto before=reg.snapshot();const auto added=reg.registerCamera(camera(i),{},before.revision);
+            check(!added.existing && added.camera==camera(i).id,"new camera identity retained");
+            const auto e=reg.snapshot();const auto resolved=e.defaults(added.camera);
+            check(e.current.cameras.size()==i+1 && e.current.setups.size()==i+1 && e.current.profiles.size()==i+1 && e.registrations.size()==i+1,"one and five cameras have exactly one default pair each");
+            check(e.registrations[added.camera.value].shortId==QString("CAM_%1").arg(i+1,2,10,QChar('0')) && resolved.status==CameraDefaultsStatus::Pending,"automatic short ID and explicit pending state");
+            check(e.current.setups.last().toJson()["geometry"].isNull() && e.current.profiles.last().toJson()["requested"].isNull(),"unknown readback is null, never invented");
+            reject([&]{e.current.setups.last().geometryId();},"pending geometry cannot be used");reject([&]{e.current.profiles.last().acquisitionId(e.current.setups.last());},"pending acquisition cannot be used");
+            for(int j=0;j<i;++j)check(e.current.cameras[j]==before.current.cameras[j] && e.current.setups[j]==before.current.setups[j] && e.current.profiles[j]==before.current.profiles[j],"another camera and its revisions are untouched");
+        }
+        const auto initial=reg.snapshot();const auto originalBytes=bytes(r.path());
+        const auto duplicate=reg.registerCamera(camera(0),"OTHER",initial.revision);
+        check(duplicate.existing && duplicate.camera==camera(0).id && bytes(r.path())==originalBytes,"duplicate device explicitly returns existing camera without changes");
+        reject([&]{reg.registerCamera(camera(5),"cam_01",initial.revision);},"duplicate short ID is case insensitive");
+        reject([&]{reg.registerCamera(camera(5),"bad id",initial.revision);},"invalid short ID");
+        reject([&]{reg.registerCamera(camera(5),"CAM_06",initial.revision-1);},"stale registration revision");
+        for(auto fault:{MeasurementEnvironmentRepository::Fault::BeforeWrite,MeasurementEnvironmentRepository::Fault::BeforeCommit}){
+            reject([&]{reg.registerCamera(camera(5),"CAM_06",initial.revision,fault);},"registration atomic failure");check(bytes(r.path())==originalBytes,"existing registrations survive failed addition");
+        }
+        auto invalid=initial;invalid.registrations["new-0"].profile={"missing"};reject([&]{invalid.encode(10);},"dangling profile rejected");
+        invalid=initial;invalid.registrations["new-0"].setup=initial.current.setups[1].id;reject([&]{invalid.encode(10);},"cross-camera default rejected");
+        reg.renameCamera(camera(0).id,"LEFT","Left camera",initial.revision);auto renamed=reg.snapshot();
+        check(renamed.current.cameras[0].device==initial.current.cameras[0].device && renamed.current.setups==initial.current.setups && renamed.current.profiles==initial.current.profiles && renamed.selections==initial.selections,"rename preserves device/setup/profile/model selection");
+        const auto renameBytes=bytes(r.path());reg.renameCamera(camera(0).id,"LEFT","Left camera",renamed.revision);check(bytes(r.path())==renameBytes,"no-op rename preserves document and revision");
+        reject([&]{reg.renameCamera(camera(1).id,"left","Conflict",reg.snapshot().revision);},"rename duplicate short ID");
+        MeasurementEnvironmentRegistry stale(r);reg.renameCamera(camera(0).id,"LEFT","New name",reg.snapshot().revision);
+        reject([&]{stale.registerCamera(camera(5),{},stale.snapshot().revision);},"disk stale revision detected under lock");
+        reg.archiveCamera(camera(0).id);check(reg.snapshot().defaults(camera(0).id).status==CameraDefaultsStatus::Archived,"archived camera cannot resolve defaults");
+        reject([&]{reg.registerCamera(camera(0),{},reg.snapshot().revision);},"archived physical camera cannot be registered again");
+        reject([&]{reg.renameCamera(camera(0).id,"LEFT","Archived",reg.snapshot().revision);},"archived camera cannot be renamed");
+        reject([&]{reg.registerCamera(camera(5),"LEFT",reg.snapshot().revision);},"archived alias remains reserved");
+        reg.archiveSetup(reg.snapshot().registrations["new-1"].setup);check(reg.snapshot().defaults(camera(1).id).status==CameraDefaultsStatus::Archived,"archived default never silently falls back");
+        MeasurementEnvironmentRepository copy(dir.path()+"/ccux-import.vfproject","other",10);copy.importBundle(r.exportBundle());
+        check(copy.load().registrations==reg.snapshot().registrations && copy.load().current.toJson(10)==reg.snapshot().current.toJson(10) && copy.load().projectId=="other" && copy.load().operational.isEmpty(),"bundle preserves defaults/aliases/archives without admission");
+        auto legacy=MeasurementEnvironment{};legacy.projectId="legacy";legacy.current=fixture(1);legacy.history=legacy.current.setups;
+        const auto legacyJson=legacy.encode(10);check(MeasurementEnvironment::decode(legacyJson,10).encode(10)==legacyJson && legacyJson["schemaVersion"]==1,"legacy no-op JSON and hash preserved");
+        check(legacy.defaults({"c0"}).status==CameraDefaultsStatus::Ready,"unique legacy setup resolves without migration");
+        auto second=legacy.current.setups[0];second.id={"s-other"};legacy.current.setups.append(second);legacy.history.append(second);
+        check(legacy.defaults({"c0"}).status==CameraDefaultsStatus::Ambiguous,"multiple legacy setups require explicit choice");legacy.operational["c0"]="s-other";
+        check(legacy.defaults({"c0"}).setup==second.id,"explicit legacy operational setup preserved");
+        legacy.current.cameras[0].physical=PhysicalDeviceIdentity{"Vendor","Model","serial",DeviceIdentityConfidence::SerialReported};legacy.current.cameras[0].device={"gentl",{},DeviceIdentityConfidence::Unavailable,1,{}};
+        legacy.current.profiles={{{"p1"},{"c0"},second.id,"First",1,{},true},{{"p2"},{"c0"},second.id,"Second",1,{},true}};
+        check(legacy.defaults({"c0"}).status==CameraDefaultsStatus::Ambiguous,"multiple legacy profiles never select first");
+        legacy.current.profiles.removeLast();check(legacy.defaults({"c0"}).profile==ProfileId{"p1"},"one matching legacy profile resolves");
+        MeasurementEnvironmentRepository legacyRepo(dir.path()+"/legacy-defaults.vfproject","legacy-defaults",10);MeasurementEnvironmentRegistry legacyRegistry(legacyRepo);
+        auto legacyContract=initial.current;auto extra=legacyContract.profiles[0];extra.id={"extra-profile"};legacyContract.profiles.append(extra);legacyRegistry.replace(legacyContract);
+        const auto legacyBefore=legacyRegistry.snapshot();check(legacyBefore.registrations.isEmpty() && legacyBefore.defaults(camera(0).id).status==CameraDefaultsStatus::Ambiguous,"legacy multiple profiles stay unmodified and ambiguous");
+        legacyRegistry.selectDefaults(camera(0).id,"CHOSEN",extra.setup,extra.id,legacyBefore.revision);
+        check(legacyRegistry.snapshot().defaults(camera(0).id).profile==extra.id && legacyRegistry.snapshot().current.toJson(10)==legacyBefore.current.toJson(10),"explicit legacy selection changes metadata only");
+        legacyRegistry.renameCamera(camera(0).id,"RENAMED","Renamed legacy",legacyRegistry.snapshot().revision);
+        check(legacyRegistry.snapshot().defaults(camera(0).id).profile==extra.id,"legacy rename preserves explicit profile choice");
+        reject([&]{legacyRegistry.selectDefaults(camera(1).id,"BAD",extra.setup,extra.id,legacyRegistry.snapshot().revision);},"explicit choice rejects cross-camera relation");
+        MeasurementEnvironmentRepository singleRepo(dir.path()+"/legacy-single.vfproject","single",10);MeasurementEnvironmentRegistry single(singleRepo);single.replace(fixture(1));
+        const auto singleBefore=single.snapshot();single.renameCamera({"c0"},"LEGACY","Legacy camera",singleBefore.revision);
+        check(single.snapshot().current.cameras[0].id==singleBefore.current.cameras[0].id && single.snapshot().current.setups==singleBefore.current.setups && single.snapshot().current.profiles.size()==1 && single.snapshot().defaults({"c0"}).status==CameraDefaultsStatus::Pending,"explicit legacy webcam alias edit preserves UUID and setup, adds pending profile atomically");
+        reject([&]{single.renameCamera({"c0"},"OLD","Stale",singleBefore.revision);},"stale rename rejected");
+        // Strict pending codecs reject fields or claims that might turn defaults into evidence.
+        auto setup=initial.current.setups[0];setup.geometry.resolution={640,480};reject([&]{setup.toJson();},"pending setup cannot claim a resolution");
+        auto profile=initial.current.profiles[0];profile.requested.exposureTimeUs=5000;reject([&]{profile.toJson();},"pending profile cannot claim exposure");
+        auto raw=initial.current.setups[0].toJson();raw["geometry"]=fixture(1).setups[0].geometry.toJson();reject([&]{MeasurementSetupDescriptor::fromJson(raw);},"pending setup codec requires null");
+        raw=initial.current.profiles[0].toJson();raw["requested"]=QJsonObject{};reject([&]{AcquisitionProfile::fromJson(raw);},"pending profile codec requires null");
+        auto changed=initial.current.setups[0];changed.pending=false;changed.opticalProfile="lens";changed.workingPlane="plane";changed.geometry=fixture(1).setups[0].geometry;
+        check(initial.current.setups[0].revised(changed).revision==2,"explicit setup completion revises geometry");
+    }
     QTextStream(stdout)<<checks<<" measurement environment checks passed\n";return 0;
 }catch(const std::exception& e){QTextStream(stderr)<<e.what()<<" after "<<checks<<" checks\n";return 1;}}

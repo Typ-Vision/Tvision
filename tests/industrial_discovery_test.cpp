@@ -58,6 +58,8 @@ int main(int argc,char** argv){QCoreApplication app(argc,argv);try{
     bool idle=true;const auto path=dir.path()+"/project.vfproject";
     MeasurementWorkspace workspace(path,"project",[&]{return idle;},[&]{return QVector<DeviceBinding>{webcam};});
     workspace.observeInventory(inventory);
+    reject([&]{workspace.registerCamera(inventory.devices[1],"Unsaved");});
+    {QFile saved(path);check(saved.open(QIODevice::WriteOnly),"saved project fixture");saved.write("{}");}
     const auto cameraId=workspace.registerCamera(inventory.devices[1],"Industrial");
     workspace.registerCamera(inventory.devices[0],"Webcam");
     const auto e=workspace.environment();
@@ -65,7 +67,7 @@ int main(int argc,char** argv){QCoreApplication app(argc,argv);try{
     check(adapter->capabilities().softwareTrigger,"shared factory preserves webcam capability");
     reject([&]{CameraProviderFactory{}.webcam(e.current.cameras[1],{});});
     check(e.current.cameras.size()==2 && e.current.cameras[0].id==cameraId,"shared persistent CameraId");
-    reject([&]{workspace.registerCamera(inventory.devices[1],"Duplicate");});
+    check(workspace.registerCamera(inventory.devices[1],"Duplicate")==cameraId,"Duplicate registration returns existing physical camera");
     idle=false;reject([&]{workspace.registerCamera(inventory.devices[1],"Busy");});idle=true;
     MeasurementWorkspace restarted(path,"project",[]{return true;});
     check(restarted.environment().current.cameras[0].id==cameraId && restarted.availability(e.current.cameras[0]).contains("Keşif yapılmadı"),"restart keeps registration without availability permission");

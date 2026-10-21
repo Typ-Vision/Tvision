@@ -10,6 +10,15 @@ Optik, düzlem, raw koordinat çerçevesi, world eksen yönü veya çözünürl�
 
 ## Taşıma
 
+CCUX-01: bundle1 yeni environment2 `registrations` ve pending setup2/profile2
+kayıtlarını da taşır. Alias, CameraId/setup/profile ID'leri ve arşivler korunur;
+boş projeye import yalnız projectId/revision sahipliğini yeniler. Merge olmadığı
+için hedefte alias çakışması overwrite ile çözülmez; kaynak içindeki alias/ilişki
+çakışması strict decode ile reddedilir. Save As aynı kayıtları korur. Readback,
+yerel route veya oturum/üretim izni eklenmez. Legacy belge açılışında migration yoktur;
+ilk açık metadata/default seçim komutu gerektiğinde yeni kayıt biçimini oluşturur.
+
+
 - **Kalibrasyon bağımlılıklarını dışa aktar / boş projeye al:** .vfmeasurement schema1 registry + immutable katalog. Proje, üretim arşivi ve görüntüleri içermez. Yeni proje ID’sine açık import edilir; remembered seçim kullanım izni değildir. Mevcut registry üzerine merge/overwrite yoktur.
 - **Kaydedilmiş projeyi bağımlılıklarıyla farklı kaydet:** saved proje bytes, registry/katalog, varsa legacy .calibrations.json ve tüm snapshots/events/cycles kopyalanır. Worker kaynak/destination lock, SHA256, strict replay, symlink/path/boyut ve son bağımlılık karşılaştırmalarını denetler. Üretim sınırı 10000 kayıt / 512 MiB; dosya başına 20 MiB. Proje en son görünür olur. Kesinti sidecar prefix bırakabilir; aynı snapshot ile retry idempotent, çatışmada overwrite yoktur. Bağımlılıkların tek atomik transaction olduğu iddia edilmez.
 - Görüntüler otomatik paketlenmez. Destination’da relative asset aynı içerikle mevcut olmalı (aynı klasörde farklı adla Save As geçerlidir); eksik/değişmiş asset veya tool dependency açık ret alır. Kaynak proje bytes’ı/IDs/geçmiş değiştirilmez. Kopya/import explicit yeniden aktivasyon ister. Taşınabilir tam asset paketi veya disk-full/power-loss kabulü değildir.

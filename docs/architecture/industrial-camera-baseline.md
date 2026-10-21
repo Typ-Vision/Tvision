@@ -74,8 +74,8 @@ Run/begin native admission gerektirir; engine/27 ve terminal8/9 değişmedi.
 
 ## Şema ve sürüm tablosu
 
-Bu kart hiçbir yeni sürüm numarası ayırmaz. Sonraki kart, yeni zorunlu alanı explicit
-yeni codec dalıyla ekler; mevcut schema'ya alan ekleyip exact-field kontrolünü gevşetmez.
+Yeni zorunlu alan explicit yeni codec dalıyla eklenir; mevcut schema'ya alan
+eklenip exact-field kontrolü gevşetilmez. CCUX-01 aşağıdaki pending dallarını ekledi.
 
 | Sözleşme | Bugünkü sürüm / kaynak |
 | --- | --- |
@@ -84,7 +84,8 @@ yeni codec dalıyla ekler; mevcut schema'ya alan ekleyip exact-field kontrolün�
 | Engine | `visionflow.execution/28`; EUI-02 Blob sınır filtresi; ICM-08b trusted industrial completion/terminal8–9 korunur; `application/ExecutionService.hpp` |
 | Tool descriptor'ları | 17 built-in: image_file1, template_match1, blob4, edge1, calculate1, webcam1, measurement2, preprocess1, code_read2, edge_point3, geometry_measurement2, edge_pair2, line_fit3, circle_fit3, pattern_pose1, shape_pose1, industrial_camera1 (minimum editor9); `domain/ToolRegistry.cpp` |
 | Measurement contract | DeviceBinding1, GeometryDescriptor1, MeasurementCamera1, MeasurementSetupDescriptor1, MeasurementSetupContract1; DeviceCapabilities sürümsüz dört bool nested nesne; `domain/MeasurementSetupContract.cpp`. ICM-03a ekledi: MeasurementCamera2 (`physical` zorunlu; yoksa schema 1 bayt aynı), PhysicalDeviceIdentity1; TransportLocator1/BackendIdentity1 yalnız yerel, projeye yazılmaz. ICM-03b ekledi: GeometryDescriptor2 (decimation/reverse + açık ROI/binning; yalnız endüstriyel), MeasurementSetupContract2 (`profiles` boş değilse), AcquisitionProfile1/AcquisitionSettings1, AcquisitionReadback1/GeometryReadback1; eski yazımlar bayt/hash aynı |
-| Environment / transfer | measurement-environment1, measurement-bundle1; `application/MeasurementEnvironment.cpp`. Registry geçmişi/arşiv/selection alanları hash'e dahildir |
+| CCUX kayıt / pending | MeasurementSetupDescriptor2: yalnız bekleyen kurulum, boş opticalProfile/workingPlane ve geometry=null; AcquisitionProfile2: yalnız bekleyen ayarlar, requested=null. Tamamlanmış değerler mevcut setup1/profile1 codec'ini kullanır; completion explicit revision ister. Kamera1–2, geometri1–2 ve contract1–2 değişmez; webcam için yalnız pending profile bağlanabilir. |
+| Environment / transfer | measurement-environment1–2, measurement-bundle1; environment2 yalnız `registrations` doluyken yazılır: CameraId → shortId/setupId/profileId; strict alanlar, kısa ID benzersizliği ve camera/setup/profile bütünlüğü doğrulanır. Boşsa eski environment1 JSON/hash korunur; `application/MeasurementEnvironment.cpp`. Registry geçmişi/arşiv/selection alanları hash'e dahildir |
 | Source evidence | SetupReference1, MeasurementSourceEvidence1; origin camera_acquired/setup_file/trial_file/legacy_record, sourceKind recipe_tool/calibration_session; `MeasurementSourceIdentity.cpp` |
 | Kalibrasyon | MeasurementSetup1; CalibrationModelRecord wrapper1–5 (model-ready1, named2, legacy3, association4, migration5); active-calibration katalog1; `ActiveCalibrationService.cpp` |
 | Eski model codec | uniform1, raw homography2, manual scale3; `MeasurementService.cpp`; yeni wrapper eski model/hash'i yeniden yazmaz |
@@ -163,3 +164,30 @@ seri/görüntü/reboot doğrulaması ICM-01b'de kalır.
 opt-in ekler; scope1 exact reader korunur. System evidence dış zarf2, model/wrapper1–5,
 root/recipe/editor9/terminal7 ve engine değişmedi: industrial execution/production
 henüz açılmadı. Alan sözleşmesi [kaynak-kurulum belgesindedir](scoped-calibration-integration.md#icm-06b--industrial-model-ready-kapsamı).
+
+## CCUX-01 kayıt ve varsayılan çözümü
+
+`MeasurementWorkspace::registerCamera(entry, shortId, name, expectedRevision)`
+kaydedilmiş projede keşfi doğrular, UUID kamera ve pending varsayılan setup/profile'ı
+tek environment commit'inde oluşturur. Boş kısa ID `CAM_01` biçiminde üretilir;
+1–32 ASCII harf/rakam/alt çizgi, ilk karakter harf, büyük/küçük harf duyarsız
+benzersizlik uygulanır. Arşivli ID'ler ayrılmış kalır. İsim boşsa application
+etiket atar; fiziksel lens/düzlem, geometri veya exposure/gain değeri uydurmaz.
+Aynı fiziksel cihaz `{camera, existing=true}` döndürür; yeni kayıt/UUID üretmez.
+Arşivli aynı cihaz açık ret alır. Endüstriyel kimlik exact vendor/model/seri ister;
+producer/Device ID/IP kayıt kimliği değildir. Webcam eski provider eşlemesini korur.
+
+`MeasurementEnvironment::defaults(CameraId)` salt okunur: önce operational setup,
+sonra kayıtlı varsayılan, sonra tek arşivlenmemiş legacy setup. Profilde açık kayıt
+veya tek eşleşme gerekir; ilk profile fallback yoktur. Sonuç Ready (yalnız kalıcı
+kurulum bilgisi), Pending, Ambiguous, Missing veya Archived'dır; hiçbiri acquisition,
+kalibrasyon aktivasyonu veya production admission değildir. Pending geometri/cache
+ve acquisition kimliği üretemez. Açılış registry/UUID/schema migration yapmaz.
+
+`renameCamera` metadata komutudur; device/setup/profile revision ve model seçimini
+korur, aynı değerlerle no-op'tur. Legacy tek webcam setup'ında ilk açık alias edit'i
+atomik pending profil oluşturur; belirsizlikte önce `selectCameraDefaults` gerekir.
+Bu explicit seçim kısa ID ve default bağı atomik kaydeder, operational setup'ı da
+aynı hedefe getirir. Workspace hedef setup/profile değişince yalnız o kameranın
+oturum iznini düşürür; A→B→A izin canlandırmaz. Aynı hedefte metadata değişimi
+aktivasyonu korur. Tüm komutlar expected revision ve repository lock/CAS kullanır.

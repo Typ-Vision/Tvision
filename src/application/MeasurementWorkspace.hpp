@@ -25,9 +25,13 @@ public:
         active_.refreshAvailability(webcams,inventory_.industrial);discovered_=webcams;discoveryDone_=!inventory_.cancelled;
     }
     CameraId registerCamera(const CameraDiscoveryEntry& entry,const QString& name){
+        const auto revision=environment().revision;return registerCamera(entry,{},name,revision).camera;
+    }
+    CameraRegistrationResult registerCamera(const CameraDiscoveryEntry& entry,const QString& shortId,const QString& name,int expectedRevision){
+        if(!QFileInfo(path_).isFile())throw std::runtime_error("Saved project required");
         if(!gate_())throw std::runtime_error("Runtime/worker/pending kayıt/ACK meşgul");
-        if(name.trimmed().isEmpty())throw std::runtime_error("Kamera adı gerekli.");
-        auto e=environment();MeasurementCamera camera;camera.name=name.trimmed();
+        environment();MeasurementCamera camera;
+        camera.name=name.trimmed().isEmpty() ? (shortId.trimmed().isEmpty() ? QString("Camera"):shortId.trimmed()):name.trimmed();
         camera.id={QUuid::createUuid().toString(QUuid::WithoutBraces)};
         if(entry.webcam && !entry.industrial){camera.device=*entry.webcam;camera.device.resolve(discovered_);}
         else if(entry.industrial && !entry.webcam){
@@ -36,8 +40,19 @@ public:
                 throw std::runtime_error("Tam ve belirsiz olmayan keşif gerekli.");
             resolveRoutes(*camera.physical,inventory_.industrial.devices);
         }else throw std::runtime_error("Tek keşif kaydı gerekli.");
-        camera.validate();e.current.cameras.append(camera);replace(e.current,e.revision);return camera.id;
+        camera.validate();return registry_.registerCamera(camera,shortId,expectedRevision);
     }
+    void renameCamera(const CameraId& id,const QString& shortId,const QString& name,int expectedRevision){
+        if(!gate_())throw std::runtime_error("Workspace busy");
+        registry_.reload();registry_.renameCamera(id,shortId,name,expectedRevision);
+    }
+    void selectCameraDefaults(const CameraId& id,const QString& shortId,const SetupId& setup,const ProfileId& profile,int expectedRevision){
+        if(!gate_())throw std::runtime_error("Workspace busy");
+        registry_.reload();const auto before=registry_.snapshot();const auto previous=before.defaults(id);
+        registry_.selectDefaults(id,shortId,setup,profile,expectedRevision);
+        if(before.operational.value(id.value)!=setup.value || previous.setup!=setup || previous.profile!=profile)active_.disconnect(id);
+    }
+    CameraDefaults cameraDefaults(const CameraId& id){return environment().defaults(id);}
     QString availability(const MeasurementCamera& c) const {
         if(c.physical){
             if(!inventoryDone_)return "Keşif yapılmadı • kayıtlı endüstriyel kamera";

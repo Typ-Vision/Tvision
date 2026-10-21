@@ -116,6 +116,8 @@ struct MeasurementSetupDescriptor {
     void validate() const;
     QJsonObject toJson() const;
     static MeasurementSetupDescriptor fromJson(const QJsonObject&);
+    // CCUX-01: no geometry or optical claims until explicit readback/declaration.
+    bool pending=false;
     // Rename preserves revision; physical/geometry changes increment it.
     MeasurementSetupDescriptor revised(const MeasurementSetupDescriptor&) const;
     QString geometryId() const;
@@ -151,6 +153,8 @@ struct AcquisitionProfile {
     int revision=1;
     AcquisitionSettings requested;
     bool operator==(const AcquisitionProfile&) const = default;
+    // CCUX-01: requested settings are absent until supported readback is supplied.
+    bool pending=false;
     // First product profile: Mono8 and manual exposure/gain only.
     void validate() const;
     QJsonObject toJson() const;
