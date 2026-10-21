@@ -17,6 +17,7 @@ QWidget* MainWindow::makeCameraManager(){
         return !editorSession_.busy() && !runtimeJobs_.busy() && !(runtime_ && runtime_->busy()) &&
           !(runtimeCoordinator_ && (runtimeCoordinator_->state()==RuntimeState::Running || runtimeCoordinator_->state()==RuntimeState::Starting || runtimeCoordinator_->state()==RuntimeState::Stopping)) && !(plc_ && plc_->blocking());
     },cameraSession_,settingsFile_);
+    cameraManager_->onProject=[this]{selectPage("projects");};
     cameraManager_->onChanged=[this]{if(calibrationOverview_)calibrationOverview_->refresh();};
     return cameraManager_;
 }

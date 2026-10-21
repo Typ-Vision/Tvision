@@ -6,6 +6,7 @@ görev” ifadeleri yazıldıkları tarihe aittir.
 
 | Dönem / görev | Kayıt |
 | --- | --- |
+| 21 Ekim 2026 — CCUX-03 | [Sade Kameralar ekranı, kayıt/ayar akışı ve iki boyutta UI kabulü](2026-10-21-ccux-03.md) |
 | 21 Ekim 2026 — CCUX-02 | [Kamera ayarı/readback servisi, worker işlemi ve doğrulanan rollback](2026-10-21-ccux-02.md) |
 | 21 Ekim 2026 — CCUX-01 | [Atomik kamera kaydı, kısa ID ve pending varsayılanlar](2026-10-21-ccux-01.md) |
 | 21 Ekim 2026 — CCUX-PLAN-02 | [Robot dışı 15 uygulama kartı ve kısa başlangıç paketi](2026-10-21-ccux-plan-02.md) |

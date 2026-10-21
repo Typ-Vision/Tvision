@@ -4,17 +4,20 @@
 
 ## Devam noktası
 
-**Sonraki görev: [CCUX-03](architecture/camera-setup/03-camera-ui.md).**
-**CCUX-02 tamamlandı:** kamera ID'sinden ayar oturumu, yerel rota çözümü, typed
-aralık/birim/readback, worker + lease altında uygula/doğrula/kaydet; hata/disk/CAS
-rollback ve açık unusable durumu. Yeni Release/5 CTest kanıtı ve API sınırları
-[kapanışta](archive/2026-10-21-ccux-02.md); `build/ccux/ccux-02/`.
-Native backend hâlâ Unavailable; eksik settings desteği açık unsupported döner.
-Pending optik kurulum tamamlanmış sayılmaz. Önkoşul
-[CCUX-01](archive/2026-10-21-ccux-01.md) kayıt/varsayılanları korunur.
+**Sonraki görev: [CCUX-04](architecture/camera-setup/04-preview-service.md).**
+**CCUX-03 tamamlandı:** tek kamera listesi, kısa ID/ad, tara/seç/ekle ile otomatik
+varsayılanlar; CCUX-02 üzerinden ayar oku/uygula/doğrula/kaydet. Teknik alanlar
+Ayrıntılar'da; eski profil/rota belirsizliği görünür seçim ister. Proje yönlendirmesi
+reçete istemez. Mevcut önizleme ve oturumluk deneysel onay korunur; yeni canlı
+kontroller CCUX-05'tedir. Yeni Release/4 CTest ve 1400×900 / 850×600 ürün temalı
+fixture görselleri [kapanışta](archive/2026-10-21-ccux-03.md);
+`build/ccux/ccux-03/`. Fiziksel kamera/UI donanım kabulü yapılmadı.
+Native backend hâlâ Unavailable; eksik settings desteği açık unsupported kalır.
+Pending optik kurulum tamamlanmış sayılmaz. Önkoşullar
+[CCUX-01](archive/2026-10-21-ccux-01.md) ve
+[CCUX-02](archive/2026-10-21-ccux-02.md) kayıt/servis sözleşmeleri korunur.
 [CCUX planı](architecture/camera-setup/README.md) sırasıyla sürer; **Hand-eye kapsam
-dışı.** Bu teslim servis kapsamıdır; sade UI CCUX-03'tedir.
-Tamamlanmış KMC/ICM/EXP işleri yeniden başlatılmadı.
+dışı.** Tamamlanmış KMC/ICM/EXP işleri yeniden başlatılmadı.
 
 ## Hazır olanlar
 
@@ -70,5 +73,5 @@ Tamamlanmış KMC/ICM/EXP işleri yeniden başlatılmadı.
 UI: build/reference-ui/visionflow.exe; core: build/kmc9-core-off.
 PATH/build/test/başlatma README'de; mevcut UI kullanımı
 [kullanım rehberinde](camera-runtime-usage.md). Her kartta yalnız değişen kapsamı
-kanıtla. CCUX-02 yeni Release servis hedefleri ve ilgili CTest kanıtını içerir;
-fiziksel kamera/UI kabulü sayılmaz. Detay ve kalıcı kanıt kapanışta, sonraki tek görev bu özetin başında tutulur.
+kanıtla. CCUX-03 yazılım UI kabulüdür; fiziksel kamera, native DPI veya kurulum
+kabulü sayılmaz. Detay ve kalıcı kanıt kapanışta, sonraki tek görev bu özetin başında tutulur.

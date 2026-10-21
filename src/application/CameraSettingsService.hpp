@@ -28,6 +28,7 @@ public:
     CameraState state() const;
     QString error() const;
     void stop();
+    ShutdownState shutdownState() const {return worker_->shutdownState();}
 private:
     friend class CameraSettingsService;
     struct Shared {

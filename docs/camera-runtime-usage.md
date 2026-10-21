@@ -1,7 +1,7 @@
 # Kamera, kalibrasyon ve Runtime kullanımı
 
 21 Ekim 2026 mevcut uygulama. [CCUX hedef akışı](architecture/camera-setup/README.md)
-henüz uygulanmadı; bu rehber her ilgili UI tesliminde güncellenir.
+kartlar halinde uygulanır; güncel tamamlanma durumu [devir özetindedir](progress.md).
 
 
 1. Project Manager'dan proje oluşturun/açın ve kaydedin. Recipe Manager'dan reçete
@@ -9,15 +9,27 @@ henüz uygulanmadı; bu rehber her ilgili UI tesliminde güncellenir.
 2. Image File için gerçek görüntü açın; kamera kaynağında edinim yapın. **Run Flow**
    akışı yürütür. **Run Tool** güncel girdilerle seçili aracı çalıştırır; eksik
    upstream sonucu veya görüntü yerine değer üretmez.
-3. **Camera Manager** ile kamerayı projeye kaydedin; yerel producer hatırlanır.
+3. **Setup → Camera Manager** içinde **Cihazları ara → seç → Ekle** ile kamerayı
+   kaydedin. Kamera ID boşsa CAM_01 gibi benzersiz bir ID atanır; açıklama/ad
+   isteğe bağlıdır. Kayıt ve varsayılan kurulum/profil birlikte oluşturulur; reçete
+   gerekmez. **ID / adı kaydet** bağları koruyarak metadata günceller. Kayıtlı kamera
+   taramada tekrar eklenmez, çevrimdışıyken listede kalır.
+   **Ayarları oku** desteklenen backend'den başlangıç, aralık ve birimleri getirir;
+   exposure/gain için **Uygula ve kaydet** gerçek readback doğrulanınca kaydeder.
+   Native settings backend henüz Unavailable olduğundan fiziksel cihazda bu
+   düğmeler destek varmış gibi açılmaz. Hatalı ayar başarı diye gösterilmez.
+   **Ayrıntılar** yerel producer/rota/timeout ve optik/geometri taslağını taşır.
+   Birden fazla uygun rota veya eski profil belirsizliğinde seçim görünür açılır;
+   eski varsayılan profil ayrıca kaydedilir. Bilinmeyen lens/düzlem ölçüm izni vermez.
+   Küçük pencerede alt işlemlere dikey kaydırma ile ulaşılır.
    **Setup → Calibration** aynı kamera kayıtlarını kullanır. Kalibrasyonda kayıtlı edinim
    profilini seçin; aday kaydı etkin model değildir. Aktivasyon ve kaynak→kurulum bağı ayrıdır.
    Editor’da Industrial Camera ekleyin, Properties üzerinden kayıtlı profili seçip
    **Profili bağla / güncelle** düğmesine basın. **Görüntü al** yeni kare ister; seçim
    tek başına edinim yapmaz. Profil düzenlenirse açıkça yeniden bağlayın.
    Mevcut COE-050-M-USB-050-IR-C için Camera Manager’da **Deneysel OECS edinimini
-   kullan** seçimi ve kurulu x64 runtime ile **Önizleme** açılır. Tam sensör
-   Mono8 gerekir; SDK derlemesi [tanı rehberindedir](windows-camera-diagnostics.md).
+   kullan** seçimi ve kurulu x64 runtime ile **Önizleme** açılır. Mevcut **Önizleme** korunur; yeni tek/canlı kontrol akışı sonraki CCUX
+   kartlarındadır. Tam sensör Mono8 ve tamamlanmış açık optik/geometri taslağı gerekir; SDK derlemesi [tanı rehberindedir](windows-camera-diagnostics.md).
    **Görünen kareyi kanıtıyla kaydet** yeni `.pgm` ve `.pgm.json` yazar.
    Tetik eşleşmesi doğrulanmamıştır; Stop kareyi temizler. Tercih restart’ta kapalıdır.
    Editor üstündeki **Deneysel OECS kamera / dosyayı Editor'da kullan** seçimi

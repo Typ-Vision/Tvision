@@ -37,30 +37,33 @@ CameraManager::CameraManager(std::function<MeasurementWorkspace*()> context,std:
     layout->addWidget(text("Kamera kaydı ve keşif edinim izni vermez. Önizleme ölçüm veya çevrim sonucu değildir."));
     auto* actions=new QHBoxLayout;layout->addLayout(actions);scan_=button(actions,"Cihazları ara","cameraScan");stop_=button(actions,"Durdur","cameraStop");
     status_=text("Henüz arama yapılmadı. Kayıtlar için kaydedilmiş proje açın.","cameraStatus");layout->addWidget(status_);
-    auto* advanced=new QGroupBox("Bağlantı ayrıntıları / yerel producer");advanced->setCheckable(true);advanced->setChecked(false);auto* av=new QVBoxLayout(advanced);
+    auto* project=button(layout,"Proje oluştur / aç","cameraProject");connect(project,&QPushButton::clicked,this,[this]{if(onProject)onProject();});
+    auto* advanced=new QGroupBox("Ayrıntılar");advanced->setObjectName("cameraAdvanced");advanced->setCheckable(true);advanced->setChecked(false);auto* al=new QVBoxLayout(advanced);advancedBody_=new QWidget;al->addWidget(advancedBody_);auto* av=new QVBoxLayout(advancedBody_);advancedBody_->hide();connect(advanced,&QGroupBox::toggled,advancedBody_,&QWidget::setVisible);
     producer_=new QLineEdit;producer_->setObjectName("cameraProducer");producer_->setPlaceholderText("Boşsa hatırlanan producer'lar ve kurulu GenTL ortamı kullanılır");av->addWidget(producer_);
-    auto* choose=button(av,"Producer seç…","cameraChoose");layout->addWidget(advanced);
-    producer_->hide();choose->hide();connect(advanced,&QGroupBox::toggled,this,[this,choose](bool visible){producer_->setVisible(visible);choose->setVisible(visible);});
+    auto* choose=button(av,"Producer seç…","cameraChoose");
+
     connect(choose,&QPushButton::clicked,this,[this]{attempt([this]{if(jobs_.busy() || !gate_())return;auto f=QFileDialog::getOpenFileName(this,"Windows x64 GenTL producer",{},"GenTL producer (*.cti)");if(!f.isEmpty()){local_.setProducers({f});producer_->setText(f);}});});
     table_=new QTableWidget(0,5);table_->setObjectName("cameraDevices");table_->setHorizontalHeaderLabels({"Kamera","Model","Seri / kimlik","Transport","Durum"});
     table_->setSelectionBehavior(QAbstractItemView::SelectRows);table_->setSelectionMode(QAbstractItemView::SingleSelection);table_->setEditTriggers(QAbstractItemView::NoEditTriggers);
-    table_->horizontalHeader()->setSectionResizeMode(QHeaderView::Interactive);table_->horizontalHeader()->setStretchLastSection(true);table_->setMinimumHeight(190);layout->addWidget(table_);
+    table_->horizontalHeader()->setSectionResizeMode(QHeaderView::Interactive);table_->horizontalHeader()->setStretchLastSection(true);table_->setMinimumHeight(150);table_->setMaximumHeight(210);layout->addWidget(table_);
     detail_=text({},"cameraDetail");layout->addWidget(detail_);
     auto* form=new QFormLayout;form->setRowWrapPolicy(QFormLayout::WrapLongRows);layout->addLayout(form);
-    name_=new QLineEdit;name_->setObjectName("cameraName");name_->setMaxLength(128);form->addRow("Kayıt adı",name_);
-    register_=button(layout,"Seçili kamerayı projeye kaydet","cameraRegister");
-    auto* rename=button(layout,"Kayıt adını güncelle","cameraRename");
+    shortId_=new QLineEdit;shortId_->setObjectName("cameraShortId");shortId_->setMaxLength(32);shortId_->setPlaceholderText("Boşsa CAM_01 otomatik atanır");form->addRow("Kamera ID",shortId_);
+    name_=new QLineEdit;name_->setObjectName("cameraName");name_->setMaxLength(128);form->addRow("Açıklama / ad",name_);
+    register_=button(layout,"Ekle","cameraRegister");
+    auto* rename=button(layout,"ID / adı kaydet","cameraRename");
     connect(rename,&QPushButton::clicked,this,[this]{attempt([this]{
         if(jobs_.busy() || !gate_())throw std::runtime_error("Kamera/Runtime meşgul.");
         const int i=table_->currentRow();auto* ws=context_();if(!ws || i<0 || !rows_[i].camera)throw std::runtime_error("Kayıtlı kamera seçin.");
-        auto e=ws->environment();for(auto& c:e.current.cameras)if(c.id==rows_[i].camera->id){auto next=c;next.name=name_->text().trimmed();c=c.rebound(next);}
-        ws->replace(e.current,e.revision);refresh();if(onChanged)onChanged();
+        auto e=ws->environment();ws->renameCamera(rows_[i].camera->id,shortId_->text(),name_->text().trimmed().isEmpty()?shortId_->text():name_->text(),e.revision);refresh();if(onChanged)onChanged();
     });});
-    routes_=new QComboBox;routes_->setObjectName("cameraRoutes");routes_->setSizeAdjustPolicy(QComboBox::AdjustToMinimumContentsLengthWithIcon);routes_->setMinimumContentsLength(14);form->addRow("Yerel rota",routes_);
-    profiles_=new QComboBox;profiles_->setObjectName("cameraProfiles");form->addRow("Kurulum / acquisition profili",profiles_);
-    auto* draft=button(layout,"Kurulum / profil taslağını düzenle","cameraProfileEdit");
+    auto* af=new QFormLayout;af->setRowWrapPolicy(QFormLayout::WrapLongRows);av->addLayout(af);
+    routes_=new QComboBox;routes_->setObjectName("cameraRoutes");routes_->setSizeAdjustPolicy(QComboBox::AdjustToMinimumContentsLengthWithIcon);routes_->setMinimumContentsLength(14);af->addRow("Yerel rota",routes_);
+    profiles_=new QComboBox;profiles_->setObjectName("cameraProfiles");af->addRow("Eski kayıt: kurulum / profil",profiles_);af->labelForField(profiles_)->setObjectName("cameraProfilesLabel");
+    auto* defaults=button(av,"Seçili eski profili varsayılan yap","cameraDefaultsSave");connect(defaults,&QPushButton::clicked,this,[this]{attempt([this]{if(jobs_.busy() || !gate_())throw std::runtime_error("Kamera/Runtime meşgul.");auto* ws=context_();const int i=table_->currentRow();if(!ws || i<0 || !rows_[i].camera)throw std::runtime_error("Kayıtlı kamera seçin.");auto e=ws->environment();for(const auto& p:e.current.profiles)if(p.id.value==profiles_->currentData().toString()){ws->selectCameraDefaults(rows_[i].camera->id,shortId_->text(),p.setup,p.id,e.revision);refresh();if(onChanged)onChanged();return;}throw std::runtime_error("Profil seçin.");});});
+    auto* draft=button(av,"Optik / geometri taslağı…","cameraProfileEdit");
     connect(draft,&QPushButton::clicked,this,[this]{attempt([this]{editProfile();});});
-    auto* remember=button(layout,"Seçili yerel rotayı hatırla","cameraRememberRoute");
+    auto* remember=button(av,"Seçili yerel rotayı hatırla","cameraRememberRoute");
     connect(remember,&QPushButton::clicked,this,[this]{attempt([this]{
         if(jobs_.busy() || !gate_())throw std::runtime_error("Kamera/Runtime meşgul.");
         const auto i=table_->currentRow();if(i<0 || !rows_[i].discovery || !rows_[i].discovery->industrial || routes_->currentIndex()<0)throw std::runtime_error("Exact kamera ve rota seçin.");
@@ -70,81 +73,89 @@ CameraManager::CameraManager(std::function<MeasurementWorkspace*()> context,std:
     });});
     exposure_=new QLineEdit;exposure_->setObjectName("cameraExposure");gain_=new QLineEdit;gain_->setObjectName("cameraGain");
     form->addRow("Exposure (µs)",exposure_);form->addRow("Gain (dB)",gain_);
-    timeout_=new QSpinBox;timeout_->setObjectName("cameraTimeout");timeout_->setRange(1,30000);timeout_->setValue(1000);timeout_->setSuffix(" ms");form->addRow("İşlem bütçesi",timeout_);
+    timeout_=new QSpinBox;timeout_->setObjectName("cameraTimeout");timeout_->setRange(1,30000);timeout_->setValue(1000);timeout_->setSuffix(" ms");af->addRow("İşlem bütçesi",timeout_);
     experimental_=new QCheckBox("Deneysel OECS edinimini kullan");experimental_->setObjectName("cameraExperimental");layout->addWidget(experimental_);
     experimentalNotice_=text(ExperimentalOecsAcquisition::notice(),"cameraExperimentalNotice");outer->insertWidget(0,experimentalNotice_);experimentalNotice_->hide();
-    runtime_=new QLineEdit(ExperimentalOecsAcquisition::installedRuntime());runtime_->setObjectName("cameraExperimentalRuntime");form->addRow("Deneysel OECS runtime DLL",runtime_);runtime_->hide();form->labelForField(runtime_)->hide();
-    connect(experimental_,&QCheckBox::toggled,this,[this,form](bool on){runtime_->setVisible(on);form->labelForField(runtime_)->setVisible(on);experimentalNotice_->setVisible(on);lastFrame_.reset();image_->clear();image_->setText("Önizleme yok.");controls();});
+    runtime_=new QLineEdit(ExperimentalOecsAcquisition::installedRuntime());runtime_->setObjectName("cameraExperimentalRuntime");af->addRow("Deneysel OECS runtime DLL",runtime_);
+    connect(experimental_,&QCheckBox::toggled,this,[this](bool on){experimentalNotice_->setVisible(on);lastFrame_.reset();image_->clear();image_->setText("Önizleme yok.");controls();});
     connect(runtime_,&QLineEdit::textChanged,this,[this]{controls();});
-    auto* commands=new QHBoxLayout;layout->addLayout(commands);apply_=button(commands,"Ayarları uygula","cameraApply");preview_=button(commands,"Önizleme","cameraPreview");
-    check_=button(layout,"Seçili GenTL rotasını salt okunur aç / kapat","cameraCheck");
-    readback_=text("Gerçek readback yok.","cameraReadback");layout->addWidget(readback_);
+    auto* commands=new QHBoxLayout;layout->addLayout(commands);settingsRead_=button(commands,"Ayarları oku","cameraSettingsRead");apply_=button(commands,"Uygula ve kaydet","cameraApply");preview_=button(commands,"Önizleme","cameraPreview");
+    check_=button(av,"Seçili GenTL rotasını salt okunur aç / kapat","cameraCheck");
+    readback_=text("Gerçek readback yok.","cameraReadback");layout->addWidget(readback_);layout->addWidget(advanced);
     save_=button(layout,"Görünen kareyi kanıtıyla kaydet…","cameraSaveFrame");connect(save_,&QPushButton::clicked,this,[this]{attempt([this]{saveFrame();});});
     image_=text("Önizleme yok.","cameraPreviewImage");image_->setAlignment(Qt::AlignCenter);image_->setMinimumHeight(100);layout->addWidget(image_);
     connect(scan_,&QPushButton::clicked,this,&CameraManager::scan);connect(stop_,&QPushButton::clicked,this,&CameraManager::stop);
     connect(register_,&QPushButton::clicked,this,[this]{attempt([this]{registerSelected();});});
-    connect(apply_,&QPushButton::clicked,this,[this]{attempt([this]{start(false);});});
+    connect(settingsRead_,&QPushButton::clicked,this,[this]{attempt([this]{this->settings(false);});});
+    connect(apply_,&QPushButton::clicked,this,[this]{attempt([this]{this->settings(true);});});
     connect(preview_,&QPushButton::clicked,this,[this]{attempt([this]{start(true);});});
     connect(check_,&QPushButton::clicked,this,&CameraManager::checkConnection);
     connect(table_,&QTableWidget::itemSelectionChanged,this,&CameraManager::select);
     connect(routes_,&QComboBox::currentIndexChanged,this,[this]{controls();});
     connect(profiles_,&QComboBox::currentIndexChanged,this,[this]{
-        attempt([this]{auto* ws=context_();if(!ws)return;for(const auto& p:ws->environment().current.profiles)if(p.id.value==profiles_->currentData().toString()){exposure_->setText(QString::number(p.requested.exposureTimeUs,'g',12));gain_->setText(QString::number(p.requested.gain,'g',12));}controls();});
+        settingsKnown_=false;exposure_->clear();gain_->clear();controls();
     });
     timer_=new QTimer(this);timer_->setInterval(20);connect(timer_,&QTimer::timeout,this,[this]{attempt([this]{tick();});});timer_->start();refresh();
 }
-CameraManager::~CameraManager(){if(worker_)worker_->requestShutdown();worker_.reset();if(job_)jobs_.finish(job_);}
-void CameraManager::attempt(std::function<void()> f){try{f();}catch(const std::exception& e){status_->setText(QString::fromUtf8(e.what()));if(worker_){worker_->requestShutdown();closing_=true;}controls();}}
+CameraManager::~CameraManager(){if(worker_)worker_->requestShutdown();worker_.reset();if(settings_)settings_->stop();settings_.reset();if(job_)jobs_.finish(job_);}
+void CameraManager::attempt(std::function<void()> f){try{f();}catch(const std::exception& e){status_->setText(QString::fromUtf8(e.what()));if(worker_){worker_->requestShutdown();closing_=true;}if(settings_){settings_->stop();settingsClosing_=true;settingsKnown_=false;}controls();}}
 void CameraManager::refresh(){attempt([this]{
-    const auto selected=table_->currentRow();QSignalBlocker blocker(table_);rows_.clear();table_->setRowCount(0);
+    const auto selected=table_->currentRow();const auto key=selectedKey_;QSignalBlocker blocker(table_);rows_.clear();table_->setRowCount(0);
     auto* ws=context_();if(ws){auto e=ws->environment();for(const auto& c:e.current.cameras)if(!e.archivedCameras.contains(c.id.value)){
         Row row{c,{}};for(const auto& d:inventory_.devices)if(matches(c,d))row.discovery=d;rows_.append(row);
     }}
     for(const auto& d:inventory_.devices){bool registered=false;for(const auto& row:rows_)if(row.camera && matches(*row.camera,d))registered=true;if(!registered)rows_.append({{},d});}
     for(int i=0;i<rows_.size();++i){const auto& r=rows_[i];QStringList cells;
-        if(r.camera){const auto& c=*r.camera;cells={c.name,c.physical?c.physical->model:"Webcam",c.physical?c.physical->serial:c.device.providerId,c.physical?"Industrial":"Qt",ws->availability(c)};}
+        if(r.camera){const auto& c=*r.camera;cells={ws->environment().registrations.value(c.id.value).shortId+" • "+c.name,c.physical?c.physical->model:"Webcam",c.physical?c.physical->serial:c.device.providerId,c.physical?"Industrial":"Qt",ws->availability(c)};}
         else if(r.discovery->industrial){const auto& g=*r.discovery->industrial;cells={g.identity.vendor,g.identity.model,g.identity.serial,"Industrial",g.ambiguous?"Belirsiz":"Keşfedildi • kayıtlı değil"};}
         else cells={"Webcam","Qt kamera",r.discovery->webcam->providerId,"Qt","Keşfedildi • kayıtlı değil"};
         table_->insertRow(i);for(int col=0;col<cells.size();++col){auto* item=new QTableWidgetItem(cells[col]);item->setToolTip(cells[col]);table_->setItem(i,col,item);}
     }
-    if(!rows_.isEmpty())table_->selectRow(std::clamp(selected,0,int(rows_.size()-1)));select();
+    int next=std::clamp(selected,0,std::max(0,int(rows_.size()-1)));for(int i=0;i<rows_.size();++i){const auto& r=rows_[i];const auto k=r.camera?r.camera->id.value:r.discovery->industrial?(r.discovery->industrial->identity.vendor+"/"+r.discovery->industrial->identity.model+"/"+r.discovery->industrial->identity.serial):r.discovery->webcam->providerId;if(k==key)next=i;}
+    if(!rows_.isEmpty())table_->selectRow(next);select();
 });}
 void CameraManager::select(){attempt([this]{
-    lastFrame_.reset();
-    QSignalBlocker rb(routes_),pb(profiles_);routes_->clear();profiles_->clear();name_->clear();exposure_->clear();gain_->clear();readback_->setText("Gerçek readback yok.");image_->clear();image_->setText("Önizleme yok.");
+    lastFrame_.reset();settingsKnown_=false;shortId_->clear();
+    QSignalBlocker rb(routes_),pb(profiles_);routes_->clear();profiles_->clear();name_->clear();profiles_->hide();findChild<QWidget*>("cameraProfilesLabel")->hide();findChild<QPushButton*>("cameraDefaultsSave")->hide();exposure_->clear();gain_->clear();readback_->setText("Gerçek readback yok.");image_->clear();image_->setText("Önizleme yok.");
     const int index=table_->currentRow();if(index<0 || index>=rows_.size()){detail_->setText("Kamera seçin.");controls();return;}
-    const auto& row=rows_[index];name_->setText(row.camera?row.camera->name:row.discovery->industrial?row.discovery->industrial->identity.model:"Webcam");
+    const auto& row=rows_[index];selectedKey_=row.camera?row.camera->id.value:row.discovery->industrial?(row.discovery->industrial->identity.vendor+"/"+row.discovery->industrial->identity.model+"/"+row.discovery->industrial->identity.serial):row.discovery->webcam->providerId;name_->setText(row.camera?row.camera->name:row.discovery->industrial?row.discovery->industrial->identity.model:"Webcam");
     if(row.discovery && row.discovery->industrial){const auto& g=*row.discovery->industrial;QString details=g.identity.vendor+" / "+g.identity.model+"\nSeri: "+g.identity.serial;
         for(const auto& d:g.routes){routes_->addItem(d.route.backend+" • "+d.route.interfaceId+" • "+d.route.deviceId);routes_->setItemData(routes_->count()-1,d.route.producer,Qt::ToolTipRole);}
         if(g.routes.size()>1)routes_->setCurrentIndex(-1);
         if(g.identity.usable())if(auto route=local_.route(g.identity))for(int i=0;i<g.routes.size();++i)if(g.routes[i].route==*route)routes_->setCurrentIndex(i);
         detail_->setText(details+"\n"+factory_.capabilities(g.routes.front()).unavailableReason);
+        if(g.routes.size()>1 && routes_->currentIndex()<0){static_cast<QGroupBox*>(advancedBody_->parentWidget())->setChecked(true);detail_->setText(detail_->text()+"\nBirden fazla bağlantı rotası var; Ayrıntılar’dan yerel rota seçin.");}
     }else detail_->setText(row.camera && row.camera->physical?"Kayıtlı kamera çevrimdışı. Yeniden keşif ve açık bağlantı gerekir.":"Webcam • ortak kamera kaydı. Edinim mevcut kalibrasyon/Editor yolundadır.");
-    if(row.camera)if(auto* ws=context_()){const auto e=ws->environment();for(const auto& p:e.current.profiles)if(p.camera==row.camera->id)profiles_->addItem(p.name,p.id.value);
-        if(profiles_->count())for(const auto& p:e.current.profiles)if(p.id.value==profiles_->currentData().toString()){exposure_->setText(QString::number(p.requested.exposureTimeUs,'g',12));gain_->setText(QString::number(p.requested.gain,'g',12));}
+    if(row.camera)if(auto* ws=context_()){const auto e=ws->environment();shortId_->setText(e.registrations.value(row.camera->id.value).shortId);const auto defaults=e.defaults(row.camera->id);for(const auto& p:e.current.profiles)if(p.camera==row.camera->id)profiles_->addItem(p.name,p.id.value);
+        profiles_->setCurrentIndex(-1);if(defaults.profile)for(int i=0;i<profiles_->count();++i)if(profiles_->itemData(i).toString()==defaults.profile->value)profiles_->setCurrentIndex(i);
+        const bool ambiguous=defaults.status==CameraDefaultsStatus::Ambiguous;profiles_->setVisible(ambiguous);findChild<QWidget*>("cameraProfilesLabel")->setVisible(ambiguous);findChild<QPushButton*>("cameraDefaultsSave")->setVisible(ambiguous);
+        if(ambiguous){static_cast<QGroupBox*>(advancedBody_->parentWidget())->setChecked(true);detail_->setText(detail_->text()+"\nEski kayıt: Ayrıntılar’dan profil seçip varsayılanı kaydedin.");}
+        if(defaults.status==CameraDefaultsStatus::Pending)detail_->setText(detail_->text()+"\nKurulum bilgisi bekleniyor; ölçüm etkin değil.");
+        exposure_->clear();gain_->clear();exposure_->setPlaceholderText("Önce Ayarları oku");gain_->setPlaceholderText("Önce Ayarları oku");
     }controls();
 });}
 void CameraManager::controls(){
-    const bool idle=!jobs_.busy() && !worker_ && gate_();const int row=table_->currentRow();const bool selected=row>=0 && row<rows_.size();
-    scan_->setEnabled(idle);table_->setEnabled(idle);producer_->setEnabled(idle);name_->setEnabled(idle);
-    findChild<QPushButton*>("cameraChoose")->setEnabled(idle);stop_->setEnabled(jobs_.busy() || bool(worker_));
+    const bool idle=!jobs_.busy() && !worker_ && !settings_ && gate_();const int row=table_->currentRow();const bool selected=row>=0 && row<rows_.size();
+    scan_->setEnabled(idle);table_->setEnabled(idle);producer_->setEnabled(idle);name_->setEnabled(idle);shortId_->setEnabled(idle);findChild<QPushButton*>("cameraProject")->setVisible(!context_());
+    findChild<QPushButton*>("cameraChoose")->setEnabled(idle);stop_->setEnabled(jobs_.busy() || bool(worker_) || bool(settings_));
     register_->setEnabled(idle && selected && !rows_[row].camera && context_() && !inventory_.cancelled && inventory_.errors.isEmpty());
     findChild<QPushButton*>("cameraRename")->setEnabled(idle && selected && rows_[row].camera.has_value());
     findChild<QPushButton*>("cameraProfileEdit")->setEnabled(idle && selected && rows_[row].camera && rows_[row].camera->physical.has_value());
-    routes_->setEnabled(idle);profiles_->setEnabled(idle);timeout_->setEnabled(idle);
+    findChild<QPushButton*>("cameraDefaultsSave")->setEnabled(idle);routes_->setEnabled(idle);profiles_->setEnabled(idle);timeout_->setEnabled(idle);
     IndustrialCameraCapabilities caps;bool route=false;
     if(selected && rows_[row].discovery && rows_[row].discovery->industrial){const auto& g=*rows_[row].discovery->industrial;
         route=routes_->currentIndex()>=0 && routes_->currentIndex()<g.routes.size() && !g.ambiguous && !inventory_.cancelled && inventory_.errors.isEmpty();
         if(route)caps=factory_.capabilities(g.routes[routes_->currentIndex()]);
     }
-    const bool configured=selected && rows_[row].camera && profiles_->count() && route;
+    const bool configured=selected && rows_[row].camera && profiles_->currentIndex()>=0 && route;
     const bool exp=experimental_->isChecked();
     bool expAvailable=false;
     if(route)expAvailable=ExperimentalOecsAcquisition::available(rows_[row].discovery->industrial->routes[routes_->currentIndex()],runtime_->text().trimmed());
     experimental_->setEnabled(idle);runtime_->setEnabled(idle);
     save_->setEnabled(lastFrame_.has_value() && experimentalSession_ && !closing_);
-    exposure_->setEnabled(idle && configured && (exp?expAvailable:caps.exposure));gain_->setEnabled(idle && configured && (exp?expAvailable:caps.gain));
-    apply_->setEnabled(idle && configured && !exp && caps.configure);preview_->setEnabled(idle && configured && (exp?expAvailable:caps.preview));
+    settingsRead_->setEnabled(idle && configured && !exp && caps.configure);
+    exposure_->setEnabled(idle && configured && !exp && settingsKnown_ && caps.exposure);gain_->setEnabled(idle && configured && !exp && settingsKnown_ && caps.gain);
+    apply_->setEnabled(idle && configured && !exp && settingsKnown_ && caps.configure);preview_->setEnabled(idle && configured && (exp?expAvailable:caps.preview));
     check_->setEnabled(idle && route && rows_[row].discovery->industrial->routes[routes_->currentIndex()].route.backend=="gentl");
     findChild<QPushButton*>("cameraRememberRoute")->setEnabled(idle && route);
 }
@@ -174,10 +185,10 @@ void CameraManager::editProfile(){
         bool a=false,b=false;auto us=exposure->text().toDouble(&a),db=gain->text().toDouble(&b);if(!a || !b)throw std::runtime_error("Sayısal exposure/gain gerekli.");
         GeometryDescriptor g;g.resolution={width->value(),height->value()};g.sensorRoi=QRect(QPoint(0,0),g.resolution);g.binning=QSize(1,1);g.decimation=QSize(1,1);g.reverse=GeometryMirror{};g.complete=true;
         auto next=setup.value_or(MeasurementSetupDescriptor{});if(!setup){next.id={QUuid::createUuid().toString(QUuid::WithoutBraces)};next.camera=camera.id;}
-        next.name=profileName->text();next.opticalProfile=lens->text();next.workingPlane=plane->text();next.geometry=g;next.deviceRevision=camera.device.revision;
+        next.pending=false;next.name=profileName->text();next.opticalProfile=lens->text();next.workingPlane=plane->text();next.geometry=g;next.deviceRevision=camera.device.revision;
         if(setup)next=setup->revised(next);else next.validate();
         auto profile=old.value_or(AcquisitionProfile{});if(!old){profile.id={QUuid::createUuid().toString(QUuid::WithoutBraces)};profile.camera=camera.id;profile.setup=next.id;}
-        profile.name=profileName->text();profile.requested={"Mono8",(trigger->currentText()=="Off"?TriggerSettings{}:old && old->requested.trigger.enabled && old->requested.trigger.selector==trigger->currentText()?old->requested.trigger:TriggerSettings{true,trigger->currentText(),"Software"}),AutoMode::Off,us,AutoMode::Off,db,old?old->requested.illumination:QString{}};
+        profile.pending=false;profile.name=profileName->text();profile.requested={"Mono8",(trigger->currentText()=="Off"?TriggerSettings{}:old && old->requested.trigger.enabled && old->requested.trigger.selector==trigger->currentText()?old->requested.trigger:TriggerSettings{true,trigger->currentText(),"Software"}),AutoMode::Off,us,AutoMode::Off,db,old?old->requested.illumination:QString{}};
         if(old)profile=old->revised(profile);else profile.validate();
         auto candidate=e.current;
         if(setup){for(auto& s:candidate.setups)if(s.id==next.id)s=next;}else candidate.setups.append(next);
@@ -187,7 +198,7 @@ void CameraManager::editProfile(){
     dialog.resize(560,560);if(dialog.exec()==QDialog::Accepted){refresh();status_->setText("İstenen profil taslağı kaydedildi. Gerçek readback yok; edinim yeteneği ayrıca denetlenir.");if(onChanged)onChanged();}
 }
 void CameraManager::scan(){attempt([this]{
-    if(jobs_.busy() || worker_ || !gate_())return;
+    if(jobs_.busy() || worker_ || settings_ || !gate_())return;
     auto* ws=context_();const auto captured=ws?ws->environment().projectId:QString{};
     const auto typed=producer_->text().trimmed();auto files=typed.isEmpty()?local_.producers():QStringList{typed};
     auto* watcher=jobs_.watch<CameraInventory>(this,SessionJob::Discovery);auto cancel=jobs_.token(SessionJob::Discovery);status_->setText("Kameralar aranıyor…");controls();
@@ -205,9 +216,9 @@ void CameraManager::scan(){attempt([this]{
 void CameraManager::registerSelected(){
     if(jobs_.busy() || !gate_())throw std::runtime_error("Kamera/Runtime meşgul.");
     auto* ws=context_();const int i=table_->currentRow();if(!ws || i<0 || !rows_[i].discovery || rows_[i].camera)throw std::runtime_error("Keşfedilmiş, kayıtlı olmayan kamera seçin.");
-    auto entry=*rows_[i].discovery;ws->observeInventory(inventory_);const auto id=ws->registerCamera(entry,name_->text());
+    auto entry=*rows_[i].discovery;ws->observeInventory(inventory_);const auto result=ws->registerCamera(entry,shortId_->text(),name_->text(),ws->environment().revision);const auto id=result.camera;selectedKey_=id.value;
     if(entry.industrial && routes_->currentIndex()>=0)local_.setRoute(entry.industrial->identity,entry.industrial->routes[routes_->currentIndex()].route);
-    refresh();status_->setText("Kamera kaydedildi • CameraId: "+id.value+". Kalibrasyon sistem özetinde aynı kayıttır.");if(onChanged)onChanged();
+    refresh();status_->setText((result.existing?"Kamera zaten kayıtlı • CameraId: ":"Kamera kaydedildi • CameraId: ")+id.value+". Kalibrasyon sistem özetinde aynı kayıttır.");if(onChanged)onChanged();
 }
 IndustrialCameraRequest CameraManager::request() const {
     auto* ws=context_();const int i=table_->currentRow();if(!ws || i<0 || !rows_[i].camera)throw std::runtime_error("Kayıtlı kamera gerekli.");
@@ -220,11 +231,8 @@ IndustrialCameraRequest CameraManager::request() const {
     r.device=CameraService::resolveIndustrial(r.camera,inventory_.industrial,rows_[i].discovery->industrial->routes[routes_->currentIndex()].route);r.validate();return r;
 }
 void CameraManager::start(bool preview){
-    if(jobs_.busy() || worker_ || !gate_())throw std::runtime_error("Kamera/Runtime meşgul.");
-    auto r=request();bool a=false,b=false;const double exposure=exposure_->text().toDouble(&a),gain=gain_->text().toDouble(&b);
-    if(!a || !b || !std::isfinite(exposure) || !std::isfinite(gain))throw std::runtime_error("Sayısal exposure/gain gerekli.");
-    auto desired=r.profile;desired.requested.exposureTimeUs=exposure;desired.requested.gain=gain;desired=r.profile.revised(desired);
-    auto* ws=context_();auto e=ws->environment();for(auto& p:e.current.profiles)if(p.id==desired.id)p=desired;ws->replace(e.current,e.revision);r.profile=desired;
+    if(jobs_.busy() || worker_ || settings_ || !gate_())throw std::runtime_error("Kamera/Runtime meşgul.");
+    auto r=request();
     experimentalSession_=experimental_->isChecked();
     if(experimentalSession_){
         if(!preview || !ExperimentalOecsAcquisition::available(r.device,runtime_->text().trimmed()))throw std::runtime_error("Deneysel OECS runtime veya desteklenen cihaz gerekli.");
@@ -236,7 +244,35 @@ void CameraManager::start(bool preview){
     job_=jobs_.begin(SessionJob::Connection);worker_=std::move(opened);previewing_=preview;closing_=false;
     lastFrame_.reset();image_->clear();image_->setText("Önizleme yok.");readback_->setText("Gerçek readback bekleniyor…");worker_->submit(CameraOperation::Connect,timeout_->value());controls();
 }
+void CameraManager::settings(bool apply){
+    if(jobs_.busy() || worker_ || settings_ || !gate_())throw std::runtime_error("Kamera/Runtime meşgul.");
+    auto* ws=context_();const int i=table_->currentRow();if(!ws || i<0 || !rows_[i].camera)throw std::runtime_error("Kayıtlı kamera seçin.");
+    desired_={};if(apply){bool a=false,b=false;double us=exposure_->text().toDouble(&a),db=gain_->text().toDouble(&b);if(!a || !b || !std::isfinite(us) || !std::isfinite(db))throw std::runtime_error("Sayısal exposure/gain gerekli.");desired_={us,db};}
+    if(rows_[i].discovery && rows_[i].discovery->industrial && routes_->currentIndex()>=0)local_.setRoute(rows_[i].discovery->industrial->identity,rows_[i].discovery->industrial->routes[routes_->currentIndex()].route);
+    settings_=ws->cameraSettings(rows_[i].camera->id,ws->environment().revision,local_,factory_,gate_);
+    settingsApply_=apply;settingsClosing_=false;settings_->connect(timeout_->value());job_=jobs_.begin(SessionJob::Connection);status_->setText("Gerçek kamera ayarları okunuyor…");controls();
+}
+void CameraManager::settingsReadback(){
+    const auto s=settings_->snapshot();settingsKnown_=true;
+    const auto show=[](QLineEdit* field,const CameraFeature& f){
+        if(!f.readable() || (f.type!=FeatureType::Float && f.type!=FeatureType::Integer)){field->clear();field->setToolTip("Desteklenmiyor");return;}
+        const double value=f.type==FeatureType::Float?std::get<double>(f.value):double(std::get<qint64>(f.value));
+        field->setText(QString::number(value,'g',12));field->setToolTip(QString("%1 – %2 %3").arg(f.minimum).arg(f.maximum).arg(f.unit));
+    };
+    show(exposure_,s.exposure);show(gain_,s.gain);
+    readback_->setText(QString("Gerçek readback: %1×%2 • exposure %3 %4 [%5–%6] • gain %7 %8 [%9–%10]")
+        .arg(s.actual.geometry.resolution.width()).arg(s.actual.geometry.resolution.height()).arg(exposure_->text()).arg(s.exposure.unit).arg(s.exposure.minimum).arg(s.exposure.maximum).arg(gain_->text()).arg(s.gain.unit).arg(s.gain.minimum).arg(s.gain.maximum));
+}
 void CameraManager::tick(){
+    if(settings_){
+        if(auto token=jobs_.token(SessionJob::Connection);token && token->load() && !settingsClosing_)stop();
+        if(settingsClosing_){if(settings_->shutdownState()==ShutdownState::Ready){settings_.reset();jobs_.finish(job_);job_=0;settingsClosing_=false;controls();}return;}
+        settings_->poll();const auto state=settings_->state();
+        if(state==CameraState::Fault){status_->setText(settings_->error());settingsKnown_=false;settings_->stop();settingsClosing_=true;return;}
+        if(state==CameraState::Connected){if(settingsApply_){settingsApply_=false;settings_->apply(desired_,timeout_->value());}else{settingsReadback();status_->setText("Gerçek ayarlar okundu; değişiklik kaydedilmedi.");settings_->stop();settingsClosing_=true;}}
+        else if(state==CameraState::Configured){settingsReadback();status_->setText("Ayarlar gerçek readback ile doğrulandı ve kaydedildi.");if(onChanged)onChanged();settings_->stop();settingsClosing_=true;}
+        return;
+    }
     if(!worker_)return;
     if(auto token=jobs_.token(SessionJob::Connection);token && token->load())stop();
     if(closing_){if(worker_->shutdownState()==ShutdownState::Ready){const auto error=worker_->lifecycle().error();worker_.reset();jobs_.finish(job_);job_=0;closing_=false;
@@ -256,6 +292,7 @@ void CameraManager::tick(){
 void CameraManager::stop(){
     if(jobs_.busy(SessionJob::Discovery))jobs_.stop(SessionJob::Discovery);
     if(!worker_ && jobs_.busy(SessionJob::Connection))jobs_.stop(SessionJob::Connection);
+    if(settings_){settings_->stop();settingsClosing_=true;settingsKnown_=false;}
     if(worker_){worker_->requestStop(timeout_->value());worker_->requestShutdown(timeout_->value());closing_=true;}
     lastFrame_.reset();image_->clear();image_->setText("Önizleme durduruldu • görüntü temizlendi.");controls();
 }

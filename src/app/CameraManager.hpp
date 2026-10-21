@@ -15,12 +15,14 @@ public:
     void checkConnection();
     void stop();
     const CameraInventory& inventory() const {return inventory_;}
-    std::function<void()> onChanged;
+    std::function<void()> onChanged, onProject;
 private:
     void attempt(std::function<void()>);
     void select();
     void registerSelected();
     void editProfile();
+    void settings(bool apply);
+    void settingsReadback();
     void start(bool preview);
     void tick();
     void controls();
@@ -37,7 +39,13 @@ private:
     QVector<Row> rows_;
     QTableWidget* table_;
     QLabel *status_,*detail_,*image_,*readback_;
-    QLineEdit *producer_,*name_,*exposure_,*gain_;
+    QLineEdit *producer_,*shortId_,*name_,*exposure_,*gain_;
+    QWidget *advancedBody_;
+    QPushButton *settingsRead_;
+    std::unique_ptr<CameraSettingsSession> settings_;
+    CameraSettingsValues desired_;
+    bool settingsApply_=false, settingsClosing_=false, settingsKnown_=false;
+    QString selectedKey_;
     QComboBox *routes_,*profiles_;
     QSpinBox* timeout_;
     QPushButton *scan_,*register_,*apply_,*preview_,*stop_,*check_;
