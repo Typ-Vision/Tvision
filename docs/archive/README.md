@@ -6,6 +6,7 @@ görev” ifadeleri yazıldıkları tarihe aittir.
 
 | Dönem / görev | Kayıt |
 | --- | --- |
+| 21 Ekim 2026 — ICM-OECS-EXP-01a | [İlk görünür plaka; sonraki seri/tekrar karanlık, fiziksel kabul açık](2026-10-21-icm-oecs-exp-01a.md) |
 | 21 Ekim 2026 — ICM-OECS-EXP-01 | [Deneysel OECS preview/Stop/kayıt; gerçek tek/100 edinim, sahne kabulü açık](2026-10-21-icm-oecs-exp-01.md) |
 | 21 Ekim 2026 — ICM-PLAN-03 | [Mevcut OECS ile deneysel edinim → Editor/ölçüm → Runtime planı](2026-10-21-icm-plan-03.md) |
 | 19 Ekim 2026 — TAP-RES-01 | [Rigid tapping: enkoder/cetvel, tork izleme ve senkronizasyon araştırması](2026-10-19-tap-res-01.md) |
