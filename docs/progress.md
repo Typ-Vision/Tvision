@@ -4,14 +4,18 @@
 
 ## Devam noktası
 
-**Sonraki görev: [CCUX-10](architecture/camera-setup/10-editor-binding.md).**
-**CCUX-09 tamamlandı:** kamera merkezli durum/aktif model özeti; Kalibre Et ile
-iki yöntem, immutable varsayılan hedef, tek Kaydet ve kullan komutu ve kısmi
-kayıt/ret/tekrar deneme. Geçmiş/dosya/legacy/optik bildirimi Ayrıntılar'da;
-deneysel köken/etiket, canlı uyum probe'u ve kamera/proje iptali korunur.
-Yeni Release + kartın 5 CTest'i ve 3 servis regresyonu, 0/1/5/10 kamera ve iki
-boyutta offscreen görsel kabul geçti; [kapanış](archive/2026-10-22-ccux-09.md),
-`build/ccux/ccux-09/`. Fiziksel kamera/mm ve native DPI kabulü değildir.
+**Sonraki görev: [CCUX-11](architecture/camera-setup/11-recipe-fields.md).**
+**CCUX-10 tamamlandı:** kaynakta kamera ID/ad seçimi default kurulum/profil ile
+atomik bağlanır; eski explicit bağ ayrıntılardadır. Aynı kamera ayarı Run Flow’da
+snapshot/DRAFT/dirty yeniler; geometri/seri/legacy otomatik onarılmaz. Kaynak başına
+ayrı typed deneysel canlı/replay mm resolver ve cache kökeni korunur.
+Release + kartın 6 CTest’i ve ek save/use fixture kabulü; iki boyutta görsel
+kanıt ve sınırlar [kapanışta](archive/2026-10-22-ccux-10.md),
+`build/ccux/ccux-10/`. Fiziksel mm/native DPI kabulü değildir; Runtime mm CCUX-12.
+**CCUX-09 tamamlandı:** kamera merkezli özet, iki yöntem, immutable hedef ve tek
+Kaydet ve kullan; kısmi kayıt/ret/retry ve deneysel etiket. Yeni yazılım/görsel
+kanıt [kapanışta](archive/2026-10-22-ccux-09.md), `build/ccux/ccux-09/`.
+Fiziksel kamera/mm ve native DPI kabulü değildir.
 **CCUX-08 tamamlandı:** exact hedef/revision/generation ve son commit gate'li
 tek application komutu; Failed/CandidateSaved/Activated, idempotent retry ve
 ayrı deneysel typed snapshot. [Kapanış](archive/2026-10-22-ccux-08.md),

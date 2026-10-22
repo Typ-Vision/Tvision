@@ -8,7 +8,7 @@
 
 1. Recipe Editor → **Çok kaynaklı Editor** reçeteyi açıkça editor9'a geçirir. Normal açma/Save ve Add Tool eski reçeteyi otomatik taşımaz. Migration araçları ve bağlantıları korur; reçete DRAFT olur.
 2. Toolbox'tan N Image File veya Webcam ekleyin. Görüntü kaynağını seçip **Open Image** ile yalnız o kaynağın dosyasını atayın. Properties görüntü girişlerini aynı kaynak dalı içinde bağlayın. Çapraz kaynak geometri/scalar birleşimi reddedilir.
-3. Kaynağın Properties → **Ölçüm kurulumu / Kurulumu bağla** ile o kaynağa exact kurulum seçin. Bağımsız Calibration sistem özetinde hazır/etkin model gerekir. Bağsız dal raw px çalışabilir; mm sonucu veya global model fallback'i üretmez.
+3. Kaynağın Properties → **Kamera ID / ad** seçicisinden kamerayı seçin; varsayılan kurulum/profil birlikte bağlanır. Eski explicit kurulum seçimi Ayrıntılar’dadır. Bağımsız Calibration sistem özetinde hazır/etkin model gerekir. Bağsız dal raw px çalışabilir; mm sonucu veya global model fallback'i üretmez.
 4. **Run Flow** bütün enabled kaynakları sıralı edinir. Viewer üzerindeki ayrı kaynak seçici doğru ham kareyi gösterir; tool seçimi kendi upstream kaynağına geçer. Preprocess kendi source/frame/cycle kimliğini korur. Seçili tool'un gerçek overlay'i yalnız o kaynak üzerinde gösterilir.
 5. Kaynakta **Görüntü al / Reload** yalnız o kaynağı yeniler ve kendi downstream cache'ini temizler. Diğer kaynakların kareleri ve cache'leri korunur. Hedefli edinim kısmi değerlendirme olarak işaretlenir; sonuçlarda her tool için source/frame/cycle kimlikleri görünür. **Run Tool** mevcut dal karesi/cache'i üzerinde yalnız hedefi değerlendirir; acquisition sayısı sıfırdır. Güncel upstream yoksa SKIPPED/hata olur, gizli edinim yapılmaz.
 

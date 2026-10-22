@@ -32,9 +32,15 @@ kartlar halinde uygulanır; güncel tamamlanma durumu [devir özetindedir](progr
    Geçmiş/legacy eşleme ve **Optik / kamera konumu değişti** Ayrıntılar'dadır.
    Kayıtlı / bağlantı bekleniyor durumu kalibrasyon yok anlamına gelmez. Kaynak bağı
    ve Runtime hazırlığı ayrı kalır.
-   Editor’da Industrial Camera ekleyin, Properties üzerinden kayıtlı profili seçip
-   **Profili bağla / güncelle** düğmesine basın. **Görüntü al** yeni kare ister; seçim
-   tek başına edinim yapmaz. Profil düzenlenirse açıkça yeniden bağlayın.
+   Editor’da Industrial Camera ekleyin, Properties → **Kamera ID / ad** seçicisinden
+   kamerayı seçin. Varsayılan kurulum/profil birlikte bağlanır; seçim kare almaz.
+   Aynı kameranın exposure/gain snapshot’ı Run Flow hazırlığında yenilenir ve
+   reçete DRAFT/dirty olur; diske kendiliğinden yazılmaz. Geometri/seri veya
+   varsayılan profil kimliği değişirse açık yeniden seçim gerekir. Dosya/Webcam
+   kaynaklarında aynı seçici vardır; eski açık kurulum bağı Ayrıntılar’dadır.
+   Raw/px model istemez; mm yalnız ilgili kaynağın uygun etkin modelini kullanır.
+   Deneysel mm ayrıca kalibrasyonda etkin oturum izni ve Editor onayı ister;
+   canlı veya PGM+JSON kökeni sonuç/cache üzerinde korunur.
    Mevcut COE-050-M-USB-050-IR-C için Camera Manager’da **Deneysel OECS edinimini
    kullan** seçimi ve kurulu x64 runtime ile **Tek görüntü** veya **Canlı görüntü** açılır.
    Tek görüntü bir kareden sonra cihazı kapatır; canlı görüntü Durdur’a kadar sürer.

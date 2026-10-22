@@ -91,7 +91,7 @@ target_sources(visionflow_acquisition PRIVATE src/application/MeasurementEnviron
 target_sources(visionflow_acquisition PRIVATE src/application/ScopedActiveCalibration.cpp)
 target_sources(visionflow_acquisition PRIVATE src/application/IndependentCalibrationCapture.cpp)
 target_sources(visionflow_acquisition PRIVATE src/application/CalibrationTargetLibrary.cpp)
-target_sources(visionflow_acquisition PRIVATE src/application/SystemCalibration.cpp)
+target_sources(visionflow_acquisition PRIVATE src/application/SystemCalibration.cpp src/application/ProjectCameraBinding.cpp)
 target_sources(visionflow_acquisition PRIVATE src/application/CalibrationMigration.cpp)
 target_sources(visionflow_acquisition PRIVATE src/application/CalibrationWorkflow.cpp)
 target_sources(visionflow_acquisition PRIVATE src/application/ChessboardService.cpp)

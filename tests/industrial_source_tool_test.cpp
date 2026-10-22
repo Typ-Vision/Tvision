@@ -1,4 +1,5 @@
 #include "application/ProjectService.hpp"
+#include "application/MeasurementEnvironment.hpp"
 #include "application/ProductionRecipeService.hpp"
 #include "application/SystemCalibration.hpp"
 #include "application/ToolExecutors.hpp"
@@ -73,6 +74,20 @@ int main(int argc,char** argv){QCoreApplication app(argc,argv);try{
         check(cycle.state==ExecutionState::Error && cycle.frames.isEmpty(),"industrial execution fails without real frames");
         reject([]{ToolExecutors::get("industrial_camera");});
         ProductionRecipeService runtime([](const QString&,ProductionAction){return true;});reject([&]{runtime.validate("engineer",*s.activeRecipe(),dir.path());});
+    }
+    {
+        ProjectService s;s.createProject("Camera selector","",dir.filePath("ccux10.vfproject"),"industrial");const auto recipe=s.createRecipe("Camera draft","",ApplicationType::Measurement,"industrial");const auto source=s.addTool("industrial_camera");
+        MeasurementEnvironment e;e.projectId=s.project().id;e.current=contract;
+        s.bindCameraSource(source,e,{"camera"});check(SystemCalibration::setupReference(SystemCalibration::branch(*s.activeRecipe(),source))==std::optional(SetupReference{{"camera"},{"setup"},1}),"Camera selection atomically binds setup and profile");
+        s.save();const auto saved=bytes(s.path());s.bindCameraSource(source,e,{"camera"});s.save();check(bytes(s.path())==saved && !s.dirty(),"Camera selector no-op keeps exact saved bytes");
+        auto changed=e;changed.current.profiles[0].revision++;changed.current.profiles[0].requested.gain=2;
+        s.refreshCameraSources(changed);check(s.dirty() && IndustrialSourceReference::fromJson(s.tools().first().parameters["sourceReference"].toObject()).profileRevision==2,"Run preparation refreshes same-camera settings and marks dirty");
+        const auto before=s.activeRecipe()->definition;auto geometric=changed;geometric.current.setups[0].revision++;s.refreshCameraSources(geometric);check(s.activeRecipe()->definition==before,"Geometry revision never silently rebound");
+        auto wrong=changed;wrong.current.cameras[0].physical->serial="other";s.refreshCameraSources(wrong);check(s.activeRecipe()->definition==before,"Different serial never silently rebound");
+        auto ambiguous=e;auto p=contract.profiles.first();p.id={"second-profile"};ambiguous.current.profiles.append(p);reject([&]{s.bindCameraSource(source,ambiguous,{"camera"});});check(s.activeRecipe()->definition==before,"Ambiguous legacy choice rejected atomically");
+        auto other=changed.current.cameras.first();other.id={"camera-b"};other.physical->serial="serial-b";changed.current.cameras.append(other);auto setup=changed.current.setups.first();setup.id={"setup-b"};setup.camera=other.id;changed.current.setups.append(setup);auto profile=changed.current.profiles.first();profile.id={"profile-b"};profile.camera=other.id;profile.setup=setup.id;changed.current.profiles.append(profile);
+        s.bindCameraSource(source,changed,other.id);check(IndustrialSourceReference::fromJson(s.tools().first().parameters["sourceReference"].toObject()).camera==other.id && SystemCalibration::setupReference(SystemCalibration::branch(*s.activeRecipe(),source))->camera==other.id,"Camera switch updates exact source and setup together");
+        s.save();s.openProject(s.path());s.selectRecipe(recipe);const auto reopened=s.activeRecipe()->definition;s.refreshCameraSources(changed);check(!s.dirty() && s.activeRecipe()->definition==reopened,"Reopen exact snapshot is no-op");auto disabled=s.tools().first();disabled.enabled=false;s.updateTool(disabled);s.save();s.refreshCameraSources(changed);check(!s.dirty(),"Disabled industrial source does not block Run preparation");s.removeTool(source);check(s.activeRecipe()->definition["sourceSetups"].toObject().isEmpty(),"Delete clears camera setup binding");
     }
     QTextStream(stdout)<<"PASS: explicit industrial source, editor9 migration, portable binding, mixed graph, legacy/new no-op hashes and closed execution/production\n";return 0;
 }catch(const std::exception& e){QTextStream(stderr)<<"FAIL: "<<e.what()<<'\n';return 1;}}

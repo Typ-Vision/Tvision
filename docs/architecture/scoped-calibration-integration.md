@@ -90,3 +90,26 @@ Model matematiği mevcut kaliper/plaka solver'ından gelir; bağımsız fiziksel
 değildir. Eski record schema1–5 no-op encode/hash korunur. Schema6 kanıtı silmek,
 legacy migration/association veya normal Active/SystemCalibration yoluyla trusted
 izne çevirmek reddedilir. Aktivasyon CCUX-08; Runtime mm CCUX-12 kapsamıdır.
+
+
+## CCUX-10 — kamera seçimi ve Editor snapshot’ı
+
+`ProjectService::bindCameraSource` kamera defaults çözümünü, industrial sourceReference
+ve sourceSetups bağını tek doğrulanmış kopyada commit eder. Belirsiz/pending/arşivli
+varsayılanlar reddedilir. İsim/kısa ID kimliği değiştirmez; aynı seçim no-op kalır.
+Komut Qt Core proje kütüphanesine GUI bağımlılığı eklemeden acquisition bileşiminde
+`ProjectCameraBinding.cpp` ile uygulanır. Dosya hedefi replay kalır.
+
+`refreshCameraSources` yalnız zaten aynı kamera/setup/profile’a exact bağlı,
+fiziksel kimliği/device/setup revision’ı değişmeyen industrial kaynakları Run Flow
+hazırlığında yeniler. Exposure/gain profil snapshot’ı değişirse reçete DRAFT/dirty
+olur ve kaynak cache imzası değişir. Başka kamera, geometri ve legacy bağsız kaynak
+kendiliğinden onarılmaz; yalnız açmak/Save bunu tetiklemez.
+
+`SystemCalibration::resolveExperimental` yalnız ayrı typed experimental snapshot
+alır; etkin canlı permission probe’u, exact setup/seri/profil ve gerçek frame
+kökenini denetler. Canlı ile replay aynı matematiği kullanır; dosya acquired olmaz.
+`experimentalBinding` record content, etkin seçim, scope, permission acquisition
+ve source/coordinates içerir; source başına Editor kimliği cache’i geçersiz kılar.
+Trusted `binding/evidence/resolve` schema6 modelini kabul etmez. Runtime admission
+ve terminal codec’i bu kartta değiştirilmedi; Runtime mm CCUX-12 kapsamındadır.

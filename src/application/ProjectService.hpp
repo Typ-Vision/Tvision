@@ -7,7 +7,9 @@
 #include "domain/ReferenceConfig.hpp"
 #include "domain/IndustrialSourceReference.hpp"
 
+
 namespace visionflow {
+struct MeasurementEnvironment;
 class ProjectService {
 public:
     bool hasProject() const { return project_.has_value(); }
@@ -30,6 +32,8 @@ public:
     void enableMultiSource();
     QString addTool(const QString& kind);
     void bindIndustrialSource(const QString& toolId,const MeasurementSetupContract&,const ProfileId&,int timeoutMs);
+    void bindCameraSource(const QString& toolId,const MeasurementEnvironment&,const CameraId&,int timeoutMs=5000);
+    void refreshCameraSources(const MeasurementEnvironment&);
     void updateTool(const ToolDefinition& tool);
     // Commit teaching and its reference connection as one validated edit.
     void updateToolConnections(const ToolDefinition&,const QVector<ToolConnection>&);

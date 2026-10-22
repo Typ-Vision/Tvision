@@ -253,7 +253,16 @@ void MainWindow::showToolProperties() {
         auto* run=new QPushButton(ToolRegistry::get(tool.kind).acquisitionSource ? "Görüntü al" : "Run Tool");run->setObjectName("runSelectedTool");form->addRow(run);
         connect(run,&QPushButton::clicked,this,[this,tool]{runExecution(tool.id);});
     }
-    if(ToolRegistry::get(tool.kind).acquisitionSource && measurementWorkspace_){
+    if(ToolRegistry::get(tool.kind).acquisitionSource && tool.kind!="industrial_camera" && measurementWorkspace_){
+        auto* cameras=new QComboBox;cameras->setObjectName("sourceCameraSelector");cameras->addItem("Kamera bağı yok / dosya raw px",QString{});
+        const auto environment=measurementWorkspace_->environment();const auto definition=service_.activeRecipe()->definition;const auto bindingForCamera=definition["sourceSetups"].toObject().contains(tool.id) ? definition["sourceSetups"].toObject()[tool.id].toObject():definition["sourceSetup"].toObject();std::optional<SetupReference> selected;if(bindingForCamera["sourceToolId"]==tool.id)selected=SetupReference::fromJson(bindingForCamera["target"].toObject());
+        for(const auto& camera:environment.current.cameras)if(!environment.archivedCameras.contains(camera.id.value) && (tool.kind!="webcam" || !camera.physical)){const auto registration=environment.registrations.value(camera.id.value);cameras->addItem((registration.shortId.isEmpty()?camera.id.value:registration.shortId)+" • "+camera.name,camera.id.value);}
+        if(selected)cameras->setCurrentIndex(qMax(0,cameras->findData(selected->camera.value)));form->addRow("Kamera ID / ad",cameras);
+        connect(cameras,&QComboBox::activated,this,[this,tool,cameras]{try{if(!measurementWorkspace_->changeAllowed() || editorSession_.busy())throw std::runtime_error("Önce worker/Runtime işlemini bitirin.");const auto before=service_.activeRecipe()->definition;if(cameras->currentData().toString().isEmpty())service_.clearSourceSetup(tool.id);else service_.bindCameraSource(tool.id,measurementWorkspace_->environment(),CameraId{cameras->currentData().toString()});if(before!=service_.activeRecipe()->definition){editorSession_.invalidateTool(editorContext(),tool.id);editorSession_.sourceFrames.remove(tool.id);if(editorSession_.frame && editorSession_.frame->metadata().sourceId==tool.id)editorSession_.frame.reset();editorSession_.invalidateResults();imageBinding_.clear();}refreshWorkspace();}catch(const std::exception& ex){displayError(QString::fromUtf8(ex.what()));}});
+        form->addRow(note(calibrationSummary()));
+        auto* details=new QPushButton("Eski / açık kurulum bağı — ayrıntılar");details->setCheckable(true);details->setObjectName("sourceSetupDetails");form->addRow(details);auto* advanced=new QWidget;form->addRow(advanced);advanced->hide();connect(details,&QPushButton::toggled,advanced,&QWidget::setVisible);
+        auto* form=new QFormLayout(advanced);
+
         auto* setups=new QComboBox;setups->setObjectName("sourceSetupSelector");setups->addItem("Kurulum bağı yok",QJsonObject{});
         const auto e=measurementWorkspace_->environment();for(const auto& s:e.current.setups)if(!e.archivedSetups.contains(s.id.value) && !e.archivedCameras.contains(s.camera.value))setups->addItem(s.name+QString(" • r%1").arg(s.revision),SetupReference{s.camera,s.id,s.revision}.toJson());
         const auto d=service_.activeRecipe()->definition;const auto binding=d["sourceSetups"].toObject().contains(tool.id) ? d["sourceSetups"].toObject()[tool.id].toObject():d["sourceSetup"].toObject();const auto current=binding["sourceToolId"]==tool.id ? binding["target"].toObject():QJsonObject{};for(int i=0;i<setups->count();++i)if(setups->itemData(i).toJsonObject()==current)setups->setCurrentIndex(i);
@@ -263,31 +272,27 @@ void MainWindow::showToolProperties() {
         auto* manage=new QPushButton("Kurulumları aç");manage->setObjectName("sourceSetupManage");form->addRow(manage);connect(manage,&QPushButton::clicked,this,[this]{selectPage("calibration");});
     }
     if(tool.kind=="industrial_camera") {
-        auto* status=note("Kayıtlı profili açıkça bağlayın. Seçim kare almaz. Native backend doğrulanmadıysa edinim hata verir; preview üretim sonucu değildir.");status->setObjectName("industrialSourceStatus");form->addRow(status);
         const auto reference=tool.parameters["sourceReference"].toObject();
-        auto* profiles=new QComboBox;profiles->setObjectName("industrialProfileSelector");profiles->setSizeAdjustPolicy(QComboBox::AdjustToMinimumContentsLengthWithIcon);profiles->setMinimumContentsLength(14);profiles->addItem("Kamera / kurulum / profil seçin",QString{});
+        auto* status=note("Kamera seçin. Seçim varsayılan kurulum/profili birlikte bağlar; görüntü almaz.");status->setObjectName("industrialSourceStatus");form->addRow(status);
+        auto* cameras=new QComboBox;cameras->setObjectName("sourceCameraSelector");cameras->addItem("Kamera seçin",QString{});
         if(measurementWorkspace_){const auto e=measurementWorkspace_->environment();
-            for(const auto& p:e.current.profiles)for(const auto& c:e.current.cameras)if(c.id==p.camera && c.physical && !e.archivedCameras.contains(c.id.value))for(const auto& setup:e.current.setups)if(setup.id==p.setup && !e.archivedSetups.contains(setup.id.value)){
-                profiles->addItem(c.name+" / "+setup.name+" / "+p.name+QString(" • r%1").arg(p.revision),p.id.value);
-                profiles->setItemData(profiles->count()-1,c.physical->model+" • "+c.physical->serial+"\n"+measurementWorkspace_->availability(c),Qt::ToolTipRole);
+            for(const auto& c:e.current.cameras)if(c.physical && !e.archivedCameras.contains(c.id.value)){
+                const auto registration=e.registrations.value(c.id.value);cameras->addItem((registration.shortId.isEmpty()?c.id.value:registration.shortId)+" • "+c.name,c.id.value);
+                cameras->setItemData(cameras->count()-1,c.physical->serial+" • "+measurementWorkspace_->availability(c),Qt::ToolTipRole);
             }
-            if(!reference.isEmpty())try{IndustrialSourceReference::fromJson(reference).validateAgainst(e.current);status->setText("Profil bağlı. Görüntü al yeni kare ister. Profil/kurulum değişirse açıkça yeniden bağlayın.");}catch(const std::exception& ex){status->setText("Bağ geçersiz: "+QString::fromUtf8(ex.what()));}
+            if(!reference.isEmpty())try{IndustrialSourceReference::fromJson(reference).validateAgainst(e.current);status->setText("Kamera bağlı. "+calibrationSummary());}catch(const std::exception& ex){status->setText("Bağ geçersiz: "+QString::fromUtf8(ex.what())+"\nUygun ayar snapshot’ı Run Flow hazırlığında yenilenir; geometri değişiminde kamerayı yeniden seçin.");}
         }
-        profiles->setCurrentIndex(qMax(0,profiles->findData(reference["profileId"].toString())));form->addRow("Kamera / kurulum / profil",profiles);
-        auto* timeout=new QSpinBox;timeout->setObjectName("industrialTimeout");timeout->setRange(1,600000);timeout->setSuffix(" ms");timeout->setValue(reference["timeoutMs"].toInt(5000));form->addRow("Timeout",timeout);
-        if(!reference.isEmpty())form->addRow(note(QString("Bağlı kamera: %1\nKurulum: %2 • Profil: %3\nİstenen edinim: %4").arg(reference["cameraId"].toString(),reference["setupId"].toString(),reference["profileId"].toString(),reference["acquisitionId"].toString().left(16)+"…")));
-        auto* bind=new QPushButton("Profili bağla / güncelle");bind->setObjectName("industrialProfileApply");form->addRow(bind);
-        connect(bind,&QPushButton::clicked,this,[this,tool,profiles,timeout]{try{
-            if(!measurementWorkspace_ || !measurementWorkspace_->changeAllowed() || editorSession_.busy())throw std::runtime_error("Önce Runtime/worker/pending kayıt/ACK işlemini bitirin.");
-            if(!applyToolProperties())return;
-            const auto e=measurementWorkspace_->environment();const ProfileId profile{profiles->currentData().toString()};
-            for(const auto& p:e.current.profiles)if(p.id==profile && (e.archivedCameras.contains(p.camera.value) || e.archivedSetups.contains(p.setup.value)))throw std::runtime_error("Arşivlenmiş profil bağı kullanılamaz.");
-            const auto before=service_.activeRecipe()->definition;service_.bindIndustrialSource(tool.id,e.current,profile,timeout->value());
-            if(before!=service_.activeRecipe()->definition){editorSession_.invalidateTool(editorContext(),tool.id);editorSession_.sourceFrames.remove(tool.id);if(editorSession_.frame && editorSession_.frame->metadata().sourceId==tool.id)editorSession_.frame.reset();editorSession_.invalidateResults();matchInfo_->clear();}
+        cameras->setCurrentIndex(qMax(0,cameras->findData(reference["cameraId"].toString())));form->addRow("Kamera ID / ad",cameras);
+        connect(cameras,&QComboBox::activated,this,[this,tool,cameras]{try{
+            if(!measurementWorkspace_ || !measurementWorkspace_->changeAllowed() || editorSession_.busy())throw std::runtime_error("Önce Runtime/worker işlemini bitirin.");
+            if(cameras->currentData().toString().isEmpty())return;
+            const auto before=service_.activeRecipe()->definition;
+            service_.bindCameraSource(tool.id,measurementWorkspace_->environment(),CameraId{cameras->currentData().toString()},tool.parameters["sourceReference"].toObject()["timeoutMs"].toInt(5000));
+            if(before!=service_.activeRecipe()->definition){editorSession_.invalidateTool(editorContext(),tool.id);editorSession_.sourceFrames.remove(tool.id);if(editorSession_.frame && editorSession_.frame->metadata().sourceId==tool.id)editorSession_.frame.reset();editorSession_.invalidateResults();imageBinding_.clear();matchInfo_->clear();}
             refreshWorkspace();
         }catch(const std::exception& ex){displayError(QString::fromUtf8(ex.what()));}});
-        auto* manage=new QPushButton("Kamera ve profilleri düzenle");manage->setObjectName("industrialProfileManage");form->addRow(manage);connect(manage,&QPushButton::clicked,this,[this]{selectPage("camera");});
-        form->addRow(note("Profil düzenleme eski kare/cache ve Runtime hazırlığını geçersiz kılar; ölçüm modeli ayrıca kurulum bağı ve etkinleştirme ister."));
+        auto* manage=new QPushButton(cameras->count()==1 ? "Kamera ekle — Setup":"Kameraları aç");manage->setObjectName("sourceCameraManage");form->addRow(manage);connect(manage,&QPushButton::clicked,this,[this]{selectPage("camera");});
+        form->addRow(note("Raw/px kalibrasyonsuzdur. mm yalnız bu kameranın uygun etkin modeliyle hesaplanır. Model/optik değişimi world ROI ve referansı yeniden denetler."));
     } else if (tool.kind=="image_file") {
         auto* path=new QLineEdit(tool.parameters["path"].toString()); path->setReadOnly(true); path->setCursorPosition(0); path->setPlaceholderText("Seçilmedi"); path->setToolTip(path->text()); form->addRow("File",path);
         auto* choose=new QPushButton("Open Image…"); form->addRow(choose); connect(choose,&QPushButton::clicked,this,&MainWindow::openImageDialog);

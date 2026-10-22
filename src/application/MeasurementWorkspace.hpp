@@ -111,7 +111,7 @@ public:
     }
     QJsonObject acquisition(const Recipe& r) const {const auto ref=SystemCalibration::setupReference(r);if(!ref)return {};const auto e=active_.environment();
         if(e.archivedCameras.contains(ref->camera.value) || e.archivedSetups.contains(ref->setup.value))throw std::runtime_error("Archived source setup");
-        for(const auto& c:e.current.cameras)if(c.id==ref->camera)for(const auto& s:e.current.setups)if(s.id==ref->setup && s.camera==c.id && s.revision==ref->revision){IndependentCaptureRequest check;check.origin=SourceOrigin::CameraAcquired;check.camera=c;check.setup=s;check.validate();return {{"target",ref->toJson()},{"device",c.device.toJson()},{"geometry",s.geometry.toJson()}};}
+        for(const auto& c:e.current.cameras)if(c.id==ref->camera)for(const auto& s:e.current.setups)if(s.id==ref->setup && s.camera==c.id && s.revision==ref->revision){IndependentCaptureRequest::installation(c,s);return {{"target",ref->toJson()},{"device",c.device.toJson()},{"geometry",s.geometry.toJson()}};}
         throw std::runtime_error("Source setup changed; bind explicitly again");
     }
     void observeAcquisition(const Recipe& r,const CycleResult& cycle){const auto ref=SystemCalibration::setupReference(r);if(!ref)return;const auto source=SystemCalibration::source(r);if(source.kind!="webcam")return;for(const auto& result:cycle.tools)if(result.toolId==source.id && result.state==ExecutionState::Error){active_.disconnect(ref->camera);return;}}
