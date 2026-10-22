@@ -4,11 +4,13 @@
 
 ## Devam noktası
 
-**Güncel devam: [CCUX-18](architecture/camera-setup/18-calibration-navigation.md).**
-CCUX-17: dört edinim seçimi/uyarıları kaldırıldı; Logs tek CSV eylemi seçili
-kayıt türünü kullanır. Kanıt/codec korunur. [Kapanış](archive/2026-10-22-ccux-17.md),
-`build/ccux/ccux-17/`. [CCUX-16 politikası](archive/2026-10-22-ccux-16.md) korunur.
-Sıra 18→19→15; C0 teknik engelleri ve eski gezinme temizliği açıktır.
+**Güncel devam: [CCUX-19](architecture/camera-setup/19-final-flow-acceptance.md).**
+CCUX-18: eski gezinme/widget kaldırıldı; katalog proje servisinde.
+13 hedef + shell tekrarı geçti.
+[Kapanış](archive/2026-10-22-ccux-18.md), `build/ccux/ccux-18/`.
+[CCUX-17 UI](archive/2026-10-22-ccux-17.md) ve
+[CCUX-16 politikası](archive/2026-10-22-ccux-16.md) korunur.
+Sıra 19→15; C0 teknik engelleri ve bağımsız fiziksel kabul açıktır.
 
 **CCUX-15 plaka denemesi açık:** 7×7 simetrik daire, kullanıcı beyanı 12 mm.
 56000 µs / 0 dB readback ile ham kare alındı; servis 48 adayla reddediyor,

@@ -6,7 +6,7 @@ CalibrationInstallation CalibrationWorkflow::installation(const Recipe& recipe,c
     const auto model=modelType.isEmpty() ? (recipe.calibrationBinding ? recipe.calibrationBinding->modelType : QString("uniform_planar_scale")) : modelType;
     require(model=="uniform_planar_scale" || model=="raw_planar_homography" || model=="manual_planar_scale","Unsupported planar model");
     const auto setup=recipe.definition.value("planarSetup").toObject();
-    require(setup.size()==2 && setup["lensId"].isString() && setup["workingPlaneId"].isString() && !setup["lensId"].toString().trimmed().isEmpty() && !setup["workingPlaneId"].toString().trimmed().isEmpty(),"Lens ve çalışma düzlemini Calibration ekranında uygulayın.");
+    require(setup.size()==2 && setup["lensId"].isString() && setup["workingPlaneId"].isString() && !setup["lensId"].toString().trimmed().isEmpty() && !setup["workingPlaneId"].toString().trimmed().isEmpty(),"Reçetenin kayıtlı lens / çalışma düzlemi bilgisi eksik; kamera ve kalibrasyon bağını denetleyin.");
     const auto& m=frame.metadata();require(!frame.size().isEmpty() && !m.sourceId.isEmpty() && !m.frameId.isEmpty() && !m.cycleId.isEmpty() && !m.coordinateSystemId.isEmpty() && m.completedAtUtc.isValid(),"Önce reçetenin kaynağından yeni bir kare alın.");
     int sources=0;for(const auto& t:editorTools(recipe.definition))if(t.enabled && (t.kind=="image_file" || t.kind=="webcam")) {++sources;require(t.id==m.sourceId,"Kare başka reçete/kaynaktan geliyor.");}
     require(sources==1,"Tek enabled edinim kaynağı gerekli.");

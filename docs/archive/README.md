@@ -6,6 +6,7 @@ görev” ifadeleri yazıldıkları tarihe aittir.
 
 | Dönem / görev | Kayıt |
 | --- | --- |
+| 22 Ekim 2026 — CCUX-18 | [Eski gezinme/widget kaldırıldı; proje servisi kataloğu, kayıt ve görsel kabul](2026-10-22-ccux-18.md) |
 | 22 Ekim 2026 — CCUX-17 | [Kutular/uyarılar kaldırıldı; tek seçili kayıt türü CSV eylemi, fiziksel kabul açık](2026-10-22-ccux-17.md) |
 | 22 Ekim 2026 — CCUX-16 | [Normal komutlardan kaynak/kanıt tabanlı edinim; kutusuz yazılım kabulü, fiziksel mm açık](2026-10-22-ccux-16.md) |
 | 22 Ekim 2026 — CCUX-15c | [56000 µs gerçek plaka karesi/readback; 48 aday ve hatalı 49 aday tanısı, kalibrasyon bekliyor](2026-10-22-ccux-15c.md) |

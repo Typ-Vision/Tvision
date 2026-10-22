@@ -1,6 +1,6 @@
 # CCUX-18 — Kalibrasyon eski ekran gezinmesini kaldırma
 
-Durum: planlandı, uygulanmadı. Önkoşul: CCUX-17.
+Durum: yazılım/görsel kabul tamamlandı (22 Ekim 2026); [kapanış](../../archive/2026-10-22-ccux-18.md). Fiziksel mm kabulü açık. Önkoşul: CCUX-17.
 [Ortak sözleşme](contract.md) C0/C3/C4.
 
 ## Oku

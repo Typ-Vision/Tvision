@@ -15,8 +15,10 @@ namespace visionflow {
 class MeasurementWorkspace {
 public:
     MeasurementWorkspace(QString path,QString project,ActiveCalibrationService::ChangeGate gate,std::function<QVector<DeviceBinding>()> discovery=WebcamAdapter::discover)
-        :path_(path),project_(project),registry_(MeasurementEnvironmentRepository(path,project)),active_(MeasurementEnvironmentRepository(path,project),gate),gate_(std::move(gate)),discovery_(std::move(discovery)){}
+        :path_(path),project_(project),registry_(MeasurementEnvironmentRepository(path,project)),active_(MeasurementEnvironmentRepository(path,project),gate),legacy_(path+".active-calibrations.json",project,gate),gate_(std::move(gate)),discovery_(std::move(discovery)){}
     MeasurementEnvironment environment(){registry_.reload();return registry_.snapshot();}
+    ActiveCalibrationService& legacyCalibrations(){return legacy_;}
+    const ActiveCalibrationService& legacyCalibrations() const{return legacy_;}
     ScopedActiveCalibrationService& calibrations(){return active_;}
     CalibrationSaveUseResult saveAndUseCalibration(const CalibrationSaveUseRequest& request,const CalibrationModelRecord& record,
         const IndependentCalibrationSession& probe,std::function<bool()> currentTarget){
@@ -155,6 +157,7 @@ private:
     QString path_,project_;
     MeasurementEnvironmentRegistry registry_;
     ScopedActiveCalibrationService active_;
+    ActiveCalibrationService legacy_;
     ActiveCalibrationService::ChangeGate gate_;
     QVector<DeviceBinding> discovered_;
     bool discoveryDone_=false;

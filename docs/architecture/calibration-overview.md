@@ -1,11 +1,11 @@
-# Kamera merkezli kalibrasyon ekranı — CCUX-09
+# Kamera merkezli kalibrasyon ekranı — CCUX-09 / CCUX-18
 
 Setup → Calibration aynı `MeasurementWorkspace` kamera registry'sini kullanır.
 Kaydedilmiş proje yeterlidir; reçete gerekmez. Kamera listesi ve altındaki seçili
 kamera özeti yöntemi, kayıt tarihini, kullanım durumunu ve yalnız bu oturumda
 uyumlu etkin modelin temel değerlerini gösterir. Durumlar: Kalibrasyon yok,
-Kayıtlı / bağlantı ve uyum denetimi bekleniyor, Geçerli, Yeniden kalibrasyon gerekli
-ve ayrı Deneysel niteliği. Restart kayıtlı seçimi korur, kullanım izni oluşturmaz.
+Kayıtlı / bağlantı ve uyum denetimi bekleniyor, Geçerli, Yeniden kalibrasyon gerekli.
+Restart kayıtlı seçimi korur, kullanım izni oluşturmaz.
 Uyumsuz modelin eski değerleri ana ekranda etkin değer olarak sunulmaz.
 
 0 kamerada dosyadan deneme açılabilir; 1 kamerada kart şeridi gizlenir, 5/10
@@ -28,15 +28,16 @@ Başarıdan sonra Bitir kapanışı vardır. Bağımsız fiziksel kontrol yoklu�
 
 Dosya adayı kökenini korur; Kaydet ve kullan ayrıca gerçek canlı uyum probe'u
 ister. Dosya tek başına fiziksel edinim veya aktivasyon probe'u değildir.
-Deneysel OECS için ayrı görünür oturum onayı gerekir; typed edinim kanıtı UI
-matematiğinden kayda korunur ve ana sonuç Deneysel etiketini taşır. Tetik
-ilişkilendirmesi, fiziksel mm kabulü veya üretim yetkisi verilmez.
+OECS edinimini normal komutların application politikası seçer; ayrıca mod/onay
+seçimi yoktur. Typed edinim kanıtı kayıtta korunur. Tetik ilişkilendirmesi, fiziksel
+mm kabulü veya üretim yetkisi verilmez.
 
 **Ayrıntılar** geçmiş, dosya denemesi, legacy ilişkilendirme/aktivasyon incelemesi,
 çok kurulumlu eski projelerin açık seçimi, import/export/Save As, arşivleme ve
 **Optik / kamera konumu değişti** bildirimini taşır. Sihirbazın dosya ayrıntıları
-trial veya açık kurulum beyanını korur; trial yalnız aday kaydeder. Önceki ekranlar
-MainWindow'daki Ayrıntılar gezinmesinden erişilir. Kamera/proje/politika değişimi
+trial veya açık kurulum beyanını korur; trial yalnız aday kaydeder. Kalibrasyon
+yalnız bu kamera merkezli ana sayfayı üretir; eski ana sayfa, kanıt ekranı, stack
+ve gezinme widget'ları yoktur. Kamera/proje/politika değişimi
 ve pencere kapanışı işi iptal eder; geç capture/model sonucu başka hedefe taşınmaz.
 UI algoritma veya SDK çağırmaz. Runtime/worker/pending kayıt/ACK gate'i korunur.
 
