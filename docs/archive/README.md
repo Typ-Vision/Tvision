@@ -6,6 +6,7 @@ görev” ifadeleri yazıldıkları tarihe aittir.
 
 | Dönem / görev | Kayıt |
 | --- | --- |
+| 22 Ekim 2026 — CCUX-20b | [Tek çekim gecikmesi kaynak incelemesi ve ölçüm/kalıcı oturum önerisi](2026-10-22-ccux-20b.md) |
 | 22 Ekim 2026 — CCUX-21 | [Reçeteye bağlı dikdörtgen ROI, Region/Runtime ve görsel kabul](2026-10-22-ccux-21.md) |
 | 22 Ekim 2026 — CCUX-20 | [Büyük raster hash/preview tekrarları kaldırıldı; ölçüm ve ROI planı](2026-10-22-ccux-20.md) |
 | 22 Ekim 2026 — CCUX-19 | [Birleşik otomatik akış, tooltip düzeltmesi ve kullanım rehberi; fiziksel kabul açık](2026-10-22-ccux-19.md) |

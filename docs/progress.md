@@ -7,13 +7,13 @@
 **CCUX-21 tamamlandı:** Ön işleme → ROI; reçeteye bağlı dikdörtgen Region,
 Blob/Template Match gerçek işlem alanı, Run Tool/Flow, reopen ve immutable Runtime.
 [Kapanış](archive/2026-10-22-ccux-21.md), `build/ccux/ccux-21/`.
-**Sonraki: CCUX-20 gerçek kamera etkileşim teyidi**, ardından CCUX-15 kalan fiziksel
-kabul. CCUX-20 hash/preview düzeltmesi korunur; canlı cihaz kabulü açık.
+**Öncelik: tek çekim ~2 sn ön incelemesi [CCUX-20b](archive/2026-10-22-ccux-20b.md).**
+Her çekimde keşif/open/configure/close ve kare başına stream start/stop var.
+Sonraki: birlikte ölçüm/kalıcı oturum planı; kod değişmedi. CCUX-20 canlı teyit,
+CCUX-15 fiziksel kabul açık; hash/preview düzeltmesi korunur.
 [CCUX-20](archive/2026-10-22-ccux-20.md), `build/ccux/ccux-20/`.
 Geçici viewer geometrisi ayrı adlandırılır; araç ROI'leri reçeteye bağlıdır.
-CCUX-16–19 teslimleri korunur: [19](archive/2026-10-22-ccux-19.md),
-[18](archive/2026-10-22-ccux-18.md), [17](archive/2026-10-22-ccux-17.md),
-[16](archive/2026-10-22-ccux-16.md). C0 teknik/fiziksel engeller açık.
+CCUX-16–19 teslimleri [arşivde](archive/README.md); C0 teknik/fiziksel engeller açık.
 
 **CCUX-15 plaka denemesi açık:** 7×7 simetrik daire, kullanıcı beyanı 12 mm.
 56000 µs / 0 dB readback ile ham kare alındı; servis 48 adayla reddediyor,
