@@ -5,6 +5,14 @@
 ## Devam noktası
 
 **Sonraki görev: [CCUX-15](architecture/camera-setup/15-physical-acceptance.md).**
+**CCUX-15 fiziksel kabul bekliyor; tamamlanmadı.** 22 Ekim önkoşul incelemesinde
+kullanıcının karanlık ortam bildirimi, doğrulanmamış lens/çalışma düzlemi,
+bağımsız fiziksel referans ve iş toleransı eksikleri kaydedildi. Yeni kamera
+koşumu, mm sonucu, fiziksel PASS veya kullanıcı işlem kabulü yoktur.
+Aydınlatılmış/sabit kurulum, ayrı öğretim/doğrulama referansı ve operatör
+hazır olduğunda aynı karttan sürdürün; [bekleme kaydı](archive/2026-10-22-ccux-15.md)
+ve `build/ccux/ccux-15/` önkoşul raporu.
+
 **CCUX-14 tamamlandı:** tek proje fixture'ında 1/5 kamera, reçetesiz iki yöntem,
 üç applicationType, Editor → Runtime → Logs/CSV; kaynak başına ayrı gerçek
 fixture mm ve Raw/px, restart/taşıma/duplicate/Stop/invalidation negatifleri.

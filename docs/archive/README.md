@@ -6,6 +6,7 @@ görev” ifadeleri yazıldıkları tarihe aittir.
 
 | Dönem / görev | Kayıt |
 | --- | --- |
+| 22 Ekim 2026 — CCUX-15 bekliyor | [Fiziksel kabul önkoşulları; yeni donanım/mm koşumu yapılmadı](2026-10-22-ccux-15.md) |
 | 22 Ekim 2026 — CCUX-14 | [Birleşik e2e, iki Release kabul matrisi ve görsel düzeltmeler](2026-10-22-ccux-14.md) |
 | 22 Ekim 2026 — CCUX-13 | [Runtime/Logs kaynaklı metrik gösterim, deneysel CSV ve görsel kabul](2026-10-22-ccux-13.md) |
 | 22 Ekim 2026 — CCUX-12 | [Deneysel Runtime metrik snapshot, karma Raw/mm ve runtime2 codec](2026-10-22-ccux-12.md) |
