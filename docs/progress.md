@@ -15,10 +15,10 @@ ayar kaydı doğrulandı; görüntü/mm koşumu değildir.
 kare ve Runtime 10 Raw/px çevrim/CSV doğrulandı. Exposure/gain değişip geri
 yüklendi: son 6000 µs / 0 dB. Yanlış seri/geometri reddedildi. Kopmada SDK stop
 temizleme hatası; 7000 µs / 1 dB isteğinde readback reddi kaydedildi.
-**CCUX-15 tamamlanmadı:** gerçek plaka yok; lens/düzlem, ışık/odak, ayrı fiziksel
-referans/tolerans, mm zinciri ve kullanıcı işlem kabulü açık. Sonraki görev aynı
+**CCUX-15 tamamlanmadı:** plaka/referans/kurulum hazır değil; ışık/odak,
+tolerans/mm ve henüz denenmeyen kullanıcı işlem kabulü açık. Sonraki görev aynı
 kartın bu maddeleridir. [Yeni kanıt/kapanış](archive/2026-10-22-ccux-15a.md),
-`build/ccux/ccux-15/no-plate-20261022/`; [ilk önkoşul](archive/2026-10-22-ccux-15.md).
+`build/ccux/ccux-15/no-plate-20261022/`; [kullanıcı teyidi](archive/2026-10-22-ccux-15-teyit.md).
 
 **CCUX-14 tamamlandı:** tek proje fixture'ında 1/5 kamera, reçetesiz iki yöntem,
 üç applicationType, Editor → Runtime → Logs/CSV; kaynak başına ayrı gerçek
