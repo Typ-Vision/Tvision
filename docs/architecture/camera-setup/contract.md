@@ -4,6 +4,24 @@ Bu metin **hedef davranıştır**; uygulanmış API diye okunmaz. Mevcut KMC/ICM
 katmanları genişletilir. Değişen kuralın eski sözleşmesi ilgili kartta güncellenir;
 bütün kurallar her karta veya README'ye kopyalanmaz.
 
+## C0 — 22 Ekim sade ürün akışı kararı
+
+Kullanıcının güncel kararıyla bütün “Deneysel OECS” opt-in seçimleri ve tetik–kare
+eşleşmesinin doğrulanmadığını söyleyen banner/tooltip/durum metinleri kaldırılır.
+Aynı anlamda yeni bir mod, onay penceresi veya uyarı eklenmez. Kalibrasyon'un
+“Önceki akış ve eski kanıt ekranları” gezinmesi kaldırılır. Normal kamera,
+kalibrasyon, Editor ve Runtime komutları uygun backend politikasını seçer.
+Uygulama sırası CCUX-16–19'dur; bu karar henüz uygulanmış özellik değildir.
+
+Bu bölüm eski EXP/CCUX kartlarındaki açık deneysel seçim, restart'ta kutuyu yeniden
+işaretleme ve kalıcı kamera uyarısı gereğinin yerine geçer. Kaynak başına kimlik,
+uyum/probe, izin ömrü, hash, model bağı, immutable snapshot ve Stop/drain kuralları
+korunur. Restart/proje açılışı capture veya Run başlatmaz. Kalıcı `experimental`
+alanları/şema adları UI etiketi değildir; eski kayıtlar aynı anlamla okunur.
+Tetik kanıtı, production admission veya bağımsız fiziksel kabul varmış gibi
+üretilmez; PLC/robot çıkışı bu sadeleştirmeyle açılmaz. Donanım engelleri teknik
+belgelerde ve kanıtta kalır. Gerçek işlem hataları ve kalibrasyon durumu gösterilir.
+
 ## C1 — Kimlik ve varsayılanlar
 
 Kaydedilmiş proje gerekir, reçete gerekmez. Projedeki immutable CameraId ile
@@ -35,8 +53,8 @@ ile belirlenir. Yeni desteklenmeyen SDK eklemek bu paketin görevi değildir.
 Normal UI: tara, ID/ad, exposure/gain, ekle/kaydet, tek görüntü, canlı görüntü,
 durdur. Producer/rota/timeout/geometri ayrıntıları gerektiğinde açılır.
 Tek uygun rota veya hâlen exact eşleşen hatırlanmış rota otomatik çözülür;
-belirsizlikte anlaşılır seçim gösterilir. Deneysel OECS onayı açık ve oturumluk
-kalır; teknik ayrıntıların gizlenmesi bu onayı gizlemek değildir.
+belirsizlikte anlaşılır seçim gösterilir. OECS için ayrıca onay seçimi yoktur;
+normal işlem komutu C0 kapsamındaki application politikasını kullanır.
 
 Canlı görüntü test önizlemesidir, dosyaya video kaydı değildir. Provider'ın gerçek
 continuous desteği varsa kullanılır; yoksa tek bekleyen kareli sıralı edinimle
@@ -50,14 +68,15 @@ Stop/kopma eski generation'ı emekliye ayırır. UI SDK çağırmaz. Lease çak�
 
 Kalibrasyon sayfası kamera listesidir; alt bölüm seçili kameranın yöntemi, tarihi,
 temel değerleri ve durumudur. Ayrım: “Kalibrasyon yok”, “Kayıtlı / bağlantı
-bekleniyor”, “Geçerli”, “Yeniden kalibrasyon gerekli”, “Deneysel”.
+bekleniyor”, “Geçerli”, “Yeniden kalibrasyon gerekli”.
 Çevrimdışı kayıt yokmuş gibi gösterilmez. Değişmiş geometride eski model etkin
 değer gibi gösterilmez; geçmişte kalır. Kamera A değişimi kamera B'yi bozmaz.
 
 Kamera seçimi sihirbaz hedefini sabitler. Bilinen ölçü ve mevcut chessboard/circle
 grid yöntemleri kullanılır; yeni solver gerekmez. Varsayılan kaynak kameradır.
-Dosya denemesi/legacy geçmiş kaybolmaz fakat normal akıştan ayrıntılara taşınır;
-dosya görüntüsü fiziksel edinim diye yeniden etiketlenmez.
+Dosya denemesi güncel sihirbazın kaynak seçimiyle yapılır. Legacy kayıt uyumluluğu
+korunur; önceki akış/eski kanıt ekranları için ayrı gezinme sunulmaz. Dosya
+görüntüsü fiziksel edinim diye yeniden etiketlenmez.
 
 Kaydet ve kullan: hesaplanmış adayın kayıt + uyum/kullanılabilirlik kontrolü +
 etkin seçim işlemini tek kullanıcı komutu yapar. İptal, eski revision, yazma hatası
@@ -76,7 +95,7 @@ sessiz gevşetilmez. Preview gerçek sonuç değildir; sahte mm/PASS yoktur.
 Fiziksel lens/konum değişimi yazılımla algılanamayabilir: ayrıntılarda “Optik /
 kamera konumu değişti” bildirimi bulunur. Geometriye etkili ayarlar sırf profil
 adı altında oldukları için exposure gibi ele alınmaz. Restart uyum kontrolü
-native capability/deneysel oturum onayı sınırlarını aşamaz.
+native capability ve güncel kimlik/probe/izin ömrü sınırlarını aşamaz.
 
 ## C4 — Kaynak bağı ve immutable yürütme
 

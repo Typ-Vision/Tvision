@@ -2,12 +2,13 @@
 
 Güncel uygulama durumu ve görev sırası [devir özetindedir](../progress.md). Bu belge gereksinimleri taşır; aşağıdaki tarihli planlar tek başına uygulama kabulü değildir. Üç belgede birebir tekrarlanan teslim paragrafları [taşıma öncesi tam kayıtta](../archive/2026-10-17/01_machine_vision_yazilim_tanimi.md) korunmuştur. Yalnız görevle ilgili bölümleri okuyun; yeni teslim günlüğü eklemeyin.
 
-21 Ekim kamera kullanım hedefi: eldeki COE-U USB3/OECS ile açık deneysel edinim,
-Editor ölçümleri ve Runtime kullanılacak; başka kamera beklenmeyecek.
-[Deneysel kullanım planı](../architecture/industrial-camera-oecs-experimental-plan.md)
-iptal/boşaltmayı çalışma varsayımı olarak tanımlar. Sonuçlarda tetik eşleşmesinin
-doğrulanmadığı görünür; gerçek ölçü hesabı production parça eşleşmesi kabulü olmaz.
-Basler/Daheng ayrı gelecek paketleridir. Deneysel yol henüz uygulanmadı.
+22 Ekim kamera kullanım hedefi: eldeki COE-U USB3/OECS kamera, kalibrasyon,
+Editor ve Runtime normal kullanıcı komutlarıyla kullanılacak; ayrı deneysel
+seçimler ve tetik eşleşmesi uyarıları kaldırılacak. Başka kamera beklenmeyecek.
+[Güncel ürün akışı sözleşmesi](../architecture/camera-setup/contract.md#c0--22-ekim-sade-ürün-akışı-kararı)
+eski opt-in/sunum gereğini değiştirir. [OECS teknik politika](../architecture/industrial-camera-oecs-experimental-plan.md)
+ve gerçek kaynak kanıtı korunur; ölçü hesabı production parça eşleşmesi kabulü olmaz.
+Basler/Daheng ayrı gelecek paketleridir; uygulama durumu progress'tedir.
 
 16 Ekim — **Uygulanan A özellikleri / B hedefi:** reçetesiz kamera/dosya kalibrasyonu,
 kamera/ölçüm kurulumu başına etkin kayıt ve N kamera yönetimi. Tek kamera yaygın

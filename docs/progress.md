@@ -4,7 +4,11 @@
 
 ## Devam noktası
 
-**Sonraki görev: [CCUX-15](architecture/camera-setup/15-physical-acceptance.md).**
+**Sonraki görev: [CCUX-16](architecture/camera-setup/16-automatic-acquisition.md).**
+**CCUX-PLAN-03 hazır, uygulanmadı:** OECS seçenek/uyarıları ve Kalibrasyon eski
+gezinmesi kalkacak; normal komutlar edinim yolunu seçecek. Sıra **16 → 17 → 18 →
+19 → CCUX-15**. [Plan/C0](architecture/camera-setup/README.md) eski opt-in/uyarı
+gereğini değiştirir; teknik engeller korunur. [Kapanış](archive/2026-10-22-ccux-plan-03.md).
 **CCUX-10b:** Editor kamera seçimi sırasında seçicinin silinmesi düzeltildi.
 Klavye olayı regresyonu ve kanıtlar [kapanışta](archive/2026-10-22-ccux-10b.md).
 **CCUX-03b:** Opto ayar servisi edinimden ayrıldı. Gerçek cihazda kayıt/oku/mevcut
@@ -16,19 +20,15 @@ kare ve Runtime 10 Raw/px çevrim/CSV doğrulandı. Exposure/gain değişip geri
 yüklendi: son 6000 µs / 0 dB. Yanlış seri/geometri reddedildi. Kopmada SDK stop
 temizleme hatası; 7000 µs / 1 dB isteğinde readback reddi kaydedildi.
 **CCUX-15 tamamlanmadı:** plaka/referans/kurulum hazır değil; ışık/odak,
-tolerans/mm ve henüz denenmeyen kullanıcı işlem kabulü açık. Sonraki görev aynı
-kartın bu maddeleridir. [Yeni kanıt/kapanış](archive/2026-10-22-ccux-15a.md),
+tolerans/mm ve henüz denenmeyen kullanıcı işlem kabulü açık. Yeni UI paketinden
+sonra bu maddelere dönülecek. [Yeni kanıt/kapanış](archive/2026-10-22-ccux-15a.md),
 `build/ccux/ccux-15/no-plate-20261022/`; [kullanıcı teyidi](archive/2026-10-22-ccux-15-teyit.md).
 
-**CCUX-14 tamamlandı:** tek proje fixture'ında 1/5 kamera, reçetesiz iki yöntem,
-üç applicationType, Editor → Runtime → Logs/CSV; kaynak başına ayrı gerçek
-fixture mm ve Raw/px, restart/taşıma/duplicate/Stop/invalidation negatifleri.
-UI birleşik seçki 42/43; eksik shell fixture'ı ve iki görsel düzeltmeden sonra
-etkilenen 7/7 geçti. Core-off Release 33/33. Tam ürün suite'i değildir.
-1400×900 / 850×600 görselleri incelendi; sıfır kamera Calibration hatası ve
-Logs başlıkları düzeltildi. Eski shell Stop/retry engeli kapandı: frozen kayıt
-kalıcılaşır, Stop sonrası sonuç geri gösterilmez. Komut/exit/matris/kanıt
-[kapanışta](archive/2026-10-22-ccux-14.md), `build/ccux/ccux-14/`.
+**CCUX-14 tamamlandı:** 1/5 kamera fixture'ı, iki yöntem, üç applicationType,
+Editor → Runtime → Logs/CSV ve Raw/mm negatifleri. UI 42/43, düzeltme sonrası
+etkilenen 7/7; core-off 33/33. Tam suite/fiziksel kabul değildir. İki boyut görseli
+incelendi. Stop/retry engeli kapandı: kayıt kalıcılaşır, Stop sonrası sonuç dönmez.
+[Matris ve kanıt](archive/2026-10-22-ccux-14.md), `build/ccux/ccux-14/`.
 
 CCUX-01–13 tamamlandı; ayrıntılı kayıtlar [arşiv dizinindedir](archive/README.md).
 - Kamera immutable ID/kısa ID ve atomik varsayılan kurulum/profil; belirsiz eski
@@ -110,5 +110,5 @@ sırasıyla sürer; **Hand-eye kapsam dışı.** Tamamlanmış KMC/ICM/EXP işle
 UI: build/reference-ui/visionflow.exe; core: build/kmc9-core-off.
 PATH/build/test/başlatma README'de; mevcut UI kullanımı
 [kullanım rehberinde](camera-runtime-usage.md). Her kartta yalnız değişen kapsamı
-kanıtla. CCUX-03 yazılım UI kabulüdür; fiziksel kamera, native DPI veya kurulum
-kabulü sayılmaz. Detay ve kalıcı kanıt kapanışta, sonraki tek görev bu özetin başında tutulur.
+kanıtla. CCUX-03 fiziksel kamera, native DPI veya kurulum kabulü değildir.
+Detay ve kanıt tarihli kapanıştadır.

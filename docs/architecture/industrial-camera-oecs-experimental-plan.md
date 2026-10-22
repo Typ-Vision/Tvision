@@ -1,5 +1,11 @@
 # ICM-PLAN-03 — Mevcut OECS kamera ile deneysel kullanım
 
+**22 Ekim ürün akışı güncellemesi:** aşağıdaki açık deneysel seçim ve kalıcı
+tetik eşleşmesi uyarısı gerekleri [CCUX C0](camera-setup/contract.md#c0--22-ekim-sade-ürün-akışı-kararı)
+ile değiştirilmiştir. [CCUX-16–19](camera-setup/README.md) normal komutlardan
+politika seçimi ve görünür seçenek/uyarıların kaldırılmasını planlar; henüz
+uygulanmadı. Aşağıdaki teknik kanıt, kimlik/lease ve kayıt kuralları geçerlidir.
+
 21 Ekim 2026. **EXP-02 px Editor teslimi hazır; gerçek mm/kalibrasyon kabulü açık.**
 EXP-03 deneysel Runtime da teslim edildi. Güncel robot dışı kalibrasyon/mm ve
 UI devamı [CCUX](camera-setup/README.md) kartlarıdır; aşağıdaki eski “sonraki”

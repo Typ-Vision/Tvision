@@ -1,5 +1,17 @@
 # Endüstriyel Machine Vision Yazılımı — UI Sayfa ve Ekran Gereksinimleri
 
+## 22 Ekim 2026 — kamera akışının son kullanıcı için sadeleştirilmesi
+
+Kameralar, Kalibrasyon, Editor, Runtime ve Logs'taki “Deneysel OECS” seçimleri,
+deneysel etiketler ve tetik–kare eşleşmesinin doğrulanmadığını söyleyen uyarılar
+kaldırılır. Yerlerine eşdeğer uyarı, mod veya onay eklenmez. Normal işlem komutu
+uygun edinim yolunu kullanır. Kalibrasyon'da “Önceki akış ve eski kanıt ekranları”
+bölümü kaldırılır; kamera listesi ve iki yöntemli güncel akış kalır.
+[CCUX-16–19 planı](../architecture/camera-setup/README.md) ve
+[C0 sözleşmesi](../architecture/camera-setup/contract.md#c0--22-ekim-sade-ürün-akışı-kararı)
+önceki açık opt-in/kalıcı uyarı gereklerini değiştirir. Bu bölüm hedef davranıştır;
+uygulama durumu progress'tedir. Eski kayıt uyumluluğu ve gerçek veri kontrolleri korunur.
+
 ## 21 Ekim 2026 — kamera merkezli devreye alma hedefi
 
 Uygulama bekliyor: [CCUX planı](../architecture/camera-setup/README.md) ve

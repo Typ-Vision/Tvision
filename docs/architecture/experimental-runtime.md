@@ -1,5 +1,11 @@
 # Deneysel Runtime sözleşmesi — EXP-03 / CCUX-12–13
 
+**22 Ekim hedef güncellemesi:** [CCUX C0](camera-setup/contract.md#c0--22-ekim-sade-ürün-akışı-kararı)
+Runtime dahil görünür deneysel seçim/uyarı gereğini kaldırır. CCUX-16–19 henüz
+uygulanmadı; aşağıdaki oturumluk kutu/mod anlatımı mevcut uygulamayı tarif eder.
+Yeni akış politika seçimini normal Load/Run hazırlığına taşır; kayıt/snapshot,
+köken, Stop/retry ve iletişim sınırları korunur.
+
 22 Ekim 2026. [Deneysel kamera planı](industrial-camera-oecs-experimental-plan.md).
 
 Ortak Runtime'daki oturuma özel seçim `experimental_runtime/2` admission üretir.
