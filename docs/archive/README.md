@@ -6,6 +6,7 @@ görev” ifadeleri yazıldıkları tarihe aittir.
 
 | Dönem / görev | Kayıt |
 | --- | --- |
+| 22 Ekim 2026 — CCUX-20 | [Büyük raster hash/preview tekrarları kaldırıldı; ölçüm ve ROI planı](2026-10-22-ccux-20.md) |
 | 22 Ekim 2026 — CCUX-19 | [Birleşik otomatik akış, tooltip düzeltmesi ve kullanım rehberi; fiziksel kabul açık](2026-10-22-ccux-19.md) |
 | 22 Ekim 2026 — CCUX-18 | [Eski gezinme/widget kaldırıldı; proje servisi kataloğu, kayıt ve görsel kabul](2026-10-22-ccux-18.md) |
 | 22 Ekim 2026 — CCUX-17 | [Kutular/uyarılar kaldırıldı; tek seçili kayıt türü CSV eylemi, fiziksel kabul açık](2026-10-22-ccux-17.md) |

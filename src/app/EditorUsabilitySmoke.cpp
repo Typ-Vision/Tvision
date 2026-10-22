@@ -284,6 +284,11 @@ bool MainWindow::verifyEditorUsability(const QString& artifacts) {
     bool processed=false;for(auto* item:imageViewer_->scene()->items())if(auto* pixels=dynamic_cast<QGraphicsPixmapItem*>(item))processed=pixels->pixmap().toImage().pixelColor(0,0).red()==0;check(processed,"drawing displays actual bound processed pixels");refreshFlow();check(imageViewer_->drawingActive() && drawingImage_ && drawingImage_->preview().pixelColor(0,0).red()==0,"Flow refresh preserves current drawing raster");
     for(const auto size:{QSize(1400,900),QSize(850,600)}){resize(size);QApplication::processEvents();findChild<QScrollArea*>("propertiesScroll")->ensureWidgetVisible(propertiesBody_->findChild<QComboBox*>("input_image"));QApplication::processEvents();CameraFlowSmokeAudit::save(*this,QDir(artifacts).filePath(QString("u4-source-drawing-%1.png").arg(size.width())));}
     findChild<QPushButton*>("stopFlow")->click();runFlow();wait();check(pendingDrawTool_.isEmpty() && !imageViewer_->roiGestureActive(),"Stop prevents late rearming");
+    selectTool(pre);
+    auto rasterKey=[&]{for(auto* item:imageViewer_->scene()->items())if(auto* pixels=dynamic_cast<QGraphicsPixmapItem*>(item))return pixels->pixmap().cacheKey();return qint64(0);};
+    const auto processedKey=rasterKey();check(processedKey!=0,"processed preview present");
+    for(int i=0;i<5;++i)refreshFlow();
+    check(rasterKey()==processedKey,"unchanged processed result refresh must not upload raw and processed again");
     service_.save();service_.createRecipe("Late file","",ApplicationType::Measurement,"file");service_.addTool("image_file");refreshWorkspace();const auto lateTool=add("edge_point");check(pendingDrawTool_==lateTool,"new tool pending before file raster");
     service_.setImageFile(path);refreshWorkspace();wait();check(selectedToolId_==lateTool && pendingDrawTool_.isEmpty() && imageViewer_->roiGestureActive(),"late file completion arms after all viewer refreshes");findChild<QPushButton*>("stopFlow")->click();
     service_.save();service_.createRecipe("No source","",ApplicationType::DefectInspection,"file");refreshWorkspace();const auto pending=add("edge_point");check(pendingDrawTool_==pending && !imageViewer_->roiGestureActive(),"no image pending");

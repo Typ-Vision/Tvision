@@ -21,7 +21,9 @@ ImageViewer::ImageViewer(QWidget* parent) : QGraphicsView(parent),scene_(new QGr
 }
 void ImageViewer::setPreviewPixels(const QImage& image) {
     if(!imageItem_ || imageItem_->pixmap().size()!=image.size()){setImage(image);return;}
+    if(previewCacheKey_==image.cacheKey())return;
     imageItem_->setPixmap(QPixmap::fromImage(image));
+    previewCacheKey_=image.cacheKey();
 }
 void ImageViewer::setImage(const QImage& image) {
     searchHandles_.clear();searchIdentity_.clear();searchUndo_.clear();searchEditable_=searchDragging_=middlePanning_=false;searchValue_={};
@@ -31,6 +33,7 @@ void ImageViewer::setImage(const QImage& image) {
     modelRegion_=searchRegion_=resultRegion_=draftRegion_=nullptr; drawRegion(false);
     if (image.isNull()) { clearImage(); return; }
     imageItem_=scene_->addPixmap(QPixmap::fromImage(image));
+    previewCacheKey_=image.cacheKey();
     const QRectF rect(0,0,image.width(),image.height()); scene_->setSceneRect(rect);
     QPen pen(QColor("#66e3c4")); pen.setWidth(2); pen.setCosmetic(true);
     selection_=scene_->addRect(rect,pen); selection_->setVisible(false);
@@ -39,6 +42,7 @@ void ImageViewer::setImage(const QImage& image) {
     fitImage();if(onRoiChanged)onRoiChanged();
 }
 void ImageViewer::clearImage(const QString& message) {
+    previewCacheKey_=0;
     searchHandles_.clear();searchIdentity_.clear();searchUndo_.clear();searchEditable_=searchDragging_=middlePanning_=false;searchValue_={};
     roiItems_.clear();roi_.reset();roiDraft_.reset();roiBeforeDrag_.reset();roiStatus_="Geometri yok.";roiUndo_.clear();roiVertices_.clear();validDomain_.clear();roiDrawing_=-1;roiHandle_=-1;roiDragging_=roiEditing_=false;
     resultAnnotations_.clear();toolOverlay_.clear();

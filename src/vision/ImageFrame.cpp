@@ -6,6 +6,7 @@
 #include <stdexcept>
 namespace visionflow {
 QByteArray ImageFrame::contentId() const {
+    if(!contentId_.isEmpty())return contentId_;
     QCryptographicHash hash(QCryptographicHash::Sha256);
     hash.addData(QByteArray::number(pixels_.cols)+":"+QByteArray::number(pixels_.rows)+":"+QByteArray::number(int(pixelFormat_)));
     for(int y=0;y<pixels_.rows;++y)hash.addData(QByteArrayView(reinterpret_cast<const char*>(pixels_.ptr(y)),pixels_.cols*pixels_.elemSize()));
@@ -37,7 +38,9 @@ ImageFrame ImageFrame::fromBuffer(const void* data,std::size_t bytes,int width,i
         else {cv::cvtColor(frame.pixels_,display,bpp==3 ? cv::COLOR_BGR2RGB : cv::COLOR_BGRA2RGBA);qformat=bpp==3 ? QImage::Format_RGB888 : QImage::Format_RGBA8888;}
         frame.preview_=QImage(display.data,width,height,static_cast<int>(display.step),qformat).copy();
         if(frame.preview_.isNull())throw std::runtime_error("Görüntü önizlemesi oluşturulamadı.");
-    }return frame;
+    }
+    frame.contentId_=frame.contentId();
+    return frame;
 }
 ImageFrame ImageFrame::withMetadata(const FrameMetadata& metadata) const {auto copy=*this;copy.metadata_=metadata;return copy;}
 QString ImageFrame::pixelText(int x,int y) const {

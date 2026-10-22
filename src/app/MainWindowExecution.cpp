@@ -118,14 +118,24 @@ void MainWindow::showExecutionResult() {
     }else drawingImage_.reset();
     edgeProfile_->setDiagnostics({});
     imageViewer_->setToolOverlay({},{});
-    if(editorSession_.frame){imageViewer_->setPreviewPixels(drawingImage_ ? drawingImage_->preview():editorSession_.frame->preview());imageInfo_->setText(QString("Ham g\u00f6r\u00fcnt\u00fc - %1 x %2 px - Frame %3").arg(editorSession_.frame->size().width()).arg(editorSession_.frame->size().height()).arg(editorSession_.frame->metadata().frameId));}
+    QImage displayPreview;
+    if(editorSession_.frame){displayPreview=drawingImage_ ? drawingImage_->preview():editorSession_.frame->preview();imageInfo_->setText(QString("Ham g\u00f6r\u00fcnt\u00fc - %1 x %2 px - Frame %3").arg(editorSession_.frame->size().width()).arg(editorSession_.frame->size().height()).arg(editorSession_.frame->metadata().frameId));}
     if(drawingImage_)imageInfo_->setText(drawingImage_->processing().isEmpty() ? "Ham görüntü · bağlı kaynak":"İşlenmiş görüntü · bağlı Preprocess");
     if(!drawingImage_ && service_.activeRecipe())for(const auto& tool:service_.tools())if(tool.id==selectedToolId_ && tool.kind=="blob")try{
-        const auto image=editorSession_.toolImage(editorContext(),tool.id);imageViewer_->setPreviewPixels(image.preview());
+        const auto image=editorSession_.toolImage(editorContext(),tool.id);displayPreview=image.preview();
         QString source=image.metadata().sourceId;for(const auto& candidate:service_.tools())if(candidate.id==source){source=candidate.name;break;}
         imageInfo_->setText(QString("%1 · bağlı kaynak: %2 · %3 × %4 px · Frame %5").arg(image.processing().isEmpty() ? "Ham görüntü":"İşlenmiş görüntü",source).arg(image.size().width()).arg(image.size().height()).arg(image.metadata().frameId));
     }catch(const std::exception&){}
     if(!editorSession_.frame && !drawingImage_){imageViewer_->clearImage("Bu kaynak için güncel kare yok.");imageInfo_->setText("Görüntü yok.");}
+    // Resolve the final raster before uploading: do not bounce processed -> raw -> processed.
+    if(editorSession_.cycle)for(const auto& r:editorSession_.cycle->tools)
+        if(r.toolId==selectedToolId_ && r.state==ExecutionState::Done &&
+           (editorSession_.sourceFrames.isEmpty() || (editorSession_.frame && editorSession_.sourceForTool(editorContext(),r.toolId)==editorSession_.frame->metadata().sourceId))){
+            const auto processed=r.outputs.value("image");
+            if(processed.valid)if(const auto* image=std::get_if<ImageFrame>(&processed.data))
+                if(!image->processing().isEmpty())displayPreview=image->preview();
+        }
+    if(!displayPreview.isNull())imageViewer_->setPreviewPixels(displayPreview);
     if(!editorSession_.cycle){matchInfo_->clear();return;}
     if(editorSession_.frame){const auto evidence=editorSession_.cycle->industrialEvidence.value(editorSession_.frame->metadata().sourceId);
         if(evidence)imageInfo_->setText(imageInfo_->text()+QString("\n%1 • %2 | Profil %3 r%4 | actual exposure %5 µs / gain %6 | offset %7,%8")
@@ -147,7 +157,7 @@ void MainWindow::showExecutionResult() {
         }
         if(r.toolId==selectedToolId_ && (editorSession_.sourceFrames.isEmpty() || (editorSession_.frame && editorSession_.sourceForTool(editorContext(),r.toolId)==editorSession_.frame->metadata().sourceId))) {
             if(r.state==ExecutionState::Done)edgeProfile_->setDiagnostics(r.edgeDiagnostics);
-            const auto processed=r.outputs.value("image");if(r.state==ExecutionState::Done && processed.valid)if(const auto* image=std::get_if<ImageFrame>(&processed.data))if(!image->processing().isEmpty()){imageViewer_->setPreviewPixels(image->preview());imageInfo_->setText(QString("İşlenmiş Gray8 • %1×%2 px • geometri korunur • %3").arg(image->size().width()).arg(image->size().height()).arg(QString::fromLatin1(image->processingId().toHex().left(12))));}
+            const auto processed=r.outputs.value("image");if(r.state==ExecutionState::Done && processed.valid)if(const auto* image=std::get_if<ImageFrame>(&processed.data))if(!image->processing().isEmpty()){imageInfo_->setText(QString("İşlenmiş Gray8 • %1×%2 px • geometri korunur • %3").arg(image->size().width()).arg(image->size().height()).arg(QString::fromLatin1(image->processingId().toHex().left(12))));}
             QString annotation;if(r.outputs.contains("valuePx") || r.outputs.contains("widthPx") || (r.outputs.contains("linePx") || r.outputs.contains("circlePx")))annotation=r.message;annotation.replace(" • ","\n");
             // The world tracking status is already in Results. Avoid placing it
             // over the ROI frame/unit label at the image origin.

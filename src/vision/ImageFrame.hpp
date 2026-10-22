@@ -50,6 +50,8 @@ private:
     cv::Mat pixels_;
     QString path_,format_;
     PixelFormat pixelFormat_=PixelFormat::Gray8;
+    // Computed before publication; copies and worker/UI readers share immutable identity.
+    QByteArray contentId_;
     FrameMetadata metadata_;
     QVector<ProcessingStep> processing_;
 };

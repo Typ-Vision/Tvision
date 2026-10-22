@@ -4,23 +4,25 @@
 
 ## Devam noktası
 
-**Güncel devam: [CCUX-15 fiziksel kabul](architecture/camera-setup/15-physical-acceptance.md).**
-CCUX-16–19 yazılımı tamam; core-off 21/21, UI 29/31;
-tooltip/fixture düzeltmesi sonrası etkilenen grup 3/3.
-[Kapanış](archive/2026-10-22-ccux-19.md), `build/ccux/ccux-19/`.
-[18 gezinme](archive/2026-10-22-ccux-18.md), [17 UI](archive/2026-10-22-ccux-17.md),
-[16 politika](archive/2026-10-22-ccux-16.md). C0 teknik/fiziksel engeller açık.
+**Öncelik: CCUX-20 gerçek kamera etkileşim teyidi → [CCUX-21 PreProcess ROI](architecture/camera-setup/21-preprocess-roi.md).**
+CCUX-20 yazılım düzeltmesi tamam: immutable raster hash'i bir kez hesaplanır;
+aynı preview tekrar yüklenmez, ham/işlenmiş çift yükleme kaldırıldı.
+Release ilgili grup 10/11; dosya fixture onarımı sonrası kalan test 1/1.
+Canlı cihaz etkileşim kabulü açık; mikro ölçümler kapanışta.
+[Kapanış](archive/2026-10-22-ccux-20.md), `build/ccux/ccux-20/`.
+Üst menü ROI geometrisi geçicidir; araç ROI'leri işlevseldir. CCUX-21 planlandı.
+CCUX-16–19 teslimleri korunur: [19](archive/2026-10-22-ccux-19.md),
+[18](archive/2026-10-22-ccux-18.md), [17](archive/2026-10-22-ccux-17.md),
+[16](archive/2026-10-22-ccux-16.md). C0 teknik/fiziksel engeller açık.
 
 **CCUX-15 plaka denemesi açık:** 7×7 simetrik daire, kullanıcı beyanı 12 mm.
 56000 µs / 0 dB readback ile ham kare alındı; servis 48 adayla reddediyor,
 tanıdaki 49 aday da doğru grid değil. Model/etkinlik/mm yok.
 [CCUX-15c](archive/2026-10-22-ccux-15c.md), `build/ccux/ccux-15/plate-20261022-02/`.
 [Önceki kare](archive/2026-10-22-ccux-15b.md).
-**CCUX-10b:** Editor kamera seçicisinin silinmesi düzeltildi;
-[klavye regresyonu/kanıt](archive/2026-10-22-ccux-10b.md).
-**CCUX-03b:** Opto ayar servisi edinimden ayrıldı. Gerçek cihazda kayıt/oku/mevcut
-ayar kaydı doğrulandı; görüntü/mm koşumu değildir.
-[Kanıt](archive/2026-10-22-ccux-03b.md), `build/ccux/ccux-03b/`.
+**CCUX-10b:** [Editor seçici/klavye düzeltmesi](archive/2026-10-22-ccux-10b.md).
+**CCUX-03b:** [Ayrı Opto ayar servisi ve fiziksel readback](archive/2026-10-22-ccux-03b.md);
+görüntü/mm kabulü değildir.
 **CCUX-15a önceki plakasız kontroller:** 60 s / 558 kare / 9,36 FPS, Stop/reopen,
 USB, Editor 3 ve Runtime 10 Raw/px çevrim/CSV. O koşum sonu 6000 µs / 0 dB;
 yanlış seri/geometri reddi var. SDK kopma stop temizleme hatası ve 7000 µs / 1 dB
@@ -29,10 +31,9 @@ readback reddi açık. [Kanıt](archive/2026-10-22-ccux-15a.md),
 ışık/odak, bağımsız referansın ölçü/kökeni, tolerans/mm ve kullanıcı işlem kabulü
 açık. [Önceki teyit](archive/2026-10-22-ccux-15-teyit.md) tarihsel durumdur.
 
-**CCUX-14 tamamlandı:** 1/5 kamera fixture'ı, iki yöntem, üç applicationType,
-Editor → Runtime → Logs/CSV ve Raw/mm negatifleri. UI 42/43, düzeltme sonrası
-7/7; core-off 33/33. Tam suite/fiziksel kabul değildir. Stop/retry engeli kapandı.
-[Matris ve kanıt](archive/2026-10-22-ccux-14.md), `build/ccux/ccux-14/`.
+**CCUX-14 tamamlandı:** 1/5 kamera fixture'ı ve üç applicationType yazılım/görsel
+kabulü; fiziksel kabul değildir. Stop/retry engeli kapandı.
+[Matris/kanıt](archive/2026-10-22-ccux-14.md), `build/ccux/ccux-14/`.
 
 CCUX-01–13 tamamlandı; ayrıntılı kayıtlar [arşiv dizinindedir](archive/README.md).
 - Kamera immutable ID/kısa ID ve atomik varsayılan kurulum/profil; belirsiz eski
@@ -68,12 +69,10 @@ sırasıyla sürer; **Hand-eye kapsam dışı.** Tamamlanmış KMC/ICM/EXP işle
   Eski 21 CTest ve fiziksel koşum yeni test değildir. Uzun probe sonunda zorunlu
   sonlandırma sınırı var. PLC/robot kapalı; restart deneysel onayı kapatır.
 - **EXP-02 canlı Editor + PGM/JSON px replay hazır**;
-  [kanıt](archive/2026-10-21-icm-oecs-exp-02.md). Deneysel kalibrasyon/aktivasyon
-  ve bağımsız mm referansı açık; CCUX-07–13 bu açığı devralır.
+  [kanıt](archive/2026-10-21-icm-oecs-exp-02.md). Kalibrasyon zinciri CCUX-07–13'te.
 - **EXP-01 görüntü/Stop/PGM hazır, fiziksel kabul kısmi**;
-  [odak/100 seri](archive/2026-10-21-icm-oecs-exp-01d.md).
-  Optik/mm kabulü yok. MUI-01–03, EUI-01–08 tamam; **MUI-04 sentetik kabulü
-  tamam, özgün gerçek raster/reçete/ROI problemi açık**.
+  [kanıt](archive/2026-10-21-icm-oecs-exp-01d.md). Optik/mm kabulü yok.
+  MUI-01–03/EUI-01–08 tamam; **MUI-04 özgün raster/reçete/ROI problemi açık**.
 - KMC-0–9/10a–e ve ICM ortak yazılım/G2 tamam: reçetesiz N kamera, bağımsız
   kalibrasyon, kaynak başına immutable model, çok kaynaklı Editor/Runtime.
   [G2 raporu](architecture/industrial-camera-release-acceptance.md).
@@ -113,6 +112,4 @@ sırasıyla sürer; **Hand-eye kapsam dışı.** Tamamlanmış KMC/ICM/EXP işle
 
 UI: build/reference-ui/visionflow.exe; core: build/kmc9-core-off.
 PATH/build/test/başlatma README'de; mevcut UI kullanımı
-[kullanım rehberinde](camera-runtime-usage.md). Her kartta yalnız değişen kapsamı
-kanıtla. CCUX-03 fiziksel kamera, native DPI veya kurulum kabulü değildir.
-Detay tarihli kapanıştadır.
+[kullanım rehberinde](camera-runtime-usage.md). Kapsam ve kanıt ayrıntıları tarihli kapanıştadır.

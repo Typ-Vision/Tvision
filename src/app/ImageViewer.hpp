@@ -110,6 +110,7 @@ private:
     QPointF roiStart_;
     QGraphicsScene* scene_{};
     QGraphicsPixmapItem* imageItem_{};
+    qint64 previewCacheKey_=0;
     QGraphicsRectItem* selection_{};
     QPoint pressed_;
     bool fitMode_=true;

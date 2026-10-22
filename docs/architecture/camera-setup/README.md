@@ -5,7 +5,9 @@ CCUX-01–14 teslimleri korunur; CCUX-15 fiziksel kabulü kısmen açıktır.
 CCUX-16 politika, CCUX-17 UI, CCUX-18 gezinme temizliği ve CCUX-19 birleşik
 yazılım/görsel kabulü teslim edildi. CCUX-15 fiziksel kabulü açık. Güncel seçili iş ve
 tamamlanan kartlar [progress](../../progress.md) üzerinden izlenir.
-Öncelik sırası **CCUX-16 → 17 → 18 → 19 → CCUX-15'in kalan fiziksel kabulü**.
+22 Ekim yeni öncelik: **[CCUX-20 görüntü tepkiselliği](20-image-responsiveness.md)
+→ [CCUX-21 PreProcess ROI](21-preprocess-roi.md)**. CCUX-15'in kalan fiziksel
+kabulü açık kalır; CCUX-16–19 tamamlanmıştır.
 Eski EXP/KMC sıraları bu sıranın önüne geçmez.
 
 ## 22 Ekim kullanıcı kararı
