@@ -123,12 +123,16 @@ void MainWindow::showProjectDialog(bool edit) {
         const auto path=QFileDialog::getSaveFileName(&dialog,"Yeni proje dosyası",QDir::currentPath(),"VisionFlow Project (*.vfproject)",nullptr,QFileDialog::DontConfirmOverwrite);
         if (!path.isEmpty()) location->setText(path.endsWith(".vfproject",Qt::CaseInsensitive) ? path : path+".vfproject");
     });
-    auto* camera=field(form,"Varsayılan görüntü kaynağı","projectCamera",edit ? p.cameraReference : "ImageFile");
     auto* robot=field(form,"Robot türü (opsiyonel)","projectRobot",p.robotType);
     auto* protocol=field(form,"Protokol (opsiyonel)","projectProtocol",p.communicationProtocol);
-    auto* calibration=field(form,"Kalibrasyon referansı (opsiyonel)","projectCalibration",p.calibrationReference);
     layout->addLayout(form);
-    layout->addWidget(text("Kaynak ve donanım alanları yalnız metadata'dır; bağlantı veya kalibrasyon geçerliliği henüz doğrulanmaz."));
+    auto* details=new QPushButton("Ayrıntılar — eski proje referansları"); details->setCheckable(true); details->setObjectName("projectLegacyDetails");
+    layout->addWidget(details);
+    auto* legacy=new QWidget; auto* legacyForm=new QFormLayout(legacy);
+    auto* camera=field(legacyForm,"Görüntü kaynağı (eski metadata)","projectCamera",p.cameraReference);
+    auto* calibration=field(legacyForm,"Kalibrasyon (eski metadata)","projectCalibration",p.calibrationReference);
+    legacyForm->addRow(text("Bu metinler reçetelere aktarılmaz. Kamerayı Recipe Editor kaynak düğümünde seçin."));
+    layout->addWidget(legacy); legacy->hide(); connect(details,&QPushButton::toggled,legacy,&QWidget::setVisible);
     auto* error=text(""); error->setObjectName("error"); layout->addWidget(error);
     auto* buttons=new QDialogButtonBox(QDialogButtonBox::Ok|QDialogButtonBox::Cancel);
     buttons->button(QDialogButtonBox::Ok)->setText(edit ? "Apply" : "Create Project");
@@ -185,11 +189,9 @@ void MainWindow::showRecipeDialog(bool edit) {
     layout->addLayout(cards); auto* form=new QFormLayout;
     auto* name=field(form,"Reçete adı","recipeName",original.name);
     auto* description=field(form,"Açıklama","recipeDescription",original.description,2048);
-    auto* camera=field(form,"Görüntü kaynağı referansı","recipeCamera",edit ? original.cameraReference : service_.project().cameraReference);
-    auto* calibration=field(form,"Kalibrasyon referansı","recipeCalibration",edit ? original.calibrationReference : service_.project().calibrationReference);
     layout->addLayout(form);
     layout->addWidget(text(edit ? "Tür değişikliği flow uyumluluğu doğrulamasıyla daha sonra eklenecek. Değişiklikler reçeteyi DRAFT yapar." :
-        "Reçete DRAFT oluşturulur. Başlangıç akışı burada açıklamadır; tool'lar sonraki adımlarda uygulanacak."));
+        "Reçete boş kaynakla DRAFT oluşturulur. Kamerayı veya dosyayı Recipe Editor kaynak düğümünde seçin; kalibrasyon kaynak üzerinden çözülür."));
     auto* error=text(""); error->setObjectName("error"); layout->addWidget(error);
     auto* buttons=new QDialogButtonBox(QDialogButtonBox::Ok|QDialogButtonBox::Cancel);
     buttons->button(QDialogButtonBox::Ok)->setText(edit ? "Apply && Open Editor" : "Create && Open Editor");
@@ -197,8 +199,8 @@ void MainWindow::showRecipeDialog(bool edit) {
     connect(buttons,&QDialogButtonBox::rejected,&dialog,&QDialog::reject);
     connect(buttons,&QDialogButtonBox::accepted,&dialog,[&]{
         try {
-            if (edit) service_.editRecipe(original.id,name->text(),description->text(),camera->text(),calibration->text());
-            else service_.createRecipe(name->text(),description->text(),static_cast<ApplicationType>(group->checkedId()),camera->text(),calibration->text());
+            if (edit) service_.editRecipeMetadata(original.id,name->text(),description->text());
+            else service_.createRecipe(name->text(),description->text(),static_cast<ApplicationType>(group->checkedId()));
             refreshWorkspace(); selectPage("editor"); dialog.accept();
         } catch (const std::exception& e) { error->setText(QString::fromUtf8(e.what())); }
     });
@@ -332,6 +334,7 @@ bool MainWindow::verifyWorkspace(const QString& artifacts) {
         auto* dialog=findChild<QDialog*>("projectDialog"); if (!dialog) return;
         dialog->findChild<QLineEdit*>("projectName")->setText("Test Projesi");
         dialog->findChild<QLineEdit*>("projectPath")->setText(path);
+        if(dialog->findChild<QLineEdit*>("projectCamera")->isVisible() || dialog->findChild<QLineEdit*>("projectCalibration")->isVisible()) {dialog->reject();return;}
         dialog->grab().save(QDir(artifacts).filePath("step2-new-project.png"));
         dialog->findChild<QPushButton*>("acceptProject")->click();
         dialogCompleted=service_.hasProject(); if (!dialogCompleted) dialog->reject();
@@ -344,11 +347,22 @@ bool MainWindow::verifyWorkspace(const QString& artifacts) {
         dialogCompleted=false;
         QTimer::singleShot(0,this,[&,type]{
             auto* dialog=findChild<QDialog*>("recipeDialog"); if (!dialog) return;
+            if(dialog->findChild<QLineEdit*>("recipeCamera") || dialog->findChild<QLineEdit*>("recipeCalibration")) {dialog->reject();return;}
+            if(type<2) {
+                dialog->findChild<QLineEdit*>("recipeName")->setText(type==0 ? "  " : "part_1");
+                dialog->findChild<QPushButton*>("acceptRecipe")->click();
+                if(service_.project().recipes.size()!=type || dialog->findChild<QLabel*>("error")->text().isEmpty()) {dialog->reject();return;}
+            }
             dialog->findChild<QLineEdit*>("recipeName")->setText("Part_"+QString::number(type+1));
             dialog->findChild<QRadioButton*>(typeKey(static_cast<ApplicationType>(type)))->click();
-            if (type==2) dialog->grab().save(QDir(artifacts).filePath("step2-new-recipe.png"));
+            if (type==2) {
+                resize(1400,900);dialog->resize(1000,450);QApplication::processEvents();dialog->grab().save(QDir(artifacts).filePath("ccux11-new-normal.png"));
+                resize(850,600);dialog->resize(820,450);QApplication::processEvents();dialog->grab().save(QDir(artifacts).filePath("ccux11-new-small.png"));
+                resize(1400,900);dialog->grab().save(QDir(artifacts).filePath("step2-new-recipe.png"));
+            }
             dialog->findChild<QPushButton*>("acceptRecipe")->click();
-            dialogCompleted=service_.activeRecipe() && service_.activeRecipe()->applicationType==static_cast<ApplicationType>(type);
+            dialogCompleted=service_.activeRecipe() && service_.activeRecipe()->applicationType==static_cast<ApplicationType>(type) &&
+                service_.activeRecipe()->cameraReference.isEmpty() && service_.activeRecipe()->calibrationReference.isEmpty() && service_.tools().isEmpty();
             if (!dialogCompleted) dialog->reject();
         });
         findChild<QPushButton*>("newRecipe")->click();
@@ -370,7 +384,10 @@ bool MainWindow::verifyWorkspace(const QString& artifacts) {
     dialogCompleted=false;
     QTimer::singleShot(0,this,[&]{
         auto* dialog=findChild<QDialog*>("recipeDialog"); if (!dialog) return;
+        if(dialog->findChild<QLineEdit*>("recipeCamera") || dialog->findChild<QLineEdit*>("recipeCalibration")) {dialog->reject();return;}
         dialog->findChild<QLineEdit*>("recipeDescription")->setText("Güncellenmiş açıklama");
+        resize(1400,900);dialog->resize(1000,450);QApplication::processEvents();dialog->grab().save(QDir(artifacts).filePath("ccux11-edit-normal.png"));
+        resize(850,600);dialog->resize(820,450);QApplication::processEvents();dialog->grab().save(QDir(artifacts).filePath("ccux11-edit-small.png"));resize(1400,900);
         dialog->findChild<QPushButton*>("acceptRecipe")->click();
         dialogCompleted=service_.dirty(); if (!dialogCompleted) dialog->reject();
     });

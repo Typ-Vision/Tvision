@@ -17,6 +17,7 @@ int main(int argc, char* argv[]) {
     if (!theme.open(QIODevice::ReadOnly)) return 2;
     app.setStyleSheet(QString::fromUtf8(theme.readAll()));
     const bool multiRuntimeOnly=app.arguments().contains("--multi-source-runtime-smoke");
+    const bool recipeFieldsOnly=app.arguments().contains("--recipe-fields-smoke");
     const bool multiOnly=app.arguments().contains("--multi-source-smoke");
     const bool circleOnly=app.arguments().contains("--circle-smoke");
     const bool systemOnly=app.arguments().contains("--system-calibration-smoke");
@@ -24,12 +25,13 @@ int main(int argc, char* argv[]) {
     const bool poseOnly=app.arguments().contains("--pose-tracking-smoke");
     const bool experimentalOnly=app.arguments().contains("--experimental-editor-smoke");
     const bool usabilityOnly=app.arguments().contains("--usability-smoke");
-    const bool smoke = app.arguments().contains("--smoke-test") || circleOnly || geometryOnly || poseOnly || usabilityOnly || systemOnly || multiOnly || multiRuntimeOnly || experimentalOnly;
+    const bool smoke = app.arguments().contains("--smoke-test") || circleOnly || geometryOnly || poseOnly || usabilityOnly || systemOnly || multiOnly || multiRuntimeOnly || experimentalOnly || recipeFieldsOnly;
     const QDir buildDir(smoke ? qEnvironmentVariable("VISIONFLOW_TEST_ARTIFACTS",QCoreApplication::applicationDirPath()):QCoreApplication::applicationDirPath());
     if(smoke)QDir().mkpath(buildDir.absolutePath());
     visionflow::MainWindow window(buildDir.filePath(smoke ? "ui-smoke.ini" : "../config/local.ui.ini"));
     window.show();
     if (smoke) QTimer::singleShot(100, &app, [&]{
+        if(recipeFieldsOnly){QFontDatabase::addApplicationFont(QDir(qEnvironmentVariable("WINDIR", "C:/Windows")).filePath("Fonts/segoeui.ttf"));bool valid=false;try{window.resize(1400,900);valid=window.verifyWorkspace(buildDir.absolutePath());}catch(const std::exception& e){QTextStream(stderr)<<e.what()<<'\n';}QTextStream(stdout)<<(valid ? "PASS":"FAIL")<<": reference-free recipe dialogs, three types, validation and metadata roundtrip\n";window.close();app.exit(valid ? 0:1);return;}
         if(multiRuntimeOnly){QFontDatabase::addApplicationFont(QDir(qEnvironmentVariable("WINDIR", "C:/Windows")).filePath("Fonts/segoeui.ttf"));bool valid=false;try{valid=window.verifyMultiSourceRuntime(buildDir.absolutePath());}catch(const std::exception& e){QTextStream(stderr)<<e.what()<<'\n';}window.close();app.exit(valid ? 0:1);return;}
         if(multiOnly){QFontDatabase::addApplicationFont(QDir(qEnvironmentVariable("WINDIR", "C:/Windows")).filePath("Fonts/segoeui.ttf"));bool valid=false;try{valid=window.verifyMultiSource(buildDir.absolutePath());}catch(const std::exception& e){QTextStream(stderr)<<e.what()<<'\n';}window.close();app.exit(valid ? 0:1);return;}
         if(systemOnly){QFontDatabase::addApplicationFont(QDir(qEnvironmentVariable("WINDIR", "C:/Windows")).filePath("Fonts/segoeui.ttf"));bool valid=false;try{valid=window.verifySystemCalibration(buildDir.absolutePath());}catch(const std::exception& e){QTextStream(stderr)<<e.what()<<'\n';}window.close();app.exit(valid ? 0:1);return;}

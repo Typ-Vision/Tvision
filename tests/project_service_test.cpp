@@ -37,7 +37,7 @@ int main(int argc, char** argv) {
         }
         rejected([&]{service.createRecipe("part_0","",ApplicationType::Measurement,"ImageFile");},"case insensitive unique name");
         check(service.project().recipes.size()==3,"failed validation is non-mutating");
-        rejected([&]{service.editRecipe(ids[0],"Part_0","","","");},"empty camera must fail");
+        rejected([&]{service.editRecipeMetadata(ids[0],"part_1","");},"metadata duplicate name must fail");
         rejected([&]{service.createRecipe("","",ApplicationType::Measurement,"ImageFile");},"empty name must fail");
         service.save(); service.openProject(path);
         check(service.project().id==projectId && service.project().recipes.size()==3,"project identity / recipes roundtrip");
@@ -101,6 +101,36 @@ int main(int argc, char** argv) {
         check(service.dirty() && service.activeRecipe()->name=="Pending" && service.activeRecipe()->recipeVersion==2,"conflict retains pending edits");
         ProjectService fresh; fresh.createProject("New","",dir.filePath("new.vfproject"),"ImageFile"); fresh.discardChanges();
         check(!fresh.hasProject() && !fresh.dirty(),"discard new unsaved project");
+        // CCUX-11: references are optional legacy metadata, never inherited by new recipes.
+        ProjectService empty; empty.createProject("No references","",dir.filePath("empty.vfproject"),"");
+        for(int type=0;type<3;++type) {
+            const auto id=empty.createRecipe("Empty_"+QString::number(type),"",static_cast<ApplicationType>(type));
+            check(empty.activeRecipe()->cameraReference.isEmpty() && empty.activeRecipe()->calibrationReference.isEmpty() &&
+                  empty.activeRecipe()->definition.isEmpty() && empty.activeRecipe()->status==RecipeStatus::Draft,"three types start with zero sources and no global reference");
+            empty.save();empty.editRecipeMetadata(id,empty.activeRecipe()->name,"");check(!empty.dirty(),"empty recipe metadata no-op");
+        }
+        empty.updateProject("No references","","Old camera","","","Old calibration");
+        empty.createRecipe("No inheritance","",ApplicationType::Measurement);
+        check(empty.activeRecipe()->cameraReference.isEmpty() && empty.activeRecipe()->calibrationReference.isEmpty(),"project references are not inherited");
+        rejected([&]{empty.editRecipeMetadata(empty.activeRecipe()->id,"  ","");},"blank metadata name rejected");
+        rejected([&]{empty.editRecipeMetadata(empty.activeRecipe()->id,"empty_0","");},"case-fold metadata duplicate rejected");
+        rejected([&]{empty.editRecipeMetadata("missing","Missing","");},"unknown metadata recipe rejected");
+        empty.save();
+        auto portable=ProjectRepository{}.load(empty.path());
+        ProjectRepository{}.save(dir.filePath("portable-copy.vfproject"),portable);
+        check(ProjectRepository::encode(ProjectRepository{}.load(dir.filePath("portable-copy.vfproject")))==ProjectRepository::encode(portable),"value copy and project export/import preserve empty references and three types");
+        ProjectService legacy; legacy.createProject("Legacy","",dir.filePath("metadata.vfproject"),"Old project");
+        const auto legacyId=legacy.createRecipe("Legacy recipe","old",ApplicationType::Measurement,"Old camera","cal");
+        legacy.bindCalibration({"cal",1,"content","source","lens",{640,480},"plane",{"source/image"},{"plane",LengthUnit::Millimetre,AxisConvention::XRightYDown}});
+        legacy.save();
+        const auto before=*legacy.activeRecipe();const auto encoded=ProjectRepository::encode(legacy.project());
+        legacy.editRecipeMetadata(legacyId,"Legacy recipe","old");legacy.save();
+        check(!legacy.dirty() && ProjectRepository::encode(legacy.project())==encoded,"legacy metadata no-op preserves bytes and revisions");
+        legacy.editRecipeMetadata(legacyId,"Renamed legacy","old");
+        check(legacy.activeRecipe()->cameraReference==before.cameraReference && legacy.activeRecipe()->calibrationReference==before.calibrationReference &&
+              legacy.activeRecipe()->calibrationBinding==before.calibrationBinding && legacy.activeRecipe()->definition==before.definition,"name-only edit preserves legacy fields and binding");
+        legacy.save();legacy.openProject(legacy.path());legacy.selectRecipe(legacyId);
+        check(legacy.activeRecipe()->calibrationBinding==before.calibrationBinding && legacy.activeRecipe()->recipeVersion==2,"legacy metadata edit roundtrip");
         QTextStream(stdout)<<"PASS: three types, IDs, revisions, discard, validation, failed save/open and external conflict\n";
         return 0;
     } catch (const std::exception& e) { QTextStream(stderr)<<"FAIL: "<<e.what()<<'\n'; return 1; }

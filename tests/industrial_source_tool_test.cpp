@@ -76,10 +76,14 @@ int main(int argc,char** argv){QCoreApplication app(argc,argv);try{
         ProductionRecipeService runtime([](const QString&,ProductionAction){return true;});reject([&]{runtime.validate("engineer",*s.activeRecipe(),dir.path());});
     }
     {
-        ProjectService s;s.createProject("Camera selector","",dir.filePath("ccux10.vfproject"),"industrial");const auto recipe=s.createRecipe("Camera draft","",ApplicationType::Measurement,"industrial");const auto source=s.addTool("industrial_camera");
+        ProjectService s;s.createProject("Camera selector","",dir.filePath("ccux10.vfproject"),"");const auto recipe=s.createRecipe("Camera draft","",ApplicationType::Measurement);const auto source=s.addTool("industrial_camera");
         MeasurementEnvironment e;e.projectId=s.project().id;e.current=contract;
         s.bindCameraSource(source,e,{"camera"});check(SystemCalibration::setupReference(SystemCalibration::branch(*s.activeRecipe(),source))==std::optional(SetupReference{{"camera"},{"setup"},1}),"Camera selection atomically binds setup and profile");
         s.save();const auto saved=bytes(s.path());s.bindCameraSource(source,e,{"camera"});s.save();check(bytes(s.path())==saved && !s.dirty(),"Camera selector no-op keeps exact saved bytes");
+        const auto bound=s.activeRecipe()->definition;const auto signature=ExecutionService::toolSignature(bound,dir.path(),source,"scope");
+        s.editRecipeMetadata(recipe,"Camera renamed","");check(s.activeRecipe()->definition==bound && s.activeRecipe()->cameraReference.isEmpty() && s.activeRecipe()->calibrationReference.isEmpty(),"Metadata edit preserves scoped binding with no legacy reference");
+        check(ExecutionService::toolSignature(s.activeRecipe()->definition,dir.path(),source,"scope")==signature,"Name-only edit preserves source hash");
+        s.save();const auto renamed=bytes(s.path());s.editRecipeMetadata(recipe,"Camera renamed","");s.save();check(bytes(s.path())==renamed,"Scoped metadata no-op preserves bytes");
         auto changed=e;changed.current.profiles[0].revision++;changed.current.profiles[0].requested.gain=2;
         s.refreshCameraSources(changed);check(s.dirty() && IndustrialSourceReference::fromJson(s.tools().first().parameters["sourceReference"].toObject()).profileRevision==2,"Run preparation refreshes same-camera settings and marks dirty");
         const auto before=s.activeRecipe()->definition;auto geometric=changed;geometric.current.setups[0].revision++;s.refreshCameraSources(geometric);check(s.activeRecipe()->definition==before,"Geometry revision never silently rebound");

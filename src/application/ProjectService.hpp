@@ -23,7 +23,9 @@ public:
     void openProject(const QString& path);
     void updateProject(QString name, QString description, QString cameraReference,
                        QString robotType, QString protocol, QString calibration);
-    QString createRecipe(QString name, QString description, ApplicationType type, QString camera, QString calibration = {});
+    QString createRecipe(QString name, QString description, ApplicationType type, QString camera = {}, QString calibration = {});
+    void editRecipeMetadata(const QString& id, QString name, QString description);
+    // Explicit legacy reference edit; normal UI edits use editRecipeMetadata.
     void editRecipe(const QString& id, QString name, QString description, QString camera, QString calibration);
     void selectRecipe(const QString& id);
     void save();

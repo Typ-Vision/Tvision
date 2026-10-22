@@ -63,6 +63,17 @@ QString ProjectService::createRecipe(QString name, QString description, Applicat
     project_=candidate; activeId_=recipe.id; changedRecipes_.insert(recipe.id); newRecipes_.insert(recipe.id); dirty_=true;
     return recipe.id;
 }
+void ProjectService::editRecipeMetadata(const QString& id, QString name, QString description) {
+    // Metadata edits must not clear legacy calibration or source-scoped bindings.
+    auto candidate=project();
+    for (auto& recipe : candidate.recipes) if (recipe.id==id) {
+        if (recipe.name==name.trimmed() && recipe.description==description) return;
+        recipe.name=name.trimmed(); recipe.description=description; recipe.status=RecipeStatus::Draft;
+        validateProject(candidate);
+        project_=candidate; changedRecipes_.insert(id); dirty_=true; return;
+    }
+    fail("Reçete bulunamadı.");
+}
 void ProjectService::editRecipe(const QString& id, QString name, QString description, QString camera, QString calibration) {
     auto candidate=project();
     for (auto& recipe : candidate.recipes) if (recipe.id==id) {

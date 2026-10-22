@@ -4,14 +4,19 @@
 
 ## Devam noktası
 
-**Sonraki görev: [CCUX-11](architecture/camera-setup/11-recipe-fields.md).**
+**Sonraki görev: [CCUX-12](architecture/camera-setup/12-runtime-metric.md).**
+**CCUX-11 tamamlandı:** yeni/düzenle penceresinde genel referanslar yok; üç tür
+boş kaynakla DRAFT açılır. Metadata edit legacy/scoped bağ ve no-op hash'i korur;
+proje referansları Ayrıntılar'da kalır, miras alınmaz. Release + 7 ilgili test geçti,
+iki boyutta görseller incelendi. Genel shell temiz producer fixture'ıyla yine eski
+Runtime Stop/retry beklentisinde kaldı. Yeni kanıt/sınırlar
+[kapanışta](archive/2026-10-22-ccux-11.md), `build/ccux/ccux-11/`.
 **CCUX-10 tamamlandı:** kaynakta kamera ID/ad seçimi default kurulum/profil ile
-atomik bağlanır; eski explicit bağ ayrıntılardadır. Aynı kamera ayarı Run Flow’da
-snapshot/DRAFT/dirty yeniler; geometri/seri/legacy otomatik onarılmaz. Kaynak başına
-ayrı typed deneysel canlı/replay mm resolver ve cache kökeni korunur.
-Release + kartın 6 CTest’i ve ek save/use fixture kabulü; iki boyutta görsel
-kanıt ve sınırlar [kapanışta](archive/2026-10-22-ccux-10.md),
-`build/ccux/ccux-10/`. Fiziksel mm/native DPI kabulü değildir; Runtime mm CCUX-12.
+atomik bağlanır; aynı kamera ayarı Run Flow’da snapshot/DRAFT/dirty yeniler.
+Geometri/seri/legacy otomatik onarılmaz. Ayrı typed deneysel canlı/replay mm
+resolver/cache kökeni korunur. Yazılım/görsel kanıt
+[kapanışta](archive/2026-10-22-ccux-10.md), `build/ccux/ccux-10/`.
+Fiziksel mm/native DPI kabulü değildir; Runtime mm CCUX-12.
 **CCUX-09 tamamlandı:** kamera merkezli özet, iki yöntem, immutable hedef ve tek
 Kaydet ve kullan; kısmi kayıt/ret/retry ve deneysel etiket. Yeni yazılım/görsel
 kanıt [kapanışta](archive/2026-10-22-ccux-09.md), `build/ccux/ccux-09/`.

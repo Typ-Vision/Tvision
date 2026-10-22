@@ -108,7 +108,13 @@ QSaveFile direct-write fallback kapalıdır: atomik commit başarısızsa dirty/
 ## Doğrulama ve sınırlar
 
 - Proje/reçete isimleri 1–64 yazdırılabilir karakter; reçete adı proje içinde case-fold karşılaştırmayla benzersiz.
-- Açıklama en fazla 2048 karakter; görüntü kaynağı referansı boş olamaz. Robot/protokol/kalibrasyon opsiyoneldir.
+- Açıklama en fazla 2048 karakter. CCUX-11 ile proje/reçete genel görüntü kaynağı ve
+  kalibrasyon referansları opsiyonel legacy metadata'dır; yeni reçete bunları
+  projeden miras almaz. Normal bağlama Editor kaynak düğümündedir. JSON alanları
+  ve root/recipe şemaları korunur; aç/no-op kayıtta toplu silme/migration yapılmaz.
+  `editRecipeMetadata` yalnız ad/açıklama değiştirir; legacy referans ve binding'leri
+  korur. Eski explicit referans edit API'si ayrı kalır. Runtime legacy kalibrasyon
+  çözümleme kontrolü korunur; boş referans doğrulanmış model veya üretim izni değildir.
 - ID, tür, status, tamsayı sürüm, UTC tarih ve nesne/dizi tipleri doğrulanır.
 - Bilinmeyen şema/tür ve root/recipe alanları reddedilir; daha yeni veriyi sessizce silerek kaydetme yapılmaz.
 - Dosya boyutu en fazla 16 MB. Yeni proje yolu mevcut olmamalı; üst klasör mevcut olmalı. İlk aşamada klasör açma veya Save As yoktur.

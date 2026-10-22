@@ -5,7 +5,10 @@ kartlar halinde uygulanır; güncel tamamlanma durumu [devir özetindedir](progr
 
 
 1. Project Manager'dan proje oluşturun/açın ve kaydedin. Recipe Manager'dan reçete
-   oluşturun; kaynak ve araçları ortak Editor'da bağlayın. Save taslağı kaydeder.
+   ad/açıklama ve uygulama türüyle oluşturun. Kamera seçmeden boş DRAFT açılır;
+   kaynak ve araçları ortak Editor'da bağlayın. Bilgileri düzenle yalnız ad/açıklamayı
+   değiştirir; mevcut kamera/kalibrasyon bağını korur. Projedeki eski genel referans
+   metinleri Ayrıntılar'dadır ve yeni reçeteye aktarılmaz. Save taslağı kaydeder.
 2. Image File için gerçek görüntü açın; kamera kaynağında edinim yapın. **Run Flow**
    akışı yürütür. **Run Tool** güncel girdilerle seçili aracı çalıştırır; eksik
    upstream sonucu veya görüntü yerine değer üretmez.

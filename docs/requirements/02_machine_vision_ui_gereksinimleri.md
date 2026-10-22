@@ -154,12 +154,16 @@ Komutlar: New, Open Editor, Copy, Delete, Import, Export, Version History. Delet
 | Defect Inspection | Bölgesel kusurları incele ve PASS/FAIL üret | Image → Reference → Inspection ROI → Defect → Result |
 | Measurement | Mesafe, çap, açı ve özellikleri ölç | Image → Features → Calculate → Limits → Result |
 
-21 Ekim 2026 kullanıcı kararı (uygulama bekliyor): ad, açıklama ve uygulama türü
+CCUX-11: ad, açıklama ve uygulama türü
 kalır; yeni/düzenlenen reçete penceresinden Görüntü kaynağı referansı ve Kalibrasyon
 referansı kaldırılır. Kamera Editor kaynak düğümünde seçilir; ilgili kalibrasyon
 kaynak üzerinden çözülür. **Create & Open Editor** ortak Recipe Editor'e geçer.
 Reçete türü `applicationType` alanında saklanır. Eski kayıt uyumluluğu ve kamera/
-kalibrasyon sadeleştirmesi [taslakta](../architecture/camera-calibration-ux-draft.md).
+kalibrasyon sadeleştirmesi [ortak sözleşmede](../architecture/camera-setup/contract.md#c4--kaynak-bağı-ve-immutable-yürütme).
+Yeni reçete proje referans metinlerini miras almaz. Metadata düzenlemesi eski
+referansları ve kaynak/kalibrasyon bağlarını korur; değişmeyen düzenleme dirty,
+sürüm veya içerik değişikliği üretmez. Projedeki eski referans metinleri
+Ayrıntılar'dadır; yeni proje/reçetenin önkoşulu değildir.
 
 İsim benzersizliği ve gerekli alanlar doğrulanır. Kamera henüz seçilmeden yeni
 reçete DRAFT oluşabilir; yalnızca oluşturulması onu VALID yapmaz. Donanım/model
@@ -520,7 +524,7 @@ Bağlantı/kalibrasyon/parametre hatası ile normal inspection FAIL ayrı mesajl
 
 ### Ortak başlangıç
 
-Recipe Manager → New Recipe → Application Type + Name + Camera → Create → **Recipe Editor**.
+Recipe Manager → New Recipe → Application Type + Name → Create → **Recipe Editor** → kaynak düğümünde kamera/dosya seçimi.
 
 ### Robot Guidance
 
