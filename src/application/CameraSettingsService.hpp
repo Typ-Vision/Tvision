@@ -2,6 +2,7 @@
 #include "IndustrialCameraProvider.hpp"
 #include "CameraLocalConfiguration.hpp"
 #include "MeasurementEnvironment.hpp"
+#include "OecsCameraSettings.hpp"
 #include <mutex>
 
 namespace visionflow {
@@ -47,11 +48,13 @@ private:
 };
 class CameraSettingsService {
 public:
+    static bool available(const DiscoveredDevice&,const CameraProviderFactory&,const QString& runtime);
     static std::unique_ptr<CameraSettingsSession> open(
         MeasurementEnvironmentRepository,const CameraId&,int expectedRevision,
         const IndustrialDiscoverySnapshot&,const CameraLocalConfiguration&,
         const CameraProviderFactory&,std::function<bool()> gate,
         std::function<void()> invalidate,
-        MeasurementEnvironmentRepository::Fault=MeasurementEnvironmentRepository::Fault::None);
+        MeasurementEnvironmentRepository::Fault=MeasurementEnvironmentRepository::Fault::None,
+        QString runtime=OecsCameraSettings::installedRuntime(),OecsCameraSettings::ApiFactory=makeOecsCApi);
 };
 }

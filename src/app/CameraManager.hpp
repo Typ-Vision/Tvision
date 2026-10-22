@@ -56,6 +56,8 @@ private:
     std::unique_ptr<CameraSettingsSession> settings_;
     CameraSettingsValues desired_;
     bool settingsApply_=false, settingsClosing_=false, settingsKnown_=false;
+    bool exposureWritable_=false, gainWritable_=false;
+    QSize settingsGeometry_;
     QString selectedKey_;
     QComboBox *routes_,*profiles_;
     QSpinBox* timeout_;

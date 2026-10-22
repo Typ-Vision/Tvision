@@ -40,11 +40,18 @@ doğruluğu kabulü değildir; fiziksel devreye alma ayrıca tamamlanır.
    taramada tekrar eklenmez, çevrimdışıyken listede kalır.
    **Ayarları oku** desteklenen backend'den başlangıç, aralık ve birimleri getirir;
    exposure/gain için **Uygula ve kaydet** gerçek readback doğrulanınca kaydeder.
-   Native settings backend henüz Unavailable olduğundan fiziksel cihazda bu
-   düğmeler destek varmış gibi açılmaz. Hatalı ayar başarı diye gösterilmez.
+   COE-050-M-USB-050-IR-C ve kurulu OECS runtime için ayar okuma/yazma native
+   görüntü ediniminden bağımsızdır; deneysel görüntü onayı gerekmez. Kayıtlı
+   satırda Ekle yerine **Kamera kayıtlı** görünür. Webcam ayarları ve bu sayfada
+   webcam önizlemesi desteklenmez; Editor/Kalibrasyon edinim yolu kullanılır.
+   Hatalı ayar başarı diye gösterilmez; erişim/aralıklar gerçek cihazdan gelir.
    **Ayrıntılar** yerel producer/rota/timeout ve optik/geometri taslağını taşır.
    Birden fazla uygun rota veya eski profil belirsizliğinde seçim görünür açılır;
    eski varsayılan profil ayrıca kaydedilir. Bilinmeyen lens/düzlem ölçüm izni vermez.
+   Yeni Opto kaydında önce ayarları okuyup kaydedin, ardından **Optik / geometri
+   taslağı** içindeki gerçek lens ve çalışma düzlemini tamamlayın. Okunan çözünürlük
+   taslağa taşınır; taslak kaydı fiziksel doğrulama değildir. Varsayılan işlem bütçesi
+   5 saniyedir. Native üretim edinimi kapalı kalır.
    Küçük pencerede alt işlemlere dikey kaydırma ile ulaşılır.
    **Setup → Calibration** aynı kamera kayıtlarını kullanır. Kamera → **Kalibre Et**
    → **Bilinen ölçü** veya **Kalibrasyon plakası** seçin. Hazır varsayılan hedef

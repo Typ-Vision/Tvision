@@ -18,7 +18,9 @@ UI algoritma veya donanım SDK'sını doğrudan çağırmaz.
 - Image File/Webcam edinimi; Camera Manager'da keşif, kamera kaydı ve Mono8 profil
   taslağı. Industrial Editor kaynağına kayıtlı kamera/kurulum/profil bağlanır;
   kare isteği ortak worker/provider yolundadır. Industrial Load çevrimdışı beyanı
-  gösterir; Run tam native kabul ister. Native production kapalıdır; mevcut COE-U için Camera Manager’da açık deneysel önizleme yolu vardır.
+  gösterir. Desteklenen Opto/OECS kamera ayarları gerçek readback ile okunup
+  kaydedilir; bu işlem görüntü edinim izninden bağımsızdır. Industrial Run
+  tam native kabul ister. Native production kapalıdır; mevcut COE-U için Camera Manager’da açık deneysel önizleme yolu vardır.
 
 Hazırlık/keşif üretim kabulü değildir; gerçek sonuç olmadan PASS, skor veya
 robot pose gösterilmez. Robot ekranları hazırlıktır. Yazılım testleri fiziksel

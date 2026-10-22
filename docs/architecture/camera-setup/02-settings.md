@@ -45,8 +45,12 @@ Tek oturum tek apply içindir; tekrar ayarlamak için kapatıp yeniden okuyun.
 
 Provider'ın worker-only `createSettings(camera, device)` / `setting` /
 `writeSetting` desteği acquisition `create(request)` admission yolundan ayrıdır.
-Eski backend varsayılanı açık unsupported hatasıdır. Ürün factory'si native
-Unavailable kalır; test enjeksiyonu ürün ayarı değildir. Kamera ayarı oturumu
+Eski backend varsayılanı açık unsupported hatasıdır. Ürün edinim factory'si native
+Unavailable kalır; test enjeksiyonu ürün ayarı değildir. CCUX-03b ile desteklenen
+COE-050-M-USB-050-IR-C için `OecsCameraSettings` ayrı ürün ayar backend'idir;
+`CameraSettingsService::available` kurulu runtime/kimlik desteğini denetler.
+UI aynı workspace/worker/lease/CAS işlemini kullanır; SDK UI'ya taşınmaz.
+Kamera ayarı oturumu
 Start/Grab sunmaz. Oturum workspace'ten önce kapanır; destructor worker'ı join eder.
 
 Mevcut profil sözleşmesi manual-only kalır. Auto kapalı olduğu readback ile
@@ -61,6 +65,14 @@ Donanım ve disk arasında atomiklik veya SDK çağrısını zorla kesme garanti
 donanım yazımı, revision ve invalidation üretmez. Diğer değişiklik/hatalarda mevcut
 conservative kamera invalidation korunur; uyum gevşetmesi CCUX-06'dadır.
 Pending setup lens/düzlem iddiası üretmez ve pending kalır; gerçek geometri DTO'da
-bulunur, profil gerçek readback sonrası doldurulabilir. Hazır setup'ın değişen
+bulunur, profil gerçek readback sonrası doldurulabilir. Camera Manager bu okunan
+çözünürlüğü optik taslağa başlangıç olarak taşır; lens/düzlemi uydurmaz.
+Hazır setup'ın değişen
 geometrisi yeni revision/history ile kaydedilir. Matematik etkinleştirilmez.
+
+OECS tetik modu açıkken auto node'ları unavailable olabilir. Ayar backend'i yalnız
+bu durumda TriggerMode'u geçici Off yaparak auto node'unu okur/yazar; önceki modu
+başarıda ve hatada geri yükleyip readback ile doğrular. Restore doğrulanamazsa
+session Fault olur. Start/Grab/SoftwareTrigger çağrısı yapılmaz; bu işlem bekleyen
+tetik komutu için cancel/drain garantisi veya production admission oluşturmaz.
 

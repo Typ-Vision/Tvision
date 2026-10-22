@@ -53,6 +53,10 @@ Sıra aşağıdaki gibidir; çalışma paralel değildir. “Bağlı” teknik �
 | [CCUX-14](14-software-acceptance.md) | Birleşik yazılım ve görsel kabul | 09,13 |
 | [CCUX-15](15-physical-acceptance.md) | Gerçek kamera ve bağımsız mm kabulü | 14 + cihaz/referans |
 
+22 Ekim kullanıcı hata bildirimi: **CCUX-03b**, Camera Manager kayıt/ayar kilidi
+onarımıdır; CCUX-15'i tamamlamaz. Ayrı OECS settings backend'i ve görünür kayıt/
+unsupported yönlendirmesi [kapanışta](../../archive/2026-10-22-ccux-03b.md).
+
 Kart içindeki CTest listesi mevcut hedef adlarıdır; yeni davranış için test
 gerekiyorsa aynı suite genişletilir veya anlamlı yeni hedef eklenir. Komut:
 `ctest --test-dir build/reference-ui -R '^(ad1|ad2)$' --output-on-failure`.

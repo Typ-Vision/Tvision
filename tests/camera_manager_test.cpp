@@ -41,6 +41,20 @@ int main(int argc,char** argv){QApplication app(argc,argv);try{
     app.setStyle("Fusion");QFile theme(":/resources/theme.qss");check(theme.open(QIODevice::ReadOnly),"product theme resource");app.setStyleSheet(QString::fromUtf8(theme.readAll()));
     QTemporaryDir dir(QDir::currentPath()+"/icm-camera-ui-XXXXXX");check(dir.isValid(),"UI artifact directory");
     const auto evidence=qEnvironmentVariable("VISIONFLOW_TEST_ARTIFACTS",QDir::currentPath()+"/../ccux/ccux-05")+"/camera";QDir().mkpath(evidence);
+    if(app.arguments().contains("--physical-settings")){
+        const auto path=dir.filePath("physical.vfproject");QFile file(path);check(file.open(QIODevice::WriteOnly),"physical temporary project");file.write("{}");file.close();
+        CameraSession jobs;MeasurementWorkspace ws(path,"physical-settings",[&]{return !jobs.busy();});
+        CameraManager view([&]{return &ws;},[]{return true;},jobs,dir.filePath("physical.ini"));view.resize(1400,900);view.show();view.scan();waitUi([&]{return !jobs.busy();});
+        auto* table=view.findChild<QTableWidget*>("cameraDevices");int selected=-1;
+        for(int i=0;i<table->rowCount();++i)if(table->item(i,2)->text()=="02A2220000627")selected=i;
+        check(selected>=0,"physical Opto row discovered");table->selectRow(selected);
+        auto* add=view.findChild<QPushButton*>("cameraRegister");check(add->isEnabled(),"physical Ekle enabled");add->click();
+        auto* read=view.findChild<QPushButton*>("cameraSettingsRead");check(read->isEnabled(),"physical settings read enabled without native acquisition");read->click();waitUi([&]{return !jobs.busy();});
+        auto* apply=view.findChild<QPushButton*>("cameraApply");check(apply->isEnabled(),qPrintable(view.findChild<QLabel*>("cameraStatus")->text()));
+        apply->click();waitUi([&]{return !jobs.busy();});check(view.findChild<QLabel*>("cameraStatus")->text().contains("doğrulandı ve kaydedildi"),qPrintable(view.findChild<QLabel*>("cameraStatus")->text()));
+        for(const auto size:{QSize(1400,900),QSize(850,600)}){view.resize(size);QApplication::processEvents();view.findChild<QScrollArea*>()->ensureWidgetVisible(read);QApplication::processEvents();check(view.grab().save(evidence+QString("/physical-settings-%1.png").arg(size.width())),"physical settings screenshot");}
+        QTextStream(stdout)<<"PASS physical Camera Manager: scan -> select -> Ekle -> read -> current-value apply/save; temporary project only; "<<view.findChild<QLabel*>("cameraReadback")->text()<<'\n';return 0;
+    }
     bool gate=true;int count=0;bool missing=false;bool ambiguous=false;bool reversed=false;bool multiRoute=false;
     QFile project(dir.path()+"/project.vfproject");check(project.open(QIODevice::WriteOnly),"saved project fixture");project.write("{}");project.close();
     CameraSession jobs;
@@ -196,6 +210,33 @@ int main(int argc,char** argv){QApplication app(argc,argv);try{
         legacyView.findChild<QLineEdit*>("cameraShortId")->setText("LEGACY");profiles->setCurrentIndex(1);legacyView.findChild<QPushButton*>("cameraDefaultsSave")->click();check(legacy.environment().defaults(r.camera.id).profile==p.id && !profiles->isVisible(),"explicit legacy defaults persist then hide chooser");}
     // Real experimental API contract through the widget, without a physical SDK.
     {namespace oe=oecs_experimental_fixture;
+        const auto path=dir.path()+"/product-settings.vfproject";QFile file(path);check(file.open(QIODevice::WriteOnly),"settings project");file.write("{}");file.close();
+        MeasurementWorkspace ws(path,"product-settings",[]{return true;});CameraSession settingJobs;auto hardware=oe::state();hardware->dynamicAuto=true;
+        hardware->nodes["TriggerMode"].value=QString("On");hardware->nodes["TriggerSource"].value=QString("Software");
+        auto scanner=[&](const QStringList&,const std::shared_ptr<std::atomic_bool>&){return CameraService::combine({},{{oe::request().device},{},false});};
+        CameraManager product([&]{return &ws;},[]{return true;},settingJobs,dir.filePath("product-settings.ini"),nullptr,scanner,{},[hardware]{return std::make_unique<oe::Api>(hardware);});
+        QFile runtime(dir.filePath("settings-api.dll"));check(runtime.open(QIODevice::WriteOnly),"settings runtime marker");runtime.write("fixture");runtime.close();
+        product.findChild<QLineEdit*>("cameraExperimentalRuntime")->setText(runtime.fileName());product.resize(1400,900);product.show();product.scan();waitUi([&]{return !settingJobs.busy();});
+        auto* add=product.findChild<QPushButton*>("cameraRegister");auto* read=product.findChild<QPushButton*>("cameraSettingsRead");auto* apply=product.findChild<QPushButton*>("cameraApply");
+        check(add->isEnabled() && !read->isEnabled(),"unregistered product camera can add without native admission");add->click();
+        check(ws.environment().current.cameras.size()==1 && add->text()=="Kamera kayıtlı" && !add->isEnabled() && read->isEnabled(),"pending registered camera can read real product settings");
+        check(!product.findChild<QPushButton*>("cameraPreview")->isEnabled(),"native preview stays closed");
+        read->click();waitUi([&]{return !settingJobs.busy();});
+        auto* exposure=product.findChild<QLineEdit*>("cameraExposure");check(exposure->isEnabled() && exposure->text()=="5000" && apply->isEnabled(),"product scalar values enabled from SDK readback");
+        product.findChild<QCheckBox*>("cameraExperimental")->setChecked(true);check(read->isEnabled() && apply->isEnabled(),"experimental opt-in does not disable settings");
+        exposure->setText("6000");apply->click();waitUi([&]{return !settingJobs.busy();});
+        check(ws.environment().current.profiles.first().requested.exposureTimeUs==6000 && ws.environment().current.setups.first().pending,"real settings persisted while physical optics remain pending");
+        check(hardware->calls.isEmpty() && hardware->nodes["TriggerMode"].value==FeatureValue(QString("On")),"settings do not acquire or retain altered trigger mode");
+        product.findChild<QGroupBox*>("cameraAdvanced")->setChecked(true);
+        QTimer::singleShot(0,[&]{auto* dialog=qobject_cast<QDialog*>(QApplication::activeModalWidget());check(dialog,"pending optical draft");
+            check(dialog->findChild<QSpinBox*>("draftWidth")->value()==2448 && dialog->findChild<QSpinBox*>("draftHeight")->value()==2048 && dialog->findChild<QLineEdit*>("draftExposure")->text()=="6000","pending draft uses actual settings geometry");
+            check(dialog->findChild<QLineEdit*>("draftLens")->text().isEmpty() && dialog->findChild<QLineEdit*>("draftPlane")->text().isEmpty(),"physical optics never invented");dialog->reject();});
+        product.findChild<QPushButton*>("cameraProfileEdit")->click();
+        product.findChild<QGroupBox*>("cameraAdvanced")->setChecked(false);
+        product.findChild<QLabel*>("cameraTitle")->setText("Sentetik Opto SDK • ürün ayar yolu");
+        for(const auto size:{QSize(1400,900),QSize(850,600)}){product.resize(size);QApplication::processEvents();product.findChild<QScrollArea*>()->ensureWidgetVisible(read);QApplication::processEvents();product.grab().save(evidence+QString("/product-settings-%1.png").arg(size.width()));}
+    }
+    {namespace oe=oecs_experimental_fixture;
         const auto r=oe::request();const auto path=dir.path()+"/experimental.vfproject";
         QFile projectFile(path);check(projectFile.open(QIODevice::WriteOnly),"experimental project");projectFile.write("{}");projectFile.close();
         MeasurementEnvironmentRegistry registry(MeasurementEnvironmentRepository(path,"experimental-ui"));registry.replace({{r.camera},{r.setup},{r.profile}});
@@ -208,9 +249,10 @@ int main(int argc,char** argv){QApplication app(argc,argv);try{
         expView.resize(1400,900);expView.show();expView.scan();waitUi([&]{return !expJobs.busy();});
         QFile dll(dir.path()+"/fixture.dll");check(dll.open(QIODevice::WriteOnly),"fixture DLL marker");dll.write("Synthetic API only");dll.close();
         expView.findChild<QLineEdit*>("cameraExperimentalRuntime")->setText(dll.fileName());expView.findChild<QCheckBox*>("cameraExperimental")->setChecked(true);
+        expView.findChild<QSpinBox*>("cameraTimeout")->setValue(3000); // This SDK fixture asserts a 3 s stream budget.
         auto* expSave=expView.findChild<QPushButton*>("cameraSaveFrame");auto* expImage=expView.findChild<QLabel*>("cameraPreviewImage");
         expView.findChild<QPushButton*>("cameraPreview")->click();waitUi([&]{return !expJobs.busy();});
-        check(!expImage->pixmap().isNull() && expSave->isEnabled(),"single experimental visible frame can save after clean shutdown");
+        check(!expImage->pixmap().isNull() && expSave->isEnabled(),qPrintable("single experimental visible frame can save after clean shutdown: "+expView.findChild<QLabel*>("cameraStatus")->text()));
         const auto saved=evidence+"/visible-experimental.pgm";QFile::remove(saved);QFile::remove(saved+".json");
         auto choose=[&](const QString& file,bool stop){selectedPath=file;stopDuringSave=stop;};
         choose(saved,false);expSave->click();check(QFileInfo::exists(saved) && QFileInfo::exists(saved+".json"),"visible PGM and sidecar saved");

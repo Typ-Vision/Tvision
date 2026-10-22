@@ -53,10 +53,14 @@ CameraState CameraSettingsSession::state() const{return worker_->lifecycle().sta
 QString CameraSettingsSession::error() const{return worker_->lifecycle().error();}
 void CameraSettingsSession::stop(){if(applying_){applying_=false;invalidate_();}worker_->requestShutdown();}
 
+bool CameraSettingsService::available(const DiscoveredDevice& d,const CameraProviderFactory& factory,const QString& runtime){
+    if(factory.injected_){const auto caps=factory.capabilities(d);return caps.open && caps.configure;}
+    return OecsCameraSettings::available(d,runtime);
+}
 std::unique_ptr<CameraSettingsSession> CameraSettingsService::open(MeasurementEnvironmentRepository repo,
     const CameraId& id,int revision,const IndustrialDiscoverySnapshot& discovery,const CameraLocalConfiguration& local,
     const CameraProviderFactory& factory,std::function<bool()> gate,std::function<void()> invalidate,
-    MeasurementEnvironmentRepository::Fault fault){
+    MeasurementEnvironmentRepository::Fault fault,QString runtime,OecsCameraSettings::ApiFactory api){
     require(bool(gate) && bool(invalidate) && gate(),"Workspace busy / missing invalidation gate");
     require(QFileInfo(repo.projectPath()).isFile(),"Saved project required");
     const auto e=repo.load();require(e.revision==revision,"Stale registry revision");
@@ -73,8 +77,7 @@ std::unique_ptr<CameraSettingsSession> CameraSettingsService::open(MeasurementEn
     for(auto i:routes)if(hint && discovery.devices[i].route==*hint)matches=true;
     if(!matches)hint.reset();
     r.device=CameraService::resolveIndustrial(r.camera,discovery,hint);
-    const auto caps=factory.capabilities(r.device);
-    require(factory.injected_ && caps.open && caps.configure,"Native settings backend unavailable / unsupported");
+    require(available(r.device,factory,runtime),"Camera settings backend unavailable / unsupported");
     auto session=std::unique_ptr<CameraSettingsSession>(new CameraSettingsSession);
     session->shared_=std::make_shared<CameraSettingsSession::Shared>();
     session->expected_=e;session->repository_=repo;session->gate_=std::move(gate);session->invalidate_=std::move(invalidate);
@@ -89,9 +92,9 @@ std::unique_ptr<CameraSettingsSession> CameraSettingsService::open(MeasurementEn
         void publish(CameraSettingsSnapshot s){std::lock_guard lock(shared_->mutex);shared_->snapshot=std::move(s);}
         void identity(){require(backend_->actualIdentity()==request_.device.identity,"Actual settings identity mismatch");}
     public:
-        Transaction(std::shared_ptr<const IndustrialCameraProvider> provider,IndustrialCameraRequest r,
+        Transaction(std::unique_ptr<IndustrialCameraBackend> backend,IndustrialCameraRequest r,
             MeasurementEnvironmentRepository repo,MeasurementEnvironment e,std::shared_ptr<CameraSettingsSession::Shared> shared,
-            MeasurementEnvironmentRepository::Fault fault):backend_(provider->createSettings(r.camera,r.device)),request_(std::move(r)),repo_(std::move(repo)),expected_(std::move(e)),shared_(std::move(shared)),fault_(fault){require(bool(backend_),"Settings backend missing");}
+            MeasurementEnvironmentRepository::Fault fault):backend_(std::move(backend)),request_(std::move(r)),repo_(std::move(repo)),expected_(std::move(e)),shared_(std::move(shared)),fault_(fault){require(bool(backend_),"Settings backend missing");}
         CameraWorkerResult execute(const CameraTicket& t) override {
             if(t.operation==CameraOperation::Connect){auto result=backend_->execute(t);if(!result.success)return result;
                 identity();publish(inspect(*backend_));return {true,{},{}};}
@@ -163,7 +166,9 @@ std::unique_ptr<CameraSettingsSession> CameraSettingsService::open(MeasurementEn
         void shutdown() override {backend_->shutdown();}
     };
     session->worker_=std::make_unique<CameraWorkerSession>(r.device.identity,CameraLeaseUse::Editor,r.sourceId,FrameQueueMode::ProductionFifo,
-        [provider=factory.injected_,r,repo,e,shared=session->shared_,fault]{return std::make_unique<Transaction>(provider,r,repo,e,shared,fault);});
+        [provider=factory.injected_,r,repo,e,shared=session->shared_,fault,runtime,api]{
+            auto backend=provider?provider->createSettings(r.camera,r.device):OecsCameraSettings::create(r.device,runtime,api);
+            return std::make_unique<Transaction>(std::move(backend),r,repo,e,shared,fault);});
     return session;
 }
 }

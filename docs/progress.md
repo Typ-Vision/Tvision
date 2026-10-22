@@ -5,6 +5,11 @@
 ## Devam noktası
 
 **Sonraki görev: [CCUX-15](architecture/camera-setup/15-physical-acceptance.md).**
+**CCUX-03b düzeltildi:** Opto ayar okuma/yazma native edinimden ayrıldı;
+kayıtlı kamera ve unsupported yönlendirmesi görünür. Gerçek 02A2220000627 ile
+Ekle → oku → mevcut 5000 µs / 0 dB kaydet geçici projede doğrulandı; görüntü/mm
+koşumu değildir. Release, ilgili test ve iki boyut görsel kanıtı
+[kapanışta](archive/2026-10-22-ccux-03b.md), `build/ccux/ccux-03b/`.
 **CCUX-15 fiziksel kabul bekliyor; tamamlanmadı.** 22 Ekim önkoşul incelemesinde
 kullanıcının karanlık ortam bildirimi, doğrulanmamış lens/çalışma düzlemi,
 bağımsız fiziksel referans ve iş toleransı eksikleri kaydedildi. Yeni kamera
@@ -26,7 +31,7 @@ kalıcılaşır, Stop sonrası sonuç geri gösterilmez. Komut/exit/matris/kanı
 CCUX-01–13 tamamlandı; ayrıntılı kayıtlar [arşiv dizinindedir](archive/README.md).
 - Kamera immutable ID/kısa ID ve atomik varsayılan kurulum/profil; belirsiz eski
   profil/rota açık seçim ister. Exposure/gain gerçek readback ile kaydedilir.
-  Pending optik kurulum ölçüm izni değildir; native settings hâlâ unsupported.
+  Pending optik kurulum ölçüm izni değildir; Opto/OECS ayar servisi edinimden ayrıdır.
 - Tek/canlı preview ortak worker/session, bir pending istek/latest kare,
   generation/Stop/drain ve gerçek FPS kullanır; deneysel OECS sıralı
   FrameBurstStart continuous diye sunulmaz. Sayfa/proje/pencere geçişi drain bekler.
