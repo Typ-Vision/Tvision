@@ -5,11 +5,11 @@
 ## Devam noktası
 
 **Güncel görev: [CCUX-15](architecture/camera-setup/15-physical-acceptance.md),
-kullanıcı seçimiyle plaka denemesi.** 7×7 simetrik daire, kullanıcı beyanı 12 mm;
-Yeni ham kare/sidecar alındı; karanlık görüntüde tam
-49 daire denetimi reddedildi. Işık iyileştirmesi/yeniden kare bekleniyor;
-model, etkinlik veya mm sonucu yok. [CCUX-15b](archive/2026-10-22-ccux-15b.md),
-`build/ccux/ccux-15/plate-20261022-01/`.
+kullanıcı seçimiyle plaka denemesi.** 7×7 simetrik daire, kullanıcı beyanı 12 mm.
+Kullanıcının istediği **56000 µs / 0 dB** readback ile yeni ham kare alındı.
+Servis 48 adayla reddediyor; tanıdaki 49 aday da doğru grid değil. Algılama
+sorunu açık; model/etkinlik/mm yok. [CCUX-15c](archive/2026-10-22-ccux-15c.md),
+`build/ccux/ccux-15/plate-20261022-02/`. [Önceki kare](archive/2026-10-22-ccux-15b.md).
 **CCUX-PLAN-03 uygulanmadı:** OECS seçim/uyarıları ve eski kalibrasyon gezinmesi
 kalkacak; [plan/C0](architecture/camera-setup/README.md) teknik engelleri korur.
 Plan sırası 16→17→18→19→15; güncel kullanıcı seçimi yukarıdadır.
@@ -19,7 +19,7 @@ Klavye olayı regresyonu ve kanıtlar [kapanışta](archive/2026-10-22-ccux-10b.
 ayar kaydı doğrulandı; görüntü/mm koşumu değildir.
 [Kanıt](archive/2026-10-22-ccux-03b.md), `build/ccux/ccux-03b/`.
 **CCUX-15a önceki plakasız kontroller:** 60 s / 558 kare / 9,36 FPS, Stop/reopen,
-USB, Editor 3 ve Runtime 10 Raw/px çevrim/CSV. Son ayar 6000 µs / 0 dB;
+USB, Editor 3 ve Runtime 10 Raw/px çevrim/CSV. O koşum sonu 6000 µs / 0 dB;
 yanlış seri/geometri reddi var. SDK kopma stop temizleme hatası ve 7000 µs / 1 dB
 readback reddi açık. [Kanıt](archive/2026-10-22-ccux-15a.md),
 `build/ccux/ccux-15/no-plate-20261022/`. **CCUX-15 tamamlanmadı:** lens/düzlem,

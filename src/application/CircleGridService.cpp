@@ -28,7 +28,9 @@ CalibrationGridObservation CircleGridService::detect(const ImageFrame& frame,con
     p.filterByColor=true;p.blobColor=0;p.filterByArea=true;p.minArea=9;p.maxArea=1000000;
     p.filterByCircularity=false;p.filterByConvexity=true;p.minConvexity=.8;p.filterByInertia=true;p.minInertiaRatio=.1;
     const auto detector=cv::SimpleBlobDetector::create(p);std::vector<cv::KeyPoint> blobs;detector->detect(gray,blobs);stop();
-    require(blobs.size()==size_t(t.columns*t.rows),"Circle count differs from declared full grid (partial/clutter unsupported)");
+    if(blobs.size()!=size_t(t.columns*t.rows))throw std::runtime_error(
+        QString("Circle count differs from declared full grid: detected %1, expected %2 (partial/clutter unsupported)")
+            .arg(qulonglong(blobs.size())).arg(t.columns*t.rows).toStdString());
     // A returned count alone is insufficient: some cluster assignments repeat
     // a blob or fold rows under perspective. Accept only a full geometric replay.
     for(int flags:{int(cv::CALIB_CB_SYMMETRIC_GRID),int(cv::CALIB_CB_SYMMETRIC_GRID | cv::CALIB_CB_CLUSTERING)}){

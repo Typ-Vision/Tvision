@@ -3,6 +3,9 @@
 #include "application/CalibrationService.hpp"
 #include "application/CalibrationStudyStore.hpp"
 #include "application/ImageFileService.hpp"
+#include "vision/ImageAccess.hpp"
+#include <opencv2/features.hpp>
+#include <opencv2/imgproc.hpp>
 #include "chessboard_fixture.hpp"
 #include <QCoreApplication>
 #include <QDir>
@@ -81,7 +84,28 @@ int main(int argc,char** argv){QCoreApplication app(argc,argv);
                 const auto mapping=PlaneMappingService::fit(observation);
                 report["status"]="GRID_FIT_REQUIRES_OPERATOR_REVIEW";
                 report["mapping"]=PlaneMappingService::encode(mapping);
-            }catch(const std::exception& e){report["status"]="DETECTION_REJECTED";report["error"]=QString::fromUtf8(e.what());}
+            }catch(const std::exception& e){
+                report["status"]="DETECTION_REJECTED";report["error"]=QString::fromUtf8(e.what());
+                // Diagnostic positions only, using the production detector's gates.
+                // These do not bypass full-grid order/fit or create a model.
+                if(raster.format()==PixelFormat::Gray8){
+                    cv::SimpleBlobDetector::Params p;p.minThreshold=10;p.maxThreshold=240;p.thresholdStep=10;p.minRepeatability=2;
+                    p.filterByColor=true;p.blobColor=0;p.filterByArea=true;p.minArea=9;p.maxArea=1000000;
+                    p.filterByCircularity=false;p.filterByConvexity=true;p.minConvexity=.8;p.filterByInertia=true;p.minInertiaRatio=.1;
+                    std::vector<cv::KeyPoint> blobs;cv::SimpleBlobDetector::create(p)->detect(ImageAccess(raster).ownedCopy(),blobs);
+                    QJsonArray positions;for(const auto& blob:blobs)positions.append(QJsonArray{blob.pt.x,blob.pt.y,blob.size});
+                    report["diagnosticBlobs"]=positions;
+                    QJsonArray trials;
+                    const auto gray=ImageAccess(raster).ownedCopy();
+                    for(int step:{2,5,10})for(int area:{9,1000}){
+                        auto trial=p;trial.thresholdStep=step;trial.minArea=area;
+                        std::vector<cv::KeyPoint> found;cv::SimpleBlobDetector::create(trial)->detect(gray,found);
+                        trials.append(QJsonObject{{"step",step},{"minArea",area},{"count",int(found.size())}});
+                        if(step==2 && area==1000){QJsonArray pts;for(const auto& b:found)pts.append(QJsonArray{b.pt.x,b.pt.y,b.size});report["fineDiagnosticBlobs"]=pts;}
+                    }
+                    report["diagnosticTrials"]=trials;
+                }
+            }
             QFile output(QString::fromLocal8Bit(argv[6]));
             if(!output.open(QIODevice::WriteOnly|QIODevice::NewOnly))throw std::runtime_error("New report file required");
             const auto bytes=QJsonDocument(report).toJson();
