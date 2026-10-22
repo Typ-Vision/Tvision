@@ -1,5 +1,6 @@
 #include "CameraService.hpp"
 #include "WebcamAdapter.hpp"
+#include "hardware/AcquisitionTiming.hpp"
 #include <QCryptographicHash>
 #include <QFile>
 #include <QFileInfo>
@@ -22,6 +23,7 @@ IndustrialDiscoverySnapshot CameraService::industrialSnapshot(const CameraDiscov
         try {
             const auto path=QFileInfo(d.producerPath).canonicalFilePath();
             if(!binaries.contains(path)){
+                AcquisitionTimingSpan timing("discovery.backend-hash");
                 QFile file(path);if(path.isEmpty() || !file.open(QIODevice::ReadOnly))throw std::runtime_error("Producer fingerprint unavailable.");
                 QCryptographicHash hash(QCryptographicHash::Sha256);if(!hash.addData(&file))throw std::runtime_error("Producer fingerprint failed.");
                 // File hash is the binary version identity; no SDK or G1 admission is inferred.

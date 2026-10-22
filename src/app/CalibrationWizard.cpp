@@ -150,6 +150,7 @@ void CalibrationWizard::saveAndUse(const CalibrationModelRecord& record){
     jobs_.launch(watcher,[job,backend]{return IndependentCalibrationSession::run(job,backend);});refresh();
 }
 void CalibrationWizard::captureIndependent(QString path){
+    const auto timing=AcquisitionTiming::request("calibration");AcquisitionTimingBinding binding(timing);AcquisitionTimingSpan commandTiming("calibration.user-command");
     if(jobs_.busy())throw std::runtime_error("Önce devam eden işi durdurun.");
     cancelWork();pendingFrame_.reset();setup_.reset();independentSetup_.reset();resultRecord_.reset();controls_={};lastResult_.reset();viewer_->clearImage();imageInfo_->setText("Görüntü yok.");step_=0;
     auto request=*independentTarget_;request.filePath=path;
@@ -157,7 +158,7 @@ void CalibrationWizard::captureIndependent(QString path){
     if(request.origin==SourceOrigin::TrialFile){request.camera.reset();request.setup.reset();request.profile.reset();request.localRoute.reset();request.policy=CalibrationCapturePolicy::Trusted;}
     const auto job=independent_.begin(request);const auto backend=backend_;
     auto* watcher=jobs_.watch<IndependentCaptureResult>(this,SessionJob::Image);
-    connect(watcher,&QFutureWatcher<IndependentCaptureResult>::finished,this,[this,watcher]{const auto r=watcher->result();watcher->deleteLater();
+    connect(watcher,&QFutureWatcher<IndependentCaptureResult>::finished,this,[this,watcher,timing]{AcquisitionTimingBinding binding(timing);const auto r=watcher->result();watcher->deleteLater();
         if(independent_.accept(r)){const auto frame=*independent_.math().frame();const auto setup=*independent_.acceptedSetup();const auto evidence=*independent_.evidence();
             presentFrame(frame,evidence.origin!=SourceOrigin::CameraAcquired);independentSetup_=setup;independentOrigin_=evidence.origin==SourceOrigin::CameraAcquired ? "acquired":sourceOriginName(evidence.origin);
             imageInfo_->setText(QString("%1 • %2×%3 px\nHedef: %4").arg(independentOrigin_).arg(frame.size().width()).arg(frame.size().height()).arg(evidence.target ? evidence.target->setup.value:"Yalnız deneme"));

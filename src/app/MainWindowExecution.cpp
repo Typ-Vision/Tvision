@@ -180,6 +180,7 @@ void MainWindow::runFlow() {
 }
 void MainWindow::runExecution(const QString& targetTool) {
     if(runtimeJobs_.busy() || (runtime_ && runtime_->busy()) || editorSession_.busy(SessionJob::Execution) || editorSession_.busy(SessionJob::Teaching) || editorSession_.busy(SessionJob::Image) || !applyToolProperties() || !service_.activeRecipe())return;
+    const auto timing=AcquisitionTiming::request("editor");const auto commandedAt=AcquisitionTiming::Clock::now();AcquisitionTimingBinding timingBinding(timing);AcquisitionTimingSpan commandTiming("editor.user-command");
     if(targetTool.isEmpty() && measurementWorkspace_)try{const auto before=service_.activeRecipe()->definition;service_.refreshCameraSources(measurementWorkspace_->environment());if(before!=service_.activeRecipe()->definition){editorSession_.reconcile(editorContext());refreshWorkspace();}}catch(const std::exception& e){matchInfo_->setText(QString::fromUtf8(e.what()));return;}
     findChild<QTabWidget*>("editorTabs")->setCurrentWidget(findChild<QScrollArea*>("resultsScroll"));
     const auto recipe=*service_.activeRecipe();const auto definition=recipe.definition;const auto catalogPath=service_.path()+".calibrations.json";const auto resolver=calibrationResolver(recipe);QJsonObject acquisitionPlan;try{if(recipe.definition["editor"].toObject()["schemaVersion"]==9){QJsonObject sources;for(const auto& t:editorTools(definition))if(t.enabled && ToolRegistry::get(t.kind).acquisitionSource && (targetTool.isEmpty() || t.id==targetTool)){const auto branch=SystemCalibration::branch(recipe,t.id);if(branch.definition.contains("sourceSetup")){if(!measurementWorkspace_)throw std::runtime_error("Measurement workspace unavailable");sources[t.id]=measurementWorkspace_->acquisition(branch);}}acquisitionPlan["sources"]=sources;}else if(recipe.definition.contains("sourceSetup")){if(!measurementWorkspace_)throw std::runtime_error("Measurement workspace unavailable");acquisitionPlan=measurementWorkspace_->acquisition(recipe);}}catch(const std::exception& e){matchInfo_->setText(QString::fromUtf8(e.what()));return;}
@@ -190,9 +191,11 @@ void MainWindow::runExecution(const QString& targetTool) {
             const auto signature=flowSignature();const auto directory=QFileInfo(service_.path()).absolutePath();
             auto* watcher=editorSession_.watch<CycleResult>(this,SessionJob::Execution);const auto cancel=editorSession_.token(SessionJob::Execution);
             editorSession_.invalidateTool(editorContext(),targetTool);editorSession_.matchOutcome.reset();editorSession_.resultSignature.clear();refreshFlow();matchInfo_->setText("BUSY — yalnız seçili araç, mevcut ham görüntü…");
-            connect(watcher,&QFutureWatcher<CycleResult>::finished,this,[this,watcher,signature,targetTool]{
+            connect(watcher,&QFutureWatcher<CycleResult>::finished,this,[this,watcher,signature,targetTool,timing,commandedAt]{
+                AcquisitionTimingBinding binding(timing);AcquisitionTimingSpan delivery("editor.command-to-delivery",commandedAt);
                 auto result=watcher->result();watcher->deleteLater();
-                if(editorSession_.acceptTool(std::move(result),signature,editorContext())) {
+                const bool accepted=editorSession_.acceptTool(std::move(result),signature,editorContext());delivery.finish(!accepted?"superseded":editorSession_.cycle->state==ExecutionState::Skipped?"cancelled":editorSession_.cycle->state==ExecutionState::Done?"success":"error");
+                if(accepted) {
                     if(editorSession_.cycle->state!=ExecutionState::Skipped)for(const auto& r:editorSession_.cycle->tools)if(r.toolId==targetTool && r.state==ExecutionState::Done) {
                         const auto region=r.outputs.value("region"),score=r.outputs.value("score"),found=r.outputs.value("found");
                         if(std::holds_alternative<QRect>(region.data) && score.valid && found.valid) {
@@ -204,7 +207,7 @@ void MainWindow::runExecution(const QString& targetTool) {
                 }else {editorSession_.matchOutcome.reset();matchInfo_->setText("Değişen girdi/ayar nedeniyle araç sonucu atıldı.");}
                 refreshMatchOverlay();refreshFlow();refreshCalibration();
             });
-            editorSession_.launch(watcher,[definition,directory,recipe,signature,cancel,targetTool,evaluation,resolver]{return ExecutionService{}.runTool(definition,directory,recipe.id,signature,cancel,targetTool,evaluation,resolver);});
+            editorSession_.launch(watcher,[definition,directory,recipe,signature,cancel,targetTool,evaluation,resolver,timing]{AcquisitionTimingBinding binding(timing);return ExecutionService{}.runTool(definition,directory,recipe.id,signature,cancel,targetTool,evaluation,resolver);});
         }catch(const std::exception& e){matchInfo_->setText(QString::fromUtf8(e.what()));}
         return;
     }
@@ -221,9 +224,11 @@ void MainWindow::runExecution(const QString& targetTool) {
     refreshFlow();matchInfo_->setText("BUSY — acquisition ve DAG çalışıyor…");
     findChild<QTabWidget*>("editorTabs")->setCurrentWidget(findChild<QScrollArea*>("resultsScroll"));
     const auto signature=flowSignature();const auto id=service_.activeRecipe()->id;const auto directory=QFileInfo(service_.path()).absolutePath();const auto cancel=editorSession_.token(SessionJob::Execution);
-    connect(watcher,&QFutureWatcher<CycleResult>::finished,this,[this,watcher,signature,targetTool]{
+    connect(watcher,&QFutureWatcher<CycleResult>::finished,this,[this,watcher,signature,targetTool,timing,commandedAt]{
+                AcquisitionTimingBinding binding(timing);AcquisitionTimingSpan delivery("editor.command-to-delivery",commandedAt);
         auto result=watcher->result();watcher->deleteLater();
-        if(editorSession_.acceptCycle(std::move(result),signature,editorContext())) {
+        const bool accepted=editorSession_.acceptCycle(std::move(result),signature,editorContext());delivery.finish(!accepted?"superseded":editorSession_.cycle->state==ExecutionState::Skipped?"cancelled":editorSession_.cycle->state==ExecutionState::Done?"success":"error");
+        if(accepted) {
             if(measurementWorkspace_ && service_.activeRecipe()){
                 if(service_.activeRecipe()->definition["editor"].toObject()["schemaVersion"]==9){for(const auto& t:service_.tools())if(t.enabled && ToolRegistry::get(t.kind).acquisitionSource)measurementWorkspace_->observeAcquisition(SystemCalibration::branch(*service_.activeRecipe(),t.id),*editorSession_.cycle);}else measurementWorkspace_->observeAcquisition(*service_.activeRecipe(),*editorSession_.cycle);
             }
@@ -239,7 +244,7 @@ void MainWindow::runExecution(const QString& targetTool) {
         } else {editorSession_.cycle.reset();matchInfo_->setText("READY — değişen ayar/görüntü nedeniyle çevrim sonucu atıldı.");}
         refreshMatchOverlay();refreshFlow();refreshCalibration();
     });
-    editorSession_.launch(watcher,[definition,directory,id,signature,cancel,targetTool,resolver,acquisitionPlan,industrial]{return ExecutionService(industrial).run(definition,directory,id,signature,cancel,targetTool,{},resolver,nullptr,acquisitionPlan);});
+    editorSession_.launch(watcher,[definition,directory,id,signature,cancel,targetTool,resolver,acquisitionPlan,industrial,timing,commandedAt]{AcquisitionTimingBinding binding(timing);AcquisitionTiming::record(timing,"editor.worker-queue",commandedAt);return ExecutionService(industrial).run(definition,directory,id,signature,cancel,targetTool,{},resolver,nullptr,acquisitionPlan);});
 }
 void MainWindow::loadImageAsync(const QString& path,bool commit) {
     editorSession_.references.clear();

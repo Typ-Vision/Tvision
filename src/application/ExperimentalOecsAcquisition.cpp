@@ -37,6 +37,7 @@ class Backend final:public CameraWorkerBackend {
 public:
     Backend(IndustrialCameraRequest r,QString dll,ExperimentalOecsAcquisition::ApiFactory api)
         :request_(std::move(r)),session_(api(),dll){
+        AcquisitionTimingSpan timing("backend.dll-hash");
         QFile file(dll);if(file.open(QIODevice::ReadOnly)){QCryptographicHash hash(QCryptographicHash::Sha256);
             require(hash.addData(&file),"Cannot hash OECS runtime");runtimeHash_=QString::fromLatin1(hash.result().toHex());}
     }
@@ -50,6 +51,7 @@ public:
                 session_.open({id.vendor,id.model,id.serial});connected_=true;break;
             }
             case CameraOperation::Configure:{
+                AcquisitionTimingSpan timing("configure.readback");
                 require(connected_ && !started_,"Camera not idle");verifyCleanRaster(session_);budget();
                 configured_=IndustrialCameraConfiguration::applyExperimental(session_,request_.device.identity,request_.setup,request_.profile);
                 require(configured_->actual.geometry.resolution==QSize(2448,2048) && configured_->payloadBytes==2448ULL*2048,"Exact clean full sensor raster required");

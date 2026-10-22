@@ -18,27 +18,35 @@ CameraWorkerSession::CameraWorkerSession(PhysicalDeviceIdentity identity,CameraL
     require(bool(factory),"Camera worker factory missing.");
     leaseKey_=QJsonDocument(QJsonArray{identity.vendor,identity.model,identity.serial}).toJson(QJsonDocument::Compact);
     {std::lock_guard lock(leasesMutex);require(!leases.contains(leaseKey_),"Camera busy: exclusive process-local lease held.");leases.insert(leaseKey_);}
+    timing_=AcquisitionTiming::current();if(timing_.request.isEmpty())timing_=AcquisitionTiming::request("camera-worker");
+    if(!timing_.request.isEmpty())timing_.session=AcquisitionTiming::nextId();
     try {job_=jobs_.begin(SessionJob::Connection);worker_=std::thread([this,factory=std::move(factory)]() mutable {run(std::move(factory));});}
     catch(...){releaseLease();throw;}
 }
 void CameraWorkerSession::owner() const {require(std::this_thread::get_id()==owner_,"Camera session accessed outside owner thread.");}
 void CameraWorkerSession::releaseLease(){std::lock_guard lock(leasesMutex);if(leaseHeld_){leases.remove(leaseKey_);leaseHeld_=false;}}
 CameraWorkerSession::~CameraWorkerSession(){
+    AcquisitionTimingBinding binding(timing_);AcquisitionTimingSpan timing("session.close-and-join");
     // Owner lifetime must outlast this join; no detached callback captures UI/session.
     requestShutdown();if(worker_.joinable())worker_.join();
     if(clean_)releaseLease();
     jobs_.finish(job_);
+    timing.finish(clean_?"success":"error");
 }
 void CameraWorkerSession::run(Factory factory){
+    AcquisitionTimingBinding binding(timing_);
     std::unique_ptr<CameraWorkerBackend> backend;
-    try {backend=factory();require(bool(backend),"Camera worker factory returned null.");}
+    try {AcquisitionTimingSpan timing("backend.create");backend=factory();require(bool(backend),"Camera worker factory returned null.");}
     catch(const std::exception& e){startupError_=QString::fromUtf8(e.what());}
     catch(...){startupError_="Camera worker factory failed.";}
     for(;;){
-        CameraTicket ticket;
+        CameraTicket ticket;AcquisitionTimingContext timing;AcquisitionTiming::Clock::time_point submitted;
         {std::unique_lock lock(mutex_);wake_.wait(lock,[this]{return closing_ || command_.has_value();});
             if(closing_)break;
-            ticket=*command_;command_.reset();}
+            ticket=*command_;command_.reset();timing=commandTiming_;submitted=submittedAt_;}
+        AcquisitionTimingBinding commandBinding(timing);
+        AcquisitionTiming::record(timing,"worker.queue",submitted);
+        AcquisitionTimingSpan execution("worker.operation");
         CameraWorkerResult result;
         try {
             if(!backend)result.error=startupError_;
@@ -46,6 +54,7 @@ void CameraWorkerSession::run(Factory factory){
             else result=backend->execute(ticket);
         }catch(const std::exception& e){result.error=QString::fromUtf8(e.what());}
         catch(...){result.error="Camera worker operation failed.";}
+        execution.finish(ticket.cancel->load()?"cancelled":ticket.deadline.expired()?"timeout":result.success?"success":"error",{{"operation",int(ticket.operation)}});
         {std::lock_guard lock(mutex_);completion_=Completion{ticket,std::move(result),Deadline::Clock::now()};}
     }
     bool clean=true;QString error;
@@ -58,7 +67,9 @@ void CameraWorkerSession::run(Factory factory){
 void CameraWorkerSession::submit(CameraOperation operation,int timeout){
     owner();poll();std::lock_guard lock(mutex_);
     require(!closing_ && !pending_,"Camera worker busy or shutting down.");
-    command_=lifecycle_.begin(operation,timeout);pending_=true;wake_.notify_one();
+    command_=lifecycle_.begin(operation,timeout);commandTiming_=AcquisitionTiming::current();
+    if(commandTiming_.request.isEmpty())commandTiming_=timing_;commandTiming_.session=timing_.session;
+    submittedAt_=AcquisitionTiming::Clock::now();pending_=true;wake_.notify_one();
 }
 bool CameraWorkerSession::poll(){
     owner();std::optional<Completion> completed;bool exited,clean;QString cleanupError;

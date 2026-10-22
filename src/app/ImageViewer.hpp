@@ -3,6 +3,7 @@
 #include <functional>
 #include "domain/ToolRoi.hpp"
 #include "domain/ToolValues.hpp"
+#include "hardware/AcquisitionTiming.hpp"
 #include <optional>
 class QGraphicsPixmapItem;
 class QGraphicsRectItem;
@@ -70,6 +71,8 @@ protected:
     void paintEvent(QPaintEvent* event) override;
     void keyPressEvent(QKeyEvent* event) override;
 private:
+    AcquisitionTimingContext paintTiming_;
+    AcquisitionTiming::Clock::time_point imageAssignedAt_;
     void addResultLabel(const QString&,QPointF,const QColor&,bool background=false);
     void updateResultAnnotations();
     bool annotationsManaged_=false,annotationsVisible_=true;

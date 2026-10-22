@@ -1,5 +1,6 @@
 // Explicit manual hardware run; never an automatic hardware CTest.
 #include "application/ExperimentalOecsAcquisition.hpp"
+#include "application/IndependentCalibrationCapture.hpp"
 #include "application/IndustrialExecution.hpp"
 #include "application/ProjectService.hpp"
 #include "application/RuntimeCoordinator.hpp"
@@ -17,9 +18,9 @@
 using namespace visionflow;
 int main(int argc,char** argv){QCoreApplication app(argc,argv);QJsonObject out{{"productionAdmission",false},{"triggerAssociationVerified",false}};int rc=0;
     try{
-        if(argc!=5 && argc!=6)throw std::runtime_error("usage: oecs_experimental_probe absolute-dll absolute-evidence-directory exposure-us count [--preview-60s|--wrong-camera|--wrong-geometry|--stop-in-flight|--timeout|--disconnect|--editor-run|--runtime-run|--runtime-stop|--runtime-timeout|--runtime-disconnect]");
+        if(argc!=5 && argc!=6)throw std::runtime_error("usage: oecs_experimental_probe absolute-dll absolute-evidence-directory exposure-us count [--preview-60s|--wrong-camera|--wrong-geometry|--stop-in-flight|--timeout|--disconnect|--editor-run|--runtime-run|--runtime-stop|--runtime-timeout|--runtime-disconnect|--calibration-run]");
         const QString scenario=argc==6?QString::fromLocal8Bit(argv[5]):QString{};
-        if(!scenario.isEmpty() && scenario!="--preview-60s" && scenario!="--wrong-camera" && scenario!="--wrong-geometry" && scenario!="--stop-in-flight" && scenario!="--timeout" && scenario!="--disconnect" && scenario!="--editor-run" && scenario!="--runtime-run" && scenario!="--runtime-stop" && scenario!="--runtime-timeout" && scenario!="--runtime-disconnect")throw std::runtime_error("unknown manual scenario");
+        if(!scenario.isEmpty() && scenario!="--preview-60s" && scenario!="--wrong-camera" && scenario!="--wrong-geometry" && scenario!="--stop-in-flight" && scenario!="--timeout" && scenario!="--disconnect" && scenario!="--editor-run" && scenario!="--runtime-run" && scenario!="--runtime-stop" && scenario!="--runtime-timeout" && scenario!="--runtime-disconnect" && scenario!="--calibration-run")throw std::runtime_error("unknown manual scenario");
         const QString directory=QString::fromLocal8Bit(argv[2]);QDir().mkpath(directory);
         bool ok=false;const double exposure=QString::fromLocal8Bit(argv[3]).toDouble(&ok);if(!ok)throw std::runtime_error("numeric exposure required");
         const int count=QString::fromLocal8Bit(argv[4]).toInt();if(count<1 || count>1000)throw std::runtime_error("count 1..1000 required");
@@ -55,16 +56,26 @@ int main(int argc,char** argv){QCoreApplication app(argc,argv);QJsonObject out{{
             if(!preview.drained() || preview.state()==PreviewState::Error || !last || elapsed<60000 || !out["stoppedQueueEmpty"].toBool() || !out["stopRetiredGeneration"].toBool())throw std::runtime_error(("Preview observation failed: "+preview.error()).toStdString());
             out["status"]="EXPERIMENTAL_PREVIEW_60S_COMPLETED";QTextStream(stdout)<<QJsonDocument(out).toJson();return 0;
         }
+        const auto producer=qEnvironmentVariable("VISIONFLOW_TIMING_PROBE_PRODUCER");
+        auto discover=[r,producer](int timeout,const std::shared_ptr<std::atomic_bool>& cancel){return producer.isEmpty()?IndustrialDiscoverySnapshot{{r.device},{},false}:CameraService::industrialSnapshot(CameraService{}.discover({producer},timeout,cancel));};
+        out["environment"]=QJsonObject{{"vendor",r.device.identity.vendor},{"model",r.device.identity.model},{"serial",r.device.identity.serial},{"manualFallbackRoute",r.device.route.toJson()},{"producerPath",producer},{"profile",r.profile.toJson()},{"geometry",r.setup.geometry.toJson()},{"timingEnabled",AcquisitionTiming::enabled()},{"uiFirstPaintMeasured",false},{"discoveryScope",producer.isEmpty()?"fixed locator; real SDK enumerates exact serial":"application GenTL discovery, producer hash, exact SDK enumeration"}};
+        if(scenario=="--calibration-run"){
+            IndependentCaptureRequest capture;capture.origin=SourceOrigin::CameraAcquired;capture.camera=r.camera;capture.setup=r.setup;capture.profile=r.profile;capture.policy=CalibrationCapturePolicy::ExperimentalOecs;capture.timeoutMs=3000;
+            AcquisitionTimingBinding prepareBinding(AcquisitionTiming::request("calibration-preparation"));AcquisitionTimingSpan preparation("probe.initial-preparation");IndependentCaptureBackend backend;backend.industrialDiscover=[discover]{return discover(3000,{});};IndependentCalibrationSession session;QJsonArray samples;preparation.finish();
+            for(int i=0;i<count;++i){AcquisitionTimingBinding binding(AcquisitionTiming::request("calibration"));QElapsedTimer timer;timer.start();const auto result=IndependentCalibrationSession::run(session.begin(capture),backend);if(!result.error().isEmpty() || !session.accept(result))throw std::runtime_error(("Calibration capture failed: "+result.error()).toStdString());samples.append(QJsonObject{{"index",i},{"milliseconds",timer.nsecsElapsed()/1e6},{"readback",session.math().frame()->metadata().experimentalAcquisition["readback"]}});}
+            out["samples"]=samples;out["count"]=count;out["status"]="CALIBRATION_CAPTURE_COMPLETED";QTextStream(stdout)<<QJsonDocument(out).toJson();return 0;
+        }
         if(scenario.startsWith("--runtime-")){
-            IndustrialExecutionInputs inputs;inputs.contract={{r.camera},{r.setup},{r.profile}};inputs.discover=[r](int,const auto&){return IndustrialDiscoverySnapshot{{r.device},{},false};};
+            IndustrialExecutionInputs inputs;inputs.contract={{r.camera},{r.setup},{r.profile}};inputs.discover=discover;
             ProjectService p;p.createProject("Experimental Runtime","",QDir(directory).absoluteFilePath("runtime.vfproject"),"file");p.createRecipe("Experimental","",ApplicationType::Measurement,"file");const auto source=p.addTool("industrial_camera");p.bindIndustrialSource(source,inputs.contract,r.profile.id,scenario=="--runtime-timeout" ? int(exposure/1000)+1:3000);const auto blob=p.addTool("blob");p.setConnections({{source,"image",blob,"image"}});p.save();
-            RuntimeService runtime(p.path()+".production",{},RuntimeIdentity::localEngineer());runtime.setExperimental(true,[inputs,source](const Recipe&){MultiSourceDependencies set;set.sources[source]={};set.industrial=std::make_shared<const IndustrialExecutionInputs>(inputs);return set;});RuntimeCoordinator coordinator(runtime);coordinator.load(*p.activeRecipe(),directory);coordinator.start();
+            AcquisitionTimingBinding prepareBinding(AcquisitionTiming::request("runtime-preparation"));AcquisitionTimingSpan preparation("probe.initial-preparation");
+            RuntimeService runtime(p.path()+".production",{},RuntimeIdentity::localEngineer());runtime.setExperimental(true,[inputs,source](const Recipe&){MultiSourceDependencies set;set.sources[source]={};set.industrial=std::make_shared<const IndustrialExecutionInputs>(inputs);return set;});RuntimeCoordinator coordinator(runtime);coordinator.load(*p.activeRecipe(),directory);coordinator.start();preparation.finish();
             QJsonArray samples;QElapsedTimer timer;timer.start();
-            for(int i=0;i<count;++i){const auto lease=coordinator.begin(RuntimeTrigger::Manual);auto cancel=coordinator.cancellation();std::future<void> stopper;if(scenario=="--runtime-stop")stopper=std::async(std::launch::async,[cancel]{QThread::msleep(10);cancel->store(true);});auto result=RuntimeService::execute(lease,{},cancel);
+            for(int i=0;i<count;++i){AcquisitionTimingBinding binding(AcquisitionTiming::request("runtime"));QElapsedTimer sampleTimer;sampleTimer.start();const auto lease=coordinator.begin(RuntimeTrigger::Manual);auto cancel=coordinator.cancellation();std::future<void> stopper;if(scenario=="--runtime-stop")stopper=std::async(std::launch::async,[cancel]{QThread::msleep(10);cancel->store(true);});auto result=RuntimeService::execute(lease,{},cancel);
                 if(stopper.valid()){stopper.get();coordinator.stop();RuntimeService::suppressCancelled(lease,result);}
                 if(scenario=="--runtime-timeout" && result.state!=ExecutionState::Error)throw std::runtime_error("deadline did not fail");
                 if((scenario=="--runtime-run" || scenario=="--runtime-disconnect") && result.state!=ExecutionState::Done)throw std::runtime_error(("Runtime capture failed: "+result.error+([&]{QString details;for(const auto& t:result.tools)details+="\n"+t.toolId+": "+t.errorCode+" "+t.message;return details;})()).toStdString());coordinator.finish(lease.ticket,result);
-                samples.append(QJsonObject{{"cycleId",result.cycleId},{"milliseconds",result.milliseconds},{"frames",int(result.frames.size())},{"state",executionStateName(result.state)},{"error",result.error},{"trustedEvidenceCount",int(result.industrialEvidence.size())}});
+                samples.append(QJsonObject{{"cycleId",result.cycleId},{"milliseconds",result.milliseconds},{"serviceTotalMs",sampleTimer.nsecsElapsed()/1e6},{"frames",int(result.frames.size())},{"state",executionStateName(result.state)},{"error",result.error},{"trustedEvidenceCount",int(result.industrialEvidence.size())}});
                 if(result.state==ExecutionState::Done && (i==0 || i==count-1))for(const auto& t:result.tools)if(t.toolId==source){const auto image=std::get<ImageFrame>(t.outputs["image"].data);const auto m=image.metadata();ExperimentalOecsAcquisition::save({image,source,result.cycleId,m.frameId,m.completedAtUtc},QDir(directory).absoluteFilePath(QString("runtime-frame-%1.pgm").arg(i)));}
                 if((i+1)%25==0){QFile progress(QDir(directory).absoluteFilePath("runtime-progress.json"));if(progress.open(QIODevice::WriteOnly|QIODevice::Truncate))progress.write(QJsonDocument(QJsonObject{{"completed",i+1},{"elapsedMs",double(timer.elapsed())}}).toJson());}
             }
@@ -85,18 +96,19 @@ int main(int argc,char** argv){QCoreApplication app(argc,argv);QJsonObject out{{
             RuntimeService restarted(p.path()+".production",{},RuntimeIdentity::localEngineer());out["samples"]=samples;out["count"]=count;out["elapsedMs"]=double(timer.elapsed());out["restartPassive"]=!restarted.active() && !restarted.experimental();out["productionRecordCount"]=ProductionStore(p.path()+".production").recent("cycles").size();out["experimentalRecordFiles"]=QDir(p.path()+".production/experimental_cycles").entryList({"*.json"},QDir::Files).size();out["scenario"]=scenario;out["physicalCommandInFlightProven"]=false;out["coordinatorStateBeforeStop"]=int(stateBeforeStop);out["status"]="EXPERIMENTAL_RUNTIME_COMPLETED";QTextStream(stdout)<<QJsonDocument(out).toJson();return 0;
         }
         if(scenario=="--editor-run"){
+            AcquisitionTimingBinding prepareBinding(AcquisitionTiming::request("editor-preparation"));AcquisitionTimingSpan preparation("probe.initial-preparation");
             if(QString::fromLocal8Bit(argv[1])!=ExperimentalOecsAcquisition::installedRuntime())throw std::runtime_error("Editor uses installed runtime");
             IndustrialExecutionInputs inputs;inputs.contract={{r.camera},{r.setup},{r.profile}};
             // Probe supplies a locator; the real runtime re-enumerates and exact-opens
             // the identity. This is not a discovery acceptance measurement.
-            inputs.discover=[r](int,const auto&){return IndustrialDiscoverySnapshot{{r.device},{},false};};
+            inputs.discover=discover;
             ProjectService p;p.createProject("Experimental Editor","",QDir(directory).absoluteFilePath("editor.vfproject"),"file");
-            p.createRecipe("Experimental","",ApplicationType::Measurement,"file");const auto source=p.addTool("industrial_camera");p.bindIndustrialSource(source,inputs.contract,r.profile.id,3000);p.save();
+            p.createRecipe("Experimental","",ApplicationType::Measurement,"file");const auto source=p.addTool("industrial_camera");p.bindIndustrialSource(source,inputs.contract,r.profile.id,3000);p.save();preparation.finish();
             QJsonArray samples;
-            for(int i=0;i<count;++i){const auto cycle=ExecutionService(inputs).withExperimentalEditorReplay().run(p.activeRecipe()->definition,directory,p.activeRecipe()->id,{}, {},source);
+            for(int i=0;i<count;++i){AcquisitionTimingBinding binding(AcquisitionTiming::request("editor"));QElapsedTimer sampleTimer;sampleTimer.start();const auto cycle=ExecutionService(inputs).withExperimentalEditorReplay().run(p.activeRecipe()->definition,directory,p.activeRecipe()->id,{}, {},source);
                 if(cycle.state!=ExecutionState::Done || !cycle.industrialEvidence.isEmpty())throw std::runtime_error(("Editor acquisition failed: "+cycle.error+(cycle.tools.isEmpty()?QString{}:cycle.tools.front().message)).toStdString());
                 bool found=false;for(const auto& tool:cycle.tools)if(tool.toolId==source){const auto image=std::get<ImageFrame>(tool.outputs["image"].data);const auto m=image.metadata();
-                    if(m.experimentalAcquisition.isEmpty())throw std::runtime_error("Editor lost provenance");samples.append(m.experimentalAcquisition);found=true;
+                    if(m.experimentalAcquisition.isEmpty())throw std::runtime_error("Editor lost provenance");auto sample=m.experimentalAcquisition;sample["milliseconds"]=sampleTimer.nsecsElapsed()/1e6;samples.append(sample);found=true;
                     if(i==0 || i==count-1)ExperimentalOecsAcquisition::save({image,source,cycle.cycleId,m.frameId,m.completedAtUtc},QDir(directory).absoluteFilePath(QString("editor-frame-%1.pgm").arg(i)));
                 }if(!found)throw std::runtime_error("Editor source missing");
             }

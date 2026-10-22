@@ -26,6 +26,9 @@ void ImageViewer::setPreviewPixels(const QImage& image) {
     previewCacheKey_=image.cacheKey();
 }
 void ImageViewer::setImage(const QImage& image) {
+    AcquisitionTimingSpan timing("ui.set-image");
+    if(!paintTiming_.request.isEmpty())AcquisitionTiming::record(paintTiming_,"ui.set-image-to-first-paint",imageAssignedAt_,"superseded");
+    paintTiming_=AcquisitionTiming::current();imageAssignedAt_=AcquisitionTiming::Clock::now();
     searchHandles_.clear();searchIdentity_.clear();searchUndo_.clear();searchEditable_=searchDragging_=middlePanning_=false;searchValue_={};
     roiItems_.clear();roi_.reset();roiDraft_.reset();roiBeforeDrag_.reset();roiStatus_="Geometri yok.";roiUndo_.clear();roiVertices_.clear();validDomain_.clear();roiDrawing_=-1;roiHandle_=-1;roiDragging_=roiEditing_=false;
     resultAnnotations_.clear();toolOverlay_.clear();
@@ -42,6 +45,7 @@ void ImageViewer::setImage(const QImage& image) {
     fitImage();if(onRoiChanged)onRoiChanged();
 }
 void ImageViewer::clearImage(const QString& message) {
+    if(!paintTiming_.request.isEmpty())AcquisitionTiming::record(paintTiming_,"ui.set-image-to-first-paint",imageAssignedAt_,"cancelled");paintTiming_={};
     previewCacheKey_=0;
     searchHandles_.clear();searchIdentity_.clear();searchUndo_.clear();searchEditable_=searchDragging_=middlePanning_=false;searchValue_={};
     roiItems_.clear();roi_.reset();roiDraft_.reset();roiBeforeDrag_.reset();roiStatus_="Geometri yok.";roiUndo_.clear();roiVertices_.clear();validDomain_.clear();roiDrawing_=-1;roiHandle_=-1;roiDragging_=roiEditing_=false;
@@ -199,5 +203,6 @@ void ImageViewer::resizeEvent(QResizeEvent* event) { QGraphicsView::resizeEvent(
 void ImageViewer::paintEvent(QPaintEvent* event) {
     QGraphicsView::paintEvent(event);
     if (!imageItem_) { QPainter painter(viewport()); painter.setPen(QColor("#8fa0b5")); painter.drawText(viewport()->rect().adjusted(18,18,-18,-18),Qt::AlignCenter|Qt::TextWordWrap,emptyMessage_); }
+    if(imageItem_ && !paintTiming_.request.isEmpty()){AcquisitionTiming::record(paintTiming_,"ui.set-image-to-first-paint",imageAssignedAt_);AcquisitionTiming::record(paintTiming_,"ui.command-to-first-paint",paintTiming_.commandedAt);paintTiming_={};}
 }
 }

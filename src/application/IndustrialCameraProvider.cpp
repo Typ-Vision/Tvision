@@ -18,11 +18,12 @@ public:
         require(bool(backend_),"Industrial backend missing.");
     }
     CameraWorkerResult execute(const CameraTicket& ticket) override {
+        AcquisitionTimingSpan timing(ticket.operation==CameraOperation::Configure?"configure.readback":"provider.operation");
         require(!configurationOnly_ || (ticket.operation!=CameraOperation::Start && ticket.operation!=CameraOperation::Grab),
                 "Configuration-only session cannot start acquisition.");
         if(ticket.operation==CameraOperation::Grab)checkApplied();
         auto result=backend_->execute(ticket);
-        if(!result.success)return result;
+        if(!result.success){timing.finish("error");return result;}
         if(ticket.operation==CameraOperation::Connect)
             require(backend_->actualIdentity()==request_.device.identity,"Actual camera identity changed.");
         if(ticket.operation==CameraOperation::Configure || ticket.operation==CameraOperation::Grab){

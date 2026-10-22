@@ -2,6 +2,7 @@
 #include "CameraLifecycle.hpp"
 #include "EditorSession.hpp"
 #include "domain/MeasurementSetupContract.hpp"
+#include "hardware/AcquisitionTiming.hpp"
 #include <condition_variable>
 #include <mutex>
 
@@ -63,6 +64,8 @@ private:
     std::mutex mutex_;
     std::condition_variable wake_;
     std::optional<CameraTicket> command_;
+    AcquisitionTimingContext timing_,commandTiming_;
+    AcquisitionTiming::Clock::time_point submittedAt_;
     struct Completion {CameraTicket ticket;CameraWorkerResult result;Deadline::Clock::time_point completedAt;};
     std::optional<Completion> completion_;
     bool pending_=false,closing_=false,exited_=false,clean_=false;

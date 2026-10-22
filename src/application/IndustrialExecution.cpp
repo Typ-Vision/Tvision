@@ -18,15 +18,20 @@ IndustrialCameraRequest industrialExecutionRequest(const IndustrialExecutionInpu
 }
 IndustrialExecutionFrame acquireIndustrial(const IndustrialExecutionInputs& inputs,IndustrialCameraRequest request,
     const QString& cycle,const QString& frame,int timeout,const std::shared_ptr<std::atomic_bool>& cancel,bool experimentalEditor){
+    const auto inherited=AcquisitionTiming::current();
+    AcquisitionTimingBinding timingBinding(inherited.request.isEmpty()?AcquisitionTiming::request(inputs.leaseUse==CameraLeaseUse::Runtime?"runtime":"editor"):inherited);
+    AcquisitionTimingSpan timing("industrial.acquire");
     require(!experimentalEditor || (inputs.leaseUse==CameraLeaseUse::Editor && inputs.admittedDevices.isEmpty()),"Experimental acquisition requires Editor lease without production admission");
     Deadline deadline(timeout);
     auto live=[&]{require(!(cancel && cancel->load()) && !deadline.expired(),"Industrial execution cancelled/deadline exceeded");};
     live();
     std::optional<TransportLocator> route;
     if(inputs.routes.contains(request.camera.id.value))route=inputs.routes[request.camera.id.value];
+    AcquisitionTimingSpan discoveryTiming("discovery.resolve");
     const auto discovery=inputs.discover ? inputs.discover(deadline.remainingMs(),cancel):
         CameraService::industrialSnapshot(CameraService{}.discover(route && !route->producer.isEmpty() ? QStringList{route->producer}:QStringList{},deadline.remainingMs(),cancel));
     live();request.device=CameraService::resolveIndustrial(request.camera,discovery,route);
+    discoveryTiming.finish("success",{{"route",request.device.route.toJson()},{"backend",request.device.backend.toJson()}});
     if(inputs.admittedDevices.contains(request.sourceId))require(request.device==inputs.admittedDevices[request.sourceId],"Industrial Runtime device/backend changed; prepare again");
     auto session=experimentalEditor ? ExperimentalOecsAcquisition::open(request,ExperimentalOecsAcquisition::installedRuntime()):inputs.factory.open(request,inputs.leaseUse,FrameQueueMode::ProductionFifo,1);
     try {
@@ -53,7 +58,7 @@ IndustrialExecutionFrame acquireIndustrial(const IndustrialExecutionInputs& inpu
         require(experimentalEditor==!original.experimentalAcquisition.isEmpty(),"Industrial acquisition policy/provenance mismatch");
         auto evidence=experimentalEditor ? std::shared_ptr<const IndustrialExecutionEvidence>{}:std::make_shared<const IndustrialExecutionEvidence>(IndustrialExecutionEvidence{request,*applied,original,mapped,image.contentId()});
         // Cleanup and lease release precede publication. A delayed SDK cannot publish after Stop.
-        session.reset();live();return {image.withMetadata(mapped),std::move(evidence)};
-    }catch(...){if(session)session->requestStop();throw;}
+        session.reset();live();timing.finish("success",{{"sourceId",request.sourceId}});return {image.withMetadata(mapped),std::move(evidence)};
+    }catch(...){timing.finish(cancel && cancel->load()?"cancelled":deadline.expired()?"timeout":"error");if(session)session->requestStop();throw;}
 }
 }

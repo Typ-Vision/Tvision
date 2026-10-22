@@ -43,6 +43,8 @@ class IndependentCaptureJob {
     int generation_=0;
     Deadline deadline_{1};
     std::shared_ptr<std::atomic_bool> cancel_;
+    AcquisitionTimingContext timing_;
+    AcquisitionTiming::Clock::time_point commandedAt_;
 public:
     void cancel() const {cancel_->store(true);}
 };

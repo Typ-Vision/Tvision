@@ -1,4 +1,5 @@
 #include "RuntimeCoordinator.hpp"
+#include "hardware/AcquisitionTiming.hpp"
 
 namespace visionflow {
 void RuntimeCoordinator::owner() const {
@@ -10,6 +11,7 @@ void RuntimeCoordinator::replaceable() const {
         throw ProductionException(ProductionError::Busy,"Önce Stop ve bekleyen kayıt/teslimin tamamlanması gerekir.");
 }
 void RuntimeCoordinator::load(const Recipe& recipe,const QString& directory,RuntimeTrigger mode) {
+    AcquisitionTimingSpan timing("runtime.load-offline");
     replaceable();
     runtime_.checkConfiguration(recipe,directory); // failure preserves previous load
     if(runtime_.requiresManualCycles(recipe,directory) && mode!=RuntimeTrigger::Manual)throw ProductionException(ProductionError::InvalidConfiguration,"Bu kamera akışı yalnız manuel çevrimleri destekler");
@@ -22,6 +24,7 @@ quint64 RuntimeCoordinator::requestStart() {
     error_.clear();state_=RuntimeState::Starting;return ++generation_;
 }
 bool RuntimeCoordinator::completeStart(quint64 generation,const QString& preparationError) {
+    const auto inherited=AcquisitionTiming::current();AcquisitionTimingBinding binding(inherited.request.isEmpty()?AcquisitionTiming::request("runtime"):inherited);AcquisitionTimingSpan timing("runtime.prepare");
     owner();
     if(generation!=generation_ || state_!=RuntimeState::Starting)return false;
     try {
@@ -33,6 +36,7 @@ bool RuntimeCoordinator::completeStart(quint64 generation,const QString& prepara
 }
 void RuntimeCoordinator::start(){const auto ticket=requestStart();completeStart(ticket);}
 void RuntimeCoordinator::stop() {
+    AcquisitionTimingSpan timing("runtime.stop-command");
     owner();++generation_;
     if(cancel_)cancel_->store(true);
     state_=runtime_.busy() ? RuntimeState::Stopping : loaded_ ? RuntimeState::LoadedStopped : RuntimeState::Unloaded;
@@ -49,6 +53,7 @@ ProductionCycle RuntimeCoordinator::begin(RuntimeTrigger source,const QJsonObjec
     }catch(const ProductionException& e){if(e.code()!=ProductionError::Busy){error_=QString::fromUtf8(e.what());state_=RuntimeState::Fault;}throw;}
 }
 void RuntimeCoordinator::finish(quint64 ticket,const CycleResult& result) {
+    AcquisitionTimingSpan timing("runtime.finish-persist");
     owner();
     try {runtime_.finish(ticket,result);}
     catch(const ProductionException& e){if(e.code()==ProductionError::PersistenceFailure)recordingPending_=true;throw;}

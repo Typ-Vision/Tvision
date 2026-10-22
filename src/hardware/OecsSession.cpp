@@ -1,4 +1,5 @@
 #include "hardware/OecsSession.hpp"
+#include "hardware/AcquisitionTiming.hpp"
 #include <QDebug>
 #include <QFileInfo>
 #include <QSet>
@@ -34,13 +35,14 @@ bool OecsSession::libraryPinned() const {return pinned_;}
 quint32 OecsSession::sdkVersion() const {return sdkVersion_;}
 
 OecsDeviceInfo OecsSession::open(const OecsDeviceSelector& selector) {
+    AcquisitionTimingSpan openTiming("sdk.open-total");
     using F=OecsFailure;
     if(std::this_thread::get_id()!=owner_)throw OecsSessionError(F::WrongThread,"thread",0,"OECS oturumu yalnız sahibi olan iş parçacığından açılabilir");
     if(stage_!=OecsSessionStage::Unloaded)throw OecsSessionError(F::InvalidState,"state",0,"OECS oturumu açılamaz: oturum boş değil veya arızalı");
     if(selector.vendor.isEmpty()||selector.model.isEmpty()||selector.serial.isEmpty())throw OecsSessionError(F::InvalidSelector,"select",0,"OECS seçici üretici, model ve seri numarası içermeli");
     if(!QFileInfo(dllPath_).isAbsolute())throw OecsSessionError(F::Unavailable,"load",0,"OECS DLL yolu mutlak olmalı");
     QString reason;
-    if(!api_->load(dllPath_,reason))throw OecsSessionError(F::Unavailable,"load",oecs::errorLoadLibrary,reason);
+    {AcquisitionTimingSpan timing("sdk.load");if(!api_->load(dllPath_,reason))throw OecsSessionError(F::Unavailable,"load",oecs::errorLoadLibrary,reason);}
     sdkVersion_=api_->sdkVersion();
     // Undoes completed stages in reverse order; a failed destroy or unload pins the library and faults the session.
     const auto fail=[&](F failure,const QString& stage,int code,QString message,void* handle,bool claimed)->OecsSessionError {
@@ -58,8 +60,10 @@ OecsDeviceInfo OecsSession::open(const OecsDeviceSelector& selector) {
         return OecsSessionError(failure,stage,code,message);
     };
     QVector<OecsDeviceInfo> devices;
+    AcquisitionTimingSpan enumerationTiming("sdk.enumerate");
     int status=api_->enumerateUsb(devices);
     if(status!=oecs::ok)throw fail(F::ApiError,"enumerate",status,QString("OECS cihaz listesi alınamadı: %1").arg(hex(status)),nullptr,false);
+    enumerationTiming.finish();
     int index=-1,count=0;
     for(int i=0;i<devices.size();++i)
         if(devices[i].vendor==selector.vendor&&devices[i].model==selector.model&&devices[i].serial==selector.serial){index=i;++count;}
@@ -72,9 +76,11 @@ OecsDeviceInfo OecsSession::open(const OecsDeviceSelector& selector) {
     void* handle=nullptr;
     status=api_->createHandle(index,&handle);
     if(status!=oecs::ok)throw fail(F::ApiError,"create",status,QString("OECS tutamacı oluşturulamadı: %1").arg(hex(status)),nullptr,true);
+    AcquisitionTimingSpan exclusiveTiming("sdk.open-exclusive");
     status=api_->openExclusive(handle);
     if(status==oecs::errorBusy||status==oecs::errorAccessDenied)throw fail(F::Busy,"open",status,QString("OECS kamera meşgul veya erişim reddedildi (başka uygulama sahibi olabilir): %1").arg(hex(status)),handle,true);
     if(status!=oecs::ok)throw fail(F::ApiError,"open",status,QString("OECS kamera açılamadı: %1").arg(hex(status)),handle,true);
+    exclusiveTiming.finish();
     deviceInfo_=info;
     handle_=handle;
     stage_=OecsSessionStage::Open;
@@ -85,6 +91,7 @@ void OecsSession::close() {
     if(std::this_thread::get_id()!=owner_)throw OecsSessionError(OecsFailure::WrongThread,"thread",0,"OECS oturumu yalnız sahibi olan iş parçacığından kapatılabilir");
     if(probing_)throw OecsSessionError(OecsFailure::InvalidState,"stream",0,"OECS probe is in flight");
     if(stage_!=OecsSessionStage::Open && !configurationFault_)return;
+    AcquisitionTimingSpan timing("sdk.close");
     configurationFault_=false;
     QString firstStage;
     int firstCode=0;
@@ -134,6 +141,7 @@ OecsTriggerCorrelation OecsSession::softwareTriggerCorrelation() const {
 }
 
 QString OecsSession::cleanupStream(){
+    AcquisitionTimingSpan timing("stream.cleanup");
     QStringList failures;
     if(bufferHeld_){const int rc=api_->releaseBuffer(handle_);if(rc==0)bufferHeld_=false;else failures<<"release:"+hex(rc);}
     if(streamDirty_){const int rc=api_->flushStream(handle_);if(rc!=0)failures<<"flush:"+hex(rc);}
@@ -141,7 +149,7 @@ QString OecsSession::cleanupStream(){
     // Stop remains mandatory even after a release/flush error.
     if(streaming_){const int rc=api_->stopStream(handle_);if(rc==0)streaming_=false;else failures<<"stop:"+hex(rc);}
     if(failures.isEmpty())streamDirty_=false;
-    return failures.join(", ");
+    timing.finish(failures.isEmpty()?"success":"error");return failures.join(", ");
 }
 void OecsSession::probeFrame(const OecsStreamLimits& limits,const std::function<void(const OecsBuffer&)>& copy){
     captureFrame(limits,copy);
@@ -237,18 +245,18 @@ void OecsSession::captureFrame(const OecsStreamLimits& limits,const std::functio
         if(remaining)remaining();
         // Start may partially succeed. Always attempt stop/flush after entering it.
         streaming_=streamDirty_=true;
-        call(api_->startStream(handle_),"start");
+        {AcquisitionTimingSpan timing("stream.start");call(api_->startStream(handle_),"start");}
         if(remaining)remaining();
-        if(ready)ready();
+        {AcquisitionTimingSpan timing("stream.trigger");if(ready)ready();}
         OecsBuffer frame;
         const int wait=remaining?std::min(limits.timeoutMs,remaining()):limits.timeoutMs;
         if(wait<=0)throw OecsSessionError(OecsFailure::ApiError,"deadline",0,"Expired wait budget");
-        call(api_->waitBuffer(handle_,wait,frame),"wait");
+        {AcquisitionTimingSpan timing("stream.wait");const auto rc=api_->waitBuffer(handle_,wait,frame);timing.finish(rc==0?"success":"error",{{"sdkCode",rc},{"budgetMs",wait}});call(rc,"wait");}
         bufferHeld_=true;
         if(remaining)remaining();
         if(validate)validate(frame);
         if(!frame.data||!frame.complete||frame.overflow||frame.chunks||frame.pixelFormat!=0x01080001||frame.width!=w||frame.height!=h||frame.stride<w||frame.stride>bytes/h||frame.bytes!=frame.stride*h||frame.bytes>bytes)invalid("Invalid/incomplete/unsupported Mono8 buffer");
-        copy(frame); // Owned copy finishes before release, including exception paths.
+        {AcquisitionTimingSpan timing("raster.copy-hash-preview");copy(frame);} // Owned before release.
         if(remaining)remaining();
     }catch(...){failure=std::current_exception();}
     const auto cleanup=cleanupStream();

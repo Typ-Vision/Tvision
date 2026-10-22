@@ -145,6 +145,7 @@ void MainWindow::refreshRuntime() {
     findChild<QPushButton*>("runtime_retry")->setEnabled(!working && ((pending && runtimePending_.has_value()) || (plc_ && plc_->recordingPending())));
 }
 void MainWindow::runtimeAction(const QString& action) {
+    const auto timing=AcquisitionTiming::request("runtime");const auto commandedAt=AcquisitionTiming::Clock::now();AcquisitionTimingBinding binding(timing);AcquisitionTimingSpan commandTiming("runtime.user-"+action);
     try {
         if(action=="stop"){
             if(plc_ && plc_->working())plc_->cancel();
@@ -167,14 +168,15 @@ void MainWindow::runtimeAction(const QString& action) {
         } else if(action=="cycle") {
             runtimeCycle_=runtimeCoordinator_->begin(RuntimeTrigger::Manual);const auto cycle=runtimeCycle_;const auto catalog=runtimePath_+".calibrations.json";
             auto* watcher=runtimeJobs_.watch<CycleResult>(this,SessionJob::Execution);const auto cancel=runtimeCoordinator_->cancellation();
-            connect(watcher,&QFutureWatcher<CycleResult>::finished,this,[this,watcher,cancel]{
+            connect(watcher,&QFutureWatcher<CycleResult>::finished,this,[this,watcher,cancel,timing,commandedAt]{
+                AcquisitionTimingBinding binding(timing);AcquisitionTimingSpan delivery("runtime.command-to-delivery",commandedAt);
                 auto result=watcher->result();watcher->deleteLater();if(cancel->load())RuntimeService::suppressCancelled(runtimeCycle_,result);
-                runtimePending_=result;
+                delivery.finish(cancel->load()?"cancelled":result.state==ExecutionState::Done?"success":"error");runtimePending_=result;
                 try {runtimeCoordinator_->finish(runtimeCycle_.ticket,result);if(measurementWorkspace_ && runtime_->active())measurementWorkspace_->observeAcquisition(runtime_->active()->recipe(),result);runtimeResult_=std::move(runtimePending_);runtimePending_.reset();runtimeCycle_={};showRuntimeResult();}
                 catch(const std::exception& e){runtimeSummary_->setText("Kayıt bekliyor: "+QString::fromUtf8(e.what()));runtimeViewer_->clearImage("Kayıt bekliyor; sonuç yayımlanmadı.");}
                 refreshRuntime();
             });
-            runtimeJobs_.launch(watcher,[cycle,catalog,cancel]{return RuntimeService::execute(cycle,catalog,cancel);});
+            runtimeJobs_.launch(watcher,[cycle,catalog,cancel,timing,commandedAt]{AcquisitionTimingBinding binding(timing);AcquisitionTiming::record(timing,"runtime.worker-queue",commandedAt);return RuntimeService::execute(cycle,catalog,cancel);});
         }
         refreshRuntime();
     }catch(const std::exception& e){const auto diagnostic=QString::fromUtf8(e.what());runtimeSummary_->setText(diagnostic.contains("native",Qt::CaseInsensitive) ? "Endüstriyel kamera kullanılamıyor. Bu backend için edinim doğrulaması tamamlanmadı.":diagnostic);runtimeSummary_->setToolTip(diagnostic);refreshRuntime();}
