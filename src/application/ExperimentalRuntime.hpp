@@ -18,6 +18,9 @@ public:
     static void suppressCancelled(const ProductionCycle&,CycleResult&);
     static void validateRecord(const QJsonObject&);
     static QString summary(const QJsonObject&);
+    // Frozen source evidence; never consults the current registry/model selection.
+    static QString sourceSummary(const QJsonObject&,const QString& source);
+    static MeasurementExecutionContext calibration(const ProductionSnapshot&,const ImageFrame&);
     static QByteArray csv(const QVector<QJsonObject>&);
 private:
     std::shared_ptr<const ProductionSnapshot> capture(const Recipe&,const QString&) const;

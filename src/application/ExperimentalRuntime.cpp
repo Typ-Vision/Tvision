@@ -5,6 +5,7 @@
 #include "ProductionResultCodec.hpp"
 #include "MeasurementDiagnostic.hpp"
 #include "SourceFrameIndex.hpp"
+#include "ToolResultCodec.hpp"
 #include "ScopedActiveCalibration.hpp"
 #include "domain/ToolRegistry.hpp"
 #include <QCryptographicHash>
@@ -189,9 +190,48 @@ void ExperimentalRuntime::validateRecord(const QJsonObject& r){
     }
     if(r["state"]=="DONE")require(seen.size()==configured.size(),"Experimental DONE missing tools");
 }
-QString ExperimentalRuntime::summary(const QJsonObject& r){validateRecord(r);return ExperimentalOecsAcquisition::notice()+"\n"+r["state"].toString()+" • "+r["cycleId"].toString()+"\nPLC / robot: BLOCKED_EXPERIMENTAL";}
+MeasurementExecutionContext ExperimentalRuntime::calibration(const ProductionSnapshot& snapshot,const ImageFrame& frame){
+    require(snapshot.validation().scope==scope,"Experimental metric snapshot required");const auto id=frame.metadata().sourceId;
+    const auto entry=snapshot.dependencies()["sourceSet"].toObject()[id].toObject();require(!entry.isEmpty(),"Foreign experimental frame");
+    const auto branch=SystemCalibration::branch(snapshot.recipe(),id);modelFrame(entry,branch,frame);
+    if(entry.contains("experimentalCalibration"))return SystemCalibration::resolveExperimental(decodeModel(entry["experimentalCalibration"].toObject(),id),branch,frame);
+    MeasurementExecutionContext raw;raw.rawSize=frame.size();raw.error="Raw/px source has no experimental model";return raw;
+}
+QString ExperimentalRuntime::sourceSummary(const QJsonObject& entry,const QString& source){
+    QString text="Kaynak: "+source;
+    const auto model=entry["experimentalCalibration"].toObject();
+    QJsonObject camera=entry["camera"].toObject();
+    if(!model.isEmpty())camera=model["acquisition"].toObject()["probe"].toObject()["experimental"].toObject()["camera"].toObject();
+    if(camera.isEmpty() && !model.isEmpty())text+=" • Kamera: "+model["target"].toObject()["cameraId"].toString();
+    else if(!camera.isEmpty())text+=" • Kamera: "+camera["id"].toString()+" / "+camera["name"].toString();
+    if(model.isEmpty())return text+" • Raw / px • metrik model kullanılmıyor";
+    const auto typed=decodeModel(model,source);const auto& active=typed.snapshot.calibration;
+    return text+QString(" • Deneysel • mm • %1 v%2 • Model: %3 • Content: %4 • Bağımsız fiziksel kabul yapılmadı")
+        .arg(active.record.name()).arg(active.selection.version).arg(active.selection.id,active.selection.contentId);
+}
+namespace {
+QJsonArray recordedResults(const QJsonObject& r){
+    QJsonArray results;if(r["state"]!="DONE")return results;
+    for(const auto& v:r["tools"].toArray()){const auto t=v.toObject();if(t["state"]!="DONE")continue;
+        const auto outputs=t["outputs"].toObject();for(auto i=outputs.begin();i!=outputs.end();++i){const auto o=i->toObject();if(!o.contains("typedPort"))continue;
+            const auto port=ToolResultCodec::decode(o["typedPort"].toObject());if(!port.valid || !std::holds_alternative<double>(port.data))continue;
+            results.append(QJsonObject{{"sourceId",port.origin.sourceId},{"toolId",t["toolId"]},{"portId",i.key()},{"value",std::get<double>(port.data)},{"unit",port.port.unit},{"coordinateFrame",port.port.frame},{"calibration",t["calibration"]}});
+        }
+    }return results;
+}
+QJsonArray recordedModels(const QJsonObject& r){QJsonArray models;const auto sources=r["dependencies"].toObject()["sourceSet"].toObject();for(auto i=sources.begin();i!=sources.end();++i){const auto entry=i->toObject(),model=entry["experimentalCalibration"].toObject();models.append(QJsonObject{{"sourceId",i.key()},{"experimental",true},{"unit",model.isEmpty()?"px":"mm"},{"model",model.isEmpty()?QJsonObject{}:model["executionDependency"].toObject()},{"description",ExperimentalRuntime::sourceSummary(entry,i.key())}});}return models;}
+}
+QString ExperimentalRuntime::summary(const QJsonObject& r){
+    validateRecord(r);QStringList lines{ExperimentalOecsAcquisition::notice(),r["state"].toString()+" • "+r["cycleId"].toString(),"Parça: NOT_EVALUATED • PLC / robot: BLOCKED_EXPERIMENTAL"};
+    QMap<QString,QString> names;for(const auto& tool:editorTools(r["configuration"].toObject()["definition"].toObject()))names[tool.id]=tool.name;
+    QStringList metric,pixels;const auto sources=r["dependencies"].toObject()["sourceSet"].toObject();
+    for(const auto& result:recordedResults(r)){const auto value=result.toObject();const auto source=value["sourceId"].toString(),unit=value["unit"].toString();const auto text=QString("%1 / %2: %3 %4").arg(names.value(source,source),value["portId"].toString()).arg(value["value"].toDouble(),0,'g',12).arg(unit);if(unit=="mm")metric<<text;else if(!sources[source].toObject().contains("experimentalCalibration") && unit.startsWith("px"))pixels<<text;}
+    lines+=metric+pixels;
+    for(const auto& model:recordedModels(r))lines<<model.toObject()["description"].toString();
+    if(!r["error"].toString().isEmpty())lines<<r["error"].toString();return lines.join('\n');
+}
 QByteArray ExperimentalRuntime::csv(const QVector<QJsonObject>& records){
-    require(records.size()<=256,"Experimental CSV record limit");QByteArray data="schema,cycleId,recipeId,executionState,productionAdmission,triggerAssociationVerified,communicationState,evidence\r\n";
-    for(const auto& r:records){validateRecord(r);QStringList row;for(const auto& key:{"schema","cycleId","recipeId","state"})row<<cell(r[key].toString());row<<"false"<<"false"<<cell("BLOCKED_EXPERIMENTAL")<<cell(QString::fromUtf8(QJsonDocument(r).toJson(QJsonDocument::Compact)));data+=row.join(',').toUtf8()+"\r\n";}return data;
+    require(records.size()<=256,"Experimental CSV record limit");QByteArray data="schema,cycleId,recipeId,executionState,productionAdmission,triggerAssociationVerified,communicationState,sourceModels,results,evidence\r\n";
+    for(const auto& r:records){validateRecord(r);QStringList row;for(const auto& key:{"schema","cycleId","recipeId","state"})row<<cell(r[key].toString());row<<"false"<<"false"<<cell("BLOCKED_EXPERIMENTAL")<<cell(QString::fromUtf8(QJsonDocument(recordedModels(r)).toJson(QJsonDocument::Compact)))<<cell(QString::fromUtf8(QJsonDocument(recordedResults(r)).toJson(QJsonDocument::Compact)))<<cell(QString::fromUtf8(QJsonDocument(r).toJson(QJsonDocument::Compact)));data+=row.join(',').toUtf8()+"\r\n";}return data;
 }
 }

@@ -1,4 +1,4 @@
-# Deneysel Runtime sözleşmesi — EXP-03 / CCUX-12
+# Deneysel Runtime sözleşmesi — EXP-03 / CCUX-12–13
 
 22 Ekim 2026. [Deneysel kamera planı](industrial-camera-oecs-experimental-plan.md).
 
@@ -55,9 +55,16 @@ canlı Viewer/sonuçları geri getirmez. Geçmişte gerçek completion korunur.
 
 Offline okuyucu graph/kaynak/frame/port, piksel hash bağları, profile/readback,
 false admission/eşleşme bayrakları ve NOT_EVALUATED kararını yeniden denetler.
-runtime1 için mevcut Logs/CSV sunumu korunur; runtime2 metrik UI bağlama ve
-kolonları CCUX-13'tedir. Servis CSV'si her çevrimin sınırlı
-JSON kanıtını bir satırda taşır; ERROR/Stop için scalar uydurmaz. Raster gömülmez.
+Runtime hazırlık tablosu kaynak/kamera, kalibrasyon ve birimi ayrı gösterir;
+profil/rota/model content ayrıntıları tooltip'tedir. Deneysel seçenek Raw/px ve
+kaynak başına mm kapsamını açıklar. Model/ayar değişiminde Stop → yeniden
+Load Recipe → Run gerekir. Metrik ROI de yalnız frozen deneysel modelle çözülür.
+Logs runtime1 ve runtime2 kayıtlarını açık Deneysel / BLOCKED_EXPERIMENTAL
+etiketiyle okur; kaynaklı gerçek scalar/birim ve model kanıtı salt okunur kalır.
+Ayrı deneysel CSV, çevrim başına `sourceModels`, `results` ve tam `evidence`
+JSON kolonları taşır. Model kimliği/content/version ve scalar kaynak/tool/port,
+birim/coordinateFrame korunur. ERROR/Stop `results=[]` taşır; scalar uydurmaz.
+Üretim CSV'si deneysel kayıtları içermez. Raster gömülmez.
 Dosya hash'i dijital imza değildir; dışarıdan bütünü yeniden yazılan JSON'a karşı
 kimlik doğrulama veya tetik/parça tazeliği kanıtı sağlamaz.
 

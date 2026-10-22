@@ -70,6 +70,7 @@ MeasurementExecutionContext RuntimeService::completionCalibration(const ImageFra
     return calibration(*production_.active(),frame,catalogPath_);
 }
 MeasurementExecutionContext RuntimeService::calibration(const ProductionSnapshot& s,const ImageFrame& frame,const QString& path){
+    if(s.validation().scope=="experimental_runtime/2")return ExperimentalRuntime::calibration(s,frame);
     if(s.dependencies().contains("sourceSet")){const auto entry=s.dependencies()["sourceSet"].toObject()[frame.metadata().sourceId].toObject();if(entry.isEmpty())throw std::runtime_error("Foreign source in immutable model set");if(entry.contains("systemCalibration"))return SystemCalibration::resolve(SystemCalibration::decodeEvidence(entry["systemCalibration"].toObject()),SystemCalibration::branch(s.recipe(),frame.metadata().sourceId),s.projectDirectory(),frame);MeasurementExecutionContext c;c.rawSize=frame.size();c.error="Raw-only source has no admitted model";return c;}
 if(s.dependencies().contains("systemCalibration"))return SystemCalibration::resolve(SystemCalibration::decodeEvidence(s.dependencies()["systemCalibration"].toObject()),s.recipe(),s.projectDirectory(),frame);return CalibrationWorkflow::resolve(s.recipe(),frame,path);}
 ProductionDependencies RuntimeService::calibrationDependencies(const Recipe& r) const {

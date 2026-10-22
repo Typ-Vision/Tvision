@@ -4,13 +4,17 @@
 
 ## Devam noktası
 
-**Sonraki görev: [CCUX-13](architecture/camera-setup/13-runtime-ui.md).**
-**CCUX-12 tamamlandı:** kaynak başına ayrı typed deneysel model snapshot'ı,
-karma Raw/px + mm yürütme ve runtime2 kalıcı codec var. Model/version/content,
-ayar/köken/geometri ve port birimleri doğrulanır; runtime1 Raw/px geçmişi korunur.
-Parça kararı NOT_EVALUATED, PLC/robot kapalı; retry frozen payload'ı yazar.
-Yeni yazılım kanıtı [kapanışta](archive/2026-10-22-ccux-12.md),
-`build/ccux/ccux-12/`. Fiziksel mm ve Runtime/Logs/CSV metrik UI kabulü değildir.
+**Sonraki görev: [CCUX-14](architecture/camera-setup/14-software-acceptance.md).**
+**CCUX-13 tamamlandı:** Runtime kaynak/kamera, deneysel mm ve Raw/px birimlerini
+hazırlıkta ayırır; kalıcı commit sonrası gerçek kaynaklı değerler önce gösterilir.
+Logs runtime1/2'yi deneysel etiketler; ayrı CSV model ID/content/version ve gerçek
+birimli sonuçları taşır. Stop/hata sayısal sonuç üretmez; restart yalnız geçmişi
+okur, PLC/robot kapalıdır. Release, ilgili testler ve iki boyutta görsel kanıt
+[kapanışta](archive/2026-10-22-ccux-13.md), `build/ccux/ccux-13/`.
+**CCUX-12:** kaynak başına ayrı typed deneysel snapshot, karma Raw/px + mm ve
+runtime2 codec; exact model/ayar/köken/geometri ve port birimleri doğrulanır.
+Eski Raw/px geçmişi, NOT_EVALUATED ve frozen retry korunur.
+[Kapanış](archive/2026-10-22-ccux-12.md). Fiziksel mm kabulü değildir.
 **CCUX-11:** genel reçete referansları kaldırıldı; üç tür boş kaynakla DRAFT,
 metadata edit legacy/scoped bağ ve no-op hash korunur. [Kapanış](archive/2026-10-22-ccux-11.md).
 Genel shell temiz producer fixture'ıyla eski Runtime Stop/retry beklentisinde kaldı.

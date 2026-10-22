@@ -63,12 +63,18 @@ kartlar halinde uygulanır; güncel tamamlanma durumu [devir özetindedir](progr
 4. Kaydedilmiş reçeteyi **Load Recipe → Run** ile Runtime'a hazırlayın.
    **Tek çevrim** gerçek edinim/yürütmeyi başlatır; Run tek başına sonuç üretmez.
    Stop eski sonucu bastırır; farklı sürüm için Stop → Load Recipe → Run kullanın.
-   Deneysel OECS için Runtime’da **Deneysel OECS Runtime / replay (Raw / px)**
-   seçimini Load öncesi açın; restart’ta kapalıdır. PLC/robot çıkışı engellidir.
+   Deneysel OECS için Runtime’da **Deneysel OECS Runtime / replay (Raw / px +
+   kaynak başına mm)** seçimini Load öncesi açın; restart’ta kapalıdır.
+   Kaynak tablosu kamera ID/adını, kalibrasyon durumunu ve birimini gösterir;
+   profil ve köken ayrıntıları hücre ipuçlarındadır. mm yalnız aynı kaynağın uygun
+   deneysel modeliyle çalışır. Model/ayar değişiminde Stop → yeniden Load Recipe
+   → Run kullanın. Parça NOT_EVALUATED kalır; PLC/robot çıkışı engellidir.
    [Kapsam ve kayıt sözleşmesi](architecture/experimental-runtime.md).
 5. Kalıcı sonuçları **Logs/CSV** üzerinden inceleyin. Kayıt hatasında tekrar yazma
    aynı sonucu kaydeder; yeni acquisition yapmaz. Restart geçmişi korur, aktif
-   üretim iznini geri yüklemez. Deneysel geçmişin CSV düğmesi ayrıdır.
+   üretim iznini geri yüklemez. Deneysel geçmişin CSV düğmesi ayrıdır; model
+   kimliği/content/version, kaynaklı gerçek sonuç/birim ve köken kanıtı içerir.
+   Hata ve Stop satırları sayısal sonuç üretmez.
 
 Editor komutları, ROI, nominal tarama kılavuzları ve küçük ekran kullanımı
 [Editor kullanım rehberindedir](editor-usage.md).

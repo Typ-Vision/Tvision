@@ -6,6 +6,7 @@ görev” ifadeleri yazıldıkları tarihe aittir.
 
 | Dönem / görev | Kayıt |
 | --- | --- |
+| 22 Ekim 2026 — CCUX-13 | [Runtime/Logs kaynaklı metrik gösterim, deneysel CSV ve görsel kabul](2026-10-22-ccux-13.md) |
 | 22 Ekim 2026 — CCUX-12 | [Deneysel Runtime metrik snapshot, karma Raw/mm ve runtime2 codec](2026-10-22-ccux-12.md) |
 | 22 Ekim 2026 — CCUX-11 | [Sade reçete pencereleri, boş DRAFT ve legacy metadata/bağ korunumu](2026-10-22-ccux-11.md) |
 | 22 Ekim 2026 — CCUX-10 | [Editor kamera seçimi, atomik bağ ve ayrı deneysel mm çözümü](2026-10-22-ccux-10.md) |
