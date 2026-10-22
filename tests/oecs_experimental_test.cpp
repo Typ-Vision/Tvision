@@ -1,5 +1,6 @@
 #include "OecsExperimentalFixture.hpp"
 #include "application/IndependentCalibrationCapture.hpp"
+#include "application/AcquisitionPolicy.hpp"
 #include "application/MeasurementEnvironment.hpp"
 #include "application/SystemCalibration.hpp"
 #include "chessboard_fixture.hpp"
@@ -11,7 +12,15 @@ void calibrationCaptureChecks(){
     const auto r=request();auto deviceState=state();
     MeasurementEnvironment environment;environment.projectId="fixture";environment.current={{r.camera},{r.setup},{r.profile}};
     environment.history={r.setup};environment.registrations[r.camera.id.value]={"CAM_01",r.setup.id,r.profile.id};
-    auto capture=IndependentCaptureRequest::fromDefaults(environment,r.camera.id,CalibrationCapturePolicy::ExperimentalOecs);capture.timeoutMs=3000;
+    auto capture=IndependentCaptureRequest::fromDefaults(environment,r.camera.id);capture.timeoutMs=3000;
+    check(capture.policy==CalibrationCapturePolicy::ExperimentalOecs,"normal defaults choose exact supported OECS without opt-in");
+    auto oldProfile=capture;oldProfile.policy=CalibrationCapturePolicy::Automatic;oldProfile.profile->requested.trigger.selector="FrameStart";
+    {IndependentCalibrationSession rejected;rejects([&]{rejected.begin(oldProfile);});}
+    auto other=*r.camera.physical;other.model="unsupported";check(!AcquisitionPolicy::oecs(other),"unsupported identity never receives OECS policy");
+    check(!ExperimentalOecsAcquisition::available(r.device,"C:/does-not-exist.dll"),"missing runtime cannot be available");
+    ToolDefinition industrial;industrial.id="oecs-source";industrial.kind="industrial_camera";industrial.enabled=true;industrial.parameters={{"sourceReference",IndustrialSourceReference::bind(environment.current,r.profile.id,3000).toJson()}};
+    ToolDefinition webcam;webcam.id="webcam-source";webcam.kind="webcam";webcam.enabled=true;
+    rejects([&]{AcquisitionPolicy::sources({industrial,webcam},QDir::currentPath());});
     auto frozen=capture;environment.current.profiles[0].requested.exposureTimeUs=6000;
     check(frozen.profile->requested.exposureTimeUs==5000,"capture freezes CCUX defaults by value");
     auto ambiguous=environment;ambiguous.registrations.clear();auto second=r.profile;second.id={"second-profile"};ambiguous.current.profiles.append(second);
@@ -121,7 +130,7 @@ int main(int argc,char** argv){QCoreApplication app(argc,argv);try{
             project.save();const auto recipe=project.activeRecipe()->id;const auto version=project.activeRecipe()->recipeVersion;const auto definition=project.activeRecipe()->definition;
             project.openProject(project.path());project.selectRecipe(recipe);project.save();check(project.activeRecipe()->recipeVersion==version && project.activeRecipe()->definition==definition,"experimental replay no-op reopen");
             {
-                const auto archive=project.path()+".production";RuntimeService runtime(archive,{},RuntimeIdentity::localEngineer());runtime.setExperimental(true);RuntimeCoordinator coordinator(runtime);
+                const auto archive=project.path()+".production";RuntimeService runtime(archive,{},RuntimeIdentity::localEngineer());RuntimeCoordinator coordinator(runtime);
                 rejects([&]{coordinator.load(*project.activeRecipe(),directory.path(),RuntimeTrigger::SoftwareTrigger);});
                 coordinator.load(*project.activeRecipe(),directory.path());check(!runtime.active() && coordinator.state()==RuntimeState::LoadedStopped,"experimental Load grants no admission");coordinator.start();
                 check(runtime.active()->validation().scope=="experimental_runtime/2","separate experimental admission");
@@ -143,7 +152,7 @@ int main(int argc,char** argv){QCoreApplication app(argc,argv);try{
                 coordinator.start();const auto errorLease=coordinator.begin(RuntimeTrigger::Manual);check(QFile::rename(path,path+".hidden"),"hide source after begin");auto failed=RuntimeService::execute(errorLease,{},coordinator.cancellation());check(QFile::rename(path+".hidden",path),"restore source");check(failed.state==ExecutionState::Error,"real acquisition error");coordinator.finish(errorLease.ticket,failed);check(coordinator.state()==RuntimeState::Fault,"experimental failure closes admission");rejects([&]{coordinator.begin(RuntimeTrigger::Manual);});
             }
             EditorSession editor;const EditorContext ctx{project.project().id,project.path(),recipe,definition,{}};const auto signature=editor.signature(ctx);
-            auto execution=ExecutionService{}.withExperimentalEditorReplay();const auto ticket=editor.begin(SessionJob::Execution);
+            auto execution=ExecutionService{};const auto ticket=editor.begin(SessionJob::Execution);
             auto cycle=execution.run(definition,directory.path(),recipe,signature,{});check(cycle.state==ExecutionState::Done && cycle.industrialEvidence.isEmpty() && editor.acceptCycle(cycle,signature,ctx),"three application types share experimental flow");editor.finish(ticket);
             auto target=execution.runTool(definition,directory.path(),recipe,signature,{},blob,editor.evaluation(ctx,blob));
             check(target.state==ExecutionState::Done && target.acquisitions==0 && target.tools.front().outputs["area"].origin.experimentalAcquisition==saved,"TargetOnly retains experimental origin without acquisition");
@@ -152,11 +161,11 @@ int main(int argc,char** argv){QCoreApplication app(argc,argv);try{
                 check(sidecar.open(QIODevice::WriteOnly|QIODevice::Truncate),"restore cached evidence");sidecar.write(QJsonDocument(saved).toJson());}
             auto calibrationContext=ctx;calibrationContext.systemCalibration={{source,QJsonObject{{"revision",2}}}};
             check(editor.evaluation(calibrationContext,blob).cache.isEmpty(),"calibration identity change invalidates experimental cache");
-            check(ExecutionService{}.runTool(definition,directory.path(),recipe,signature,{},blob,editor.evaluation(ctx,blob)).state==ExecutionState::Error,"default policy denies experimental cached input");
+            check(ExecutionService{}.withExperimentalEditorReplay(false).runTool(definition,directory.path(),recipe,signature,{},blob,editor.evaluation(ctx,blob)).state==ExecutionState::Error,"explicit trusted boundary denies experimental cached input");
             const auto pending=editor.begin(SessionJob::Execution);editor.stop(SessionJob::Execution);check(editor.acceptCycle(cycle,signature,ctx) && !editor.frame && editor.cycle->state==ExecutionState::Skipped,"Stop suppresses late experimental cycle");editor.finish(pending);
-            check(ExecutionService{}.run(definition,directory.path(),recipe,signature,{}).state==ExecutionState::Error,"default execution denies marked replay");
+            check(ExecutionService{}.run(definition,directory.path(),recipe,signature,{}).state==ExecutionState::Done,"normal execution accepts validated marked replay without opt-in");
             ExecutionService injected([&](const ToolDefinition& t)->std::unique_ptr<AcquisitionAdapter>{if(t.kind=="image_file")return std::make_unique<ImageFileAdapter>(path,true);return {};});
-            check(injected.run(definition,directory.path(),recipe,signature,{}).state==ExecutionState::Error,"injected experimental pixels cannot bypass default execution policy");
+            check(injected.withExperimentalEditorReplay(false).run(definition,directory.path(),recipe,signature,{}).state==ExecutionState::Error,"injected experimental pixels cannot bypass explicit trusted boundary");
         }
         {
             ProjectService project;project.createProject("Two source experimental","",directory.filePath("two-source.vfproject"),"file");project.createRecipe("Two files","",ApplicationType::Measurement,"file");

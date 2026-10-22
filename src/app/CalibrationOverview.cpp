@@ -131,7 +131,7 @@ void CalibrationOverview::activate(){
     if(!camera || !setup)throw std::runtime_error("Hedef kamera ve kurulum seçin.");const SetupReference ref{camera->id,setup->id,setup->revision};const auto content=records_->item(records_->currentRow(),0)->data(Qt::UserRole).toString();const auto candidate=c->calibrations().candidate(ref,content);
     QString old="Seçim yok";for(const auto& selection:e.selections)if(selection.target.setup==ref.setup)old=selection.id+QString(" v%1").arg(selection.version);
     QStringList report{camera->name+" • "+setup->name+QString(" r%1").arg(setup->revision),"Mevcut seçim: "+old,"Yeni kayıt: "+candidate.record.name()+QString(" v%1").arg(candidate.selection.version),"Köken: "+candidate.record.image().origin,candidate.record.residualsMillimetres().isEmpty() ? "Bağımsız kontrol yapılmadı":"Bağımsız kontrol kanıtı mevcut"};
-    QStringList blockers;if(!candidate.record.activatable())blockers<<"Deneme / reddedilmiş kontrol etkinleştirilemez.";if(e.operational.value(camera->id.value)!=setup->id.value)blockers<<"Önce hedef kurulumu operasyonel seçin.";if(!c->changeAllowed())blockers<<"Runtime/worker/pending kayıt/ACK meşgul.";
+    QStringList blockers;if(!candidate.record.activatable() && !candidate.record.experimentallyActivatable())blockers<<"Deneme / reddedilmiş kontrol etkinleştirilemez.";if(e.operational.value(camera->id.value)!=setup->id.value)blockers<<"Önce hedef kurulumu operasyonel seçin.";if(!c->changeAllowed())blockers<<"Runtime/worker/pending kayıt/ACK meşgul.";
     IndependentCaptureRequest request;request.origin=SourceOrigin::CameraAcquired;request.camera=camera;request.setup=setup;configureCapture(request);try{request.validate();}catch(const std::exception& ex){blockers<<QString::fromUtf8(ex.what());}
     if(request.profile)report<<"Edinim profili: "+request.profile->name+QString(" r%1 • %2 µs • gain %3").arg(request.profile->revision).arg(request.profile->requested.exposureTimeUs).arg(request.profile->requested.gain);
     int affected=0;if(recipesProvider_)for(const auto& recipe:recipesProvider_())try{const auto target=SystemCalibration::setupReference(recipe);if(target && target->setup==ref.setup && target->camera==ref.camera){++affected;report<<SystemCalibration::impact(candidate,recipe,c->directory());}}catch(const std::exception& ex){report<<recipe.name+": "+QString::fromUtf8(ex.what());}
@@ -171,7 +171,8 @@ void CalibrationOverview::wizard(bool plate,bool trial){
     if(!trial && !selected_.isEmpty()){
         const auto defaults=e.defaults({selected_});if(defaults.status!=CameraDefaultsStatus::Ready)throw std::runtime_error("Kamera kurulum bilgisi eksik veya varsayılanı belirsiz. Ayrıntılar / Kameralar ekranında tamamlayın.");
         bool physical=false;for(const auto& camera:e.current.cameras)if(camera.id.value==selected_)physical=camera.physical.has_value();
-        request=IndependentCaptureRequest::fromDefaults(e,{selected_},experimental_ && physical ? CalibrationCapturePolicy::ExperimentalOecs:CalibrationCapturePolicy::Trusted);
+        request=IndependentCaptureRequest::fromDefaults(e,{selected_},CalibrationCapturePolicy::Automatic);
+        request.policy=CalibrationCapturePolicy::Automatic; // Re-resolve when wizard switches camera/file source.
         if(request.camera->physical && !localSettings_.isEmpty())request.localRoute=CameraLocalConfiguration(localSettings_).route(*request.camera->physical);
     }
     const auto cameraId=selected_;const bool policy=experimental_;const auto target=request.setup ? std::optional(SetupReference{request.camera->id,request.setup->id,request.setup->revision}):std::nullopt;

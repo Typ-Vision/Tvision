@@ -8,7 +8,7 @@
 #include <functional>
 
 namespace visionflow {
-enum class CalibrationCapturePolicy { Trusted, ExperimentalOecs };
+enum class CalibrationCapturePolicy { Trusted, ExperimentalOecs, Automatic };
 struct MeasurementEnvironment;
 // No recipe or ToolDefinition. Targeted files require an explicit setup declaration;
 // trial files have no target and cannot acquire camera provenance.
@@ -20,12 +20,12 @@ struct IndependentCaptureRequest {
     int timeoutMs=5000;
     std::optional<AcquisitionProfile> profile;
     std::optional<TransportLocator> localRoute;
-    // Explicit owner-session opt-in, never restored from project/INI.
-    CalibrationCapturePolicy policy=CalibrationCapturePolicy::Trusted;
+    // Automatic resolves the exact target at begin; no permission is restored.
+    CalibrationCapturePolicy policy=CalibrationCapturePolicy::Automatic;
     void validate() const;
     static MeasurementSetup installation(const MeasurementCamera&,const MeasurementSetupDescriptor&);
     static IndependentCaptureRequest fromDefaults(const MeasurementEnvironment&,const CameraId&,
-        CalibrationCapturePolicy=CalibrationCapturePolicy::Trusted,QString replayPath={});
+        CalibrationCapturePolicy=CalibrationCapturePolicy::Automatic,QString replayPath={});
 };
 // Adapter seam for deterministic contract tests, not a user-editable source claim.
 struct IndependentCaptureBackend {

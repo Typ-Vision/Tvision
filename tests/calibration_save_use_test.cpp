@@ -89,8 +89,7 @@ void experimentalChecks(const QString& path){
         const auto result=IndependentCalibrationSession::run(probe.begin(capture),backend);if(!result.error().isEmpty())throw std::runtime_error(result.error().toStdString());check(probe.accept(result),"experimental live fixture");
     };
     acquire();auto model=calculate(probe);auto input=command(service,ref,probe,CalibrationCapturePolicy::ExperimentalOecs);
-    check(service.saveAndUse(input,model,probe,[]{return true;}).state==CalibrationSaveUseState::Failed,"explicit capture opt-in does not grant activation opt-in");
-    service.setExperimental(true);auto result=service.saveAndUse(input,model,probe,[]{return true;});
+    auto result=service.saveAndUse(input,model,probe,[]{return true;});
     check(result.state==CalibrationSaveUseState::Activated && result.experimental && !result.independentControlAccepted,"separate experimental activation");
     const auto snapshot=service.experimentalSnapshots({ref}).first().snapshot.calibration;
     check(snapshot.record.encode()==model.encode() && snapshot.acquisition["triggerAssociationVerified"]==false && snapshot.acquisition["productionAdmission"]==false && snapshot.acquisition["physicalAcceptance"]==false,"experimental selection retains immutable model and false admission");
@@ -118,7 +117,8 @@ void experimentalChecks(const QString& path){
     check(service.status(ref).experimental && service.status(ref).sessionPermitted,"status labels experimental permission");
     check(service.saveAndUse(input,model,probe,[]{return true;}).state==CalibrationSaveUseState::Activated,"experimental duplicate idempotent");
     ScopedActiveCalibrationService restart(repo,[]{return true;});check(restart.status(ref).experimental && restart.status(ref).mathematicsCompatible && !restart.status(ref).sessionPermitted,"restart retains experimental mathematics without opt-in/permission");rejects([&]{restart.experimentalSnapshots({ref});});
-    const auto previous=service.environment().encode();acquire();auto next=calculate(probe,20);input=command(service,ref,probe,CalibrationCapturePolicy::ExperimentalOecs);int calls=0;
+    acquire();restart.prepareRemembered(ref,probe);check(restart.status(ref).sessionPermitted,"normal fresh probe restores remembered mathematics without opt-in");restart.disconnect(ref.camera);
+    service.setExperimental(true);const auto previous=service.environment().encode();acquire();auto next=calculate(probe,20);input=command(service,ref,probe,CalibrationCapturePolicy::ExperimentalOecs);int calls=0;
     result=service.saveAndUse(input,next,probe,[&]{if(++calls==3)service.setExperimental(false);return true;});
     check(result.state==CalibrationSaveUseState::CandidateSaved && service.environment().encode()==previous,"late opt-in change preserves previous selection and revokes permission");rejects([&]{service.experimentalSnapshots({ref});});
     service.setExperimental(true);check(!service.status(ref).sessionPermitted,"re-enabling opt-in cannot resurrect old permission");

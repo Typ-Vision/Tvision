@@ -3,8 +3,9 @@
 **22 Ekim ürün akışı güncellemesi:** aşağıdaki açık deneysel seçim ve kalıcı
 tetik eşleşmesi uyarısı gerekleri [CCUX C0](camera-setup/contract.md#c0--22-ekim-sade-ürün-akışı-kararı)
 ile değiştirilmiştir. [CCUX-16–19](camera-setup/README.md) normal komutlardan
-politika seçimi ve görünür seçenek/uyarıların kaldırılmasını planlar; henüz
-uygulanmadı. Aşağıdaki teknik kanıt, kimlik/lease ve kayıt kuralları geçerlidir.
+politika seçimi ve görünür seçenek/uyarıların kaldırılmasını kapsar. CCUX-16
+application politikası uygulandı; görünür temizliği CCUX-17 bekler. Aşağıdaki
+teknik kanıt, kimlik/lease ve kayıt kuralları geçerlidir.
 
 21 Ekim 2026. **EXP-02 px Editor teslimi hazır; gerçek mm/kalibrasyon kabulü açık.**
 EXP-03 deneysel Runtime da teslim edildi. Güncel robot dışı kalibrasyon/mm ve
@@ -44,10 +45,11 @@ kanıtları kendi kapsamlarında toplanmaya devam eder.
   `ActualCounterEpoch` başarılıymış gibi döndürülmez; sahte arm, baseline,
   ready veya trusted completion üretilmez. Native `Unavailable` bugün korunur;
   yeni politika EXP-01 uygulanınca yalnız deneysel girişten kullanılabilir.
-- Kullanıcı deneysel modu açıkça seçer. Görüntü ve sonuçta kısa, kalıcı
-  **"Deneysel kamera — tetik eşleşmesi doğrulanmadı"** durumu görünür.
-  Her çekimde onay penceresi açılmaz. Kaydedilen tercih production izni olmaz;
-  restart veya eski reçete açılışı otomatik acquisition başlatmaz.
+- Normal işlem komutu CCUX-16 application politikasını seçer; ayrıca opt-in
+  gerekmez. Exact desteklenen cihaz/profil veya işaretli PGM/JSON kaynağı
+  ayrıştırılır; yanlış/eksik kanıt loader/probe tarafından reddedilir. Restart
+  veya eski reçete açılışı acquisition/Run başlatmaz; görünür eski kutu/metinlerin
+  kaldırılması CCUX-17 teslimidir. Politika production izni değildir.
 - Exact identity, gerçek configure/readback, owned Mono8 kopya, payload/geometri
   denetimi, exclusive lease ve monoton süre bütçesi zorunludur. Yanlış cihaz,
   eksik kare veya geçersiz geometri varsayımla kabul edilmez.

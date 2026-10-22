@@ -1,4 +1,5 @@
 #include "CameraSettingsService.hpp"
+#include "AcquisitionPolicy.hpp"
 #include <cmath>
 #include <exception>
 #include <QFileInfo>
@@ -128,6 +129,7 @@ std::unique_ptr<CameraSettingsSession> CameraSettingsService::open(MeasurementEn
                 require(featureEquivalent(output.exposure,number(output.exposure,desired.exposureUs.value_or(before.actual.settings.exposureTimeUs))) &&
                     featureEquivalent(output.gain,number(output.gain,desired.gainDb.value_or(before.actual.settings.gain))),"Final scalar readback mismatch");
                 auto profile=request_.profile;profile.pending=false;profile.requested=output.actual.settings;
+                if(request_.profile.pending && AcquisitionPolicy::camera(request_.camera))profile.requested.trigger={true,"FrameBurstStart","Software"};
                 output.requested=desired;
                 if(desired.exposureUs)profile.requested.exposureTimeUs=*desired.exposureUs;
                 else if(!request_.profile.pending && featureEquivalent(output.exposure,number(output.exposure,request_.profile.requested.exposureTimeUs)))

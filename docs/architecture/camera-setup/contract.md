@@ -11,7 +11,8 @@ eşleşmesinin doğrulanmadığını söyleyen banner/tooltip/durum metinleri ka
 Aynı anlamda yeni bir mod, onay penceresi veya uyarı eklenmez. Kalibrasyon'un
 “Önceki akış ve eski kanıt ekranları” gezinmesi kaldırılır. Normal kamera,
 kalibrasyon, Editor ve Runtime komutları uygun backend politikasını seçer.
-Uygulama sırası CCUX-16–19'dur; bu karar henüz uygulanmış özellik değildir.
+CCUX-16 normal komutlarda application politikasını uygular; görünür seçim/uyarı
+ve eski gezinme temizliği CCUX-17–18, birleşik kabul CCUX-19'dadır.
 
 Bu bölüm eski EXP/CCUX kartlarındaki açık deneysel seçim, restart'ta kutuyu yeniden
 işaretleme ve kalıcı kamera uyarısı gereğinin yerine geçer. Kaynak başına kimlik,

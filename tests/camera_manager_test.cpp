@@ -248,7 +248,7 @@ int main(int argc,char** argv){QApplication app(argc,argv);try{
         });
         expView.resize(1400,900);expView.show();expView.scan();waitUi([&]{return !expJobs.busy();});
         QFile dll(dir.path()+"/fixture.dll");check(dll.open(QIODevice::WriteOnly),"fixture DLL marker");dll.write("Synthetic API only");dll.close();
-        expView.findChild<QLineEdit*>("cameraExperimentalRuntime")->setText(dll.fileName());expView.findChild<QCheckBox*>("cameraExperimental")->setChecked(true);
+        expView.findChild<QLineEdit*>("cameraExperimentalRuntime")->setText(dll.fileName());check(!expView.findChild<QCheckBox*>("cameraExperimental")->isChecked(),"new session has no experimental opt-in");
         expView.findChild<QSpinBox*>("cameraTimeout")->setValue(3000); // This SDK fixture asserts a 3 s stream budget.
         auto* expSave=expView.findChild<QPushButton*>("cameraSaveFrame");auto* expImage=expView.findChild<QLabel*>("cameraPreviewImage");
         expView.findChild<QPushButton*>("cameraPreview")->click();waitUi([&]{return !expJobs.busy();});

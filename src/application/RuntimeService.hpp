@@ -33,7 +33,10 @@ public:
     std::shared_ptr<const ProductionSnapshot> active() const;
     bool busy() const;
     void setExperimental(bool enabled,MultiProvider provider={});
+    // Configure backend dependencies only; normal Load/Run resolves required sources.
+    void setAutomaticAcquisition(MultiProvider provider={});
     bool experimental() const {return bool(experimental_);}
+    bool requiresManualCycles(const Recipe&,const QString& directory) const;
     QString principal() const {return identity_.principal;}
     const std::optional<RecipeValidation>& validation() const {return validation_;}
     QVector<QJsonObject> records() const {return store_.recent("cycles");}
@@ -68,5 +71,7 @@ private:
     bool multiMode_=false;
     std::unique_ptr<ExperimentalRuntime> experimental_;
     bool policyReset_=false;
+    bool automaticAcquisition_=true;
+    MultiProvider automaticProvider_;
 };
 }

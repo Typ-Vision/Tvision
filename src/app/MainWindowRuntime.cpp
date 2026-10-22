@@ -46,7 +46,7 @@ QWidget* MainWindow::makeRuntime() {
     connect(experimental,&QCheckBox::toggled,this,[this,notice](bool on){
         try{ensureRuntime();if(runtimeJobs_.busy() || runtime_->busy() || (plc_ && plc_->blocking()) || (runtimeCoordinator_ && runtimeCoordinator_->state()==RuntimeState::Running))throw std::runtime_error("Önce Stop ve bekleyen kayıt/teslimi tamamlayın.");
             if(plc_)plc_->bind(nullptr,nullptr);runtimeCoordinator_.reset();
-            runtime_->setExperimental(on,[this](const Recipe& r){if(!measurementWorkspace_)throw std::runtime_error("Measurement workspace unavailable");IndustrialExecutionInputs inputs;const auto e=measurementWorkspace_->environment();inputs.contract=e.current;for(const auto& c:e.current.cameras)if(c.physical)if(const auto route=CameraLocalConfiguration(settingsFile_).route(*c.physical))inputs.routes[c.id.value]=*route;return measurementWorkspace_->productionSources(r,inputs,true);});
+            runtime_->setAutomaticAcquisition([this](const Recipe& r){if(!measurementWorkspace_)throw std::runtime_error("Measurement workspace unavailable");IndustrialExecutionInputs inputs;const auto e=measurementWorkspace_->environment();inputs.contract=e.current;for(const auto& c:e.current.cameras)if(c.physical)if(const auto route=CameraLocalConfiguration(settingsFile_).route(*c.physical))inputs.routes[c.id.value]=*route;return measurementWorkspace_->productionSources(r,inputs,true);});
             runtimeCoordinator_=std::make_unique<RuntimeCoordinator>(*runtime_);if(plc_)plc_->bind(runtime_.get(),runtimeCoordinator_.get(),runtimePath_+".production",runtimePath_+".calibrations.json");runtimeResult_.reset();notice->setVisible(on);showRuntimeResult();refreshRuntime();
         }catch(const std::exception& e){QSignalBlocker blocker(findChild<QCheckBox*>("experimentalRuntime"));findChild<QCheckBox*>("experimentalRuntime")->setChecked(runtime_ && runtime_->experimental());notice->setVisible(runtime_ && runtime_->experimental());runtimeSummary_->setText(QString::fromUtf8(e.what()));}
     });
@@ -90,6 +90,12 @@ void MainWindow::ensureRuntime() {
     if(plc_ && plc_->blocking())throw std::runtime_error("Önce PLC kaydı/ACK tamamlanmalı.");
     if(runtimeJobs_.busy() || (runtime_ && runtime_->busy()))throw std::runtime_error("Önce Runtime çevrimini/kaydını tamamlayın.");
     if(plc_)plc_->bind(nullptr,nullptr);runtimeCoordinator_.reset();runtimePath_=service_.path();runtime_=std::make_unique<RuntimeService>(runtimePath_+".production",runtimePath_+".calibrations.json",RuntimeIdentity::localEngineer(),[this]{return systemCalibrationSnapshot();},[this](const Recipe& r){return systemCalibrationSnapshot(&r);},[this](const Recipe& r){if(!measurementWorkspace_)throw std::runtime_error("Measurement workspace unavailable");return measurementWorkspace_->acquisition(r);},[this](const Recipe& r){if(!measurementWorkspace_)throw std::runtime_error("Measurement workspace unavailable");return measurementWorkspace_->productionSources(r);});
+    runtime_->setAutomaticAcquisition([this](const Recipe& r){
+        if(!measurementWorkspace_)throw std::runtime_error("Measurement workspace unavailable");
+        IndustrialExecutionInputs inputs;const auto e=measurementWorkspace_->environment();inputs.contract=e.current;
+        for(const auto& c:e.current.cameras)if(c.physical)if(const auto route=CameraLocalConfiguration(settingsFile_).route(*c.physical))inputs.routes[c.id.value]=*route;
+        return measurementWorkspace_->productionSources(r,inputs,true);
+    });
     runtimeCoordinator_=std::make_unique<RuntimeCoordinator>(*runtime_);
     if(plc_)plc_->bind(runtime_.get(),runtimeCoordinator_.get(),runtimePath_+".production",runtimePath_+".calibrations.json");
     runtimeCycle_={};runtimePending_.reset();runtimeResult_.reset();showRuntimeResult();

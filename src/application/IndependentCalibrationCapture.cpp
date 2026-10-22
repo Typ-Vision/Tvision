@@ -1,4 +1,5 @@
 #include "IndependentCalibrationCapture.hpp"
+#include "AcquisitionPolicy.hpp"
 #include "WebcamAdapter.hpp"
 #include "MeasurementEnvironment.hpp"
 #include <QFileInfo>
@@ -16,12 +17,13 @@ IndependentCaptureRequest IndependentCaptureRequest::fromDefaults(const Measurem
     for(const auto& c:e.current.cameras)if(c.id==id)r.camera=c;
     for(const auto& s:e.current.setups)if(s.id==*defaults.setup && s.camera==id)r.setup=s;
     if(r.camera && r.camera->physical && defaults.profile)for(const auto& p:e.current.profiles)if(p.id==*defaults.profile)r.profile=p;
+    if(r.policy==CalibrationCapturePolicy::Automatic)r.policy=r.camera && AcquisitionPolicy::camera(*r.camera) && (r.origin==SourceOrigin::CameraAcquired || AcquisitionPolicy::replay(r.filePath)) ? CalibrationCapturePolicy::ExperimentalOecs:CalibrationCapturePolicy::Trusted;
     r.validate();return r;
 }
 void IndependentCaptureRequest::validate() const {
     require(timeoutMs>0 && timeoutMs<=60000,"Capture timeout must be 1–60000 ms");
     require(origin==SourceOrigin::CameraAcquired || origin==SourceOrigin::SetupFile || origin==SourceOrigin::TrialFile,"Unsupported acquisition origin");
-    require(policy==CalibrationCapturePolicy::Trusted || policy==CalibrationCapturePolicy::ExperimentalOecs,"Unknown calibration capture policy");
+    require(policy==CalibrationCapturePolicy::Trusted || policy==CalibrationCapturePolicy::ExperimentalOecs || policy==CalibrationCapturePolicy::Automatic,"Unknown calibration capture policy");
     if(policy==CalibrationCapturePolicy::ExperimentalOecs)require(camera && camera->physical && setup && profile && origin!=SourceOrigin::TrialFile,"Experimental capture requires frozen camera/setup/profile target");
     if(origin==SourceOrigin::TrialFile)require(!camera && !setup && !profile && !localRoute,"Trial file cannot declare a physical target");
     else {
@@ -53,7 +55,10 @@ std::optional<AcquisitionProfile> IndependentCalibrationSession::acceptedProfile
 std::optional<DiscoveredDevice> IndependentCalibrationSession::acceptedDevice() const {owner();return device_;}
 CalibrationWizardSession& IndependentCalibrationSession::math(){owner();return math_;}
 IndependentCaptureJob IndependentCalibrationSession::begin(IndependentCaptureRequest request){
-    owner();cancel();request.validate();require(generation_<1000000000,"Capture generation exhausted");IndependentCaptureJob job;job.request_=std::move(request);job.sourceId_=sourceId_;job.ticket_=id();job.generation_=++generation_;job.cancel_=std::make_shared<std::atomic_bool>(false);job.deadline_=Deadline(job.request_.timeoutMs);ticket_=job.ticket_;cancel_=job.cancel_;return job;
+    owner();cancel();
+    if(request.policy==CalibrationCapturePolicy::Automatic)request.policy=request.camera && AcquisitionPolicy::camera(*request.camera) && (request.origin==SourceOrigin::CameraAcquired || AcquisitionPolicy::replay(request.filePath)) ? CalibrationCapturePolicy::ExperimentalOecs:CalibrationCapturePolicy::Trusted;
+    if(request.policy==CalibrationCapturePolicy::ExperimentalOecs && request.profile)AcquisitionPolicy::profile(*request.profile);
+    request.validate();require(generation_<1000000000,"Capture generation exhausted");IndependentCaptureJob job;job.request_=std::move(request);job.sourceId_=sourceId_;job.ticket_=id();job.generation_=++generation_;job.cancel_=std::make_shared<std::atomic_bool>(false);job.deadline_=Deadline(job.request_.timeoutMs);ticket_=job.ticket_;cancel_=job.cancel_;return job;
 }
 IndependentCaptureResult IndependentCalibrationSession::run(const IndependentCaptureJob& job,const IndependentCaptureBackend& backend){
     IndependentCaptureResult result;result.ticket_=job.ticket_;result.generation_=job.generation_;

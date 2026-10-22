@@ -14,7 +14,7 @@ enum class CalibrationSaveUseState { Failed, CandidateSaved, Activated };
 struct CalibrationSaveUseRequest {
     SetupReference target;
     int environmentRevision=0, generation=0;
-    CalibrationCapturePolicy policy=CalibrationCapturePolicy::Trusted;
+    CalibrationCapturePolicy policy=CalibrationCapturePolicy::Automatic;
 };
 struct CalibrationSaveUseResult {
     CalibrationSaveUseState state=CalibrationSaveUseState::Failed;

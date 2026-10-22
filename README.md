@@ -20,7 +20,7 @@ UI algoritma veya donanım SDK'sını doğrudan çağırmaz.
   kare isteği ortak worker/provider yolundadır. Industrial Load çevrimdışı beyanı
   gösterir. Desteklenen Opto/OECS kamera ayarları gerçek readback ile okunup
   kaydedilir; bu işlem görüntü edinim izninden bağımsızdır. Industrial Run
-  tam native kabul ister. Native production kapalıdır; mevcut COE-U için Camera Manager’da açık deneysel önizleme yolu vardır.
+  tam native kabul ister. Native production kapalıdır; mevcut COE-U için normal kamera komutları OECS edinim yolunu seçer.
 
 Hazırlık/keşif üretim kabulü değildir; gerçek sonuç olmadan PASS, skor veya
 robot pose gösterilmez. Robot ekranları hazırlıktır. Yazılım testleri fiziksel
@@ -70,8 +70,8 @@ OECS / GenTL probe komutları, sandbox sınırları ve kanıt bağlantıları
    Load/Run hazırlığı tek başına sonuç değildir. Stop → yeniden Load sürümü değiştirir.
 
 Mevcut OECS opt-in, profil bağlama, PGM+JSON, kalibrasyon, Runtime ve panel
-kullanımı [kısa kullanım rehberinde](docs/camera-runtime-usage.md). Deneysel
-seçimler restart'ta kapanır; PLC/robot çıkışı kapalıdır. Test INI/görselleri
+kullanımı [kısa kullanım rehberinde](docs/camera-runtime-usage.md). Restart
+edinim/Run başlatmaz; PLC/robot çıkışı kapalıdır. Test INI/görselleri
 build altında, yerel panel ayarları config/local.ui.ini içindedir.
 
 ## Göreve göre okuma

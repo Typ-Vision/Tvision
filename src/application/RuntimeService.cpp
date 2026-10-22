@@ -1,4 +1,5 @@
 #include "RuntimeService.hpp"
+#include "AcquisitionPolicy.hpp"
 #include "MultiSourceRuntimeService.hpp"
 #include "EditorSession.hpp"
 #include "IndustrialExecution.hpp"
@@ -33,8 +34,14 @@ RuntimeService::RuntimeService(QString directory,QString catalogPath,RuntimeIden
         [this](const QString& kind,const QString& id,const QJsonObject& o){store_.append(kind,id,o);},[this](const ImageFrame& frame){return completionCalibration(frame);}),multiProvider_(std::move(multi)) {}
 RuntimeService::~RuntimeService()=default;
 bool RuntimeService::busy() const {return production_.busy() || (multi_ && multi_->busy()) || (experimental_ && experimental_->busy());}
+void RuntimeService::setAutomaticAcquisition(MultiProvider provider){
+    if(busy())throw ProductionException(ProductionError::Busy,"Runtime cycle/recording pending");
+    automaticAcquisition_=true;automaticProvider_=std::move(provider);
+    experimental_.reset();multi_.reset();multiMode_=false;validation_.reset();policyReset_=true;
+}
 void RuntimeService::setExperimental(bool enabled,MultiProvider provider){
     if(busy())throw ProductionException(ProductionError::Busy,"Runtime cycle/recording pending");
+    automaticAcquisition_=false;
     if(enabled)experimental_=std::make_unique<ExperimentalRuntime>(identity_,std::move(provider),[this](const QString& kind,const QString& id,const QJsonObject& o){store_.append(kind,id,o);});else experimental_.reset();
     // Switching policies must not resurrect a previous prepared production lease.
     multi_.reset();multiMode_=false;validation_.reset();policyReset_=true;
@@ -106,8 +113,14 @@ ProductionDependencies RuntimeService::declaredCalibrationDependencies(const Rec
     }
     return result;
 }
+bool RuntimeService::requiresManualCycles(const Recipe& r,const QString& directory) const {
+    if(!automaticAcquisition_)return bool(experimental_);
+    try{return AcquisitionPolicy::recipe(r.definition,directory);}
+    catch(const std::exception& e){throw ProductionException(ProductionError::InvalidConfiguration,e.what());}
+}
 void RuntimeService::checkConfiguration(const Recipe& r,const QString& directory) const {
-    if(experimental_){validateEditorDefinition(r.definition);return;}
+    if(automaticAcquisition_ && requiresManualCycles(r,directory)){ExperimentalRuntime checker(identity_,automaticProvider_,{});checker.prepare(r,directory);return;}
+    if(experimental_ && !automaticAcquisition_){validateEditorDefinition(r.definition);return;}
     if(r.definition["editor"].toObject()["schemaVersion"]==9){
         if(!multiProvider_)throw ProductionException(ProductionError::InvalidConfiguration,"Whole source-set provider required");
         const auto tools=editorTools(r.definition);bool industrial=false;for(const auto& t:tools)if(t.enabled && t.kind=="industrial_camera")industrial=true;
@@ -130,6 +143,14 @@ void RuntimeService::checkConfiguration(const Recipe& r,const QString& directory
 }
 void RuntimeService::prepare(const Recipe& r,const QString& directory) {
     if(busy())throw ProductionException(ProductionError::Busy,"Runtime cycle/recording pending.");
+    if(automaticAcquisition_){
+        const bool selected=requiresManualCycles(r,directory);
+        if(selected){
+            auto candidate=std::make_unique<ExperimentalRuntime>(identity_,automaticProvider_,[this](const QString& kind,const QString& id,const QJsonObject& o){store_.append(kind,id,o);});
+            candidate->prepare(r,directory);experimental_=std::move(candidate);multi_.reset();multiMode_=false;validation_=experimental_->active()->validation();policyReset_=false;return;
+        }
+        if(experimental_){experimental_.reset();validation_.reset();policyReset_=true;}
+    }
     if(experimental_){experimental_->prepare(r,directory);validation_=experimental_->active()->validation();policyReset_=false;return;}
     if(identity_.principal.isEmpty() || !identity_.authorize || !identity_.authorize(identity_.principal,ProductionAction::Run))throw ProductionException(ProductionError::Unauthorized,"Runtime Run denied.");
     if(r.definition["editor"].toObject()["schemaVersion"]==9){

@@ -1,5 +1,6 @@
 #include "CameraManager.hpp"
 #include "application/ExperimentalOecsAcquisition.hpp"
+#include "application/AcquisitionPolicy.hpp"
 #include <QCheckBox>
 #include <QComboBox>
 #include <QDoubleValidator>
@@ -157,7 +158,8 @@ void CameraManager::controls(){
         if(route)caps=factory_.capabilities(g.routes[routes_->currentIndex()]);
     }
     const bool configured=selected && rows_[row].camera && profiles_->currentIndex()>=0 && route;
-    const bool exp=experimental_->isChecked();
+    bool acquisitionReady=false;if(configured)try{request();acquisitionReady=true;}catch(const std::exception&){}
+    const bool exp=selected && rows_[row].camera && AcquisitionPolicy::camera(*rows_[row].camera);
     bool expAvailable=false,settingsAvailable=false;
     if(route){const auto& device=rows_[row].discovery->industrial->routes[routes_->currentIndex()];
         expAvailable=ExperimentalOecsAcquisition::available(device,runtime_->text().trimmed());
@@ -166,7 +168,7 @@ void CameraManager::controls(){
     save_->setEnabled(lastFrame_.has_value() && experimentalSession_ && !closing_ && previewSession_.state()!=PreviewState::Stopping);
     settingsRead_->setEnabled(idle && configured && settingsAvailable);
     exposure_->setEnabled(idle && configured && settingsKnown_ && settingsAvailable && exposureWritable_);gain_->setEnabled(idle && configured && settingsKnown_ && settingsAvailable && gainWritable_);
-    apply_->setEnabled(idle && configured && settingsKnown_ && settingsAvailable);preview_->setEnabled(idle && configured && (exp?expAvailable:caps.preview));
+    apply_->setEnabled(idle && configured && settingsKnown_ && settingsAvailable);preview_->setEnabled(idle && configured && acquisitionReady && (exp?expAvailable:caps.preview));
     QString guidance;
     if(!context_())guidance="Kamera eklemek için önce proje oluşturup kaydedin veya kayıtlı proje açın.";
     else if(!selected)guidance="Cihazları ara, ardından listeden bir kamera seçin.";
@@ -264,10 +266,10 @@ void CameraManager::clearFrame(){
 void CameraManager::start(bool live){
     clearFrame();
     if(jobs_.busy() || previewActive_ || settings_ || !gate_())throw std::runtime_error("Kamera/Runtime meşgul.");
-    auto r=request();experimentalSession_=experimental_->isChecked();
+    auto r=request();experimentalSession_=AcquisitionPolicy::camera(r.camera);
     if(experimentalSession_){
         if(!ExperimentalOecsAcquisition::available(r.device,runtime_->text().trimmed()))throw std::runtime_error("Deneysel OECS runtime veya desteklenen cihaz gerekli.");
-        r.profile.requested.trigger={true,"FrameBurstStart","Software"};
+        AcquisitionPolicy::profile(r.profile);
     }else r.profile.requested.trigger={false,{},{}};
     local_.setRoute(r.device.identity,r.device.route);
     const auto runtime=runtime_->text().trimmed();const auto inventory=inventory_.industrial;const auto factory=factory_;const bool exp=experimentalSession_;const auto api=experimentalApi_;

@@ -1,6 +1,7 @@
 # CCUX-16 — OECS işlemlerinde otomatik edinim politikası
 
-Durum: planlandı, uygulanmadı. Önkoşul: mevcut CCUX-01–14 altyapısı.
+Durum: yazılım teslimi tamamlandı. [22 Ekim kapanışı](../../archive/2026-10-22-ccux-16.md).
+Önkoşul: mevcut CCUX-01–14 altyapısı.
 CCUX-15 fiziksel referans kabulü bu yazılım işini bekletmez.
 [Plan](README.md), [ortak sözleşme](contract.md) C0–C5.
 

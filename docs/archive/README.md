@@ -6,6 +6,7 @@ görev” ifadeleri yazıldıkları tarihe aittir.
 
 | Dönem / görev | Kayıt |
 | --- | --- |
+| 22 Ekim 2026 — CCUX-16 | [Normal komutlardan kaynak/kanıt tabanlı edinim; kutusuz yazılım kabulü, fiziksel mm açık](2026-10-22-ccux-16.md) |
 | 22 Ekim 2026 — CCUX-15c | [56000 µs gerçek plaka karesi/readback; 48 aday ve hatalı 49 aday tanısı, kalibrasyon bekliyor](2026-10-22-ccux-15c.md) |
 | 22 Ekim 2026 — CCUX-15b | [7×7 / 12 mm plaka ham karesi ve algılama reddi; ışık ve fiziksel kabul bekliyor](2026-10-22-ccux-15b.md) |
 | 22 Ekim 2026 — CCUX-PLAN-03 | [OECS seçenek/uyarıları ve eski kalibrasyon gezinmesini kaldırma; dört uygulama kartı](2026-10-22-ccux-plan-03.md) |

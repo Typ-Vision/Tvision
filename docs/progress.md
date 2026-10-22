@@ -4,15 +4,17 @@
 
 ## Devam noktası
 
-**Güncel görev: [CCUX-15](architecture/camera-setup/15-physical-acceptance.md),
-kullanıcı seçimiyle plaka denemesi.** 7×7 simetrik daire, kullanıcı beyanı 12 mm.
-Kullanıcının istediği **56000 µs / 0 dB** readback ile yeni ham kare alındı.
-Servis 48 adayla reddediyor; tanıdaki 49 aday da doğru grid değil. Algılama
-sorunu açık; model/etkinlik/mm yok. [CCUX-15c](archive/2026-10-22-ccux-15c.md),
-`build/ccux/ccux-15/plate-20261022-02/`. [Önceki kare](archive/2026-10-22-ccux-15b.md).
-**CCUX-PLAN-03 uygulanmadı:** OECS seçim/uyarıları ve eski kalibrasyon gezinmesi
-kalkacak; [plan/C0](architecture/camera-setup/README.md) teknik engelleri korur.
-Plan sırası 16→17→18→19→15; güncel kullanıcı seçimi yukarıdadır.
+**Güncel devam: [CCUX-17](architecture/camera-setup/17-clean-camera-ui.md).**
+CCUX-16 teslim: normal kamera/kalibrasyon/Editor/Runtime komutları exact OECS
+veya işaretli replay yolunu seçer; opt-in gerekmez. Core 12/12.
+Görünür kutu/uyarıları CCUX-17 kaldıracak. [Kapanış](archive/2026-10-22-ccux-16.md),
+`build/ccux/ccux-16/`. Plan sırası 17→18→19→15; C0 teknik engelleri korur.
+
+**CCUX-15 plaka denemesi açık:** 7×7 simetrik daire, kullanıcı beyanı 12 mm.
+56000 µs / 0 dB readback ile ham kare alındı; servis 48 adayla reddediyor,
+tanıdaki 49 aday da doğru grid değil. Model/etkinlik/mm yok.
+[CCUX-15c](archive/2026-10-22-ccux-15c.md), `build/ccux/ccux-15/plate-20261022-02/`.
+[Önceki kare](archive/2026-10-22-ccux-15b.md).
 **CCUX-10b:** Editor kamera seçimi sırasında seçicinin silinmesi düzeltildi.
 Klavye olayı regresyonu ve kanıtlar [kapanışta](archive/2026-10-22-ccux-10b.md).
 **CCUX-03b:** Opto ayar servisi edinimden ayrıldı. Gerçek cihazda kayıt/oku/mevcut
