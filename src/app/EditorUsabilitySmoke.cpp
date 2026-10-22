@@ -1,3 +1,4 @@
+#include "CameraFlowSmokeAudit.hpp"
 #include "MainWindow.hpp"
 #include "ImageViewer.hpp"
 #include "Toolbox.hpp"
@@ -77,14 +78,14 @@ bool MainWindow::verifyExperimentalEditor(const QString& artifacts) {
     service_.save();const auto project=service_.path(),recipe=service_.activeRecipe()->id;const auto version=service_.activeRecipe()->recipeVersion;const auto definition=service_.activeRecipe()->definition;
     service_.openProject(project);service_.selectRecipe(recipe);service_.save();check(service_.activeRecipe()->recipeVersion==version && service_.activeRecipe()->definition==definition,"save reopen no-op");
     refreshWorkspace();selectTool(circle);wait();runFlow();wait();check(editorSession_.cycle && editorSession_.cycle->state==ExecutionState::Done,"reopen real flow");
-    for(const auto size:{QSize(1400,900),QSize(850,600)}){resize(size);QApplication::processEvents();imageViewer_->fitImage();QApplication::processEvents();check(grab().save(QDir(artifacts).filePath(QString("experimental-editor-%1.png").arg(size.width()))),"experimental screenshot");}
+    for(const auto size:{QSize(1400,900),QSize(850,600)}){resize(size);QApplication::processEvents();imageViewer_->fitImage();QApplication::processEvents();check(CameraFlowSmokeAudit::save(*this,QDir(artifacts).filePath(QString("experimental-editor-%1.png").arg(size.width()))),"experimental screenshot");}
     {
         auto* runtimePolicy=findChild<QCheckBox*>("experimentalRuntime");check(!runtimePolicy,"Runtime restart policy off");ensureRuntime();
         runtimeCoordinator_->load(*service_.activeRecipe(),QFileInfo(project).absolutePath());selectPage("runtime");runtimeAction("run");check(runtimeCoordinator_->state()==RuntimeState::Running,"experimental Runtime prepared");runtimeAction("cycle");
         QElapsedTimer timer;timer.start();while(runtimeJobs_.busy() && timer.elapsed()<20000){QApplication::processEvents();QThread::msleep(1);}QApplication::processEvents();check(runtimeResult_ && runtimeResult_->state==ExecutionState::Done,"experimental Runtime replay completion");
         runtimeTools_->setCurrentIndex(runtimeTools_->findData(circle));check(!runtimeSummary_->text().contains(ExperimentalOecsAcquisition::notice()) && runtimeViewer_->hasImage(),"Runtime image/result notice");
-        setWindowState(Qt::WindowNoState);for(const auto size:{QSize(1400,900),QSize(850,600)}){resize(size);QApplication::processEvents();runtimeViewer_->fitImage();QApplication::processEvents();check(grab().save(QDir(artifacts).filePath(QString("experimental-runtime-%1.png").arg(size.width()))),"Runtime screenshot");}
-        runtimeAction("stop");check(!runtimeResult_ && !runtimeViewer_->hasImage(),"Runtime Stop clears image");selectPage("logs");refreshLogs();check(logTable_->rowCount()==1 && !logTable_->item(0,2)->text().contains("Deneysel"),"experimental Logs row");logTable_->selectRow(0);QApplication::processEvents();check(grab().save(QDir(artifacts).filePath("experimental-logs-850.png")),"Logs screenshot");
+        setWindowState(Qt::WindowNoState);for(const auto size:{QSize(1400,900),QSize(850,600)}){resize(size);QApplication::processEvents();runtimeViewer_->fitImage();QApplication::processEvents();check(CameraFlowSmokeAudit::save(*this,QDir(artifacts).filePath(QString("experimental-runtime-%1.png").arg(size.width()))),"Runtime screenshot");}
+        runtimeAction("stop");check(!runtimeResult_ && !runtimeViewer_->hasImage(),"Runtime Stop clears image");selectPage("logs");refreshLogs();check(logTable_->rowCount()==1 && !logTable_->item(0,2)->text().contains("Deneysel"),"experimental Logs row");logTable_->selectRow(0);QApplication::processEvents();check(CameraFlowSmokeAudit::save(*this,QDir(artifacts).filePath("experimental-logs-850.png")),"Logs screenshot");
         selectPage("runtime");runtimeAction("run");QLockFile lock(project+".production/archive.lock");check(lock.tryLock(0),"Runtime archive fixture lock");runtimeAction("cycle");timer.restart();while(runtimeJobs_.busy() && timer.elapsed()<20000){QApplication::processEvents();QThread::msleep(1);}QApplication::processEvents();check(runtimePending_ && !runtimeResult_ && !runtimeViewer_->hasImage(),"failed recording does not publish");runtimeAction("stop");lock.unlock();runtimeAction("retry");check(!runtimePending_ && !runtimeResult_ && !runtimeViewer_->hasImage() && runtimeCoordinator_->state()==RuntimeState::LoadedStopped,"record retry after Stop must not restore live pixels/results");
 
     }
@@ -135,8 +136,8 @@ bool MainWindow::verifyEditorUsability(const QString& artifacts) {
             auto* editorPage=findChild<QWidget*>("editorPage");
             if(editorPage)check(editorPage->rect().contains(QRect(editorContext_->mapTo(editorPage,QPoint()),editorContext_->size())),"header status fits pinned and auto-hide layouts");
             const auto v=imageViewer_->viewport()->size();metrics.write(QString("%1 %2 %3x%4\n").arg(size.width()).arg(pinned ? "pinned":"auto").arg(v.width()).arg(v.height()).toUtf8());
-            grab().save(QDir(artifacts).filePath(QString("workspace-%1-%2.png").arg(size.width()).arg(pinned ? "pinned":"auto")));
-            if(!pinned){workspacePanel_->reveal();QApplication::processEvents();check(imageViewer_->viewport()->size()==v,"overlay maintains viewport at each size");grab().save(QDir(artifacts).filePath(QString("workspace-%1-overlay.png").arg(size.width())));}
+            CameraFlowSmokeAudit::save(*this,QDir(artifacts).filePath(QString("workspace-%1-%2.png").arg(size.width()).arg(pinned ? "pinned":"auto")));
+            if(!pinned){workspacePanel_->reveal();QApplication::processEvents();check(imageViewer_->viewport()->size()==v,"overlay maintains viewport at each size");CameraFlowSmokeAudit::save(*this,QDir(artifacts).filePath(QString("workspace-%1-overlay.png").arg(size.width())));}
         }
         selectPage("calibration");check(pages_->currentIndex()==pageIds_.indexOf("calibration"),"auto-hide shared by Calibration");selectPage("runtime");selectPage("editor");
         findChild<QAction*>("resetPanels")->trigger();QApplication::processEvents();check(workspacePanel_->pinned(),"Reset restores pinned mode");
@@ -162,7 +163,7 @@ bool MainWindow::verifyEditorUsability(const QString& artifacts) {
             }
             check(editorContext_->text().contains("DRAFT") && editorContext_->text().contains("Kaydedilmedi"),"long recipe name cannot hide draft/dirty status");
             keyClick(more);QApplication::processEvents();check(findChild<QPushButton*>("editActiveRecipe")->isVisible() && findChild<QPushButton*>("enableMultiSource")->isVisible(),"keyboard reveals secondary recipe controls");
-            grab().save(QDir(artifacts).filePath(QString("compact-details-%1.png").arg(size.width())));keyClick(more);
+            CameraFlowSmokeAudit::save(*this,QDir(artifacts).filePath(QString("compact-details-%1.png").arg(size.width())));keyClick(more);
             auto* menu=viewerMore->findChild<QMenu*>();bool opened=false;
             QTimer::singleShot(50,this,[&]{auto* reload=findChild<QAction*>("reloadImage");opened=menu->isVisible() && menu->activeAction()==reload && findChild<QAction*>("roiGeometry")->isVisible();
                 QKeyEvent down(QEvent::KeyPress,Qt::Key_Down,Qt::NoModifier);QApplication::sendEvent(menu,&down);opened=opened && menu->activeAction()==findChild<QAction*>("zoomOut");
@@ -170,7 +171,7 @@ bool MainWindow::verifyEditorUsability(const QString& artifacts) {
                 const auto zoom=imageViewer_->zoomFactor();QKeyEvent enter(QEvent::KeyPress,Qt::Key_Return,Qt::NoModifier);QApplication::sendEvent(menu,&enter);opened=opened && imageViewer_->zoomFactor()<zoom;menu->close();});
             keyClick(viewerMore);QElapsedTimer menuWait;menuWait.start();while(menuWait.elapsed()<100){QApplication::processEvents();QThread::msleep(1);}
             check(opened,"keyboard opens viewer overflow commands");
-            grab().save(QDir(artifacts).filePath(QString("compact-long-name-%1.png").arg(size.width())));
+            CameraFlowSmokeAudit::save(*this,QDir(artifacts).filePath(QString("compact-long-name-%1.png").arg(size.width())));
         }
         check(service_.activeRecipe()->definition==definition && flowSignature()==signature,"layout and menus preserve recipe and execution identity");
         service_.editRecipe(recipe.id,recipe.name,recipe.description,recipe.cameraReference,recipe.calibrationReference);
@@ -178,18 +179,18 @@ bool MainWindow::verifyEditorUsability(const QString& artifacts) {
         for(const auto type:{ApplicationType::RobotGuidance,ApplicationType::DefectInspection,ApplicationType::Measurement}) {
             service_.createRecipe("Compact type fixture "+QString::number(int(type)),"",type,"file");refreshWorkspace();selectPage("editor");QApplication::processEvents();
             check(pages_->currentWidget()==findChild<QWidget*>("editorPage") && editorContext_->text().contains(typeLabel(type)),"three application types share compact Editor");
-            grab().save(QDir(artifacts).filePath(QString("compact-empty-%1.png").arg(int(type))));
+            CameraFlowSmokeAudit::save(*this,QDir(artifacts).filePath(QString("compact-empty-%1.png").arg(int(type))));
         }
         service_.selectRecipe(recipe.id);refreshWorkspace();wait();resize(1400,900);
         runFlow();check(editorSession_.busy() && findChild<QTabWidget*>("editorTabs")->currentWidget()==findChild<QScrollArea*>("resultsScroll"),"actual worker busy state remains visible in Results");
-        grab().save(QDir(artifacts).filePath("compact-busy.png"));wait();check(editorSession_.cycle && editorSession_.cycle->state==ExecutionState::Done,"compact fixture execution produces real DONE");
+        CameraFlowSmokeAudit::save(*this,QDir(artifacts).filePath("compact-busy.png"));wait();check(editorSession_.cycle && editorSession_.cycle->state==ExecutionState::Done,"compact fixture execution produces real DONE");
         // Reopen an extreme older splitter state using a dedicated test INI.
         horizontal_->setSizes({9000,1,9000});vertical_->setSizes({1,9000});
         const auto legacyIni=QDir(artifacts).filePath("compact-old-layout.ini");
         {QSettings old(legacyIni,QSettings::IniFormat);old.setValue("editor/horizontal",horizontal_->saveState());old.setValue("editor/vertical",vertical_->saveState());}
         {MainWindow old(legacyIni);old.resize(850,600);old.selectPage("editor");old.show();QApplication::processEvents();
             check(old.size()==QSize(850,600) && old.imageViewer_->height()>=80 && old.findChild<QScrollArea*>("propertiesScroll")->width()>=210,"old splitter preferences constrained to usable minimums");
-            old.grab().save(QDir(artifacts).filePath("compact-old-layout.png"));}
+            CameraFlowSmokeAudit::save(old,QDir(artifacts).filePath("compact-old-layout.png"));}
         findChild<QAction*>("resetPanels")->trigger();QApplication::processEvents();
     }
     // EUI-05: group headers are presentation, never tool kinds.
@@ -210,10 +211,10 @@ bool MainWindow::verifyEditorUsability(const QString& artifacts) {
         toolbox_->setCurrentItem(measurementGroup);key(Qt::Key_Right);check(!lineEntry->isHidden(),"keyboard reopens group");
         search->setText("no_such_tool");for(int i=0;i<toolbox_->count();++i)check(toolbox_->item(i)->isHidden(),"no-match filter hides groups and children");search->clear();
         check(service_.activeRecipe()->definition==definition && flowSignature()==signature && editorSession_.generation==generation,"group and search preserve recipe and execution identity");
-        for(const auto size:{QSize(1400,900),QSize(850,600)}){resize(size);horizontal_->setSizes({190,750,300});QApplication::processEvents();toolbox_->scrollToTop();imageViewer_->fitImage();grab().save(QDir(artifacts).filePath(QString("eui05-toolbox-%1.png").arg(size.width())));}
+        for(const auto size:{QSize(1400,900),QSize(850,600)}){resize(size);horizontal_->setSizes({190,750,300});QApplication::processEvents();toolbox_->scrollToTop();imageViewer_->fitImage();CameraFlowSmokeAudit::save(*this,QDir(artifacts).filePath(QString("eui05-toolbox-%1.png").arg(size.width())));}
         for(int i=0;i<toolbox_->count();++i)if(toolbox_->item(i)->data(Toolbox::HeaderRole).toBool()){toolbox_->setCurrentRow(i);key(Qt::Key_Left);}
-        resize(1400,900);QApplication::processEvents();toolbox_->scrollToTop();grab().save(QDir(artifacts).filePath("eui05-groups-collapsed-1400.png"));
-        search->setText("Line Fit");for(const auto size:{QSize(1400,900),QSize(850,600)}){resize(size);QApplication::processEvents();toolbox_->scrollToTop();grab().save(QDir(artifacts).filePath(QString("eui05-search-%1.png").arg(size.width())));}search->clear();
+        resize(1400,900);QApplication::processEvents();toolbox_->scrollToTop();CameraFlowSmokeAudit::save(*this,QDir(artifacts).filePath("eui05-groups-collapsed-1400.png"));
+        search->setText("Line Fit");for(const auto size:{QSize(1400,900),QSize(850,600)}){resize(size);QApplication::processEvents();toolbox_->scrollToTop();CameraFlowSmokeAudit::save(*this,QDir(artifacts).filePath(QString("eui05-search-%1.png").arg(size.width())));}search->clear();
         for(int i=0;i<toolbox_->count();++i)if(toolbox_->item(i)->data(Toolbox::HeaderRole).toBool()){toolbox_->setCurrentRow(i);key(Qt::Key_Right);}
 
     }
@@ -253,20 +254,20 @@ bool MainWindow::verifyEditorUsability(const QString& artifacts) {
         auto* scroll=findChild<QScrollArea*>("propertiesScroll");
         for(const int detail:{0,1}) {
             mode->setCurrentIndex(detail);
-            for(const auto size:{QSize(1400,900),QSize(850,600)}) {resize(size);horizontal_->setSizes({155,750,300});QApplication::processEvents();scroll->ensureWidgetVisible(mode);imageViewer_->fitImage();QApplication::processEvents();check(scroll->horizontalScrollBar()->maximum()==0,"properties fit without horizontal scroll");grab().save(QDir(artifacts).filePath(QString("u1-%1-%2-%3.png").arg(kind).arg(detail ? "detailed":"basic").arg(size.width())));}
+            for(const auto size:{QSize(1400,900),QSize(850,600)}) {resize(size);horizontal_->setSizes({155,750,300});QApplication::processEvents();scroll->ensureWidgetVisible(mode);imageViewer_->fitImage();QApplication::processEvents();check(scroll->horizontalScrollBar()->maximum()==0,"properties fit without horizontal scroll");CameraFlowSmokeAudit::save(*this,QDir(artifacts).filePath(QString("u1-%1-%2-%3.png").arg(kind).arg(detail ? "detailed":"basic").arg(size.width())));}
         }
         if(kind=="line_fit" || kind=="circle_fit")for(int group:{0,1,2}) {
             auto* toggle=propertiesBody_->findChild<QPushButton*>(kind+"/measurementGroup"+QString::number(group)+"Toggle");toggle->click();
             auto* body=propertiesBody_->findChild<QWidget*>(kind+"/measurementGroup"+QString::number(group));
-            for(const auto size:{QSize(1400,900),QSize(850,600)}){resize(size);QApplication::processEvents();scroll->ensureWidgetVisible(body->findChild<QDoubleSpinBox*>());QApplication::processEvents();check(scroll->horizontalScrollBar()->maximum()==0,"measurement groups fit narrow panel");grab().save(QDir(artifacts).filePath(QString("mui02-%1-group%2-%3.png").arg(kind).arg(group).arg(size.width())));}
-            if(group==1){scroll->ensureWidgetVisible(body->findChild<QDoubleSpinBox*>("mt_minCoverage"));QApplication::processEvents();grab().save(QDir(artifacts).filePath(QString("mui02-%1-coverage-850.png").arg(kind)));}
+            for(const auto size:{QSize(1400,900),QSize(850,600)}){resize(size);QApplication::processEvents();scroll->ensureWidgetVisible(body->findChild<QDoubleSpinBox*>());QApplication::processEvents();check(scroll->horizontalScrollBar()->maximum()==0,"measurement groups fit narrow panel");CameraFlowSmokeAudit::save(*this,QDir(artifacts).filePath(QString("mui02-%1-group%2-%3.png").arg(kind).arg(group).arg(size.width())));}
+            if(group==1){scroll->ensureWidgetVisible(body->findChild<QDoubleSpinBox*>("mt_minCoverage"));QApplication::processEvents();CameraFlowSmokeAudit::save(*this,QDir(artifacts).filePath(QString("mui02-%1-coverage-850.png").arg(kind)));}
             toggle->click();
         }
         propertiesBody_->findChild<QPushButton*>(kind+"/manualToggle")->click();propertiesBody_->findChild<QPushButton*>(kind+"/outputsToggle")->click();
         check(!manual->isHidden() && !outputs->isHidden(),"manual and outputs accessible in Detailed");
         for(const auto size:{QSize(1400,900),QSize(850,600)}){
-            resize(size);QApplication::processEvents();scroll->ensureWidgetVisible(manual->findChild<QDoubleSpinBox*>());QApplication::processEvents();grab().save(QDir(artifacts).filePath(QString("u1-%1-manual-%2.png").arg(kind).arg(size.width())));
-            scroll->ensureWidgetVisible(outputs->findChild<QLabel*>());QApplication::processEvents();grab().save(QDir(artifacts).filePath(QString("u1-%1-outputs-%2.png").arg(kind).arg(size.width())));
+            resize(size);QApplication::processEvents();scroll->ensureWidgetVisible(manual->findChild<QDoubleSpinBox*>());QApplication::processEvents();CameraFlowSmokeAudit::save(*this,QDir(artifacts).filePath(QString("u1-%1-manual-%2.png").arg(kind).arg(size.width())));
+            scroll->ensureWidgetVisible(outputs->findChild<QLabel*>());QApplication::processEvents();CameraFlowSmokeAudit::save(*this,QDir(artifacts).filePath(QString("u1-%1-outputs-%2.png").arg(kind).arg(size.width())));
         }
         check(service_.activeRecipe()->definition==definition && !service_.dirty() && flowSignature()==signature && editorSession_.generation==generation,"presentation does not edit recipe or invalidate cache");
         selectTool(source);selectTool(id);check(propertiesBody_->findChild<QComboBox*>("propertyDetailMode")->currentIndex()==1 && !propertiesBody_->findChild<QWidget*>(kind+"/manual")->isHidden(),"type preference survives refresh and selection");
@@ -281,7 +282,7 @@ bool MainWindow::verifyEditorUsability(const QString& artifacts) {
     const auto pre=add("preprocess");for(auto t:service_.tools())if(t.id==pre){t.parameters["steps"]=QJsonArray{QJsonObject{{"op","threshold"},{"size",3},{"value",100}}};service_.updateTool(t);}refreshWorkspace();const auto circle=add("circle_fit");check(pendingDrawTool_==circle && !imageViewer_->roiGestureActive(),"missing preprocess cache leaves pending intent");
     propertiesBody_->findChild<QComboBox*>("mt_mode")->setCurrentText("pixel");runExecution(pre);wait();check(pendingDrawTool_.isEmpty() && imageViewer_->roiGestureActive(),"upstream completion prepares only still-selected new tool");
     bool processed=false;for(auto* item:imageViewer_->scene()->items())if(auto* pixels=dynamic_cast<QGraphicsPixmapItem*>(item))processed=pixels->pixmap().toImage().pixelColor(0,0).red()==0;check(processed,"drawing displays actual bound processed pixels");refreshFlow();check(imageViewer_->drawingActive() && drawingImage_ && drawingImage_->preview().pixelColor(0,0).red()==0,"Flow refresh preserves current drawing raster");
-    for(const auto size:{QSize(1400,900),QSize(850,600)}){resize(size);QApplication::processEvents();findChild<QScrollArea*>("propertiesScroll")->ensureWidgetVisible(propertiesBody_->findChild<QComboBox*>("input_image"));QApplication::processEvents();grab().save(QDir(artifacts).filePath(QString("u4-source-drawing-%1.png").arg(size.width())));}
+    for(const auto size:{QSize(1400,900),QSize(850,600)}){resize(size);QApplication::processEvents();findChild<QScrollArea*>("propertiesScroll")->ensureWidgetVisible(propertiesBody_->findChild<QComboBox*>("input_image"));QApplication::processEvents();CameraFlowSmokeAudit::save(*this,QDir(artifacts).filePath(QString("u4-source-drawing-%1.png").arg(size.width())));}
     findChild<QPushButton*>("stopFlow")->click();runFlow();wait();check(pendingDrawTool_.isEmpty() && !imageViewer_->roiGestureActive(),"Stop prevents late rearming");
     service_.save();service_.createRecipe("Late file","",ApplicationType::Measurement,"file");service_.addTool("image_file");refreshWorkspace();const auto lateTool=add("edge_point");check(pendingDrawTool_==lateTool,"new tool pending before file raster");
     service_.setImageFile(path);refreshWorkspace();wait();check(selectedToolId_==lateTool && pendingDrawTool_.isEmpty() && imageViewer_->roiGestureActive(),"late file completion arms after all viewer refreshes");findChild<QPushButton*>("stopFlow")->click();
@@ -298,7 +299,7 @@ bool MainWindow::verifyEditorUsability(const QString& artifacts) {
     for(const auto size:{QSize(1400,900),QSize(850,600)}){
         resize(size);QApplication::processEvents();showFlowMenu(flowTools_->visualItemRect(flowTools_->item(1)).center());
         menu=flowTools_->findChild<QMenu*>("flowMoveMenu");check(menu && menu->actions()[0]->isEnabled() && !menu->actions()[1]->isEnabled(),"bottom menu boundary");
-        grab().save(QDir(artifacts).filePath(QString("u3-flow-%1.png").arg(size.width())));menu->grab().save(QDir(artifacts).filePath(QString("u3-menu-%1.png").arg(size.width())));menu->close();QApplication::sendPostedEvents(nullptr,QEvent::DeferredDelete);QApplication::processEvents();
+        CameraFlowSmokeAudit::save(*this,QDir(artifacts).filePath(QString("u3-flow-%1.png").arg(size.width())));menu->grab().save(QDir(artifacts).filePath(QString("u3-menu-%1.png").arg(size.width())));menu->close();QApplication::sendPostedEvents(nullptr,QEvent::DeferredDelete);QApplication::processEvents();
     }
     const auto ticket=editorSession_.begin(SessionJob::Execution);
     showFlowMenu(flowTools_->visualItemRect(flowTools_->item(0)).center());menu=flowTools_->findChild<QMenu*>("flowMoveMenu");
@@ -352,8 +353,8 @@ bool MainWindow::verifyEditorUsability(const QString& artifacts) {
     const auto filtered=std::find_if(editorSession_.cycle->tools.cbegin(),editorSession_.cycle->tools.cend(),[&](const auto& t){return t.toolId==blob;});check(filtered!=editorSession_.cycle->tools.cend() && std::get<double>(filtered->outputs["candidateCount"].data)==1 && std::get<double>(filtered->outputs["count"].data)==0 && !filtered->outputs["point"].valid,"border stripe rejected with no stale point");
     service_.save();const auto borderRecipe=service_.activeRecipe()->id,borderPath=service_.path();service_.openProject(borderPath);service_.selectRecipe(borderRecipe);refreshWorkspace();selectTool(blob);
     check(propertiesBody_->findChild<QCheckBox*>("rejectBorderTouching")->isChecked() && !service_.dirty(),"border checkbox Save/reopen");
-    for(const auto size:{QSize(1400,900),QSize(850,600)}){resize(size);QApplication::processEvents();auto* scroll=findChild<QScrollArea*>("propertiesScroll");scroll->ensureWidgetVisible(propertiesBody_->findChild<QCheckBox*>("rejectBorderTouching"));QApplication::processEvents();check(grab().save(QDir(artifacts).filePath(QString("eui02-blob-editor-%1.png").arg(size.width()))),"border filter screenshot");}
-    for(const auto size:{QSize(1400,900),QSize(850,600)}){resize(size);vertical_->setSizes(size.width()==850 ? QList<int>{360,90}:QList<int>{600,180});QApplication::processEvents();imageViewer_->fitImage();QApplication::processEvents();check(grab().save(QDir(artifacts).filePath(QString("eui01-blob-editor-%1.png").arg(size.width()))),"Blob Editor screenshot");}
+    for(const auto size:{QSize(1400,900),QSize(850,600)}){resize(size);QApplication::processEvents();auto* scroll=findChild<QScrollArea*>("propertiesScroll");scroll->ensureWidgetVisible(propertiesBody_->findChild<QCheckBox*>("rejectBorderTouching"));QApplication::processEvents();check(CameraFlowSmokeAudit::save(*this,QDir(artifacts).filePath(QString("eui02-blob-editor-%1.png").arg(size.width()))),"border filter screenshot");}
+    for(const auto size:{QSize(1400,900),QSize(850,600)}){resize(size);vertical_->setSizes(size.width()==850 ? QList<int>{360,90}:QList<int>{600,180});QApplication::processEvents();imageViewer_->fitImage();QApplication::processEvents();check(CameraFlowSmokeAudit::save(*this,QDir(artifacts).filePath(QString("eui01-blob-editor-%1.png").arg(size.width()))),"Blob Editor screenshot");}
     const auto beforeRecipeSwitch=service_.activeRecipe()->definition;mouse(QEvent::MouseButtonPress,{100.5,100.5},Qt::LeftButton,Qt::LeftButton);mouse(QEvent::MouseMove,{110.5,110.5},Qt::NoButton,Qt::LeftButton);service_.createRecipe("Cancel Blob gesture","",ApplicationType::Measurement,"file");refreshWorkspace();mouse(QEvent::MouseButtonRelease,{110.5,110.5},Qt::LeftButton,Qt::NoButton);service_.selectRecipe(savedRecipe);refreshWorkspace();check(service_.activeRecipe()->definition==beforeRecipeSwitch,"recipe switch retires Blob preview without commit");
 
     // EUI-03: real result toggling neither runs nor edits/invalidate the recipe.
@@ -368,7 +369,7 @@ bool MainWindow::verifyEditorUsability(const QString& artifacts) {
         check(imageViewer_->resultAnnotationsVisible()==visible && !editorSession_.busy(),"toggle updates presentation without execution");
         check(service_.activeRecipe()->definition==annotationDefinition && !service_.dirty() && flowSignature()==annotationSignature && editorSession_.generation==generation && editorSession_.cycle && editorSession_.cycle->cycleId==cycleId,"toggle preserves recipe identity and current cycle");
         selectTool(annotationSourceA);selectTool(annotationSourceB);selectTool(annotationBlob);runExecution(annotationBlob);wait();check(editorSession_.cycle && editorSession_.cycle->state==ExecutionState::Done,"annotation rerun has real DONE result");check(imageViewer_->resultAnnotationsVisible()==visible,"preference survives tool/source selection and rerun");
-        for(const auto size:{QSize(1400,900),QSize(850,600)}){resize(size);QApplication::processEvents();imageViewer_->fitImage();QApplication::processEvents();check(grab().save(QDir(artifacts).filePath(QString("eui03-editor-%1-%2.png").arg(visible ? "on":"off").arg(size.width()))),"annotation Editor PNG");}
+        for(const auto size:{QSize(1400,900),QSize(850,600)}){resize(size);QApplication::processEvents();imageViewer_->fitImage();QApplication::processEvents();check(CameraFlowSmokeAudit::save(*this,QDir(artifacts).filePath(QString("eui03-editor-%1-%2.png").arg(visible ? "on":"off").arg(size.width()))),"annotation Editor PNG");}
     }
     {MainWindow restarted(settingsFile_);check(restarted.findChild<QCheckBox*>("showResultAnnotations")->isChecked() && restarted.imageViewer_->resultAnnotationsVisible(),"restart loads annotation preference");}
     annotations->setChecked(false);

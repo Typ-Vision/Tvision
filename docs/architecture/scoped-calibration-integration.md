@@ -40,14 +40,15 @@ ve oturum kullanım iznini ayrı DTO alanlarında verir. None kalibrasyon tercih
 Remembered uyumlu kayıt var fakat bağlantı/profil/oturum denetimi bekleniyor;
 Valid güncel izinli; RecalibrationRequired hedef/optik/geometri uyumsuzdur.
 Bu durum üretim veya bağımsız fiziksel doğruluk kabulü değildir. Deneysel edinimin
-ayrı kanıt/opt-in yolu CCUX-07 kapsamındadır; native factory Unavailable kalır.
+ayrı typed kanıt yolu CCUX-07 kapsamındadır; normal komut otomatik politikayı
+seçer (CCUX-16–17), native factory Unavailable kalır.
 
 `prepareRemembered` hatırlanan exact seçimi yeni kabul edilmiş CameraAcquired
 probe ile yeniden hazırlar. Güncel profil, gerçek readback doğrulayan provider,
 fiziksel kimlik ve kurulum denetimi aktivasyonla aynıdır; dosya/discovery tek başına
 izin vermez. Gate, stale/reused probe ve belirsiz backend engelleri korunur.
 Seçim değişmiyorsa katalog/environment yazılmaz; model contentId ve özgün kanıt
-korunur. Restart otomatik capture, opt-in veya Runtime başlatmaz.
+korunur. Restart otomatik capture veya Runtime başlatmaz.
 
 Yeni snapshot'ların system evidence **zarf3** biçimi özgün record + scope1/2'ye
 `acquisition` ekler: schemaVersion1, opaque session probe'unun kaynak/raster/target
@@ -66,8 +67,9 @@ eski modeli canlandırmaz. Başka kameranın izni değişmez. UI bu kartta eklen
 ## CCUX-07 — deneysel kalibrasyon edinimi ve aday codec'i
 
 `IndependentCaptureRequest::fromDefaults` kayıtlı kameranın tek anlamlı, hazır
-CCUX kurulum/profilini değer kopyasıyla dondurur. `ExperimentalOecs` politikası
-yalnız çağıran oturumun açık tercihidir; proje/INI'den geri yüklenmez. Canlı yol
+CCUX kurulum/profilini değer kopyasıyla dondurur. Varsayılan `Automatic` politikası
+exact desteklenen kamera/PGM kanıtından backend seçer; ayrı UI tercihi yoktur.
+`ExperimentalOecs` servis/kanıt tipi korunur. Canlı yol
 ayrı `openCalibration` girişinden Calibration lease alır; native production
 factory/admission değişmez. İptal/deadline ve generation eski sonucu emekliye
 ayırır. Deneysel dosya yalnız explicit SetupFile hedefi ve işaretli PGM+JSON ile

@@ -2,7 +2,8 @@
 
 22 Ekim 2026 — **CCUX-PLAN-03: kamera akışını son kullanıcı için sadeleştirme**.
 CCUX-01–14 teslimleri korunur; CCUX-15 fiziksel kabulü kısmen açıktır.
-CCUX-16 application politikası, CCUX-17 UI sadeleştirmesi ve CCUX-18 eski gezinme temizliği teslim edildi; CCUX-19 bekliyor. Güncel seçili iş ve
+CCUX-16 politika, CCUX-17 UI, CCUX-18 gezinme temizliği ve CCUX-19 birleşik
+yazılım/görsel kabulü teslim edildi. CCUX-15 fiziksel kabulü açık. Güncel seçili iş ve
 tamamlanan kartlar [progress](../../progress.md) üzerinden izlenir.
 Öncelik sırası **CCUX-16 → 17 → 18 → 19 → CCUX-15'in kalan fiziksel kabulü**.
 Eski EXP/KMC sıraları bu sıranın önüne geçmez.

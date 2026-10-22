@@ -1,3 +1,4 @@
+#include "app/CameraFlowSmokeAudit.hpp"
 #include "app/CameraManager.hpp"
 #include "app/CalibrationOverview.hpp"
 #include "CameraSettingsFixture.hpp"
@@ -52,7 +53,7 @@ int main(int argc,char** argv){QApplication app(argc,argv);try{
         auto* read=view.findChild<QPushButton*>("cameraSettingsRead");check(read->isEnabled(),"physical settings read enabled without native acquisition");read->click();waitUi([&]{return !jobs.busy();});
         auto* apply=view.findChild<QPushButton*>("cameraApply");check(apply->isEnabled(),qPrintable(view.findChild<QLabel*>("cameraStatus")->text()));
         apply->click();waitUi([&]{return !jobs.busy();});check(view.findChild<QLabel*>("cameraStatus")->text().contains("doğrulandı ve kaydedildi"),qPrintable(view.findChild<QLabel*>("cameraStatus")->text()));
-        for(const auto size:{QSize(1400,900),QSize(850,600)}){view.resize(size);QApplication::processEvents();view.findChild<QScrollArea*>()->ensureWidgetVisible(read);QApplication::processEvents();check(view.grab().save(evidence+QString("/physical-settings-%1.png").arg(size.width())),"physical settings screenshot");}
+        for(const auto size:{QSize(1400,900),QSize(850,600)}){view.resize(size);QApplication::processEvents();view.findChild<QScrollArea*>()->ensureWidgetVisible(read);QApplication::processEvents();check(CameraFlowSmokeAudit::save(view,evidence+QString("/physical-settings-%1.png").arg(size.width())),"physical settings screenshot");}
         QTextStream(stdout)<<"PASS physical Camera Manager: scan -> select -> Ekle -> read -> current-value apply/save; temporary project only; "<<view.findChild<QLabel*>("cameraReadback")->text()<<'\n';return 0;
     }
     bool gate=true;int count=0;bool missing=false;bool ambiguous=false;bool reversed=false;bool multiRoute=false;
@@ -81,11 +82,11 @@ int main(int argc,char** argv){QApplication app(argc,argv);try{
     auto scan=[&]{view.scan();waitUi([&]{return !jobs.busy();});};
     for(int n:{0,1,5,10}){count=n;scan();check(table->rowCount()==n,"0/1/5/10 synthetic inventory");
         view.findChild<QLabel*>("cameraTitle")->setText(QString("Sentetik UI fixture • %1 kamera").arg(n));
-        view.grab().save(evidence+QString("/camera-%1-normal.png").arg(n));
-        view.resize(850,600);QApplication::processEvents();view.grab().save(evidence+QString("/camera-%1-small.png").arg(n));view.resize(1400,900);
+        CameraFlowSmokeAudit::save(view,evidence+QString("/camera-%1-normal.png").arg(n));
+        view.resize(850,600);QApplication::processEvents();CameraFlowSmokeAudit::save(view,evidence+QString("/camera-%1-small.png").arg(n));view.resize(1400,900);
     }
     multiRoute=true;count=1;scan();auto* routes=view.findChild<QComboBox*>("cameraRoutes");check(routes->currentIndex()==-1 && routes->isVisible(),"unresolved local routes are visible in details");routes->setCurrentIndex(1);view.findChild<QPushButton*>("cameraRememberRoute")->click();scan();check(routes->currentIndex()==1,"exact remembered route auto resolves");multiRoute=false;count=10;scan();view.findChild<QGroupBox*>("cameraAdvanced")->setChecked(false);
-    table->selectRow(9);view.resize(850,600);QApplication::processEvents();view.grab().save(evidence+"/camera-long-small.png");
+    table->selectRow(9);view.resize(850,600);QApplication::processEvents();CameraFlowSmokeAudit::save(view,evidence+"/camera-long-small.png");
     check(view.findChild<QScrollArea*>()->horizontalScrollBar()->maximum()==0,"small window wraps long identity without page overflow");
     view.resize(1400,900);table->selectRow(0);view.findChild<QLineEdit*>("cameraName")->setText("Synthetic test camera");
     view.findChild<QLineEdit*>("cameraShortId")->setText("CAM_MAIN");view.findChild<QPushButton*>("cameraRegister")->click();auto e=workspace.environment();
@@ -122,7 +123,7 @@ int main(int argc,char** argv){QApplication app(argc,argv);try{
     check(status->text().contains("Tek görüntü") && status->text().contains("1 kare") && status->text().contains("0.0 FPS"),"single frame stops cleanly with measured stats");
     check(!view.findChild<QLabel*>("cameraPreviewImage")->pixmap().isNull(),"selected synthetic owned preview");
     view.findChild<QScrollArea*>()->verticalScrollBar()->setValue(view.findChild<QScrollArea*>()->verticalScrollBar()->maximum());
-    view.grab().save(evidence+"/camera-preview.png");
+    CameraFlowSmokeAudit::save(view,evidence+"/camera-preview.png");
     view.stop();check(view.findChild<QLabel*>("cameraPreviewImage")->pixmap().isNull(),"Stop immediately clears stale preview");
     waitUi([&]{return !jobs.busy();});
     auto* live=view.findChild<QPushButton*>("cameraLive");
@@ -135,7 +136,7 @@ int main(int argc,char** argv){QApplication app(argc,argv);try{
         check(status->text().contains("Sıralı tek kare") && !status->text().contains("0.0 FPS"),"live sequential label and real FPS");
         for(const auto size:{QSize(1400,900),QSize(850,600)}){
             view.resize(size);QApplication::processEvents();auto* sc=view.findChild<QScrollArea*>();sc->ensureWidgetVisible(image);
-            view.grab().save(evidence+QString("/live-%1-%2.png").arg(cycle).arg(size.width()));
+            CameraFlowSmokeAudit::save(view,evidence+QString("/live-%1-%2.png").arg(cycle).arg(size.width()));
             check(sc->horizontalScrollBar()->maximum()==0,"live small layout no horizontal overflow");
             for(auto* action:{live,view.findChild<QPushButton*>("cameraStop"),preview}){sc->ensureWidgetVisible(action);QApplication::processEvents();check(sc->viewport()->rect().contains(action->mapTo(sc->viewport(),action->rect().center())),"live actions reachable");}
         }
@@ -156,12 +157,12 @@ int main(int argc,char** argv){QApplication app(argc,argv);try{
     // Programmatic selection is guarded as well as disabled user controls.
     live->click();waitUi([&]{return !image->pixmap().isNull();});table->selectRow(1);
     check(image->pixmap().isNull(),"camera change immediately retires old frame");waitUi([&]{return !jobs.busy();});table->selectRow(0);
-    ambiguous=true;count=1;scan();check(!preview->isEnabled() && !view.findChild<QPushButton*>("cameraSettingsRead")->isEnabled(),"ambiguous physical identity cannot open");view.grab().save(evidence+"/camera-ambiguous.png");ambiguous=false;
+    ambiguous=true;count=1;scan();check(!preview->isEnabled() && !view.findChild<QPushButton*>("cameraSettingsRead")->isEnabled(),"ambiguous physical identity cannot open");CameraFlowSmokeAudit::save(view,evidence+"/camera-ambiguous.png");ambiguous=false;
     gate=false;view.refresh();check(!apply->isEnabled(),"external Runtime busy gate");gate=true;
     count=0;scan();check(table->rowCount()==1 && table->item(0,4)->text().contains("Çevrimdışı"),"registered camera remains offline");
     missing=true;scan();check(status->text().contains("SDK missing") && !preview->isEnabled(),"missing SDK error no preview");
     view.findChild<QLabel*>("cameraTitle")->setText("Sentetik UI fixture • SDK eksik / kayıtlı kamera");
-    view.resize(850,600);view.findChild<QScrollArea*>()->verticalScrollBar()->setValue(0);view.grab().save(evidence+"/camera-small-error.png");
+    view.resize(850,600);view.findChild<QScrollArea*>()->verticalScrollBar()->setValue(0);CameraFlowSmokeAudit::save(view,evidence+"/camera-small-error.png");
     missing=false;count=1;view.scan();view.stop();waitUi([&]{return !jobs.busy();});
     check(view.inventory().cancelled && table->rowCount()==1,"cancel keeps registry but clears discovery");
     // A late preview completion after Stop cannot repopulate the image or release ownership early.
@@ -193,20 +194,20 @@ int main(int argc,char** argv){QApplication app(argc,argv);try{
     const auto expEvidence=evidence;QDir().mkpath(expEvidence);
     check(!view.findChild<QCheckBox*>("cameraExperimental"),"camera has no acquisition opt-in");
     view.findChild<QLabel*>("cameraTitle")->setText("Sentetik UI • edinim yok");
-    view.resize(1400,900);QApplication::processEvents();view.grab().save(expEvidence+"/camera-experimental-normal.png");
-    view.resize(850,600);QApplication::processEvents();view.grab().save(expEvidence+"/camera-experimental-small.png");
-    view.findChild<QScrollArea*>()->verticalScrollBar()->setValue(view.findChild<QScrollArea*>()->verticalScrollBar()->maximum());QApplication::processEvents();view.grab().save(expEvidence+"/camera-experimental-small-bottom.png");
+    view.resize(1400,900);QApplication::processEvents();CameraFlowSmokeAudit::save(view,expEvidence+"/camera-experimental-normal.png");
+    view.resize(850,600);QApplication::processEvents();CameraFlowSmokeAudit::save(view,expEvidence+"/camera-experimental-small.png");
+    view.findChild<QScrollArea*>()->verticalScrollBar()->setValue(view.findChild<QScrollArea*>()->verticalScrollBar()->maximum());QApplication::processEvents();CameraFlowSmokeAudit::save(view,expEvidence+"/camera-experimental-small-bottom.png");
     check(!view.findChild<QLabel*>("cameraExperimentalNotice") && !view.findChild<QPushButton*>("cameraSaveFrame")->isEnabled(),"persistent experimental notice; no raster means no save");
     check(view.findChild<QScrollArea*>()->horizontalScrollBar()->maximum()==0,"experimental controls fit small window");
 
     auto* scroll=view.findChild<QScrollArea*>();for(auto* action:{view.findChild<QPushButton*>("cameraScan"),view.findChild<QPushButton*>("cameraRename"),view.findChild<QPushButton*>("cameraSettingsRead"),preview,live,view.findChild<QPushButton*>("cameraStop")}){scroll->ensureWidgetVisible(action);QApplication::processEvents();check(scroll->viewport()->rect().contains(action->mapTo(scroll->viewport(),action->rect().center())),"small screen main action reachable by scrolling");}
-    scroll->verticalScrollBar()->setValue(scroll->verticalScrollBar()->maximum());view.grab().save(evidence+"/camera-small-actions.png");
+    scroll->verticalScrollBar()->setValue(scroll->verticalScrollBar()->maximum());CameraFlowSmokeAudit::save(view,evidence+"/camera-small-actions.png");
     {CameraSession emptyJobs;CameraManager empty([]()->MeasurementWorkspace*{return nullptr;},[]{return true;},emptyJobs,dir.path()+"/empty.ini",nullptr,scanner);
-        bool guided=false;empty.onProject=[&]{guided=true;};empty.resize(850,600);empty.show();QApplication::processEvents();auto* projectAction=empty.findChild<QPushButton*>("cameraProject");check(empty.findChild<QScrollArea*>()->viewport()->rect().contains(projectAction->mapTo(empty.findChild<QScrollArea*>()->viewport(),projectAction->rect().center())),"project guidance visible without scrolling");projectAction->click();check(guided && !empty.findChild<QPushButton*>("cameraRegister")->isEnabled(),"single project guidance without recipe");empty.grab().save(evidence+"/camera-no-project.png");}
+        bool guided=false;empty.onProject=[&]{guided=true;};empty.resize(850,600);empty.show();QApplication::processEvents();auto* projectAction=empty.findChild<QPushButton*>("cameraProject");check(empty.findChild<QScrollArea*>()->viewport()->rect().contains(projectAction->mapTo(empty.findChild<QScrollArea*>()->viewport(),projectAction->rect().center())),"project guidance visible without scrolling");projectAction->click();check(guided && !empty.findChild<QPushButton*>("cameraRegister")->isEnabled(),"single project guidance without recipe");CameraFlowSmokeAudit::save(empty,evidence+"/camera-no-project.png");}
     {const auto path=dir.path()+"/legacy.vfproject";QFile file(path);check(file.open(QIODevice::WriteOnly),"legacy saved project");file.write("{}");file.close();auto r=request();auto p=r.profile;p.id={"profile-two"};p.name="Second profile";
         MeasurementEnvironmentRegistry registry(MeasurementEnvironmentRepository(path,"legacy"));registry.replace({{r.camera},{r.setup},{r.profile,p}});
         MeasurementWorkspace legacy(path,"legacy",[]{return true;});CameraSession legacyJobs;CameraManager legacyView([&]{return &legacy;},[]{return true;},legacyJobs,dir.path()+"/legacy.ini",nullptr,scanner,factory);legacyView.resize(1400,900);legacyView.show();legacyView.scan();waitUi([&]{return !legacyJobs.busy();});
-        auto* profiles=legacyView.findChild<QComboBox*>("cameraProfiles");check(profiles->currentIndex()==-1 && profiles->isVisible() && !legacyView.findChild<QPushButton*>("cameraSettingsRead")->isEnabled(),"legacy ambiguity requires explicit visible selection");legacyView.grab().save(evidence+"/camera-legacy-ambiguous.png");
+        auto* profiles=legacyView.findChild<QComboBox*>("cameraProfiles");check(profiles->currentIndex()==-1 && profiles->isVisible() && !legacyView.findChild<QPushButton*>("cameraSettingsRead")->isEnabled(),"legacy ambiguity requires explicit visible selection");CameraFlowSmokeAudit::save(legacyView,evidence+"/camera-legacy-ambiguous.png");
         legacyView.findChild<QLineEdit*>("cameraShortId")->setText("LEGACY");profiles->setCurrentIndex(1);legacyView.findChild<QPushButton*>("cameraDefaultsSave")->click();check(legacy.environment().defaults(r.camera.id).profile==p.id && !profiles->isVisible(),"explicit legacy defaults persist then hide chooser");}
     // Real experimental API contract through the widget, without a physical SDK.
     {namespace oe=oecs_experimental_fixture;
@@ -234,7 +235,7 @@ int main(int argc,char** argv){QApplication app(argc,argv);try{
         product.findChild<QPushButton*>("cameraProfileEdit")->click();
         product.findChild<QGroupBox*>("cameraAdvanced")->setChecked(false);
         product.findChild<QLabel*>("cameraTitle")->setText("Sentetik Opto SDK • ürün ayar yolu");
-        for(const auto size:{QSize(1400,900),QSize(850,600)}){product.resize(size);QApplication::processEvents();product.findChild<QScrollArea*>()->ensureWidgetVisible(read);QApplication::processEvents();product.grab().save(evidence+QString("/product-settings-%1.png").arg(size.width()));}
+        for(const auto size:{QSize(1400,900),QSize(850,600)}){product.resize(size);QApplication::processEvents();product.findChild<QScrollArea*>()->ensureWidgetVisible(read);QApplication::processEvents();CameraFlowSmokeAudit::save(product,evidence+QString("/product-settings-%1.png").arg(size.width()));}
     }
     {namespace oe=oecs_experimental_fixture;
         const auto r=oe::request();const auto path=dir.path()+"/experimental.vfproject";
@@ -259,7 +260,7 @@ int main(int argc,char** argv){QApplication app(argc,argv);try{
         QFile sidecar(saved+".json");check(sidecar.open(QIODevice::ReadOnly),"saved sidecar");const auto metadata=QJsonDocument::fromJson(sidecar.readAll()).object();
         check(metadata["productionAdmission"]==false && metadata["triggerAssociationVerified"]==false && metadata["profileSnapshot"].toObject()==r.profile.toJson(),"experimental provenance retained");
         expView.findChild<QPushButton*>("cameraLive")->click();waitUi([&]{return !expImage->pixmap().isNull() && expSave->isEnabled();});
-        for(const auto size:{QSize(1400,900),QSize(850,600)}){expView.resize(size);QApplication::processEvents();expView.findChild<QScrollArea*>()->ensureWidgetVisible(expImage);expView.grab().save(evidence+QString("/experimental-live-%1.png").arg(size.width()));}
+        for(const auto size:{QSize(1400,900),QSize(850,600)}){expView.resize(size);QApplication::processEvents();expView.findChild<QScrollArea*>()->ensureWidgetVisible(expImage);CameraFlowSmokeAudit::save(expView,evidence+QString("/experimental-live-%1.png").arg(size.width()));}
         const auto stopped=evidence+"/stopped-frame.pgm";QFile::remove(stopped);QFile::remove(stopped+".json");
         choose(stopped,true);expSave->click();waitUi([&]{return !expJobs.busy();});
         check(!QFileInfo::exists(stopped) && !QFileInfo::exists(stopped+".json") && expImage->pixmap().isNull() && !expSave->isEnabled(),"Stop while save dialog open cannot write retired frame");

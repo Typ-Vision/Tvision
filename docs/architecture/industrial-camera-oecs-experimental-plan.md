@@ -4,7 +4,7 @@
 tetik eşleşmesi uyarısı gerekleri [CCUX C0](camera-setup/contract.md#c0--22-ekim-sade-ürün-akışı-kararı)
 ile değiştirilmiştir. [CCUX-16–19](camera-setup/README.md) normal komutlardan
 politika seçimi ve görünür seçenek/uyarıların kaldırılmasını kapsar. CCUX-16
-application politikası uygulandı; görünür temizliği CCUX-17 bekler. Aşağıdaki
+application politikası ve CCUX-17 görünür temizliği uygulandı. Aşağıdaki
 teknik kanıt, kimlik/lease ve kayıt kuralları geçerlidir.
 
 21 Ekim 2026. **EXP-02 px Editor teslimi hazır; gerçek mm/kalibrasyon kabulü açık.**
@@ -86,8 +86,9 @@ Native provider'a ayrı deneysel politika, configure/readback ve owned capture
 bağlanır. Camera Manager preview/Stop ve tek kareyi dosyaya kaydetme eklenir.
 EXP-01 yalnız metadata bankalarının tamamı kapalı 2448×2048 rasteri kabul eder;
 gömülü metadata/ilk satır çıkarma yolu bu teslimde açılmaz. PGM içi deneysel işaret
-ve JSON sidecar kullanılır. EXP-02 Editor opt-in ile kanıtı doğrulayarak replay
-açar; varsayılan Image File/Runtime yolu bu rasteri reddetmeye devam eder.
+ve JSON sidecar kullanılır. EXP-02
+replay kanıt doğrulamasını getirdi; güncel CCUX-16–17 normal Image File/Editor/
+Runtime komutunda işaretli kaynağı seçer. Trusted servis sınırı bu rasteri reddeder.
 Dosya piksel hash/geometri ve doğrulanmamış eşleşme kaydıyla korunur; bu gerçek
 raster MUI-04'ün Image File incelemesinde kullanılabilir. Önceki isteğe bağlı
 ICM-OECS-P1 işi bu göreve alınır; ayrıca tekrar uygulanmaz.
@@ -122,9 +123,9 @@ Gerçek referans yokken yalnız px/raster incelemesi kabul edilir.
 
 Kabul: ilgili Release/CTest, normal/küçük görseller, gerçek Line/Circle tanıları,
 Save/reopen/no-op, Stop/invalidation ve yanlış kalibrasyon negatifleri.
-Uygulanan px geliştirme yolu: Editor oturumuna özel açık politika, canlı
-FrameBurstStart edinimi ve işaretli PGM + JSON replay. Politika reçeteye/INI’ye
-yazılmaz; restart ve varsayılan execution kapalıdır. Dosya kanıtı piksel hash,
+Uygulanan px geliştirme yolu: normal Editor komutuyla otomatik seçilen canlı
+FrameBurstStart edinimi ve işaretli PGM + JSON replay. Backend tercihi reçeteye/INI’ye
+yazılmaz; restart capture veya Run başlatmaz. Dosya kanıtı piksel hash,
 geometri, kimlik ve false admission/eşleşme alanlarıyla denetlenir; eksik/bozuk
 kanıt reddedilir. JSON değişikliği TargetOnly cache imzasını da değiştirir.
 Canlı deneysel istek Editor lease ister, production admission taşıyamaz ve
@@ -136,8 +137,8 @@ Gerçek mm referansı/deneysel kalibrasyon aktivasyonu açık; sonraki geliştir
 
 ### ICM-OECS-EXP-03 — Deneysel Runtime ve kayıt
 
-Önkoşul: EXP-02; ayrı uygulama kurmadan ortak Runtime'da açık deneysel çalışma
-modu ve provenance korunarak Load/Run/tek çevrim/Stop ile Logs/CSV tamamlanır.
+Önkoşul: EXP-02; ortak Runtime normal komutlarıyla backend seçilir;
+provenance korunarak Load/Run/tek çevrim/Stop ile Logs/CSV yürütülür.
 Mevcut trusted terminal codec'ine sahte kanıt yazmak yerine deneysel kaydın
 admission/completion/persistence ayrımı uygulanır; gerekirse şema sürümlenir.
 

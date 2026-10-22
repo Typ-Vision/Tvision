@@ -4,13 +4,12 @@
 
 ## Devam noktası
 
-**Güncel devam: [CCUX-19](architecture/camera-setup/19-final-flow-acceptance.md).**
-CCUX-18: eski gezinme/widget kaldırıldı; katalog proje servisinde.
-13 hedef + shell tekrarı geçti.
-[Kapanış](archive/2026-10-22-ccux-18.md), `build/ccux/ccux-18/`.
-[CCUX-17 UI](archive/2026-10-22-ccux-17.md) ve
-[CCUX-16 politikası](archive/2026-10-22-ccux-16.md) korunur.
-Sıra 19→15; C0 teknik engelleri ve bağımsız fiziksel kabul açıktır.
+**Güncel devam: [CCUX-15 fiziksel kabul](architecture/camera-setup/15-physical-acceptance.md).**
+CCUX-16–19 yazılımı tamam; core-off 21/21, UI 29/31;
+tooltip/fixture düzeltmesi sonrası etkilenen grup 3/3.
+[Kapanış](archive/2026-10-22-ccux-19.md), `build/ccux/ccux-19/`.
+[18 gezinme](archive/2026-10-22-ccux-18.md), [17 UI](archive/2026-10-22-ccux-17.md),
+[16 politika](archive/2026-10-22-ccux-16.md). C0 teknik/fiziksel engeller açık.
 
 **CCUX-15 plaka denemesi açık:** 7×7 simetrik daire, kullanıcı beyanı 12 mm.
 56000 µs / 0 dB readback ile ham kare alındı; servis 48 adayla reddediyor,

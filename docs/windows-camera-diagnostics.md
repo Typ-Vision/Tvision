@@ -17,7 +17,7 @@ Probe üretim admission değildir; native production kapalıdır. Ayrı
 geçici ayarları geri yükler.
 
 
-## Deneysel Camera Manager (EXP-01)
+## Camera Manager ve OECS runtime
 
 Üretim yolu açılmadan yerel x64 OECS SDK ile Release derleyin:
 
@@ -26,10 +26,14 @@ cmake -S . -B build/reference-ui -DVISIONFLOW_OECS_INCLUDE_DIR="C:/Program Files
 cmake --build build/reference-ui -j 6
 ```
 
-Camera Manager’da kayıtlı kamera/kurulum/profil ve yerel rota seçin; **Deneysel
-OECS edinimini kullan** işaretini açıkça seçip **Önizleme** başlatın. Günlük kullanım
-[README](../README.md) içindedir. Derleme seçeneği otomatik edinim veya production
-izni değildir. Gerçek kullanılabilir sahne ve fiziksel Stop/kopma kabulü ayrıca gerekir.
+Camera Manager'da kamerayı kaydedin, ayarları okuyun ve gerçek optik/geometri
+taslağını tamamlayın. **Tek görüntü / Canlı görüntü / Durdur** normal komutları
+uygun backend'i application katmanında seçer; ayrıca OECS seçim kutusu yoktur.
+Ayrıntılar'daki OECS sürücü DLL yolu yerel ayardır. Eski FrameStart profili
+FrameBurstStart / Software'e sessiz dönüştürülmez. Günlük kullanım
+[kamera/Runtime rehberindedir](camera-runtime-usage.md). Derleme seçeneği kendi
+başına capture veya üretim başlatmaz. Teknik tetik/cancel engelleri ve bağımsız
+fiziksel Stop/kopma/mm kabulü ayrı kalır.
 
 Elle çalıştırılan `oecs_experimental_probe.exe absolute-dll absolute-output-directory
 exposure-us count` aynı application worker yolunu kullanır; otomatik hardware CTest

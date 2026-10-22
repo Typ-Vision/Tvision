@@ -1,8 +1,9 @@
 # Deneysel Runtime sözleşmesi — EXP-03 / CCUX-12–13
 
-**22 Ekim hedef güncellemesi:** [CCUX C0](camera-setup/contract.md#c0--22-ekim-sade-ürün-akışı-kararı)
+**22 Ekim ürün akışı:** [CCUX C0](camera-setup/contract.md#c0--22-ekim-sade-ürün-akışı-kararı)
 Runtime dahil görünür deneysel seçim/uyarı gereğini kaldırır. CCUX-16 politika
-seçimini normal Load/Run hazırlığına taşıdı; görünür temizliği CCUX-17 bekler.
+seçimini normal Load/Run hazırlığına taşıdı; CCUX-17 görünür seçim ve uyarıları
+kaldırdı. Logs tek CSV komutuyla seçili kayıt türünün exporter'ını çağırır.
 Aşağıdaki kayıt/snapshot,
 köken, Stop/retry ve iletişim sınırları korunur.
 

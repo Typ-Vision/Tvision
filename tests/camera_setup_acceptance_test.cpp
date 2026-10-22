@@ -29,9 +29,9 @@ void scenario(const QString& directory,int cameraCount,QJsonArray& matrix) {
     ProjectService project;project.createProject("CCUX unified fixture","",directory+"/line.vfproject","file");project.save();
     check(project.project().recipes.isEmpty(),"camera/calibration before any recipe");
     MeasurementWorkspace workspace(project.path(),project.project().id,[]{return true;});
-    auto& active=workspace.calibrations();active.setExperimental(true);
+    auto& active=workspace.calibrations();
     QVector<IndustrialCameraRequest> cameras;IndustrialDiscoverySnapshot discovery;
-    for(int i=0;i<cameraCount;++i){auto r=request();r.device.identity.serial="CCUX14-"+QString::number(i);discovery.devices<<r.device;cameras<<r;}
+    for(int i=0;i<cameraCount;++i){auto r=request();r.device.identity.serial="CCUX19-"+QString::number(i);discovery.devices<<r.device;cameras<<r;}
     auto inventory=CameraService::combine({},discovery);workspace.observeInventory(inventory);
     for(int i=0;i<cameraCount;++i){const auto added=workspace.registerCamera(inventory.devices[i],"CAM_"+QString::number(i+1),"Fixture camera",workspace.environment().revision);
         auto e=workspace.environment();auto& r=cameras[i];for(const auto& c:e.current.cameras)if(c.id==added.camera)r.camera=c;
@@ -55,7 +55,7 @@ void scenario(const QString& directory,int cameraCount,QJsonArray& matrix) {
     QStringList replayPaths;QVector<SetupReference> references;
     for(int i=0;i<cameraCount;++i){const auto r=cameras[i];hardware->nodes["DeviceSerialNumber"].value=r.device.identity.serial;
         const SetupReference ref{r.camera.id,r.setup.id,r.setup.revision};references<<ref;active.setOperational(ref.camera,ref.setup);
-        IndependentCaptureRequest input;input.origin=SourceOrigin::CameraAcquired;input.camera=r.camera;input.setup=r.setup;input.profile=r.profile;input.policy=CalibrationCapturePolicy::ExperimentalOecs;input.timeoutMs=3000;
+        IndependentCaptureRequest input;input.origin=SourceOrigin::CameraAcquired;input.camera=r.camera;input.setup=r.setup;input.profile=r.profile;input.policy=CalibrationCapturePolicy::Automatic;input.timeoutMs=3000;
         IndependentCaptureBackend backend;backend.industrialDiscover=[r]{return IndustrialDiscoverySnapshot{{r.device},{},false};};backend.experimentalApi=[hardware,r]{return std::make_unique<IdentityApi>(hardware,r.device.identity);};
         IndependentCalibrationSession probe;
         for(const bool plate : i==0 ? QVector<bool>{true,false}:QVector<bool>{false}){
@@ -63,7 +63,7 @@ void scenario(const QString& directory,int cameraCount,QJsonArray& matrix) {
             if(!captured.error().isEmpty())throw std::runtime_error(captured.error().toStdString());check(probe.accept(captured),"selected camera independent acquisition");
             auto& math=probe.math();CalibrationModelRecord model=[&]{if(plate){check(math.accept(CalibrationWizardSession::run(math.scanPlate({"fixture board",9,6,10}))),"existing chessboard detection");math.confirmPlate();return math.calculatePlate();}
                 check(math.accept(CalibrationWizardSession::run(math.scanPair("pair",{{"image"},ScanSegment{{20,100},{620,100},4}}))),"known length uses detected edges");math.setKnownMillimetres(10*(i+1));return math.calculate();}();
-            const auto saved=workspace.saveAndUseCalibration({ref,workspace.environment().revision,probe.evidence()->generation,CalibrationCapturePolicy::ExperimentalOecs},model,probe,[]{return true;});
+            const auto saved=workspace.saveAndUseCalibration({ref,workspace.environment().revision,probe.evidence()->generation,CalibrationCapturePolicy::Automatic},model,probe,[]{return true;});
             if(!saved.error.isEmpty())throw std::runtime_error(saved.error.toStdString());check(saved.state==CalibrationSaveUseState::Activated && saved.experimental && !saved.independentControlAccepted,"one save/use command without invented physical acceptance");
         }
         const auto image=*probe.math().frame();const auto meta=image.metadata();const auto path=directory+QString("/camera-%1.pgm").arg(i);
@@ -83,10 +83,10 @@ void scenario(const QString& directory,int cameraCount,QJsonArray& matrix) {
         auto resolve=[&](const ImageFrame& frame){const auto source=frame.metadata().sourceId;if(!dependencies.experimentalCalibrations.contains(source))return MeasurementExecutionContext{};return SystemCalibration::resolveExperimental(*dependencies.experimentalCalibrations[source],SystemCalibration::branch(recipe,source),frame);};
         QJsonObject acquisition;for(const auto& source:sources)acquisition[source]=workspace.acquisition(SystemCalibration::branch(recipe,source));
         EditorSession editor;EditorContext context{project.project().id,project.path(),id,recipe.definition,{}, {}};const auto signature=editor.signature(context);
-        const auto result=ExecutionService{}.withExperimentalEditorReplay().run(recipe.definition,directory,id,signature,{}, {},{},resolve,nullptr,{{"sources",acquisition}});
+        const auto result=ExecutionService{}.run(recipe.definition,directory,id,signature,{}, {},{},resolve,nullptr,{{"sources",acquisition}});
         if(result.state!=ExecutionState::Done)throw std::runtime_error(result.error.toStdString());const auto ticket=editor.begin(SessionJob::Execution);check(editor.acceptCycle(result,signature,context),"Editor Run Flow accepts only actual source results");editor.finish(ticket);
         const auto archive=directory+"/runtime-"+QString::number(int(type));RuntimeService runtime(archive,{},RuntimeIdentity::localEngineer());
-        bool foreign=true;runtime.setExperimental(true,[&](const Recipe& recipe){auto d=workspace.productionSources(recipe,{},true);if(foreign){auto wrong=std::make_shared<ExperimentalScopedCalibrationSnapshot>(*d.experimentalCalibrations[sources[0]]);wrong->snapshot.target.camera={"foreign-camera"};d.experimentalCalibrations[sources[0]]=wrong;}return d;});
+        bool foreign=true;runtime.setAutomaticAcquisition([&](const Recipe& recipe){auto d=workspace.productionSources(recipe,{},true);if(foreign){auto wrong=std::make_shared<ExperimentalScopedCalibrationSnapshot>(*d.experimentalCalibrations[sources[0]]);wrong->snapshot.target.camera={"foreign-camera"};d.experimentalCalibrations[sources[0]]=wrong;}return d;});
         rejects([&]{runtime.prepare(recipe,directory);});foreign=false;runtime.prepare(recipe,directory);check(ProductionStore(archive).recent("experimental_cycles").isEmpty(),"Load/Run preparation produces no result");
         rejects([&]{runtime.begin({{"plc",true}});});const auto lease=runtime.begin();const auto cycle=RuntimeService::execute(lease,{},{});check(cycle.state==ExecutionState::Done,"same recipe Runtime executes");
         for(int i=0;i<metrics.size();++i){bool actual=false;for(const auto& t:cycle.tools)if(t.toolId==metrics[i])actual=t.outputs["value"].valid && t.outputs["value"].port.unit=="mm" && std::abs(std::get<double>(t.outputs["value"].data)-10*(i+1))<.001 && t.decision==PartDecision::NotEvaluated;check(actual,"each source uses its own 10/20/30/40/50 mm fixture model");}
@@ -96,7 +96,7 @@ void scenario(const QString& directory,int cameraCount,QJsonArray& matrix) {
         write(archive+"/record.json",QJsonDocument(record).toJson());write(archive+"/results.csv",csv);
         const auto late=runtime.begin();auto stopped=RuntimeService::execute(late,{},{});RuntimeService::suppressCancelled(late,stopped);runtime.finish(late.ticket,stopped);check(stopped.frames.isEmpty(),"late Stop suppresses outputs");rejects([&]{runtime.begin();});
         RuntimeService restart(archive,{},RuntimeIdentity::localEngineer());check(!restart.active() && !restart.experimental() && ProductionStore(archive).recent("experimental_cycles").size()==2,"restart preserves Logs only");
-        matrix.append(QJsonObject{{"cameras",cameraCount},{"applicationType",int(type)},{"metricSources",cameraCount},{"rawSources",1},{"state","DONE"},{"physicalAcceptance",false},{"record",archive+"/record.json"}});
+        matrix.append(QJsonObject{{"cameras",cameraCount},{"applicationType",int(type)},{"metricSources",cameraCount},{"rawSources",1},{"state","DONE"},{"automaticPolicy",true},{"physicalAcceptance",false},{"record",archive+"/record.json"}});
     }
     // The very same registered/calibrated project exercises transfer and permission retirement.
     const auto before=workspace.environment();const auto copied=directory+"/copy.vfproject";MeasurementProjectTransfer::copy(project.path(),copied,project.project().id);
@@ -111,9 +111,9 @@ void scenario(const QString& directory,int cameraCount,QJsonArray& matrix) {
 }
 }
 int main(int argc,char** argv){QCoreApplication app(argc,argv);try{
-    const auto root=qEnvironmentVariable("VISIONFLOW_TEST_ARTIFACTS",QDir::currentPath()+"/../ccux/ccux-14");QDir().mkpath(root);
+    const auto root=qEnvironmentVariable("VISIONFLOW_TEST_ARTIFACTS",QDir::currentPath()+"/../ccux/ccux-19");QDir().mkpath(root);
     QTemporaryDir temp(root+"/e2e-XXXXXX");check(temp.isValid(),"e2e evidence directory");temp.setAutoRemove(false);QJsonArray matrix;
     for(int count:{1,5})scenario(temp.path()+QString("/%1-camera").arg(count),count,matrix);
     write(root+"/e2e-matrix.json",QJsonDocument(QJsonObject{{"scope","software fixture only"},{"scenarios",matrix}}).toJson());
-    QTextStream(stdout)<<"PASS: saved project -> 1/5 registrations -> single/live/Stop -> two recipe-free calibration methods -> three application types -> Editor -> source-scoped Runtime -> Logs/CSV; transfer, duplicate, restart, unplug and invalidation; fixture only\n";return 0;
+    QTextStream(stdout)<<"PASS: saved project -> 1/5 registrations -> single/live/Stop -> automatic policy without opt-in -> two recipe-free calibration methods -> three application types -> Editor -> source-scoped Runtime -> Logs/CSV; transfer, duplicate, restart, unplug and invalidation; fixture only\n";return 0;
 }catch(const std::exception& e){QTextStream(stderr)<<"FAIL: "<<e.what()<<'\n';return 1;}}

@@ -216,7 +216,18 @@ void MainWindow::refreshRuntimeSources(){
             }}
             else if(runtimeCoordinator_ && runtimeCoordinator_->state()==RuntimeState::Fault){readiness=acquisitionStatus("ERROR",runtimeCoordinator_->error());industrialDetail+="\n"+runtimeCoordinator_->error();}
         }
-        industrialDetail+="\n"+QString::fromUtf8(QJsonDocument(deps).toJson(QJsonDocument::Indented));
+        if(snapshot && snapshot->validation().scope=="experimental_runtime/2"){
+            industrialDetail+="\n"+ExperimentalRuntime::sourceSummary(deps,tool.id);
+            const auto acquisition=deps["experimentalAcquisition"].toObject();
+            const auto physical=deps["camera"].toObject()["physical"].toObject();
+            const auto profile=deps["profile"].toObject();
+            industrialDetail+="\nSeri: "+physical["serial"].toString(acquisition["serial"].toString())+
+                " • Profil: "+profile["id"].toString(acquisition["profileId"].toString());
+            const auto image=deps["imageInfo"].toObject();
+            industrialDetail+="\nKöken: "+deps["measurementSource"].toObject()["origin"].toString()+
+                " • İçerik: "+deps["contentId"].toString();
+            if(!image.isEmpty())industrialDetail+=QString(" • %1×%2").arg(image["width"].toInt()).arg(image["height"].toInt());
+        }else industrialDetail+="\n"+QString::fromUtf8(QJsonDocument(deps).toJson(QJsonDocument::Indented));
         const QStringList values{sourceLabel,model,readiness,actual};for(int col=0;col<values.size();++col){auto* item=new QTableWidgetItem(values[col]);item->setToolTip(values[col]+"\n"+tool.id+"\n"+industrialDetail);runtimePreparation_->setItem(row,col,item);}
         runtimeSources_->setItemText(row,sourceLabel.replace('\n'," • "));
     }

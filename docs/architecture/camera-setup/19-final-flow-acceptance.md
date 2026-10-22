@@ -1,6 +1,7 @@
 # CCUX-19 — Sade kamera akışının birleşik kabulü ve kullanım belgeleri
 
-Durum: planlandı, uygulanmadı. Önkoşul: CCUX-16–18.
+Durum: yazılım/görsel kabul tamamlandı. [22 Ekim kapanışı](../../archive/2026-10-22-ccux-19.md).
+Önkoşul: CCUX-16–18. CCUX-15 fiziksel kabulü açık.
 [Ortak sözleşme](contract.md); yalnız gerekirse önceki kartların kanıtları.
 
 ## Uygula ve kabul et

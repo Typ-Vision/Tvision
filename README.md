@@ -69,7 +69,8 @@ OECS / GenTL probe komutları, sandbox sınırları ve kanıt bağlantıları
 4. Kaydedilmiş reçete için Load Recipe → Run → Tek çevrim; sonuçlar Logs/CSV'de.
    Load/Run hazırlığı tek başına sonuç değildir. Stop → yeniden Load sürümü değiştirir.
 
-Mevcut OECS opt-in, profil bağlama, PGM+JSON, kalibrasyon, Runtime ve panel
+Normal kamera komutları uygun edinim yolunu seçer; ek OECS modu/onayı yoktur.
+Profil bağlama, PGM+JSON, kalibrasyon, Runtime ve panel
 kullanımı [kısa kullanım rehberinde](docs/camera-runtime-usage.md). Restart
 edinim/Run başlatmaz; PLC/robot çıkışı kapalıdır. Test INI/görselleri
 build altında, yerel panel ayarları config/local.ui.ini içindedir.

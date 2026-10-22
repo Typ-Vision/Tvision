@@ -123,21 +123,25 @@ World/reference dönüşümünde nominal açıdan gerçek current world kalite k
 ayrıca denetlenir. Bu kontrolün uyarı vermemesi başarılı fit garantisi değildir.
 
 
-## Deneysel OECS Editor edinimi
+## Kamera ve PGM+JSON edinimi
 
-Editor üstündeki **Deneysel OECS kamera / dosyayı Editor'da kullan** seçimi
-yalnız mevcut oturum içindir. Canlı Industrial Camera kaynağında Camera Manager
-profil düzenleyicisinden FrameBurstStart / Software seçin ve profili Editor'a
-yeniden bağlayın. Görüntü al veya Run Flow ortak worker üzerinden edinir;
-FrameStart profili deneysel yola sessizce çevrilmez.
+Editor'da kaynak için **Kamera ID / ad** seçin. Kayıtlı varsayılan kurulum/profil
+bağlanır; seçim edinim başlatmaz. **Görüntü al / Run Flow** desteklenen Opto/OECS
+kaynağının edinim yolunu application politikasıyla seçer. Ek bir mod veya oturum
+onayı yoktur. FrameBurstStart / Software profil gerekir; eski FrameStart profili
+sessiz çevrilmez. Profil değişiminden sonra kaynağı yeniden hazırlayın.
 
-Camera Manager’ın kaydettiği işaretli `.pgm` ve `.pgm.json` çiftini Open ile
-açabilirsiniz. JSON ve piksel hash/geometri uyuşmazlığı reddedilir. Dosya adını
-değiştirirken JSON'u yeni `.pgm.json` adına taşıyın. Save/reopen kaynak yolunu
-korur; restart seçimi kapatır. Politika değişikliği güncel kare/sonuçları temizler.
-Görüntü ve ölçümde deneysel uyarı kalır; Run Tool/TargetOnly yeni edinim yapmaz.
+Camera Manager'ın kaydettiği `.pgm` + `.pgm.json` çiftini **Open** ile açın.
+JSON, raster hash, kamera ve geometri uyuşmazlığı reddedilir. Yeniden adlandırmada
+JSON'u yeni `.pgm.json` adına taşıyın. Save/reopen yolu korur; restart görüntü veya
+Run başlatmaz. Kaynak değişimi eski kare/sonuç/cache'i temizler. **Run Tool** güncel
+upstream sonucunu kullanır; TargetOnly yeni edinim yapmaz.
 
-Bağımsız ölçü referansı olmadan px tanısı kullanın. Fit/kenar eşiği ayarını
-sahneye göre açıkça inceleyin; toleransları sonucun geçmesi için gevşetmeyin.
-Deneysel kalibrasyon aday/aktivasyon akışı bu teslimde açılmadı; mm doğruluğu,
-tetik-parça eşleşmesi ve Runtime/PLC/robot kabulü bu görüntülerden çıkarılmaz.
+Raw/px kalibrasyonsuz çalışır; mm için aynı kaynağın Kalibrasyon'da kullanıma
+alınmış uygun modeli ve güncel bağlantı/uyum gerekir. Canlı/PGM kökeni ve model
+kimliği sonuçta korunur. Yeni model/ayar Runtime'a sessiz uygulanmaz: Stop ve
+Load Recipe → Run gerekir. [Tam devreye alma akışı](camera-runtime-usage.md).
+
+Bağımsız referans olmadan fiziksel doğruluk/PASS çıkarılmaz. Kenar/fit ayarını
+sahneye göre inceleyin; toleransı sonucu geçirmek için gevşetmeyin. OECS native
+üretim ve fiziksel kabul engelleri [progress'te](progress.md) açıktır.
