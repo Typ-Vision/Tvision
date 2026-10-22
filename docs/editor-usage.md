@@ -7,7 +7,7 @@ satırındadır. Sağdaki **...** düğmesi Reçete bilgileri ve Çok kaynaklı 
 geçişini açar. Geçiş bir reçete işlemidir; paneli açmak reçeteyi değiştirmez.
 
 Viewer'da Open, kaynak seçici (çok kaynaklı reçetede) ve Fit vardır. Viewer **...**
-menüsünde Reload, Zoom −/+, 1:1 ve geçici ROI geometrisi bulunur. Menü düğmelerine
+menüsünde Reload, Zoom −/+, 1:1 ve Geçici geometri denemesi bulunur. Menü düğmelerine
 Tab ve Space ile açılır; ok tuşları/Enter komut seçer, Escape menüyü kapatır. Görüntü/kaynak/frame kimliği
 tek satırda kısaltılır; tooltip ve erişilebilir metinde tam bilgi korunur.
 Sonuç/hata ayrıntıları Results'ta, kritik workspace hataları üstte görünür.
@@ -18,6 +18,17 @@ sürüklenerek boyutlandırılır. **View → Panel düzenini sıfırla** varsay
 viewer öncelikli boyutlara ve sabit Workspace moduna döner. Yerel görünüm
 tercihleri `config/local.ui.ini` içindedir; reçete hash'i veya Runtime snapshot'ı
 değişmez. 850×600'de uzun adlar viewer alanını daraltmaz; Properties kaydırılabilir.
+
+**Reçeteye bağlı ROI:** Toolbox → Ön işleme (PreProcess) → ROI ekleyin.
+Görüntü kaynağını bağlayın, kaynağı/Preprocess'i çalıştırın ve **Dikdörtgen ROI çiz**
+ile alanı sürükleyin. Alanı tutamaçlarla düzenleyebilirsiniz. Araç adını değiştirip
+kaydedin. Blob veya Template Match'in Properties → `region` girdisinde bu aracın
+`region` çıktısını seçin; tüketicinin Image girdisi aynı kaynağa ait olmalıdır.
+Run Tool için önce güncel kaynak ve ROI çıktısı gerekir; Run Flow bağımlılıkları
+çalıştırır. Kaydet/aç ve Runtime aynı alanı kullanır. Görüntü kırpılmaz, piksel
+koordinatları değişmez. Kaynak/koordinat/boyut değişiminde yeniden çizim gerekir.
+İlk sürüm yalnız piksel hizalı dikdörtgen üretir. Region girişi olmayan araçlarda
+kendi ROI çizimini kullanın. Viewer menüsündeki geçici geometri reçeteye kaydedilmez.
 
 Blob Search ROI'yi gövdeden taşıyın, sekiz tutamaçla boyutlandırın. Escape iptal,
 Ctrl+Z geri alır; ROI dışı sol veya orta tuş pan yapar. Referans/region bağı

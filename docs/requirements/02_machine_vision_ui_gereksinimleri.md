@@ -304,6 +304,13 @@ Fırça ile işaretlenen bölgeler **result filtering mask** oluşturur; match m
 
 ## 15. ROI Editor
 
+CCUX-21 ilk işlem alanı: Ön işleme (PreProcess) grubundaki ROI aracı Image
+alır, aynı kaynak/koordinat sisteminde piksel hizalı dikdörtgen Region üretir.
+İsim, alan ve bağlar reçeteye kaydedilir; Region destekli tüketicide gerçek arama
+alanını sınırlar. Görüntü kırpılmaz. Kaynak/koordinat/boyut uyumsuzluğu yeniden
+çizim ister; Region portu olmayan araçlar destekliyormuş gibi sunulmaz. Viewer'ın
+geçici geometri denemesi reçete ROI'sinden ayrı adlandırılır.
+
 Şekiller: Rectangle, Circle, Ellipse, Polygon, Rotated Rectangle, Freehand.
 
 Properties: X, Y, Width, Height, Radius, Rotation, point list ve Reference. Reference seçenekleri Absolute, Match Pose, Tool Output.

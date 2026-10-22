@@ -107,7 +107,7 @@ QWidget* MainWindow::makeEditor() {
     auto* open=new QPushButton("Open");open->setToolTip("Open Image — görüntü dosyası seç"); open->setObjectName("openImage"); toolbar->addWidget(open); connect(open,&QPushButton::clicked,this,&MainWindow::openImageDialog);
     auto* sourcePicker=new QComboBox;sourcePicker->setObjectName("editorSourceSelector");sourcePicker->setAccessibleName("Görüntü kaynağı");sourcePicker->setMinimumWidth(70);sourcePicker->setMinimumContentsLength(4);sourcePicker->setSizeAdjustPolicy(QComboBox::AdjustToMinimumContentsLengthWithIcon);toolbar->addWidget(sourcePicker,1);
     connect(sourcePicker,&QComboBox::activated,this,[this,sourcePicker](int){selectTool(sourcePicker->currentData().toString());});
-    auto* viewerMore=new QToolButton;viewerMore->setText("...");viewerMore->setObjectName("viewerMore");viewerMore->setToolTip("Görüntü: Reload, zoom ve ROI geometrisi");viewerMore->setAccessibleName("Görüntü komutları");viewerMore->setPopupMode(QToolButton::InstantPopup);
+    auto* viewerMore=new QToolButton;viewerMore->setText("...");viewerMore->setObjectName("viewerMore");viewerMore->setToolTip("Görüntü: Reload, zoom ve geçici geometri");viewerMore->setAccessibleName("Görüntü komutları");viewerMore->setPopupMode(QToolButton::InstantPopup);
     auto* viewerMenu=new QMenu(viewerMore);viewerMore->setMenu(viewerMenu);
     auto* reload=viewerMenu->addAction("Reload"); reload->setObjectName("reloadImage");
     connect(viewerMenu,&QMenu::aboutToShow,this,[this,viewerMenu,reload]{QTimer::singleShot(0,this,[viewerMenu,reload]{viewerMenu->setActiveAction(reload);});});
@@ -118,7 +118,7 @@ QWidget* MainWindow::makeEditor() {
     auto* minus=viewerMenu->addAction("Zoom −"); minus->setObjectName("zoomOut");connect(minus,&QAction::triggered,this,[this]{imageViewer_->zoomBy(1.0/1.25);});
     auto* plus=viewerMenu->addAction("Zoom +"); plus->setObjectName("zoomIn");connect(plus,&QAction::triggered,this,[this]{imageViewer_->zoomBy(1.25);});
     auto* actual=viewerMenu->addAction("1:1");connect(actual,&QAction::triggered,this,[this]{imageViewer_->actualSize();});
-    auto* geometry=viewerMenu->addAction("ROI geometrisi…");geometry->setObjectName("roiGeometry");geometry->setToolTip("Geçici subpixel geometri; reçeteye bağlı değildir.");
+    auto* geometry=viewerMenu->addAction("Geçici geometri denemesi…");geometry->setObjectName("roiGeometry");geometry->setToolTip("Reçeteye kaydedilmez. İşlem alanı için PreProcess → ROI ekleyin.");
     connect(geometry,&QAction::triggered,this,[this]{if(editorSession_.frame){showRoiEditor(imageViewer_,this,editorSession_.frame->metadata().coordinateSystemId.isEmpty() ? "viewer/raw":editorSession_.frame->metadata().coordinateSystemId);if(auto* dialog=findChild<QDialog*>("roiGeometryDialog"))if(!dialog->property("restoreRecipeRoi").toBool()){dialog->setProperty("restoreRecipeRoi",true);connect(dialog,&QDialog::finished,this,[this]{refreshMatchOverlay();});}}});
     toolbar->addWidget(viewerMore);imageLayout->addLayout(toolbar);
     imageInfo_=new ElidedLabel;imageInfo_->setObjectName("muted");imageInfo_->setText("Görüntü yok."); imageLayout->addWidget(imageInfo_); imageLayout->addWidget(imageViewer_,1);
@@ -372,6 +372,12 @@ void MainWindow::showToolProperties() {
         auto* roi=new QPushButton("Search ROI çiz");roi->setObjectName("searchRoi");form->addRow(roi);connect(roi,&QPushButton::clicked,this,[this]{beginRoi(false);});
         auto* clear=new QPushButton("Tam kare ara");clear->setObjectName("clearSearch");clear->setObjectName("clearSearch");form->addRow(clear);connect(clear,&QPushButton::clicked,this,[this]{if(!applyToolProperties())return;try{for(auto t:service_.tools())if(t.id==selectedToolId_){t.parameters["searchRoi"]=QJsonObject{};service_.updateTool(t);refreshWorkspace();break;}}catch(const std::exception& e){displayError(QString::fromUtf8(e.what()));}});
         const auto roiValue=tool.parameters["searchRoi"].toObject();form->addRow("Arama alanı (raw px)",note(roiValue.isEmpty() ? "Tam kare":QString("X: %1 px · Y: %2 px\nGenişlik: %3 px · Yükseklik: %4 px").arg(roiValue["x"].toInt()).arg(roiValue["y"].toInt()).arg(roiValue["width"].toInt()).arg(roiValue["height"].toInt())));
+    } else if(tool.kind=="roi") {
+        auto* draw=new QPushButton("Dikdörtgen ROI çiz");draw->setObjectName("searchRoi");form->addRow(draw);
+        connect(draw,&QPushButton::clicked,this,[this]{beginRoi(false);});
+        const auto r=MatchService::rectangle(tool.parameters["searchRoi"].toObject());
+        form->addRow("İşlem alanı (px)",note(r.isEmpty() ? "ROI çizilmedi":QString("X: %1 · Y: %2\nGenişlik: %3 · Yükseklik: %4").arg(r.x()).arg(r.y()).arg(r.width()).arg(r.height())));
+        form->addRow(note("Image girdisini bağlayın, ROI çizin. Region çıktısını Blob veya Template Match aracının region girdisine bağlayın. Görüntü kırpılmaz. Yalnız dikdörtgen desteklenir; diğer araçlar kendi ROI alanını kullanır."));
     } else if(tool.kind=="preprocess") {
         auto* settings=new PreprocessEditor(tool.parameters);form->addRow(settings);settings->onChanged=[this]{applyToolProperties();};
     } else if (tool.kind=="blob") {
@@ -647,7 +653,7 @@ void MainWindow::prepareNewToolDrawing() {
         if(tool.kind=="edge_point")action="edgeDraw";
         else if(tool.kind=="edge_pair" || tool.kind=="line_fit" || tool.kind=="circle_fit")action="metrologyDraw";
         else if(tool.kind=="pattern_pose" || tool.kind=="shape_pose" || tool.kind=="template_match")action="modelRoi";
-        else if(tool.kind=="blob" || tool.kind=="edge" || tool.kind=="code_read")action="searchRoi";
+        else if(tool.kind=="roi" || tool.kind=="blob" || tool.kind=="edge" || tool.kind=="code_read")action="searchRoi";
     }
     if(action.isEmpty()){pendingDrawTool_.clear();return;}
     if(editorSession_.busy())return;

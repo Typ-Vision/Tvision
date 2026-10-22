@@ -44,6 +44,7 @@ public:
     bool verifySession();
     bool verifyMatching(const QString& artifacts);
     bool verifyExecution(const QString& artifacts);
+    bool verifyRoi(const QString& artifacts);
     bool verifyPreprocessing(const QString& artifacts);
     bool verifyEdgePoint(const QString& artifacts);
     bool verifyMetrology(const QString& artifacts);

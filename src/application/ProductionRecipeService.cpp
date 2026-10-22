@@ -203,7 +203,7 @@ RecipeValidation ProductionRecipeService::validate(const QString& principal,cons
                 if(acquisition==tools.cend())throw std::runtime_error("Reference acquisition identity differs from recipe");
                 if(b.world && (!draft.calibrationBinding || b.calibration!=draft.calibrationBinding))throw std::runtime_error("Reference calibration differs from recipe");
             }
-            if(!(industrialAdmission_ && tool.kind=="industrial_camera") && !QStringList{"image_file","template_match","blob","edge","calculate","webcam","measurement","preprocess","code_read","edge_point","edge_pair","line_fit","circle_fit","geometry_measurement","pattern_pose","shape_pose"}.contains(tool.kind))throw std::runtime_error("Üretim sözleşmesinde desteklenmeyen tool.");
+            if(!(industrialAdmission_ && tool.kind=="industrial_camera") && !QStringList{"image_file","template_match","blob","edge","calculate","webcam","measurement","roi","preprocess","code_read","edge_point","edge_pair","line_fit","circle_fit","geometry_measurement","pattern_pose","shape_pose"}.contains(tool.kind))throw std::runtime_error("Üretim sözleşmesinde desteklenmeyen tool.");
             if(tool.kind=="webcam" || (industrialAdmission_ && tool.kind=="industrial_camera"))++sources;
             if((ToolRegistry::get(tool.kind).usesCalibration || ((tool.kind=="edge_pair" || tool.kind=="line_fit" || tool.kind=="circle_fit" || tool.kind=="geometry_measurement") && tool.parameters["mode"]=="calibrated")) && !draft.calibrationBinding)throw std::runtime_error("Metric tool requires an exact calibration binding.");
             if(tool.kind=="image_file") {++sources;if(tool.parameters["path"].toString().isEmpty())throw std::runtime_error("Kaynak yolu boş.");}

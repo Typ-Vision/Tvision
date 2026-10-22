@@ -4,13 +4,13 @@
 
 ## Devam noktası
 
-**Öncelik: CCUX-20 gerçek kamera etkileşim teyidi → [CCUX-21 PreProcess ROI](architecture/camera-setup/21-preprocess-roi.md).**
-CCUX-20 yazılım düzeltmesi tamam: immutable raster hash'i bir kez hesaplanır;
-aynı preview tekrar yüklenmez, ham/işlenmiş çift yükleme kaldırıldı.
-Release ilgili grup 10/11; dosya fixture onarımı sonrası kalan test 1/1.
-Canlı cihaz etkileşim kabulü açık; mikro ölçümler kapanışta.
-[Kapanış](archive/2026-10-22-ccux-20.md), `build/ccux/ccux-20/`.
-Üst menü ROI geometrisi geçicidir; araç ROI'leri işlevseldir. CCUX-21 planlandı.
+**CCUX-21 tamamlandı:** Ön işleme → ROI; reçeteye bağlı dikdörtgen Region,
+Blob/Template Match gerçek işlem alanı, Run Tool/Flow, reopen ve immutable Runtime.
+[Kapanış](archive/2026-10-22-ccux-21.md), `build/ccux/ccux-21/`.
+**Sonraki: CCUX-20 gerçek kamera etkileşim teyidi**, ardından CCUX-15 kalan fiziksel
+kabul. CCUX-20 hash/preview düzeltmesi korunur; canlı cihaz kabulü açık.
+[CCUX-20](archive/2026-10-22-ccux-20.md), `build/ccux/ccux-20/`.
+Geçici viewer geometrisi ayrı adlandırılır; araç ROI'leri reçeteye bağlıdır.
 CCUX-16–19 teslimleri korunur: [19](archive/2026-10-22-ccux-19.md),
 [18](archive/2026-10-22-ccux-18.md), [17](archive/2026-10-22-ccux-17.md),
 [16](archive/2026-10-22-ccux-16.md). C0 teknik/fiziksel engeller açık.

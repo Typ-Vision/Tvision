@@ -1,3 +1,4 @@
+#include <QMouseEvent>
 #include "MetrologyEditor.hpp"
 #include "MainWindow.hpp"
 #include "PreprocessEditor.hpp"
@@ -652,5 +653,33 @@ bool MainWindow::verifyGeometry(const QString& artifacts){
     service_.save();const auto recipe=service_.activeRecipe()->id;const auto revision=service_.activeRecipe()->recipeVersion;service_.openProject(service_.path());service_.selectRecipe(recipe);service_.save();check(service_.activeRecipe()->recipeVersion==revision,"Geometry UI Save reopen no-op");refreshWorkspace();selectPage("recipes");refreshRecipes();for(int row=0;row<recipeTable_->rowCount();++row)if(recipeTable_->item(row,0)->data(Qt::UserRole)==recipe)recipeTable_->selectRow(row);findChild<QPushButton*>("loadRecipe")->click();wait();findChild<QPushButton*>("runtime_run")->click();wait();check(runtime_ && runtime_->active(),"Geometry Load/Run");
     for(auto t:service_.tools())if(t.id==id){t.parameters["upper"]=100;service_.updateTool(t);}findChild<QPushButton*>("runtime_cycle")->click();wait();if(!runtimeResult_)QTextStream(stderr)<<runtimeCoordinator_->error();check(runtimeResult_ && runtimeResult_->state==ExecutionState::Done,"Geometry immutable Runtime recorded");runtimeTools_->setCurrentIndex(runtimeTools_->findData(id));runtimeViewer_->fitImage();QApplication::processEvents();grab().save(QDir(artifacts).filePath("geometry-runtime.png"));findChild<QPushButton*>("runtime_stop")->click();check(!runtimeResult_ && !runtimeViewer_->hasImage(),"Geometry Runtime Stop clears");check(ProductionResultCodec::csv(ProductionStore(service_.path()+".production").recent("cycles")).contains("geometry-refit/point_line_distance"),"Geometry Logs/restart/CSV");
     refreshWorkspace();selectPage("editor");selectTool(id);runFlow();findChild<QPushButton*>("stopFlow")->click();wait();check(result().outputs.isEmpty() && result().lines.isEmpty(),"Geometry Editor Stop clears");return true;
+}
+}
+
+namespace visionflow {
+bool MainWindow::verifyRoi(const QString& artifacts) {
+    auto check=[](bool b,const char* text){if(!b)throw std::runtime_error(text);};
+    auto wait=[&]{QElapsedTimer timer;timer.start();while(editorSession_.busy() && timer.elapsed()<20000){QApplication::processEvents();QThread::msleep(1);}check(!editorSession_.busy(),"ROI UI timeout");};
+    service_.createProject("ROI acceptance","",QDir(artifacts).filePath("roi-ui-"+QUuid::createUuid().toString(QUuid::WithoutBraces)+".vfproject"),"file");
+    const auto recipe=service_.createRecipe("ROI fixture","",ApplicationType::DefectInspection,"file");refreshWorkspace();selectPage("editor");
+    QImage fixture(500,320,QImage::Format_Grayscale8);fixture.fill(0);{QPainter p(&fixture);p.fillRect(QRect(60,60,40,40),Qt::white);p.fillRect(QRect(340,200,60,60),Qt::white);}
+    const auto path=QDir(artifacts).filePath("roi-input.png");check(fixture.save(path) && loadEditorImage(path),"ROI fixture acquisition");
+    const auto source=selectedToolId_,roi=service_.addTool("roi"),blob=service_.addTool("blob");
+    QVector<ToolConnection> links{{source,"image",roi,"image"},{source,"image",blob,"image"}};service_.setConnections(links);refreshWorkspace();selectTool(roi);
+    resize(1400,900);QApplication::processEvents();imageViewer_->fitImage();
+    auto draw=[&](QPointF a,QPointF b){
+        auto* button=propertiesBody_->findChild<QPushButton*>("searchRoi");check(button && button->isEnabled(),"ROI draw enabled");button->click();
+        auto mouse=[&](QEvent::Type type,QPointF point,Qt::MouseButton button,Qt::MouseButtons buttons){const auto pos=imageViewer_->mapFromScene(point);QMouseEvent e(type,QPointF(pos),QPointF(imageViewer_->viewport()->mapToGlobal(pos)),button,buttons,Qt::NoModifier);QApplication::sendEvent(imageViewer_->viewport(),&e);QApplication::processEvents();};
+        mouse(QEvent::MouseButtonPress,a,Qt::LeftButton,Qt::LeftButton);mouse(QEvent::MouseMove,b,Qt::NoButton,Qt::LeftButton);mouse(QEvent::MouseButtonRelease,b,Qt::LeftButton,Qt::NoButton);
+    };
+    draw({40.5,40.5},{130.5,130.5});
+    for(auto t:service_.tools())if(t.id==roi){check(!t.parameters["searchRoi"].toObject().isEmpty(),"mouse drawing persists ROI");t.name="Inspection ROI";service_.updateTool(t);}
+    selectTool(blob);auto* regionInput=propertiesBody_->findChild<QComboBox*>("input_region");check(regionInput && regionInput->findData(roi+"/region")>0,"ROI available in actual Region picker");regionInput->setCurrentIndex(regionInput->findData(roi+"/region"));QApplication::processEvents();selectTool(roi);runFlow();wait();
+    auto area=[&]{for(const auto& r:editorSession_.cycle->tools)if(r.toolId==blob)return std::get<double>(r.outputs["area"].data);return -1.;};
+    check(editorSession_.cycle && editorSession_.cycle->state==ExecutionState::Done && area()==1600,"UI ROI limits actual Blob");
+    runExecution(roi);wait();check(editorSession_.cycle->state==ExecutionState::Done && editorSession_.cycle->executedTools==QStringList{roi},"UI Run Tool ROI");runExecution(blob);wait();check(area()==1600,"UI Run Tool downstream");
+    service_.save();const auto saved=service_.activeRecipe()->definition;service_.openProject(service_.path());service_.selectRecipe(recipe);refreshWorkspace();selectPage("editor");selectTool(roi);runFlow();wait();check(service_.activeRecipe()->definition==saved && area()==1600,"UI ROI reopen");
+    for(const auto size:{QSize(1400,900),QSize(850,600)}){resize(size);QApplication::processEvents();imageViewer_->fitImage();grab().save(QDir(artifacts).filePath(QString("roi-editor-%1.png").arg(size.width())));}
+    resize(1400,900);QApplication::processEvents();imageViewer_->fitImage();draw({300.5,170.5},{430.5,290.5});runFlow();wait();check(area()==3600,"UI redraw selects second object");service_.save();return true;
 }
 }

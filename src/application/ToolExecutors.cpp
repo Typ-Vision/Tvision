@@ -1,3 +1,4 @@
+#include "RoiService.hpp"
 #include "PoseMatchService.hpp"
 #include "ShapeMatchService.hpp"
 #include "CircleToolService.hpp"
@@ -223,7 +224,7 @@ QMutex executorMutex; QMap<QString,ToolExecutor> extensions; }
 void ToolExecutors::registerExecutor(const QString& kind,ToolExecutor executor) {
     ToolRegistry::get(kind);
     QMutexLocker lock(&executorMutex);
-    if(!executor || extensions.contains(kind) || QStringList{"shape_pose","pattern_pose","image_file","webcam","template_match","blob","edge","calculate","measurement","preprocess","code_read","edge_point","edge_pair","line_fit","circle_fit","circle_fit","geometry_measurement"}.contains(kind))throw std::runtime_error("Geçersiz/tekrar yürütücü kaydı.");
+    if(!executor || extensions.contains(kind) || QStringList{"shape_pose","pattern_pose","image_file","webcam","template_match","blob","edge","calculate","measurement","roi","preprocess","code_read","edge_point","edge_pair","line_fit","circle_fit","circle_fit","geometry_measurement"}.contains(kind))throw std::runtime_error("Geçersiz/tekrar yürütücü kaydı.");
     extensions.insert(kind,std::move(executor));
 }
 ToolExecutor ToolExecutors::get(const QString& kind,const MeasurementExecutionContext& context,const std::optional<ToolRoi>& resolvedRoi) {
@@ -243,6 +244,7 @@ ToolExecutor ToolExecutors::get(const QString& kind,const MeasurementExecutionCo
         r.outputs["pointMm"]=physical;return r;
     };
     if(kind=="code_read")return [resolvedRoi](const ToolDefinition& t,const QMap<QString,PortValue>& inputs,const QString& dir,const QString& frame,const QString& cycle,const std::shared_ptr<std::atomic_bool>& cancel){return CodeReadService::execute(t,inputs,dir,frame,cycle,cancel,resolvedRoi);};
+    if(kind=="roi")return [](const ToolDefinition& t,const QMap<QString,PortValue>& inputs,const QString&,const QString& frame,const QString& cycle,const std::shared_ptr<std::atomic_bool>&){return RoiService::execute(t,inputs,frame,cycle);};
     if(kind=="preprocess")return [](const ToolDefinition& t,const QMap<QString,PortValue>& inputs,const QString&,const QString& frameId,const QString& cycleId,const std::shared_ptr<std::atomic_bool>& cancel){
         ToolRegistry::validate(t);const auto output=Preprocessing::run(std::get<ImageFrame>(inputs.value("image").data),t.parameters,cancel);
         ToolResult r;r.toolId=t.id;r.state=ExecutionState::Done;r.outputs["image"]={outputPorts(t.kind).first(),output,true,frameId,cycleId,output.metadata()};return r;

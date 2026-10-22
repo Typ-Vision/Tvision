@@ -1,11 +1,12 @@
 # CCUX-21 — PreProcess altında reçeteye bağlı ROI
 
-Durum: planlandı, uygulanmadı. Kullanıcı isteği: 22 Ekim 2026.
-Önce CCUX-20 performans düzeltmesi ve gerçek kamera etkileşim teyidi.
+Durum: 22 Ekim 2026 yazılım ve görsel kabulü tamamlandı.
+[Kapanış](../../archive/2026-10-22-ccux-21.md). CCUX-20 gerçek kamera etkileşim
+teyidi ve CCUX-15 fiziksel kabulü ayrı açık maddelerdir.
 
 ## Mevcut durum
 
-MainWindowEditor'daki üst menü “ROI geometrisi…” geçici subpixel geometriyi
+MainWindowEditor'daki üst menü “Geçici geometri denemesi…” geçici subpixel geometriyi
 düzenler; reçeteye bağlı değildir. Bu alan bir preprocessing işlemi değildir.
 Araç Properties bölümündeki Model/Search ROI ve metrologi ROI çizimleri
 reçeteye bağlıdır ve ilgili yürütücüde kullanılır.
@@ -34,3 +35,20 @@ Gereksinim belgesinde ROI / Preprocess bölümlerini başlık aramasıyla aç.
 - Release, ilgili CTest ve normal/küçük ekran görsel kabulü.
 
 Hand-eye, yeni kalibrasyon solver'ı ve production admission kapsam dışıdır.
+
+## Uygulanan sözleşme
+
+`roi` v1, editor schema 7: gerekli `image: Image/px/image` girdisi ve tek
+`region: Region/px/image` çıktısı. Toolbox Ön işleme grubundadır. `searchRoi`
+piksel hizalı dikdörtgendir; `imageBinding` source/coordinates/width/height taşır.
+Boş taslak kaydedilebilir; çizilmemiş, sınır dışı veya farklı kaynak/koordinat/boyutta
+çalıştırma hata verir ve downstream sonuç üretmez. Circle, polygon, rotated veya
+subpixel Region bu sürümde yoktur; ek parametreler reddedilir. Mevcut viewer'ın
+rectangle çizimi/taşıma/boyutlandırma/Escape/Undo altyapısı kullanılır.
+
+Region görüntünün rasterini veya processing kökenini değiştirmez; orijinal
+FrameMetadata'yı taşır. Blob, Template Match ve eski Edge gerçek işlem alanını
+bu porttan alır. Diğer araçlara yeni Region portu eklenmedi. Kaynak geometri
+bağının gözlemi mevcut metadata ve raster boyutuyla sınırlıdır; aynı kimlik/boyutta
+fiziksel optik değişiklik kabulü bu aracın görevi değildir. Cache imzaları ROI ve
+bağ değişimini downstream'e taşır; Runtime immutable snapshot'ı korur.

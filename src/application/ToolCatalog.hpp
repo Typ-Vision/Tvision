@@ -7,7 +7,7 @@ namespace visionflow {
 struct ToolCatalog {
     static QString groupForKind(const QString& kind) {
         if(QStringList{"image_file","webcam","industrial_camera"}.contains(kind))return "acquisition";
-        if(kind=="preprocess")return "processing";
+        if(kind=="preprocess" || kind=="roi")return "processing";
         if(QStringList{"blob","code_read"}.contains(kind))return "detection";
         if(QStringList{"template_match","pattern_pose","shape_pose"}.contains(kind))return "matching";
         if(QStringList{"edge_point","edge_pair","line_fit","circle_fit","measurement","geometry_measurement"}.contains(kind))return "measurement";
