@@ -94,7 +94,7 @@ QString availability=c->availability(camera);
 const auto full=camera.name+"\n"+setupName+"\n"+choice+"\n"+availability;card->setToolTip(full);card->setText((e.registrations.contains(camera.id.value) ? e.registrations[camera.id.value].shortId+" • ":"")+camera.name.left(32)+"\n"+setupName.left(32)+"\n"+choice+"\n"+availability.left(36));grid_->addWidget(card);cardWidgets_.append(card);connect(card,&QPushButton::clicked,this,[this,camera]{select(camera.id.value);});}
 reflow();const auto previous=setups_->currentData().toString();setups_->clear();
 for(const auto& s:e.current.setups)if(s.camera.value==selected_ && !e.archivedSetups.contains(s.id.value))setups_->addItem(s.name+QString(" • r%1").arg(s.revision),s.id.value);
-int index=setups_->findData(previous);if(index<0){const auto defaults=e.defaults({selected_});if(defaults.setup)index=setups_->findData(defaults.setup->value);}if(index>=0)setups_->setCurrentIndex(index);
+int index=setups_->findData(previous);if(index<0 && !selected_.isEmpty()){const auto defaults=e.defaults({selected_});if(defaults.setup)index=setups_->findData(defaults.setup->value);}if(index>=0)setups_->setCurrentIndex(index);
 const auto priorProfile=profiles_->currentData();profiles_->clear();bool industrial=false;
 for(const auto& camera:cameras)if(camera.id.value==selected_)industrial=camera.physical.has_value();
 findChild<QCheckBox*>("overviewExperimental")->setVisible(industrial);

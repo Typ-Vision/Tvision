@@ -4,55 +4,42 @@
 
 ## Devam noktası
 
-**Sonraki görev: [CCUX-14](architecture/camera-setup/14-software-acceptance.md).**
-**CCUX-13 tamamlandı:** Runtime kaynak/kamera, deneysel mm ve Raw/px birimlerini
-hazırlıkta ayırır; kalıcı commit sonrası gerçek kaynaklı değerler önce gösterilir.
-Logs runtime1/2'yi deneysel etiketler; ayrı CSV model ID/content/version ve gerçek
-birimli sonuçları taşır. Stop/hata sayısal sonuç üretmez; restart yalnız geçmişi
-okur, PLC/robot kapalıdır. Release, ilgili testler ve iki boyutta görsel kanıt
-[kapanışta](archive/2026-10-22-ccux-13.md), `build/ccux/ccux-13/`.
-**CCUX-12:** kaynak başına ayrı typed deneysel snapshot, karma Raw/px + mm ve
-runtime2 codec; exact model/ayar/köken/geometri ve port birimleri doğrulanır.
-Eski Raw/px geçmişi, NOT_EVALUATED ve frozen retry korunur.
-[Kapanış](archive/2026-10-22-ccux-12.md). Fiziksel mm kabulü değildir.
-**CCUX-11:** genel reçete referansları kaldırıldı; üç tür boş kaynakla DRAFT,
-metadata edit legacy/scoped bağ ve no-op hash korunur. [Kapanış](archive/2026-10-22-ccux-11.md).
-Genel shell temiz producer fixture'ıyla eski Runtime Stop/retry beklentisinde kaldı.
-**CCUX-10:** kamera seçimi default kurulum/profil ile atomik bağlanır; aynı kamera
-ayarı Run Flow'da snapshot/DRAFT/dirty yeniler. Geometri/seri/legacy otomatik
-onarılmaz; ayrı typed deneysel canlı/replay mm resolver'ı korunur.
-[Kapanış](archive/2026-10-22-ccux-10.md).
-**CCUX-09:** kamera merkezli özet, iki yöntem, immutable hedef ve tek Kaydet ve
-kullan; kısmi kayıt/ret/retry ve deneysel etiket. [Kapanış](archive/2026-10-22-ccux-09.md).
-**CCUX-08:** exact hedef/revision/generation ve son commit gate'li tek application
-komutu, idempotent retry ve ayrı deneysel snapshot. [Kapanış](archive/2026-10-22-ccux-08.md).
-**CCUX-07:** reçetesiz immutable deneysel canlı Calibration lease ve exact PGM+JSON
-replay; typed köken/hash, trusted active/system/completion ayrımı korunur.
-[Kapanış](archive/2026-10-22-ccux-07.md).
-**CCUX-06:** kayıtlı tercih/matematik/oturum izni ayrı; fresh probe ile yeniden
-hazırlama. Restart/replug izin başlatmaz; optik değişim pending revision üretir.
-[Kapanış](archive/2026-10-22-ccux-06.md).
-Kullanıcıya göre kamera bağlı, ortam karanlık; fiziksel mm kabulü yapılmadı.
-**CCUX-05 tamamlandı:** Tek görüntü / Canlı görüntü / Durdur ortak application
-session’ına bağlandı. Gerçek FPS ve edinim türü, generation ile eski kareyi
-silme, worker drain sonrası sayfa/proje/pencere geçişi ve yalnız geçerli görünen
-kareden deneysel PGM+JSON kaydı var. Yeni kabul sonuçları ve sınırlar
-[kapanışta](archive/2026-10-21-ccux-05.md), `build/ccux/ccux-05/`.
-Release + kartın 3 CTest’i geçti. Ek shell smoke temiz dizinde de eski Runtime
-Stop/retry sonuç beklentisinde başarısız; bu kapsam dışı test/sözleşme uyumsuzluğu
-kapanışta açık bırakıldı.
-**CCUX-04:** tek pending komut/latest-frame yuvası, deadline/generation ve cihaz
-lease’i korunur; [servis kabulü](archive/2026-10-21-ccux-04.md).
-Continuous capability ayrı etiketlenir; deneysel OECS sıralı FrameBurstStart
-kalır. Fiziksel uzun video kabulü yapılmadı.
-**CCUX-03:** sade kayıt/ayar ekranı, rota/profil belirsizliğinde açık seçim ve
-oturumluk deneysel onay korunur; [yazılım/görsel kabul](archive/2026-10-21-ccux-03.md).
-Native backend hâlâ Unavailable; eksik settings desteği açık unsupported kalır.
-Pending optik kurulum tamamlanmış sayılmaz. Önkoşullar
-[CCUX-01](archive/2026-10-21-ccux-01.md) ve
-[CCUX-02](archive/2026-10-21-ccux-02.md) kayıt/servis sözleşmeleri korunur.
-[CCUX planı](architecture/camera-setup/README.md) sırasıyla sürer; **Hand-eye kapsam
-dışı.** Tamamlanmış KMC/ICM/EXP işleri yeniden başlatılmadı.
+**Sonraki görev: [CCUX-15](architecture/camera-setup/15-physical-acceptance.md).**
+**CCUX-14 tamamlandı:** tek proje fixture'ında 1/5 kamera, reçetesiz iki yöntem,
+üç applicationType, Editor → Runtime → Logs/CSV; kaynak başına ayrı gerçek
+fixture mm ve Raw/px, restart/taşıma/duplicate/Stop/invalidation negatifleri.
+UI birleşik seçki 42/43; eksik shell fixture'ı ve iki görsel düzeltmeden sonra
+etkilenen 7/7 geçti. Core-off Release 33/33. Tam ürün suite'i değildir.
+1400×900 / 850×600 görselleri incelendi; sıfır kamera Calibration hatası ve
+Logs başlıkları düzeltildi. Eski shell Stop/retry engeli kapandı: frozen kayıt
+kalıcılaşır, Stop sonrası sonuç geri gösterilmez. Komut/exit/matris/kanıt
+[kapanışta](archive/2026-10-22-ccux-14.md), `build/ccux/ccux-14/`.
+
+CCUX-01–13 tamamlandı; ayrıntılı kayıtlar [arşiv dizinindedir](archive/README.md).
+- Kamera immutable ID/kısa ID ve atomik varsayılan kurulum/profil; belirsiz eski
+  profil/rota açık seçim ister. Exposure/gain gerçek readback ile kaydedilir.
+  Pending optik kurulum ölçüm izni değildir; native settings hâlâ unsupported.
+- Tek/canlı preview ortak worker/session, bir pending istek/latest kare,
+  generation/Stop/drain ve gerçek FPS kullanır; deneysel OECS sıralı
+  FrameBurstStart continuous diye sunulmaz. Sayfa/proje/pencere geçişi drain bekler.
+- Kalibrasyon kayıtlı matematik, uyum ve oturum iznini ayırır; restart/replug izin
+  başlatmaz. Exact yeniden probe gerekir. Optik değişikliği pending revision
+  üretir; A→B→A izni canlandırmaz. Tek Kaydet ve kullan önceki seçimi hata/rette korur.
+- Deneysel canlı/PGM+JSON → aday → ayrı etkin seçim → Editor/Runtime mm zinciri
+  typed köken/hash ve exact kamera/geometri/model ID/content/version taşır.
+  Trusted active/system/completion'a yükselmez; Raw/px dalı global model almaz.
+  [Son servis/UI sözleşme teslimi](archive/2026-10-22-ccux-13.md).
+- Editor kamera seçimi varsayılan bağları atomik kurar; aynı kameranın uygun ayar
+  güncellemesi Run Flow hazırlığında serialized snapshot/DRAFT/dirty yeniler.
+  Geometri/seri/legacy otomatik onarılmaz. Yeni reçete genel referans miras almaz;
+  üç tür boş kaynakla DRAFT; metadata edit legacy/scoped bağ ve no-op hash korur.
+- Runtime aktif immutable snapshot'ı kullanır; model/ayar değişimi Stop ve yeniden
+  Load ister. Deneysel runtime1/2 Logs/CSV birimleri/kökeni korur; hata/Stop sonuç
+  üretmez, restart geçmişi okur. PLC/robot kapalıdır.
+
+Kullanıcıya göre kamera bağlı, ortam karanlık; **bağımsız fiziksel mm kabulü açık**.
+CCUX-14 fixture başarısı bunu kapatmaz. [CCUX planı](architecture/camera-setup/README.md)
+sırasıyla sürer; **Hand-eye kapsam dışı.** Tamamlanmış KMC/ICM/EXP işleri yeniden başlatılmaz.
 
 ## Hazır olanlar
 

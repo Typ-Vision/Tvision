@@ -3,6 +3,27 @@
 22 Ekim 2026 mevcut uygulama. [CCUX hedef akışı](architecture/camera-setup/README.md)
 kartlar halinde uygulanır; güncel tamamlanma durumu [devir özetindedir](progress.md).
 
+## Kısa devreye alma
+
+1. Projeyi oluşturup kaydedin; önce reçete oluşturmanız gerekmez.
+2. Setup → Camera Manager → Cihazları ara → kamerayı seç → Ekle. Kamera ID'sini
+   kontrol edin; destek varsa exposure/gain readback'ini okuyun. Tek/Canlı görüntü
+   ile sahneyi kontrol edin, Durdur ile edinimi kapatın.
+3. Setup → Calibration → aynı kamera → Kalibre Et. Bilinen ölçü veya plaka
+   yöntemiyle gerçek raster üzerinde hesaplayın; Kaydet ve kullan sonucunu okuyun.
+   Deneysel ve bağımsız fiziksel kontrol durumları ayrı görünür.
+4. Yeni reçeteyi üç uygulama türünden biriyle açın. Editor'da kaynak ekleyip
+   Kamera ID / ad seçin; kaynak ve ölçüm araçlarını bağlayıp Run Flow çalıştırın.
+   Raw/px kalibrasyon istemez; mm aynı kaynağın uygun modelini gerektirir. Kaydedin.
+5. Load Recipe → Run → Tek çevrim; gerçek sonucu Logs ve uygun CSV düğmesinden
+   inceleyin. Model/ayar değişiminde Stop → yeniden Load Recipe gerekir. Deneysel
+   onay oturumluktur; deneysel sonuç PLC/robota gönderilmez.
+
+Kayıtlı / bağlantı bekleniyor, yeniden kalibrasyon gerekli veya eksik kurulum
+durumunda etkin mm değeri beklemeyin. Yazılım fixture kabulü bağımsız gerçek mm
+doğruluğu kabulü değildir; fiziksel devreye alma ayrıca tamamlanır.
+
+## Ayrıntılı kullanım
 
 1. Project Manager'dan proje oluşturun/açın ve kaydedin. Recipe Manager'dan reçete
    ad/açıklama ve uygulama türüyle oluşturun. Kamera seçmeden boş DRAFT açılır;

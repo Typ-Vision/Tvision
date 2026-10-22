@@ -40,7 +40,7 @@ int main(int argc,char** argv){QApplication app(argc,argv);try{
     QFontDatabase::addApplicationFont("C:/Windows/Fonts/segoeui.ttf");
     app.setStyle("Fusion");QFile theme(":/resources/theme.qss");check(theme.open(QIODevice::ReadOnly),"product theme resource");app.setStyleSheet(QString::fromUtf8(theme.readAll()));
     QTemporaryDir dir(QDir::currentPath()+"/icm-camera-ui-XXXXXX");check(dir.isValid(),"UI artifact directory");
-    const auto evidence=QDir::currentPath()+"/../ccux/ccux-05";QDir().mkpath(evidence);
+    const auto evidence=qEnvironmentVariable("VISIONFLOW_TEST_ARTIFACTS",QDir::currentPath()+"/../ccux/ccux-05")+"/camera";QDir().mkpath(evidence);
     bool gate=true;int count=0;bool missing=false;bool ambiguous=false;bool reversed=false;bool multiRoute=false;
     QFile project(dir.path()+"/project.vfproject");check(project.open(QIODevice::WriteOnly),"saved project fixture");project.write("{}");project.close();
     CameraSession jobs;

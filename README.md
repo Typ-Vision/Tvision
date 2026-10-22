@@ -11,7 +11,8 @@ UI algoritma veya donanım SDK'sını doğrudan çağırmaz.
 - Ortak Recipe Editor, typed DAG, worker üzerinde yürütme, kaynak başına görüntü/cache,
   ROI/model öğretimi ve gerçek araç çıktıları.
 - Kaydedilmiş projeden reçetesiz kamera/kurulum yönetimi, bilinen ölçü/plaka/dosya
-  kalibrasyon sihirbazları; aday kaydı ile etkinleştirme ayrı işlemlerdir.
+  kalibrasyon sihirbazları; **Kaydet ve kullan** aday kaydı ve uygunluk denetimini
+  tek komutta yapar, başarısız denetimde önceki model seçimi korunur.
 - Çok kaynaklı Editor ve immutable Runtime hazırlığı; gerçek çevrim, kalıcı terminal
   kayıtları, restart geçmişi, Logs/CSV ve vf.socket2 scalar mapping.
 - Image File/Webcam edinimi; Camera Manager'da keşif, kamera kaydı ve Mono8 profil
@@ -59,7 +60,9 @@ OECS / GenTL probe komutları, sandbox sınırları ve kanıt bağlantıları
 
 1. Projeyi oluştur/aç ve kaydet; kamera/kalibrasyon için reçete gerekmez.
 2. Camera Manager'da kamerayı kaydet; Setup → Calibration aynı kayıtları kullanır.
-   Mevcut sürümde profil/kurulum seçimi ve aday/aktivasyon ayrıdır.
+   Kamera → Kalibre Et → Bilinen ölçü veya Kalibrasyon plakası → Kaydet ve kullan.
+   Yeni kaydın varsayılan kurulum/profili otomatik bağlanır; eksik fiziksel kurulum
+   ayrıntıları tamamlanmadan ölçüm izni oluşmaz.
 3. Reçeteyi Editor'da kur; kaynak/araçları bağla, görüntü al ve Run Flow çalıştır.
 4. Kaydedilmiş reçete için Load Recipe → Run → Tek çevrim; sonuçlar Logs/CSV'de.
    Load/Run hazırlığı tek başına sonuç değildir. Stop → yeniden Load sürümü değiştirir.
