@@ -4,6 +4,7 @@
 #include "application/ProjectService.hpp"
 #include "application/RuntimeCoordinator.hpp"
 #include "application/ExperimentalRuntime.hpp"
+#include "application/CameraPreviewSession.hpp"
 #include <QCoreApplication>
 #include <QDir>
 #include <QFile>
@@ -16,9 +17,9 @@
 using namespace visionflow;
 int main(int argc,char** argv){QCoreApplication app(argc,argv);QJsonObject out{{"productionAdmission",false},{"triggerAssociationVerified",false}};int rc=0;
     try{
-        if(argc!=5 && argc!=6)throw std::runtime_error("usage: oecs_experimental_probe absolute-dll absolute-evidence-directory exposure-us count [--stop-in-flight|--timeout|--disconnect]");
+        if(argc!=5 && argc!=6)throw std::runtime_error("usage: oecs_experimental_probe absolute-dll absolute-evidence-directory exposure-us count [--preview-60s|--wrong-camera|--wrong-geometry|--stop-in-flight|--timeout|--disconnect|--editor-run|--runtime-run|--runtime-stop|--runtime-timeout|--runtime-disconnect]");
         const QString scenario=argc==6?QString::fromLocal8Bit(argv[5]):QString{};
-        if(!scenario.isEmpty() && scenario!="--stop-in-flight" && scenario!="--timeout" && scenario!="--disconnect" && scenario!="--editor-run" && scenario!="--runtime-run" && scenario!="--runtime-stop" && scenario!="--runtime-timeout" && scenario!="--runtime-disconnect")throw std::runtime_error("unknown manual scenario");
+        if(!scenario.isEmpty() && scenario!="--preview-60s" && scenario!="--wrong-camera" && scenario!="--wrong-geometry" && scenario!="--stop-in-flight" && scenario!="--timeout" && scenario!="--disconnect" && scenario!="--editor-run" && scenario!="--runtime-run" && scenario!="--runtime-stop" && scenario!="--runtime-timeout" && scenario!="--runtime-disconnect")throw std::runtime_error("unknown manual scenario");
         const QString directory=QString::fromLocal8Bit(argv[2]);QDir().mkpath(directory);
         bool ok=false;const double exposure=QString::fromLocal8Bit(argv[3]).toDouble(&ok);if(!ok)throw std::runtime_error("numeric exposure required");
         const int count=QString::fromLocal8Bit(argv[4]).toInt();if(count<1 || count>1000)throw std::runtime_error("count 1..1000 required");
@@ -29,6 +30,31 @@ int main(int argc,char** argv){QCoreApplication app(argc,argv);QJsonObject out{{
         GeometryDescriptor g;g.resolution={2448,2048};g.sensorRoi=QRect(0,0,2448,2048);g.binning=QSize(1,1);g.decimation=QSize(1,1);g.reverse=GeometryMirror{};g.complete=true;
         r.setup={{"scene"},r.camera.id,"Experimental scene","Lens unidentified","Scene reference unverified",1,1,g};
         r.profile={{"experimental"},r.camera.id,r.setup.id,"Manual experimental",1,{"Mono8",{true,"FrameBurstStart","Software"},AutoMode::Off,exposure,AutoMode::Off,0,{}}};r.sourceId="manual-experimental-preview";
+        if(scenario=="--wrong-camera"){r.device.identity.serial="CCUX15-absent-camera";r.camera.physical=r.device.identity;}
+        if(scenario=="--wrong-geometry"){r.setup.geometry.resolution.setWidth(2447);r.setup.geometry.sensorRoi->setWidth(2447);}
+        if(scenario=="--preview-60s"){
+            // Manual hardware observation through the same controller as Camera Manager.
+            // Placeholder optics are explicitly unverified; this cannot grant mm admission.
+            CameraPreviewSession preview;QElapsedTimer timer;timer.start();
+            preview.start([&]{return ExperimentalOecsAcquisition::open(r,QString::fromLocal8Bit(argv[1]));},true,3000);
+            std::optional<AcquiredFrame> last;QJsonArray samples;
+            while(timer.elapsed()<60000 && preview.state()!=PreviewState::Error){
+                preview.poll();if(auto frame=preview.takeLatest()){
+                    if(!last)ExperimentalOecsAcquisition::save(frame->frame,QDir(directory).absoluteFilePath("preview-first.pgm"));
+                    samples.append(frame->frame.image.metadata().experimentalAcquisition);last=std::move(frame->frame);
+                }QThread::msleep(1);
+            }
+            const auto elapsed=timer.elapsed();const auto stats=preview.stats();const auto generation=preview.generation();
+            if(last)ExperimentalOecsAcquisition::save(*last,QDir(directory).absoluteFilePath("preview-last.pgm"));
+            preview.stop();Deadline cleanup(10000);
+            while(!preview.drained() && !cleanup.expired()){preview.poll();QThread::msleep(1);}
+            out["samples"]=samples;out["count"]=double(stats.completed);out["elapsedMs"]=double(elapsed);out["completionFps"]=stats.fps;
+            out["acquisitionKind"]="sequential_single_frame";out["replaced"]=double(stats.replaced);
+            out["shutdownReady"]=preview.drained();out["stoppedQueueEmpty"]=!preview.takeLatest();out["stopRetiredGeneration"]=preview.generation()>generation;
+            out["error"]=preview.error();out["opticsVerified"]=false;out["physicalMetricAcceptance"]=false;
+            if(!preview.drained() || preview.state()==PreviewState::Error || !last || elapsed<60000 || !out["stoppedQueueEmpty"].toBool() || !out["stopRetiredGeneration"].toBool())throw std::runtime_error(("Preview observation failed: "+preview.error()).toStdString());
+            out["status"]="EXPERIMENTAL_PREVIEW_60S_COMPLETED";QTextStream(stdout)<<QJsonDocument(out).toJson();return 0;
+        }
         if(scenario.startsWith("--runtime-")){
             IndustrialExecutionInputs inputs;inputs.contract={{r.camera},{r.setup},{r.profile}};inputs.discover=[r](int,const auto&){return IndustrialDiscoverySnapshot{{r.device},{},false};};
             ProjectService p;p.createProject("Experimental Runtime","",QDir(directory).absoluteFilePath("runtime.vfproject"),"file");p.createRecipe("Experimental","",ApplicationType::Measurement,"file");const auto source=p.addTool("industrial_camera");p.bindIndustrialSource(source,inputs.contract,r.profile.id,scenario=="--runtime-timeout" ? int(exposure/1000)+1:3000);const auto blob=p.addTool("blob");p.setConnections({{source,"image",blob,"image"}});p.save();

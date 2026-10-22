@@ -10,13 +10,15 @@ Klavye olayı regresyonu ve kanıtlar [kapanışta](archive/2026-10-22-ccux-10b.
 **CCUX-03b:** Opto ayar servisi edinimden ayrıldı. Gerçek cihazda kayıt/oku/mevcut
 ayar kaydı doğrulandı; görüntü/mm koşumu değildir.
 [Kanıt](archive/2026-10-22-ccux-03b.md), `build/ccux/ccux-03b/`.
-**CCUX-15 fiziksel kabul bekliyor; tamamlanmadı.** 22 Ekim önkoşul incelemesinde
-kullanıcının karanlık ortam bildirimi, doğrulanmamış lens/çalışma düzlemi,
-bağımsız fiziksel referans ve iş toleransı eksikleri kaydedildi. Yeni kamera
-koşumu, mm sonucu, fiziksel PASS veya kullanıcı işlem kabulü yoktur.
-Aydınlatılmış/sabit kurulum, ayrı öğretim/doğrulama referansı ve operatör
-hazır olduğunda aynı karttan sürdürün; [bekleme kaydı](archive/2026-10-22-ccux-15.md)
-ve `build/ccux/ccux-15/` önkoşul raporu.
+**CCUX-15a plakasız kontroller:** yeni gerçek readback/kayıt, 60 s / 558 kare /
+9,36 FPS preview, Stop/reopen, kullanıcı bildirimli USB kopma/takma, Editor 3
+kare ve Runtime 10 Raw/px çevrim/CSV doğrulandı. Exposure/gain değişip geri
+yüklendi: son 6000 µs / 0 dB. Yanlış seri/geometri reddedildi. Kopmada SDK stop
+temizleme hatası; 7000 µs / 1 dB isteğinde readback reddi kaydedildi.
+**CCUX-15 tamamlanmadı:** gerçek plaka yok; lens/düzlem, ışık/odak, ayrı fiziksel
+referans/tolerans, mm zinciri ve kullanıcı işlem kabulü açık. Sonraki görev aynı
+kartın bu maddeleridir. [Yeni kanıt/kapanış](archive/2026-10-22-ccux-15a.md),
+`build/ccux/ccux-15/no-plate-20261022/`; [ilk önkoşul](archive/2026-10-22-ccux-15.md).
 
 **CCUX-14 tamamlandı:** tek proje fixture'ında 1/5 kamera, reçetesiz iki yöntem,
 üç applicationType, Editor → Runtime → Logs/CSV; kaynak başına ayrı gerçek
@@ -50,7 +52,7 @@ CCUX-01–13 tamamlandı; ayrıntılı kayıtlar [arşiv dizinindedir](archive/R
   Load ister. Deneysel runtime1/2 Logs/CSV birimleri/kökeni korur; hata/Stop sonuç
   üretmez, restart geçmişi okur. PLC/robot kapalıdır.
 
-Kullanıcıya göre kamera bağlı, ortam karanlık; **bağımsız fiziksel mm kabulü açık**.
+Yeni raster karanlık/kısmen bulanık; **bağımsız fiziksel mm kabulü açık**.
 CCUX-14 fixture başarısı bunu kapatmaz. [CCUX planı](architecture/camera-setup/README.md)
 sırasıyla sürer; **Hand-eye kapsam dışı.** Tamamlanmış KMC/ICM/EXP işleri yeniden başlatılmaz.
 

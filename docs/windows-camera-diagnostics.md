@@ -49,3 +49,22 @@ Kablo çıkarılmışken ayrı normal probe isteğiyle open reddini kaydedin; ku
 geri taktıktan sonra yeni kanıt dizininde normal tek kare isteğiyle manuel reopen
 gözlemi alın. Aradaki başarılı kare sayısı, USB çıkarıldıktan sonraki kare sayısı
 veya kopma algılama süresi olarak yorumlanamaz.
+
+### CCUX-15 plakasız manuel kontroller
+
+`oecs_experimental_probe ... exposure-us 1 --preview-60s`, Camera Manager ile
+aynı `CameraPreviewSession` üzerinden 60 saniye sıralı edinim yapar; bu modda
+`count` yerine süre kullanılır. JSON stdout'unu dosyaya yönlendirin: tamamlanan
+kare/FPS, süre, Stop generation/kare temizliği ve drain; ilk/son PGM+JSON ayrı
+yazılır. `--wrong-camera` bulunmayan seri, `--wrong-geometry` 2447×2048 istek
+ile ret bekler (probe exit 1; PGM oluşmamalı). Sonrasında exact readback alın.
+Probe'un lens/düzlem alanları doğrulanmamış etiketlerdir; fiziksel optik kabulü
+veya ürün UI'sındaki eksik kurulum kapısının geçildiği anlamına gelmez.
+
+`oecs_camera_settings_test.exe --physical-update absolute-dll absolute-new-report.json`
+gerçek keşif/kimlik ve geçici projede exposure'ı aralıkta 1000 µs değiştirir,
+gain'i raporlanan karşı sınıra alır; her kayıttan sonra servisi yeniden açar.
+Başarılı koşum eski scalar değerleri geri yükleyip readback'i raporlar.
+Hata başarı sayılmaz; sonraki `--physical` yeniden açma/readback ile mevcut
+durumu kontrol edin. Bu test görüntü almaz. 22 Ekim denemesinde 7000 µs / 1 dB
+isteği readback farkıyla reddedildi; sessiz tolerans genişletilmedi.
