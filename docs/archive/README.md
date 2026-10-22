@@ -6,6 +6,7 @@ görev” ifadeleri yazıldıkları tarihe aittir.
 
 | Dönem / görev | Kayıt |
 | --- | --- |
+| 22 Ekim 2026 — CCUX-10b | [Editor kamera seçiminde widget yaşam süresi düzeltmesi](2026-10-22-ccux-10b.md) |
 | 22 Ekim 2026 — CCUX-03b | [Camera Manager kayıt/ayar kilidi, ayrı OECS settings yolu ve fiziksel UI readback](2026-10-22-ccux-03b.md) |
 | 22 Ekim 2026 — CCUX-15 bekliyor | [Fiziksel kabul önkoşulları; yeni donanım/mm koşumu yapılmadı](2026-10-22-ccux-15.md) |
 | 22 Ekim 2026 — CCUX-14 | [Birleşik e2e, iki Release kabul matrisi ve görsel düzeltmeler](2026-10-22-ccux-14.md) |

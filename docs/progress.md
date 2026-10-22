@@ -5,11 +5,11 @@
 ## Devam noktası
 
 **Sonraki görev: [CCUX-15](architecture/camera-setup/15-physical-acceptance.md).**
-**CCUX-03b düzeltildi:** Opto ayar okuma/yazma native edinimden ayrıldı;
-kayıtlı kamera ve unsupported yönlendirmesi görünür. Gerçek 02A2220000627 ile
-Ekle → oku → mevcut 5000 µs / 0 dB kaydet geçici projede doğrulandı; görüntü/mm
-koşumu değildir. Release, ilgili test ve iki boyut görsel kanıtı
-[kapanışta](archive/2026-10-22-ccux-03b.md), `build/ccux/ccux-03b/`.
+**CCUX-10b:** Editor kamera seçimi sırasında seçicinin silinmesi düzeltildi.
+Klavye olayı regresyonu ve kanıtlar [kapanışta](archive/2026-10-22-ccux-10b.md).
+**CCUX-03b:** Opto ayar servisi edinimden ayrıldı. Gerçek cihazda kayıt/oku/mevcut
+ayar kaydı doğrulandı; görüntü/mm koşumu değildir.
+[Kanıt](archive/2026-10-22-ccux-03b.md), `build/ccux/ccux-03b/`.
 **CCUX-15 fiziksel kabul bekliyor; tamamlanmadı.** 22 Ekim önkoşul incelemesinde
 kullanıcının karanlık ortam bildirimi, doğrulanmamış lens/çalışma düzlemi,
 bağımsız fiziksel referans ve iş toleransı eksikleri kaydedildi. Yeni kamera

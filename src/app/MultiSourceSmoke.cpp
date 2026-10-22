@@ -3,6 +3,8 @@
 #include "ImageViewer.hpp"
 #include <QApplication>
 #include <QComboBox>
+#include <QKeyEvent>
+#include <QPointer>
 #include <QDir>
 #include <QElapsedTimer>
 #include <QGraphicsPixmapItem>
@@ -66,7 +68,12 @@ bool MainWindow::verifyMultiSource(const QString& artifacts){
     AcquisitionProfile profile{{"ui-profile"},camera.id,setup.id,"Mono8 software trigger",1,{"Mono8",{true,"FrameStart","Software"},AutoMode::Off,100,AutoMode::Off,1,{}}};
     measurementWorkspace_->replace({{camera},{setup},{profile}});refreshWorkspace();selectTool(industrial);
     auto* cameras=findChild<QComboBox*>("sourceCameraSelector");check(cameras && cameras->count()==2,"Offline registry camera listed");
-    cameras->setCurrentIndex(1);cameras->activated(1);check(!editorSession_.busy() && !editorSession_.cycle,"Camera selection never acquires");
+    QPointer<QComboBox> selectingCamera=cameras;
+    QKeyEvent cameraDown(QEvent::KeyPress,Qt::Key_Down,Qt::NoModifier);
+    QApplication::sendEvent(cameras,&cameraDown);
+    check(selectingCamera,"Camera selector survives its input event");
+    QApplication::processEvents();
+    check(!editorSession_.busy() && !editorSession_.cycle,"Camera selection never acquires");
     check(IndustrialSourceReference::fromJson(service_.tools().last().parameters["sourceReference"].toObject()).camera==camera.id && SystemCalibration::setupReference(SystemCalibration::branch(*service_.activeRecipe(),industrial))->setup==setup.id,"Camera UI atomically binds profile and setup");
     service_.save();const auto definition=service_.activeRecipe()->definition;const auto industrialRecipe=service_.activeRecipe()->id;service_.openProject(service_.path());service_.selectRecipe(industrialRecipe);refreshWorkspace();selectTool(industrial);
     check(service_.activeRecipe()->definition==definition && findChild<QPushButton*>("runSelectedTool")->isEnabled(),"Bound offline source survives reopen");
