@@ -20,14 +20,16 @@ QString CalibrationWizardSession::configurationId(const QJsonObject& config){
 void CalibrationWizardSession::cancel(){if(cancel_)cancel_->store(true);ticket_.clear();cancel_.reset();}
 void CalibrationWizardSession::invalidateSelection(){first_.clear();second_.clear();model_.reset();}
 void CalibrationWizardSession::clear(){cancel();frame_.reset();points_.clear();scans_.clear();invalidateSelection();knownMm_=0;modelId_.clear();plate_.reset();plateConfirmed_=false;}
-void CalibrationWizardSession::useFrame(ImageFrame f,MeasurementSetup s,QString origin){
+void CalibrationWizardSession::useFrame(ImageFrame f,MeasurementSetup s,QString origin,std::optional<ExperimentalCalibrationEvidence> experimental){
     // Failed replacement must not leave the previous draft available as current.
     clear();s.validate();const auto& m=f.metadata();
     require(f.size()==s.resolution && f.processing().isEmpty() && m.coordinateSystemId==s.source.id &&
         !m.sourceId.isEmpty() && !m.frameId.isEmpty() && !m.cycleId.isEmpty() && m.completedAtUtc.isValid(),"Raw frame/setup provenance mismatch");
     require(origin=="acquired" || origin=="setup_file" || origin=="trial_file","Invalid image origin");
     require(origin!="acquired" || !m.sourceId.startsWith("calibration-test:"),"Imported test cannot become acquired");
-    frame_=f;setup_=s;image_={origin,m.sourceId,m.frameId,QString::fromLatin1(f.contentId().toHex())};modelId_=id();
+    require(experimental.has_value()==!m.experimentalAcquisition.isEmpty(),"Experimental frame evidence cannot be removed");
+    if(experimental){experimental->verify(f);require((origin=="acquired" && experimental->origin==SourceOrigin::CameraAcquired) || (origin=="setup_file" && experimental->origin==SourceOrigin::SetupFile),"Experimental replay/live origin mismatch");origin="experimental_"+origin;}
+    frame_=f;setup_=s;image_={origin,m.sourceId,m.frameId,QString::fromLatin1(f.contentId().toHex()),experimental};modelId_=id();
 }
 void CalibrationWizardSession::importFile(QString path,MeasurementSetup s,bool declared){
     clear();auto image=ChessboardService::importImage(path);useFrame(image.frame,s,declared ? "setup_file":"trial_file");

@@ -1,5 +1,6 @@
 #include "IndependentCalibrationCapture.hpp"
 #include "WebcamAdapter.hpp"
+#include "MeasurementEnvironment.hpp"
 #include <QFileInfo>
 #include <QUuid>
 #include <limits>
@@ -9,9 +10,19 @@ namespace {
 void require(bool b,const char* why){if(!b)throw std::runtime_error(why);}
 QString id(){return QUuid::createUuid().toString(QUuid::WithoutBraces);}
 }
+IndependentCaptureRequest IndependentCaptureRequest::fromDefaults(const MeasurementEnvironment& e,const CameraId& id,CalibrationCapturePolicy policy,QString path){
+    const auto defaults=e.defaults(id);require(defaults.status==CameraDefaultsStatus::Ready && defaults.setup.has_value(),"Ready unambiguous camera defaults required");
+    IndependentCaptureRequest r;r.origin=path.isEmpty() ? SourceOrigin::CameraAcquired:SourceOrigin::SetupFile;r.filePath=std::move(path);r.policy=policy;
+    for(const auto& c:e.current.cameras)if(c.id==id)r.camera=c;
+    for(const auto& s:e.current.setups)if(s.id==*defaults.setup && s.camera==id)r.setup=s;
+    if(r.camera && r.camera->physical && defaults.profile)for(const auto& p:e.current.profiles)if(p.id==*defaults.profile)r.profile=p;
+    r.validate();return r;
+}
 void IndependentCaptureRequest::validate() const {
     require(timeoutMs>0 && timeoutMs<=60000,"Capture timeout must be 1–60000 ms");
     require(origin==SourceOrigin::CameraAcquired || origin==SourceOrigin::SetupFile || origin==SourceOrigin::TrialFile,"Unsupported acquisition origin");
+    require(policy==CalibrationCapturePolicy::Trusted || policy==CalibrationCapturePolicy::ExperimentalOecs,"Unknown calibration capture policy");
+    if(policy==CalibrationCapturePolicy::ExperimentalOecs)require(camera && camera->physical && setup && profile && origin!=SourceOrigin::TrialFile,"Experimental capture requires frozen camera/setup/profile target");
     if(origin==SourceOrigin::TrialFile)require(!camera && !setup && !profile && !localRoute,"Trial file cannot declare a physical target");
     else {
         require(camera.has_value() && setup.has_value(),"Capture requires exact camera/setup snapshot");MeasurementSetupContract{{*camera},{*setup},profile ? QVector<AcquisitionProfile>{*profile}:QVector<AcquisitionProfile>{}}.validate();require(setup->geometry.complete,"Critical geometry unknown");
@@ -54,7 +65,7 @@ IndependentCaptureResult IndependentCalibrationSession::run(const IndependentCap
             if(backend.create)adapter=backend.create(actual,r.setup->geometry);
             else adapter=std::make_unique<WebcamAdapter>(WebcamSettings{0,"qt",actual.providerId,r.setup->geometry.resolution});
             require(adapter && adapter->capabilities().sourceKind=="webcam","Unsupported actual camera adapter");
-        }else if(r.origin!=SourceOrigin::CameraAcquired)adapter=std::make_unique<ImageFileAdapter>(r.filePath);
+        }else if(r.origin!=SourceOrigin::CameraAcquired)adapter=std::make_unique<ImageFileAdapter>(r.filePath,r.policy==CalibrationCapturePolicy::ExperimentalOecs);
         const auto source=r.origin==SourceOrigin::CameraAcquired ? job.sourceId_:"calibration-test:"+job.sourceId_;
         auto image=[&]() -> ImageFrame {
             if(adapter){
@@ -67,7 +78,7 @@ IndependentCaptureResult IndependentCalibrationSession::run(const IndependentCap
             require(!job.cancel_->load() && !job.deadline_.expired(),"Industrial discovery cancelled/expired");
             IndustrialCameraRequest request{*r.camera,*r.setup,*r.profile,{},source};
             request.device=CameraService::resolveIndustrial(*r.camera,discovery,r.localRoute);
-            auto session=backend.factory.open(request,CameraLeaseUse::Calibration,FrameQueueMode::ProductionFifo,1);
+            auto session=r.policy==CalibrationCapturePolicy::ExperimentalOecs ? ExperimentalOecsAcquisition::openCalibration(request,ExperimentalOecsAcquisition::installedRuntime(),backend.experimentalApi):backend.factory.open(request,CameraLeaseUse::Calibration,FrameQueueMode::ProductionFifo,1);
             auto command=[&](CameraOperation op,CameraState expected){
                 require(!job.cancel_->load() && !job.deadline_.expired(),"Industrial capture cancelled/expired");
                 session->submit(op,job.deadline_.remainingMs());
@@ -89,9 +100,19 @@ IndependentCaptureResult IndependentCalibrationSession::run(const IndependentCap
             return frame->image; // owned raster survives worker shutdown and lease release
         }();
         require(image.processing().isEmpty(),"Only raw acquisition accepted");
-        auto meta=image.metadata();meta.coordinateSystemId="image";image=image.withMetadata(meta);
+        auto meta=image.metadata();meta.coordinateSystemId="image";
+        if(r.policy==CalibrationCapturePolicy::ExperimentalOecs && r.origin==SourceOrigin::CameraAcquired){
+            meta.experimentalAcquisition["contentId"]=QString::fromLatin1(image.contentId().toHex());
+            meta.experimentalAcquisition["frameId"]=meta.frameId;meta.experimentalAcquisition["sourceId"]=meta.sourceId;
+            meta.experimentalAcquisition["completedAtUtc"]=meta.completedAtUtc.toString(Qt::ISODateWithMs);
+        }
+        image=image.withMetadata(meta);
         MeasurementSourceEvidence evidence{r.origin,meta.sourceId,meta.frameId,meta.cycleId,meta.coordinateSystemId,QString::fromLatin1(image.contentId().toHex()),r.filePath,job.generation_,{},SourceIdentityKind::CalibrationSession};
         MeasurementSetup mathSetup;
+        if(r.policy==CalibrationCapturePolicy::ExperimentalOecs){
+            ExperimentalCalibrationEvidence proof{r.origin,*r.camera,*r.setup,*r.profile,meta.experimentalAcquisition};proof.verify(image);evidence.experimental=proof;
+            result.profile_=r.profile;
+        }else require(meta.experimentalAcquisition.isEmpty(),"Experimental raster requires calibration opt-in");
         if(r.setup){
             require(image.size()==r.setup->geometry.resolution,"Actual frame/setup geometry mismatch");evidence.target=SetupReference{r.camera->id,r.setup->id,r.setup->revision};
             // Path is evidence only. Replacing a setup file never changes physical identity.
@@ -104,6 +125,6 @@ IndependentCaptureResult IndependentCalibrationSession::run(const IndependentCap
 bool IndependentCalibrationSession::accept(const IndependentCaptureResult& result){
     owner();if(ticket_.isEmpty() || ticket_!=result.ticket_ || generation_!=result.generation_ || !cancel_)return false;
     const bool cancelled=cancel_->load();ticket_.clear();cancel_.reset();evidence_.reset();acceptedSetup_.reset();profile_.reset();device_.reset();math_.clear();if(cancelled || !result.error_.isEmpty() || !result.frame_ || !result.evidence_ || !result.mathSetup_)return false;
-    const auto origin=result.evidence_->origin;math_.useFrame(*result.frame_,*result.mathSetup_,origin==SourceOrigin::CameraAcquired ? "acquired":sourceOriginName(origin));evidence_=result.evidence_;acceptedSetup_=result.mathSetup_;profile_=result.profile_;device_=result.device_;return true;
+    const auto origin=result.evidence_->origin;math_.useFrame(*result.frame_,*result.mathSetup_,origin==SourceOrigin::CameraAcquired ? "acquired":sourceOriginName(origin),result.evidence_->experimental);evidence_=result.evidence_;acceptedSetup_=result.mathSetup_;profile_=result.profile_;device_=result.device_;return true;
 }
 }

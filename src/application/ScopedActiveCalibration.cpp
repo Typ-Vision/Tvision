@@ -52,7 +52,7 @@ int ScopedActiveCalibrationService::migrateLegacy(const SetupReference& ref,cons
 void ScopedActiveCalibrationService::activate(const SetupReference& ref,const QString& content,const IndependentCalibrationSession& probe,MeasurementEnvironmentRepository::Fault fault){
     const auto e=environment();require(gate_(),"Runtime/worker/pending record/ACK busy");require(revision_<1000000000,"Activation revision exhausted");
     const auto expected=installation(e,ref);const auto proof=probe.evidence();
-    require(!probe.busy() && proof && proof->origin==SourceOrigin::CameraAcquired && proof->target==std::optional(ref) && probe.acceptedSetup()==std::optional(expected),"Accepted actual camera probe for exact installation required");
+    require(!probe.busy() && proof && !proof->experimental && proof->origin==SourceOrigin::CameraAcquired && proof->target==std::optional(ref) && probe.acceptedSetup()==std::optional(expected),"Accepted actual camera probe for exact installation required");
     const auto profile=probe.acceptedProfile();const auto device=probe.acceptedDevice();
     for(const auto& c:e.current.cameras)if(c.id==ref.camera && c.physical){
         require(profile && device && device->identity==*c.physical && currentProfile(e,*profile),"Actual industrial probe profile changed; acquire again");

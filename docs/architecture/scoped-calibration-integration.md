@@ -62,3 +62,31 @@ kurulumları mevcut pending biçimine geçirir: bilinmeyen lens/düzlem/geometri
 beyanı temizlenir, setup revision artar ve kamera izinleri düşer. Kayıtlı seçim ve
 immutable tarihçe kalır. Yeni fiziksel beyan ayrı revision üretir; A→unknown→A
 eski modeli canlandırmaz. Başka kameranın izni değişmez. UI bu kartta eklenmedi.
+
+## CCUX-07 — deneysel kalibrasyon edinimi ve aday codec'i
+
+`IndependentCaptureRequest::fromDefaults` kayıtlı kameranın tek anlamlı, hazır
+CCUX kurulum/profilini değer kopyasıyla dondurur. `ExperimentalOecs` politikası
+yalnız çağıran oturumun açık tercihidir; proje/INI'den geri yüklenmez. Canlı yol
+ayrı `openCalibration` girişinden Calibration lease alır; native production
+factory/admission değişmez. İptal/deadline ve generation eski sonucu emekliye
+ayırır. Deneysel dosya yalnız explicit SetupFile hedefi ve işaretli PGM+JSON ile
+kabul edilir; normal PNG trial aynı kalır.
+
+`ExperimentalCalibrationEvidence` kamera/kurulum/profil ve özgün acquisition
+kanıtını taşır. Raster hash, seri, gerçek readback/geometri ve profil exact
+denetlenir; replay CameraAcquired olmaz. Canlı/replay matematiği aynı fiziksel
+kurulum alanında hesaplanabilir fakat farklı edinim kökenini korur. Gelecekteki
+deneysel kullanım yine güncel exact kimlik/geometri/profil ve oturum politikası
+ister; bu kart aktivasyon izni vermez.
+
+Eski MeasurementSourceEvidence schema1 aynen yazılır; deneysel source **schema2**
+zarfı `source` (özgün schema1) ve `experimental` (typed evidence schema1) taşır.
+Kalibrasyon adayı **schema6 / experimental-model-ready/1** ile image origin'ini
+`experimental_acquired` veya `experimental_setup_file` yazar ve `experimental`
+alanını hash'e dahil eder. Evidence içindeki `physicalAcceptance:false`,
+`triggerAssociationVerified:false`, `productionAdmission:false` korunur.
+Model matematiği mevcut kaliper/plaka solver'ından gelir; bağımsız fiziksel kabul
+değildir. Eski record schema1–5 no-op encode/hash korunur. Schema6 kanıtı silmek,
+legacy migration/association veya normal Active/SystemCalibration yoluyla trusted
+izne çevirmek reddedilir. Aktivasyon CCUX-08; Runtime mm CCUX-12 kapsamıdır.

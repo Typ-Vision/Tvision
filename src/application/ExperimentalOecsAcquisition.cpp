@@ -108,6 +108,13 @@ std::unique_ptr<CameraWorkerSession> ExperimentalOecsAcquisition::open(const Ind
     return std::make_unique<CameraWorkerSession>(request.device.identity,CameraLeaseUse::Editor,request.sourceId,FrameQueueMode::PreviewLatest,
         [request,dll,api=std::move(api)]{return std::make_unique<Backend>(request,dll,api);},1);
 }
+std::unique_ptr<CameraWorkerSession> ExperimentalOecsAcquisition::openCalibration(const IndustrialCameraRequest& request,const QString& dll,ApiFactory api){
+    request.validate();require(supported(request.device.identity),"Experimental calibration device unsupported");
+    require(QFileInfo(dll).isAbsolute() && bool(api),"Absolute OECS runtime and API required");
+    require(request.profile.requested.trigger==TriggerSettings{true,"FrameBurstStart","Software"},"Explicit experimental FrameBurstStart profile required");
+    return std::make_unique<CameraWorkerSession>(request.device.identity,CameraLeaseUse::Calibration,request.sourceId,FrameQueueMode::PreviewLatest,
+        [request,dll,api=std::move(api)]{return std::make_unique<Backend>(request,dll,api);},1);
+}
 void ExperimentalOecsAcquisition::save(const AcquiredFrame& frame,const QString& path){
     const auto& image=frame.image;auto evidence=image.metadata().experimentalAcquisition;
     require(evidence.value("schema")=="visionflow.oecs-experimental1" && evidence.value("policy")=="UnverifiedNextArrival" &&

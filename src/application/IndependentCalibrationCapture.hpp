@@ -3,10 +3,13 @@
 #include "CalibrationWizardSession.hpp"
 #include "MeasurementSourceIdentity.hpp"
 #include "IndustrialCameraProvider.hpp"
+#include "ExperimentalOecsAcquisition.hpp"
 #include <QThread>
 #include <functional>
 
 namespace visionflow {
+enum class CalibrationCapturePolicy { Trusted, ExperimentalOecs };
+struct MeasurementEnvironment;
 // No recipe or ToolDefinition. Targeted files require an explicit setup declaration;
 // trial files have no target and cannot acquire camera provenance.
 struct IndependentCaptureRequest {
@@ -17,8 +20,12 @@ struct IndependentCaptureRequest {
     int timeoutMs=5000;
     std::optional<AcquisitionProfile> profile;
     std::optional<TransportLocator> localRoute;
+    // Explicit owner-session opt-in, never restored from project/INI.
+    CalibrationCapturePolicy policy=CalibrationCapturePolicy::Trusted;
     void validate() const;
     static MeasurementSetup installation(const MeasurementCamera&,const MeasurementSetupDescriptor&);
+    static IndependentCaptureRequest fromDefaults(const MeasurementEnvironment&,const CameraId&,
+        CalibrationCapturePolicy=CalibrationCapturePolicy::Trusted,QString replayPath={});
 };
 // Adapter seam for deterministic contract tests, not a user-editable source claim.
 struct IndependentCaptureBackend {
@@ -26,6 +33,7 @@ struct IndependentCaptureBackend {
     std::function<std::unique_ptr<AcquisitionAdapter>(const DeviceBinding&,const GeometryDescriptor&)> create;
     CameraProviderFactory factory;
     std::function<IndustrialDiscoverySnapshot()> industrialDiscover;
+    ExperimentalOecsAcquisition::ApiFactory experimentalApi=makeOecsCApi;
 };
 class IndependentCaptureJob {
     friend class IndependentCalibrationSession;

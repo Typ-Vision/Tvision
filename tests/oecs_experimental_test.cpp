@@ -1,6 +1,88 @@
 #include "OecsExperimentalFixture.hpp"
+#include "application/IndependentCalibrationCapture.hpp"
+#include "application/MeasurementEnvironment.hpp"
+#include "application/SystemCalibration.hpp"
+#include "chessboard_fixture.hpp"
+#include <cmath>
 using namespace oecs_experimental_fixture;
+
+namespace {
+void calibrationCaptureChecks(){
+    const auto r=request();auto deviceState=state();
+    MeasurementEnvironment environment;environment.projectId="fixture";environment.current={{r.camera},{r.setup},{r.profile}};
+    environment.history={r.setup};environment.registrations[r.camera.id.value]={"CAM_01",r.setup.id,r.profile.id};
+    auto capture=IndependentCaptureRequest::fromDefaults(environment,r.camera.id,CalibrationCapturePolicy::ExperimentalOecs);capture.timeoutMs=3000;
+    auto frozen=capture;environment.current.profiles[0].requested.exposureTimeUs=6000;
+    check(frozen.profile->requested.exposureTimeUs==5000,"capture freezes CCUX defaults by value");
+    auto ambiguous=environment;ambiguous.registrations.clear();auto second=r.profile;second.id={"second-profile"};ambiguous.current.profiles.append(second);
+    rejects([&]{IndependentCaptureRequest::fromDefaults(ambiguous,r.camera.id,CalibrationCapturePolicy::ExperimentalOecs);});
+    IndependentCaptureBackend backend;backend.industrialDiscover=[r]{return IndustrialDiscoverySnapshot{{r.device},{},false};};
+    backend.experimentalApi=[deviceState]{return std::make_unique<Api>(deviceState);};
+    auto stripe=[&]{deviceState->pixels.fill(char(20));for(int y=0;y<2048;++y)for(int x=120;x<520;++x)deviceState->pixels[y*2448+x]=char(220);};stripe();
+    IndependentCalibrationSession session;
+    auto acquire=[&]{return IndependentCalibrationSession::run(session.begin(capture),backend);};
+    {auto held=ExperimentalOecsAcquisition::open(r,QDir::temp().absoluteFilePath("experimental.dll"),backend.experimentalApi);auto denied=acquire();check(!session.accept(denied),"calibration respects existing Editor lease");}
+    auto live=acquire();check(live.error().isEmpty() && session.accept(live),"experimental recipe-free live calibration fixture");
+    const auto liveProof=*session.evidence();const auto liveImage=*session.math().frame();
+    check(liveProof.experimental && liveProof.origin==SourceOrigin::CameraAcquired && liveProof.toJson()["schemaVersion"]==2 &&
+        MeasurementSourceEvidence::fromJson(liveProof.toJson())==liveProof,"typed experimental source roundtrip");
+    auto& math=session.math();
+    auto pair=CalibrationWizardSession::run(math.scanPair("experimental-pair",{{"image"},ScanSegment{{20,100},{620,100},4}}));
+    check(pair.error().isEmpty() && math.accept(pair) && std::abs(*math.distancePixels()-400)<.01,"existing caliper on experimental real fixture raster");
+    math.setKnownMillimetres(10);const auto candidate=math.calculate();
+    check(candidate.image().origin=="experimental_acquired" && !candidate.activatable() && candidate.encode()["schemaVersion"]==6 &&
+        !candidate.controlAccepted() && std::abs(candidate.model().millimetresPerPixel()-.025)<1e-9,"experimental candidate has math without physical/production acceptance");
+    const auto encoded=candidate.named("Experimental fixture").encode();check(CalibrationModelRecord::decode(encoded).encode()==encoded,"schema6 candidate immutable roundtrip");
+    auto stripped=encoded;stripped.remove("experimental");rejects([&]{CalibrationModelRecord::decode(stripped);});
+    stripped=encoded;stripped["schemaVersion"]=2;stripped["policy"]="model-ready/1";stripped.remove("experimental");rejects([&]{CalibrationModelRecord::decode(stripped);});
+    rejects([&]{math.useFrame(liveImage,candidate.setup(),"acquired");});
+    rejects([&]{CalibrationModelRecord::mapLegacy(candidate,candidate.setup(),"Unsafe migration",QDateTime::currentDateTimeUtc());});
+    auto clearEvidence=candidate.image();clearEvidence.experimental.reset();rejects([&]{CalibrationModelRecord::create(candidate.model(),candidate.setup(),clearEvidence);});
+    QTemporaryDir directory(QDir::currentPath()+"/ccux07-calibration-XXXXXX");check(directory.isValid(),"build-only experimental calibration fixtures");
+    ActiveCalibrationService catalog(directory.filePath("catalog.json"),"fixture",[]{return true;});catalog.save(candidate);
+    check(catalog.records().front().encode()==candidate.encode(),"catalog candidate persistence");
+    rejects([&]{catalog.activate(candidate.model().dependency().calibrationId,1,candidate.setup());});
+    ActiveCalibrationSnapshot unsafe{candidate,{candidate.model().dependency().calibrationId,candidate.contentId(),1,1}};
+    rejects([&]{SystemCalibration::evidence(unsafe,"source","image");});
+    const auto path=directory.filePath("capture.pgm");const auto meta=liveImage.metadata();
+    ExperimentalOecsAcquisition::save({liveImage,meta.sourceId,meta.cycleId,meta.frameId,meta.completedAtUtc},path);
+    auto replay=capture;replay.origin=SourceOrigin::SetupFile;replay.filePath=path;
+    auto replayResult=[&]{return IndependentCalibrationSession::run(session.begin(replay),backend);};
+    check(session.accept(replayResult()) && session.evidence()->origin==SourceOrigin::SetupFile &&
+        session.math().frame()->contentId()==liveImage.contentId() && session.evidence()->experimental->origin==SourceOrigin::SetupFile,"replay retains file identity and exact raster");
+    pair=CalibrationWizardSession::run(math.scanPair("replay-pair",{{"image"},ScanSegment{{20,100},{620,100},4}}));check(math.accept(pair),"replay caliper");math.setKnownMillimetres(10);
+    check(math.calculate().image().origin=="experimental_setup_file" && !math.calculate().activatable(),"replay math remains experimental");
+    auto wrong=replay;wrong.policy=CalibrationCapturePolicy::Trusted;check(!session.accept(IndependentCalibrationSession::run(session.begin(wrong),backend)),"opt-in off rejects marked raster");
+    wrong=capture;wrong.policy=CalibrationCapturePolicy::Trusted;check(!session.accept(IndependentCalibrationSession::run(session.begin(wrong),backend)),"production factory remains unavailable");
+    wrong=replay;wrong.camera->physical->serial="OTHER";check(!session.accept(IndependentCalibrationSession::run(session.begin(wrong),backend)),"foreign serial replay rejected");
+    wrong=replay;wrong.setup->geometry.reverse=GeometryMirror{true,false};check(!session.accept(IndependentCalibrationSession::run(session.begin(wrong),backend)),"wrong geometry replay rejected");
+    wrong=replay;wrong.profile->revision=2;check(!session.accept(IndependentCalibrationSession::run(session.begin(wrong),backend)),"wrong profile replay rejected");
+    QFile sidecar(path+".json");check(sidecar.open(QIODevice::ReadOnly),"read replay proof");const auto bytes=sidecar.readAll();sidecar.close();
+    const auto original=QJsonDocument::fromJson(bytes).object();
+    for(const auto& field:QStringList{"serial","contentId","readback","profileSnapshot","productionAdmission","triggerAssociationVerified"}){
+        auto bad=original;bad[field]=true;check(sidecar.open(QIODevice::WriteOnly|QIODevice::Truncate),"mutate sidecar");sidecar.write(QJsonDocument(bad).toJson());sidecar.close();
+        check(!session.accept(replayResult()) && !session.math().frame() && !session.evidence(),"changed sidecar cannot retain cached draft");
+    }
+    check(sidecar.open(QIODevice::WriteOnly|QIODevice::Truncate),"invalid sidecar");sidecar.write("{broken");sidecar.close();check(!session.accept(replayResult()),"broken JSON rejected");
+    check(sidecar.remove(),"remove sidecar");check(!session.accept(replayResult()),"missing JSON rejected");
+    check(sidecar.open(QIODevice::WriteOnly),"restore sidecar");sidecar.write(bytes);sidecar.close();
+    auto job=session.begin(replay);auto done=IndependentCalibrationSession::run(job,backend);session.cancel();check(!session.accept(done),"Stop suppresses experimental callback");
+    job=session.begin(replay);done=IndependentCalibrationSession::run(job,backend);auto newer=session.begin(replay);check(!session.accept(done) && session.accept(IndependentCalibrationSession::run(newer,backend)),"new generation suppresses old experimental callback");
+    stripe();job=session.begin(capture);deviceState->waitHook=[&]{job.cancel();};auto stopped=IndependentCalibrationSession::run(job,backend);check(!session.accept(stopped),"cancel during experimental SDK wait suppresses owned raster");deviceState->waitHook={};
+    QImage plate(2448,2048,QImage::Format_Grayscale8);plate.fill(255);const auto board=chessboardFixture();for(int y=0;y<board.height();++y)std::copy_n(board.constScanLine(y),board.width(),plate.scanLine(y));
+    deviceState->pixels=QByteArray(reinterpret_cast<const char*>(plate.constBits()),plate.sizeInBytes());
+    check(session.accept(acquire()),"experimental chessboard fixture acquired");
+    const auto observation=CalibrationWizardSession::run(math.scanPlate({"grid",9,6,10}));check(observation.error().isEmpty() && math.accept(observation),"existing chessboard detector on experimental raster");math.confirmPlate();
+    const auto mapping=math.calculatePlate();check(mapping.model().mapping().has_value() && mapping.image().experimental && !mapping.activatable(),"experimental plate candidate preserves evidence");
+    check(CalibrationModelRecord::decode(mapping.encode()).encode()==mapping.encode(),"experimental plate record roundtrip");
+    auto normalImage=candidate.image();normalImage.origin="acquired";normalImage.experimental.reset();const auto old=CalibrationModelRecord::create(candidate.model(),candidate.setup(),normalImage).encode();
+    check(old["schemaVersion"]==1 && !old.contains("experimental") && CalibrationModelRecord::decode(old).encode()==old,"old schema1 no-op codec/hash unchanged");
+    session.cancel();
+}
+}
+
 int main(int argc,char** argv){QCoreApplication app(argc,argv);try{
+    calibrationCaptureChecks();
     check(makeOecsCApi()->softwareTriggerCorrelation()==OecsTriggerCorrelation::Unavailable,"native trusted capability stays unavailable");
     CameraProviderFactory native;check(!native.capabilities(request().device).softwareTrigger && !native.capabilities(request().device).preview,"production factory unchanged");
     {auto r=request();r.profile.requested.trigger.selector="FrameStart";rejects([&]{ExperimentalOecsAcquisition::open(r,"C:/fake.dll");});}

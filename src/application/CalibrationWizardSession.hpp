@@ -67,7 +67,7 @@ public:
     CalibrationWizardSession& operator=(const CalibrationWizardSession&)=delete;
     ~CalibrationWizardSession(){cancel();}
     static QString configurationId(const QJsonObject& relevantAdapterConfiguration);
-    void useFrame(ImageFrame,MeasurementSetup,QString origin);
+    void useFrame(ImageFrame,MeasurementSetup,QString origin,std::optional<ExperimentalCalibrationEvidence> = {});
     void importFile(QString path,MeasurementSetup,bool declaredSameSetup);
     void clear();
     void cancel();

@@ -86,6 +86,7 @@ target_sources(visionflow_acquisition PRIVATE src/application/ActiveCalibrationS
 target_sources(visionflow_acquisition PRIVATE src/application/CalibrationWizardSession.cpp)
 target_sources(visionflow_acquisition PRIVATE src/application/CalibrationCapture.cpp)
 target_sources(visionflow_acquisition PRIVATE src/application/MeasurementSourceIdentity.cpp)
+target_sources(visionflow_acquisition PRIVATE src/application/ExperimentalCalibrationEvidence.cpp)
 target_sources(visionflow_acquisition PRIVATE src/application/MeasurementEnvironment.cpp src/application/MeasurementProjectTransfer.cpp)
 target_sources(visionflow_acquisition PRIVATE src/application/ScopedActiveCalibration.cpp)
 target_sources(visionflow_acquisition PRIVATE src/application/IndependentCalibrationCapture.cpp)

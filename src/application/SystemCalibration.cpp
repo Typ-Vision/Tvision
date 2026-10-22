@@ -32,7 +32,7 @@ void valid(const ActiveCalibrationSnapshot& snapshot){const auto r=CalibrationMo
         const auto a=snapshot.acquisition;
         require(!snapshot.scope.isEmpty() && a.size()==3 && a["schemaVersion"]==1 && a["probe"].isObject(),"Invalid session acquisition envelope");
         const auto probe=MeasurementSourceEvidence::fromJson(a["probe"].toObject());
-        require(probe.origin==SourceOrigin::CameraAcquired && probe.sourceKind==SourceIdentityKind::CalibrationSession && probe.target && probe.target->toJson()==snapshot.scope["target"].toObject(),"Session acquisition target/origin mismatch");
+        require(!probe.experimental && probe.origin==SourceOrigin::CameraAcquired && probe.sourceKind==SourceIdentityKind::CalibrationSession && probe.target && probe.target->toJson()==snapshot.scope["target"].toObject(),"Session acquisition target/origin mismatch");
         if(snapshot.scope["schemaVersion"]==2){require(a["backend"].isObject() && snapshot.scope["profile"].isObject(),"Missing session backend/profile");BackendIdentity::fromJson(a["backend"].toObject());}
         else require(a["backend"].isNull(),"Webcam cannot claim industrial backend");
     }}

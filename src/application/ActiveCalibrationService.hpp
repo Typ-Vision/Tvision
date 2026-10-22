@@ -1,5 +1,6 @@
 #pragma once
 #include "MeasurementService.hpp"
+#include "ExperimentalCalibrationEvidence.hpp"
 #include <functional>
 
 namespace visionflow {
@@ -17,6 +18,7 @@ struct MeasurementSetup {
 struct CalibrationImageEvidence {
     // acquired / setup_file (explicit same-installation declaration) / trial_file
     QString origin,sourceToolId,frameId,pixelHash;
+    std::optional<ExperimentalCalibrationEvidence> experimental;
     bool operator==(const CalibrationImageEvidence&) const = default;
 };
 struct CalibrationControl {

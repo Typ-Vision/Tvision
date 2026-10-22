@@ -4,14 +4,21 @@
 
 ## Devam noktası
 
-**Sonraki görev: [CCUX-07](architecture/camera-setup/07-experimental-calibration.md).**
+**Sonraki görev: [CCUX-08](architecture/camera-setup/08-save-use.md).**
+**CCUX-07 tamamlandı:** reçetesiz açık deneysel politika, CCUX varsayılanından
+immutable edinim; canlı OECS Calibration lease ve exact PGM+JSON replay. Typed
+köken, source schema2 ve aday schema6 hash içinde kimlik/geometri/profil ile
+korunur; replay dosya kalır, trusted active/system/completion reddedilir.
+Yeni Release + kartın 5 CTest'i (socket suite sandbox dışında yeniden) ve 6 codec/
+aktivasyon regresyonu geçti; [kapanış](archive/2026-10-22-ccux-07.md),
+`build/ccux/ccux-07/`. Fixture kaliper/plaka adayları fiziksel mm kabulü değildir.
+Aktivasyon CCUX-08, Runtime mm CCUX-12; UI bu kartta eklenmedi.
 **CCUX-06 tamamlandı:** kayıtlı tercih, matematik uyumu ve oturum izni ayrı DTO;
 yeni gerçek probe ile `prepareRemembered`, immutable model + yeni edinim zarf3;
 optik değişikliği bildirimi ilgili kurulumları pending revision'a alır.
 Restart/replug izin başlatmaz; exposure/gain yeniden fit istemez, yeni denetim ister.
 Yeni Release ve kartın 5 CTest'i geçti; [kapanış](archive/2026-10-22-ccux-06.md),
-`build/ccux/ccux-06/`. UI eklenmedi; deneysel edinim/opt-in CCUX-07'de, fiziksel
-kamera/mm kabulü yapılmadı. Kullanıcıya göre kamera bağlı, ortam karanlık.
+`build/ccux/ccux-06/`. UI eklenmedi; fiziksel kamera/mm kabulü yapılmadı. Kullanıcıya göre kamera bağlı, ortam karanlık.
 **CCUX-05 tamamlandı:** Tek görüntü / Canlı görüntü / Durdur ortak application
 session’ına bağlandı. Gerçek FPS ve edinim türü, generation ile eski kareyi
 silme, worker drain sonrası sayfa/proje/pencere geçişi ve yalnız geçerli görünen
