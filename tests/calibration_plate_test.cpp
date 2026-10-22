@@ -2,12 +2,14 @@
 #include "application/CircleGridService.hpp"
 #include "application/CalibrationService.hpp"
 #include "application/CalibrationStudyStore.hpp"
+#include "application/ImageFileService.hpp"
 #include "chessboard_fixture.hpp"
 #include <QCoreApplication>
 #include <QDir>
 #include <QTemporaryDir>
 #include <QJsonArray>
 #include <QFile>
+#include <QFileInfo>
 #include <QJsonDocument>
 #include <QTextStream>
 #include <limits>
@@ -52,7 +54,43 @@ Orientation orientation(const CalibrationGridObservation& o,bool perspective){
     return best;
 }
 }
-int main(int argc,char** argv){QCoreApplication app(argc,argv);try{
+int main(int argc,char** argv){QCoreApplication app(argc,argv);
+    // Explicit manual raster inspection; never a hardware CTest or activation.
+    if(argc>1){
+        QJsonObject report{{"physicalAccuracyAccepted",false},{"modelActivated",false}};
+        try{
+            if(argc!=7 || QString::fromLocal8Bit(argv[1])!="--inspect-circles")
+                throw std::runtime_error("usage: --inspect-circles raw-image columns rows spacing-mm new-report.json");
+            bool columnsOk=false,rowsOk=false,spacingOk=false;
+            const int columns=QString::fromLocal8Bit(argv[3]).toInt(&columnsOk),rows=QString::fromLocal8Bit(argv[4]).toInt(&rowsOk);
+            const double spacing=QString::fromLocal8Bit(argv[5]).toDouble(&spacingOk);
+            if(!columnsOk || !rowsOk || !spacingOk)throw std::runtime_error("Numeric target dimensions required");
+            const CalibrationGridTarget target{"operator-declared-plate",columns,rows,spacing,CalibrationGridPattern::SymmetricCircles};
+            target.validate();report["target"]=target.toJson();
+            auto raster=ImageFileService{}.load(QString::fromLocal8Bit(argv[2]),true);
+            auto metadata=raster.metadata();metadata.sourceId="manual-plate-inspection";
+            metadata.frameId=QString::fromLatin1(raster.contentId().toHex());metadata.cycleId=metadata.frameId;
+            metadata.coordinateSystemId="image";metadata.completedAtUtc=QDateTime::currentDateTimeUtc();
+            raster=raster.withMetadata(metadata);
+            report["pixelHash"]=QString::fromLatin1(raster.contentId().toHex());
+            report["acquisition"]=metadata.experimentalAcquisition;
+            report["inputPath"]=QFileInfo(QString::fromLocal8Bit(argv[2])).absoluteFilePath();
+            report["origin"]="offline_raster_inspection";
+            try{
+                const auto observation=CircleGridService::detect(raster,target);
+                const auto mapping=PlaneMappingService::fit(observation);
+                report["status"]="GRID_FIT_REQUIRES_OPERATOR_REVIEW";
+                report["mapping"]=PlaneMappingService::encode(mapping);
+            }catch(const std::exception& e){report["status"]="DETECTION_REJECTED";report["error"]=QString::fromUtf8(e.what());}
+            QFile output(QString::fromLocal8Bit(argv[6]));
+            if(!output.open(QIODevice::WriteOnly|QIODevice::NewOnly))throw std::runtime_error("New report file required");
+            const auto bytes=QJsonDocument(report).toJson();
+            if(output.write(bytes)!=bytes.size() || !output.flush())throw std::runtime_error("Report write failed");
+            QTextStream(stdout)<<bytes;
+            return report.contains("error")?1:0;
+        }catch(const std::exception& e){QTextStream(stderr)<<e.what()<<'\n';return 1;}
+    }
+    try{
     QTemporaryDir dir(QDir::currentPath()+"/plate-XXXXXX");check(dir.isValid(),"build fixture");dir.setAutoRemove(false);
     CalibrationGridTarget target{"circle plate",8,6,10,CalibrationGridPattern::SymmetricCircles};
     check(CalibrationGridTarget::fromJson(target.toJson()).toJson()==target.toJson(),"typed target descriptor roundtrip");

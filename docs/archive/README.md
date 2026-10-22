@@ -6,6 +6,7 @@ görev” ifadeleri yazıldıkları tarihe aittir.
 
 | Dönem / görev | Kayıt |
 | --- | --- |
+| 22 Ekim 2026 — CCUX-15b | [7×7 / 12 mm plaka ham karesi ve algılama reddi; ışık ve fiziksel kabul bekliyor](2026-10-22-ccux-15b.md) |
 | 22 Ekim 2026 — CCUX-PLAN-03 | [OECS seçenek/uyarıları ve eski kalibrasyon gezinmesini kaldırma; dört uygulama kartı](2026-10-22-ccux-plan-03.md) |
 | 22 Ekim 2026 — CCUX-15 teyit | [Referans/kurulum hazır değil; kullanıcı menü kabulü henüz denenmedi](2026-10-22-ccux-15-teyit.md) |
 | 22 Ekim 2026 — CCUX-15a | [Plakasız gerçek kamera/60 s preview, USB, ayar ve Raw/px zinciri; mm kabulü açık](2026-10-22-ccux-15a.md) |

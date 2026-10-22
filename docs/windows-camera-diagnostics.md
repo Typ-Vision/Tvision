@@ -52,6 +52,13 @@ veya kopma algılama süresi olarak yorumlanamaz.
 
 ### CCUX-15 plakasız manuel kontroller
 
+Plaka rasterini uygulamanın mevcut servisleriyle incelemek için:
+`calibration_plate_test.exe --inspect-circles absolute-raw-image columns rows
+spacing-mm absolute-new-report.json`. Deneysel PGM için sidecar/hash denetlenir;
+bu açık manuel mod dosyayı yeniden etiketlemez. Çıktı yalnız yeni dosyaya yazılır.
+Exit 1 algılama/yükleme reddidir; exit 0 yalnız matematiksel grid fitidir,
+operatör sıra incelemesi, model aktivasyonu veya fiziksel doğruluk kabulü değildir.
+
 `oecs_experimental_probe ... exposure-us 1 --preview-60s`, Camera Manager ile
 aynı `CameraPreviewSession` üzerinden 60 saniye sıralı edinim yapar; bu modda
 `count` yerine süre kullanılır. JSON stdout'unu dosyaya yönlendirin: tamamlanan

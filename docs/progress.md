@@ -4,30 +4,31 @@
 
 ## Devam noktası
 
-**Sonraki görev: [CCUX-16](architecture/camera-setup/16-automatic-acquisition.md).**
-**CCUX-PLAN-03 hazır, uygulanmadı:** OECS seçenek/uyarıları ve Kalibrasyon eski
-gezinmesi kalkacak; normal komutlar edinim yolunu seçecek. Sıra **16 → 17 → 18 →
-19 → CCUX-15**. [Plan/C0](architecture/camera-setup/README.md) eski opt-in/uyarı
-gereğini değiştirir; teknik engeller korunur. [Kapanış](archive/2026-10-22-ccux-plan-03.md).
+**Güncel görev: [CCUX-15](architecture/camera-setup/15-physical-acceptance.md),
+kullanıcı seçimiyle plaka denemesi.** 7×7 simetrik daire, kullanıcı beyanı 12 mm;
+Yeni ham kare/sidecar alındı; karanlık görüntüde tam
+49 daire denetimi reddedildi. Işık iyileştirmesi/yeniden kare bekleniyor;
+model, etkinlik veya mm sonucu yok. [CCUX-15b](archive/2026-10-22-ccux-15b.md),
+`build/ccux/ccux-15/plate-20261022-01/`.
+**CCUX-PLAN-03 uygulanmadı:** OECS seçim/uyarıları ve eski kalibrasyon gezinmesi
+kalkacak; [plan/C0](architecture/camera-setup/README.md) teknik engelleri korur.
+Plan sırası 16→17→18→19→15; güncel kullanıcı seçimi yukarıdadır.
 **CCUX-10b:** Editor kamera seçimi sırasında seçicinin silinmesi düzeltildi.
 Klavye olayı regresyonu ve kanıtlar [kapanışta](archive/2026-10-22-ccux-10b.md).
 **CCUX-03b:** Opto ayar servisi edinimden ayrıldı. Gerçek cihazda kayıt/oku/mevcut
 ayar kaydı doğrulandı; görüntü/mm koşumu değildir.
 [Kanıt](archive/2026-10-22-ccux-03b.md), `build/ccux/ccux-03b/`.
-**CCUX-15a plakasız kontroller:** yeni gerçek readback/kayıt, 60 s / 558 kare /
-9,36 FPS preview, Stop/reopen, kullanıcı bildirimli USB kopma/takma, Editor 3
-kare ve Runtime 10 Raw/px çevrim/CSV doğrulandı. Exposure/gain değişip geri
-yüklendi: son 6000 µs / 0 dB. Yanlış seri/geometri reddedildi. Kopmada SDK stop
-temizleme hatası; 7000 µs / 1 dB isteğinde readback reddi kaydedildi.
-**CCUX-15 tamamlanmadı:** plaka/referans/kurulum hazır değil; ışık/odak,
-tolerans/mm ve henüz denenmeyen kullanıcı işlem kabulü açık. Yeni UI paketinden
-sonra bu maddelere dönülecek. [Yeni kanıt/kapanış](archive/2026-10-22-ccux-15a.md),
-`build/ccux/ccux-15/no-plate-20261022/`; [kullanıcı teyidi](archive/2026-10-22-ccux-15-teyit.md).
+**CCUX-15a önceki plakasız kontroller:** 60 s / 558 kare / 9,36 FPS, Stop/reopen,
+USB, Editor 3 ve Runtime 10 Raw/px çevrim/CSV. Son ayar 6000 µs / 0 dB;
+yanlış seri/geometri reddi var. SDK kopma stop temizleme hatası ve 7000 µs / 1 dB
+readback reddi açık. [Kanıt](archive/2026-10-22-ccux-15a.md),
+`build/ccux/ccux-15/no-plate-20261022/`. **CCUX-15 tamamlanmadı:** lens/düzlem,
+ışık/odak, bağımsız referansın ölçü/kökeni, tolerans/mm ve kullanıcı işlem kabulü
+açık. [Önceki teyit](archive/2026-10-22-ccux-15-teyit.md) tarihsel durumdur.
 
 **CCUX-14 tamamlandı:** 1/5 kamera fixture'ı, iki yöntem, üç applicationType,
 Editor → Runtime → Logs/CSV ve Raw/mm negatifleri. UI 42/43, düzeltme sonrası
-etkilenen 7/7; core-off 33/33. Tam suite/fiziksel kabul değildir. İki boyut görseli
-incelendi. Stop/retry engeli kapandı: kayıt kalıcılaşır, Stop sonrası sonuç dönmez.
+7/7; core-off 33/33. Tam suite/fiziksel kabul değildir. Stop/retry engeli kapandı.
 [Matris ve kanıt](archive/2026-10-22-ccux-14.md), `build/ccux/ccux-14/`.
 
 CCUX-01–13 tamamlandı; ayrıntılı kayıtlar [arşiv dizinindedir](archive/README.md).
