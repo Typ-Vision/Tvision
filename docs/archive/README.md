@@ -6,6 +6,7 @@ görev” ifadeleri yazıldıkları tarihe aittir.
 
 | Dönem / görev | Kayıt |
 | --- | --- |
+| 22 Ekim 2026 — CCUX-08 | [Tek kaydet/kullan komutu, kısmi kayıt ve ayrı deneysel etkinlik](2026-10-22-ccux-08.md) |
 | 22 Ekim 2026 — CCUX-07 | [Deneysel kalibrasyon edinimi, typed köken ve sürümlü aday codec’i](2026-10-22-ccux-07.md) |
 | 22 Ekim 2026 — CCUX-06 | [Kalibrasyon geçerliliği, yeniden hazırlama ve optik değişikliği bildirimi](2026-10-22-ccux-06.md) |
 | 21 Ekim 2026 — CCUX-05 | [Tek/canlı görüntü UI, Stop/drain geçişleri ve görünen kareden kanıt kaydı](2026-10-21-ccux-05.md) |

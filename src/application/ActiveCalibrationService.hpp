@@ -49,6 +49,7 @@ public:
     const std::optional<bool>& controlAccepted() const {return accepted_;}
     const QString& contentId() const {return contentId_;}
     bool activatable() const;
+    bool experimentallyActivatable() const;
 private:
     CalibrationModelRecord(PlanarCalibration,MeasurementSetup,CalibrationImageEvidence,CalibrationControl);
     PlanarCalibration model_;

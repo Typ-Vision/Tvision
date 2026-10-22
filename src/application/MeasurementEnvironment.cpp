@@ -30,7 +30,7 @@ const MeasurementSetupDescriptor& setup(const MeasurementEnvironment& e,const Se
 void association(const MeasurementEnvironment& e,const RememberedCalibration& selection,const CalibrationModelRecord& r){
     const auto& s=setup(e,selection.target);const auto& d=r.model().dependency();
     require(d.calibrationId==selection.id && d.version==selection.version && r.contentId()==selection.contentId,"Dangling/tampered calibration selection");
-    require(r.activatable() && s.geometry.complete && r.setup().resolution==s.geometry.resolution && r.setup().lensId==s.opticalProfile && r.setup().planeId==s.workingPlane,"Incompatible remembered model");
+    require((r.activatable() || r.experimentallyActivatable()) && s.geometry.complete && r.setup().resolution==s.geometry.resolution && r.setup().lensId==s.opticalProfile && r.setup().planeId==s.workingPlane,"Incompatible remembered model");
 }
 QJsonArray ids(const QSet<QString>& set){auto sorted=set.values();sorted.sort();QJsonArray a;for(const auto& s:sorted)a.append(s);return a;}
 QSet<QString> idSet(QJsonValue v){QSet<QString> result;for(const auto& entry:array(v)){auto s=text(entry);require(!result.contains(s),"Duplicate archived ID");result.insert(s);}return result;}

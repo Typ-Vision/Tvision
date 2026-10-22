@@ -65,6 +65,7 @@ CalibrationModelRecord CalibrationModelRecord::create(const PlanarCalibration& m
     auto o=r.encode();o.remove("contentId");r.contentId_=digest(o);return r;
 }
 bool CalibrationModelRecord::activatable() const {return !image_.experimental && image_.origin!="trial_file" && (!accepted_ || *accepted_);}
+bool CalibrationModelRecord::experimentallyActivatable() const {return image_.experimental.has_value() && (!accepted_ || *accepted_);}
 QJsonObject CalibrationModelRecord::encode() const {
     if(migration_)return {{"schemaVersion",5},{"policy","setup-migration/1"},{"original",original_},{"derived",derived_},{"contentId",contentId_}};
     if(legacy_)return {{"schemaVersion",3},{"policy","legacy-validated/1"},{"modelReady",true},{"model",MeasurementService{}.encode(model_)},{"setup",setup_.toJson()},

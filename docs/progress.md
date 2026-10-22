@@ -4,7 +4,14 @@
 
 ## Devam noktası
 
-**Sonraki görev: [CCUX-08](architecture/camera-setup/08-save-use.md).**
+**Sonraki görev: [CCUX-09](architecture/camera-setup/09-calibration-ui.md).**
+**CCUX-08 tamamlandı:** tek application kaydet/kullan komutu; exact hedef,
+revision/generation ve son commit gate/Stop/project/disconnect denetimi.
+Failed/CandidateSaved/Activated ayrımı ve idempotent retry var. Deneysel seçim,
+oturum onayı ve typed snapshot trusted yoldan ayrı; false trigger/production ve
+bağımsız kontrol korunur. Yeni Release + kartın 4 CTest'i ve 3 ilgili suite geçti;
+[kapanış](archive/2026-10-22-ccux-08.md), `build/ccux/ccux-08/`.
+UI bağlantısı CCUX-09; fiziksel kamera/mm kabulü ve Runtime mm henüz yapılmadı.
 **CCUX-07 tamamlandı:** reçetesiz açık deneysel politika, CCUX varsayılanından
 immutable edinim; canlı OECS Calibration lease ve exact PGM+JSON replay. Typed
 köken, source schema2 ve aday schema6 hash içinde kimlik/geometri/profil ile
@@ -12,7 +19,7 @@ korunur; replay dosya kalır, trusted active/system/completion reddedilir.
 Yeni Release + kartın 5 CTest'i (socket suite sandbox dışında yeniden) ve 6 codec/
 aktivasyon regresyonu geçti; [kapanış](archive/2026-10-22-ccux-07.md),
 `build/ccux/ccux-07/`. Fixture kaliper/plaka adayları fiziksel mm kabulü değildir.
-Aktivasyon CCUX-08, Runtime mm CCUX-12; UI bu kartta eklenmedi.
+Runtime mm CCUX-12; UI bu kartta eklenmedi.
 **CCUX-06 tamamlandı:** kayıtlı tercih, matematik uyumu ve oturum izni ayrı DTO;
 yeni gerçek probe ile `prepareRemembered`, immutable model + yeni edinim zarf3;
 optik değişikliği bildirimi ilgili kurulumları pending revision'a alır.

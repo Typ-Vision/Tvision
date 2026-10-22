@@ -8,6 +8,38 @@ Optik, düzlem, raw koordinat çerçevesi, world eksen yönü veya çözünürl�
 
 Çok kayıtlı geçiş atomik transaction değildir. Bütün matematik preflight yapılır, sonra immutable ardışık prefix yazılabilir. Kesilen geçişte retry mevcut özgün kanıtı doğrulayıp kaldığı sürümden devam eder; conflict mevcut kayıtları ezmez. Kaynak properties’de açık bağlama scoped-source/1 politikasına geçirir. Bu politika bağ kaldırılınca geri dönmez; seçimsiz scoped reçete mm için global fallback kullanmaz.
 
+## CCUX-08 — tek kaydet ve kullan komutu
+
+`MeasurementWorkspace::saveAndUseCalibration` / scoped service `saveAndUse`,
+immutable adayı, exact hedefi, beklenen environment revision'ını, kabul edilmiş
+gerçek kamera probe generation'ını ve caller'ın current-target/project/Stop
+denetimini alır. Dönüş `Failed`, `CandidateSaved` veya `Activated`; content ID,
+duplicate, deneysel nitelik, ayrı bağımsız kontrol sonucu ve hata içerir.
+Kontrol yoksa null kalır; fiziksel kabul veya sıfır hata üretilmez.
+
+Aday yazımı ile seçim commit'i iki ayrı dosya işlemidir. Aday kaydından sonra
+gate, current target, generation, kamera disconnect ve oturum politika epoch'u
+yeniden denetlenir. Hata önceki seçimi korur; mevcut aday aynı content/hash ile
+yeniden kullanılır. Aynı başarılı komut tekrarlandığında yeni katalog satırı veya
+aktivasyon revision'ı oluşmaz. Başka registry değişimi stale komuttur; reload
+gerekir. Runtime'a yayın yapılmaz; önceden alınmış snapshot immutable kalır.
+
+Trusted yol önceki accepted gerçek kamera probe denetimini korur. Deneysel
+yol ayrıca `setExperimental(true)` oturum onayı ve typed deneysel **canlı** probe
+ister. Exact PGM+JSON adayı dosya kökenini korur; dosya aktivasyon probe'u olmaz.
+Bağımsız kontrol ret eşiği aynı kalır. Deneysel seçim record schema6 üzerinden
+hatırlanır; restart/import onay veya kullanım izni başlatmaz.
+
+`experimentalSnapshots` ayrı `ExperimentalScopedCalibrationSnapshot` tipini döner;
+trusted `snapshots`, legacy aktif servis ve `SystemCalibration` bu modeli
+reddeder. Edinim zarfı schema2 / `experimental-calibration/1`, özgün typed probe,
+backend ve false production/trigger-association/physical-acceptance alanlarını
+taşır. Onayı kapatmak deneysel izinleri siler; tekrar açmak eski izni diriltmez.
+UI bağlantısı CCUX-09, Editor/Runtime metrik tüketimi sonraki kartlardır.
+
+Kabul: `calibration_save_use` ile kartın dört regresyon suite'i. Fixture sonuçları
+fiziksel kamera veya bağımsız mm kabulü değildir.
+
 ## Taşıma
 
 CCUX-01: bundle1 yeni environment2 `registrations` ve pending setup2/profile2

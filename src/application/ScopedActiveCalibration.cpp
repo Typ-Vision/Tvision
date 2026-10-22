@@ -50,9 +50,15 @@ int ScopedActiveCalibrationService::migrateLegacy(const SetupReference& ref,cons
     int saved=0;for(const auto& r:pending){if(failAfter>=0 && saved==failAfter)throw std::runtime_error("Injected migration interruption; retry resumes immutable prefix");save(ref,r);++saved;}return saved;
 }
 void ScopedActiveCalibrationService::activate(const SetupReference& ref,const QString& content,const IndependentCalibrationSession& probe,MeasurementEnvironmentRepository::Fault fault){
+    activateImpl(ref,content,probe,CalibrationCapturePolicy::Trusted,fault);
+}
+void ScopedActiveCalibrationService::activateImpl(const SetupReference& ref,const QString& content,const IndependentCalibrationSession& probe,CalibrationCapturePolicy policy,MeasurementEnvironmentRepository::Fault fault,std::function<void()> beforeCommit){
     const auto e=environment();require(gate_(),"Runtime/worker/pending record/ACK busy");require(revision_<1000000000,"Activation revision exhausted");
     const auto expected=installation(e,ref);const auto proof=probe.evidence();
-    require(!probe.busy() && proof && !proof->experimental && proof->origin==SourceOrigin::CameraAcquired && proof->target==std::optional(ref) && probe.acceptedSetup()==std::optional(expected),"Accepted actual camera probe for exact installation required");
+    const bool experimental=policy==CalibrationCapturePolicy::ExperimentalOecs;
+    require(!experimental || experimental_,"Experimental session opt-in required");
+    require(!probe.busy() && proof && proof->experimental.has_value()==experimental && proof->origin==SourceOrigin::CameraAcquired && proof->target==std::optional(ref) && probe.acceptedSetup()==std::optional(expected),"Accepted actual camera probe for exact installation required");
+    if(experimental)proof->experimental->validate();
     const auto profile=probe.acceptedProfile();const auto device=probe.acceptedDevice();
     for(const auto& c:e.current.cameras)if(c.id==ref.camera && c.physical){
         require(profile && device && device->identity==*c.physical && currentProfile(e,*profile),"Actual industrial probe profile changed; acquire again");
@@ -60,11 +66,55 @@ void ScopedActiveCalibrationService::activate(const SetupReference& ref,const QS
     require(!usedProbes_.contains(proof->frameId),"Acquire a new activation probe");
     require(e.operational.value(ref.camera.value)==ref.setup.value,"Select operational setup explicitly first");
     for(const auto& r:records(ref))if(r.contentId()==content){
-        require(r.activatable() && (r.image().origin=="acquired" || r.image().origin=="setup_file" || (r.image().origin=="legacy_record" && r.encode()["schemaVersion"]==5)),"Trial/legacy/rejected control cannot activate");
+        if(experimental){
+            require(r.experimentallyActivatable(),"Experimental model/control evidence required");
+            const auto& image=*r.image().experimental;
+            require(image.camera.id==ref.camera && image.setup.id==ref.setup && image.setup.revision==ref.revision &&
+                image.camera.physical==proof->experimental->camera.physical && image.setup.geometry==proof->experimental->setup.geometry,
+                "Experimental candidate and live probe installation mismatch");
+        }else require(r.activatable() && (r.image().origin=="acquired" || r.image().origin=="setup_file" || (r.image().origin=="legacy_record" && r.encode()["schemaVersion"]==5)),"Trial/legacy/rejected control cannot activate");
+        if(beforeCommit)beforeCommit();
+        require(gate_() && probe.evidence()==proof && !probe.busy() && (!experimental || experimental_),"Activation cancelled or gate changed before commit");
         const auto committed=repository_.saveAndRemember(e,r,ref,fault);
-        QJsonObject acquisition{{"schemaVersion",1},{"probe",proof->toJson()},{"backend",device ? QJsonValue(device->backend.toJson()):QJsonValue()}};
-        for(const auto& selection:committed.selections)if(selection.target==ref){permissions_.insert(ref.setup.value,{selection,++revision_,profile,device,acquisition});usedProbes_.insert(proof->frameId);return;}
+        QJsonObject acquisition{{"schemaVersion",experimental ? 2:1},{"probe",proof->toJson()},{"backend",device ? QJsonValue(device->backend.toJson()):QJsonValue()}};
+        if(experimental){acquisition["policy"]="experimental-calibration/1";acquisition["productionAdmission"]=false;acquisition["triggerAssociationVerified"]=false;acquisition["physicalAcceptance"]=false;}
+        for(const auto& selection:committed.selections)if(selection.target==ref){permissions_.insert(ref.setup.value,{selection,++revision_,profile,device,acquisition,experimental});usedProbes_.insert(proof->frameId);return;}
     }throw std::runtime_error("Exact calibration content not found");
+}
+CalibrationSaveUseResult ScopedActiveCalibrationService::saveAndUse(const CalibrationSaveUseRequest& request,const CalibrationModelRecord& candidate,const IndependentCalibrationSession& probe,std::function<bool()> currentTarget,MeasurementEnvironmentRepository::Fault fault){
+    owner();CalibrationSaveUseResult result;result.contentId=candidate.contentId();result.independentControlAccepted=candidate.controlAccepted();result.experimental=request.policy==CalibrationCapturePolicy::ExperimentalOecs;
+    try{
+        require(request.policy==CalibrationCapturePolicy::Trusted || result.experimental,"Unknown activation policy");
+        const auto epoch=permissionEpoch_;const auto cameraEpoch=cameraEpochs_.value(request.target.camera.value);
+        auto current=[&]{
+            require(currentTarget && currentTarget(),"Project/target changed or Stop requested");
+            require(gate_() && cameraEpochs_.value(request.target.camera.value)==cameraEpoch && (!result.experimental || permissionEpoch_==epoch),"Workspace busy, disconnected or session policy changed");
+            const auto proof=probe.evidence();require(!probe.busy() && proof && proof->generation==request.generation && proof->target==std::optional(request.target),"Capture generation/target retired");
+            require(!result.experimental || experimental_,"Experimental session opt-in required");
+        };
+        current();const auto e=environment();const auto expected=installation(e,request.target);
+        const auto record=CalibrationModelRecord::decode(candidate.encode());require(record.setup()==expected,"Exact candidate installation mismatch");
+        const auto p=permissions_.constFind(request.target.setup.value);
+        const bool repeated=p!=permissions_.cend() && p->selection.contentId==record.contentId() && p->selection.target==request.target &&
+            p->experimental==result.experimental && p->acquisition["probe"].toObject()==probe.evidence()->toJson() &&
+            (p->commandBase==request.environmentRevision || p->commandCommitted==request.environmentRevision) && p->commandCommitted==e.revision;
+        require(e.revision==request.environmentRevision || repeated,"Environment revision changed; reload target");
+        for(const auto& existing:records(request.target))if(existing.contentId()==record.contentId()){require(existing.encode()==record.encode(),"Immutable candidate conflict");result.duplicate=true;break;}
+        if(!result.duplicate)save(request.target,record);
+        result.state=CalibrationSaveUseState::CandidateSaved;
+        auto beforeCommit=[&]{current();require(environment().encode()==e.encode(),"Environment changed before selection commit");};
+        beforeCommit();
+        if(!repeated){
+            activateImpl(request.target,record.contentId(),probe,request.policy,fault,beforeCommit);
+            auto& permission=permissions_[request.target.setup.value];permission.commandBase=request.environmentRevision;permission.commandCommitted=environment().revision;
+        }
+        result.state=CalibrationSaveUseState::Activated;
+    }catch(const std::exception& ex){result.error=QString::fromUtf8(ex.what());}
+    return result;
+}
+void ScopedActiveCalibrationService::setExperimental(bool enabled){
+    owner();if(experimental_==enabled)return;require(gate_(),"Workspace busy");experimental_=enabled;++permissionEpoch_;
+    for(auto i=permissions_.begin();i!=permissions_.end();)if(i->experimental)i=permissions_.erase(i);else ++i;
 }
 void ScopedActiveCalibrationService::deactivate(const SetupId& id){
     const auto e=environment();id.validate();require(gate_(),"Runtime/worker/pending record/ACK busy");auto next=e;
@@ -75,7 +125,7 @@ void ScopedActiveCalibrationService::setOperational(const CameraId& camera,const
     const auto e=environment();require(gate_(),"Runtime/worker/pending record/ACK busy");auto next=e;next.operational[camera.value]=setup.value;
     repository_.commit(e,next);if(e.operational.value(camera.value)!=setup.value)disconnect(camera);
 }
-void ScopedActiveCalibrationService::disconnect(const CameraId& camera){owner();for(auto i=permissions_.begin();i!=permissions_.end();)if(i->selection.target.camera==camera)i=permissions_.erase(i);else ++i;}
+void ScopedActiveCalibrationService::disconnect(const CameraId& camera){owner();++cameraEpochs_[camera.value];for(auto i=permissions_.begin();i!=permissions_.end();)if(i->selection.target.camera==camera)i=permissions_.erase(i);else ++i;}
 CalibrationAvailabilityStatus ScopedActiveCalibrationService::status(const SetupReference& ref) const {
     ref.validate();const auto e=environment();CalibrationAvailabilityStatus result;
     for(const auto& s:e.selections)if(s.target.camera==ref.camera && s.target.setup==ref.setup)result.remembered=s;
@@ -84,10 +134,10 @@ CalibrationAvailabilityStatus ScopedActiveCalibrationService::status(const Setup
     try {
         const auto expected=installation(e,ref);
         require(result.remembered->target==ref,"Installation changed; recalibration required");
-        for(const auto& r:records(ref))if(r.contentId()==result.remembered->contentId && r.activatable() && r.setup()==expected)result.mathematicsCompatible=true;
+        for(const auto& r:records(ref))if(r.contentId()==result.remembered->contentId && (r.activatable() || r.experimentallyActivatable()) && r.setup()==expected){result.mathematicsCompatible=true;result.experimental=r.image().experimental.has_value();}
         require(result.mathematicsCompatible,"Remembered mathematics incompatible");
         result.state=CalibrationAvailability::Remembered;
-        try {snapshots({ref});result.sessionPermitted=true;result.state=CalibrationAvailability::Valid;}
+        try {if(result.experimental)experimentalSnapshots({ref});else snapshots({ref});result.sessionPermitted=true;result.state=CalibrationAvailability::Valid;}
         catch(const std::exception& ex){result.reason=QString::fromUtf8(ex.what());}
     }catch(const std::exception& ex){result.reason=QString::fromUtf8(ex.what());}
     return result;
@@ -120,13 +170,20 @@ void ScopedActiveCalibrationService::refreshAvailability(const QVector<DeviceBin
     }catch(const std::exception&){disconnect(c.id);}
 }
 QVector<ScopedCalibrationSnapshot> ScopedActiveCalibrationService::snapshots(const QVector<SetupReference>& refs,std::function<void()> beforeVerify) const {
+    return snapshotsImpl(refs,false,std::move(beforeVerify));
+}
+QVector<ExperimentalScopedCalibrationSnapshot> ScopedActiveCalibrationService::experimentalSnapshots(const QVector<SetupReference>& refs) const {
+    owner();require(experimental_,"Experimental session opt-in required");QVector<ExperimentalScopedCalibrationSnapshot> out;
+    for(const auto& s:snapshotsImpl(refs,true,{}))out.append({s});return out;
+}
+QVector<ScopedCalibrationSnapshot> ScopedActiveCalibrationService::snapshotsImpl(const QVector<SetupReference>& refs,bool experimental,std::function<void()> beforeVerify) const {
     auto fingerprint=[&]{QFile f(repository_.catalogPath());if(!f.exists())return QByteArray("missing");require(f.open(QIODevice::ReadOnly) && f.size()<=4*1024*1024,"Catalog snapshot bounded read failed");const auto bytes=f.read(4*1024*1024+1);require(f.error()==QFileDevice::NoError && bytes.size()<=4*1024*1024,"Catalog snapshot read failed");return QCryptographicHash::hash(bytes,QCryptographicHash::Sha256);};
     const auto before=fingerprint();const auto e=environment();const auto permissions=permissions_;
     const auto models=ActiveCalibrationService(repository_.catalogPath(),e.projectId,gate_).records();QVector<ScopedCalibrationSnapshot> out;QSet<QString> seen;
     for(const auto& ref:refs){require(!seen.contains(ref.setup.value),"Duplicate snapshot target");seen.insert(ref.setup.value);
         const auto expected=installation(e,ref);require(e.operational.value(ref.camera.value)==ref.setup.value && permissions_.contains(ref.setup.value),"Installation requires explicit activation");
-        const auto p=permissions_.value(ref.setup.value);if(p.profile)require(currentProfile(e,*p.profile),"Acquisition profile changed; reactivate without refitting model");require(p.selection.target==ref && e.selections.contains(p.selection),"Selection changed; reactivate");bool found=false;
-        for(const auto& r:models)if(r.contentId()==p.selection.contentId && r.activatable() && r.setup()==expected){
+        const auto p=permissions_.value(ref.setup.value);require(p.experimental==experimental,"Calibration permission policy mismatch");if(p.profile)require(currentProfile(e,*p.profile),"Acquisition profile changed; reactivate without refitting model");require(p.selection.target==ref && e.selections.contains(p.selection),"Selection changed; reactivate");bool found=false;
+        for(const auto& r:models)if(r.contentId()==p.selection.contentId && (experimental ? r.experimentallyActivatable():r.activatable()) && r.setup()==expected){
             for(const auto& c:e.current.cameras)if(c.id==ref.camera)out.append({ref,c.device,{r,{p.selection.id,p.selection.contentId,p.selection.version,p.revision},scope(e,ref,c,p.profile),p.acquisition}});found=true;
         }require(found,"Calibration dependency unavailable");
     }if(beforeVerify)beforeVerify();require(before==fingerprint() && e.encode()==environment().encode() && permissions==permissions_,"Calibration snapshot set changed; retry whole admission");return out;
