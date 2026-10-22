@@ -27,7 +27,7 @@ MultiSourceRuntimeService::Prepared MultiSourceRuntimeService::capture(const Rec
     require(QJsonDocument(recipe.definition).toJson(QJsonDocument::Compact).size()<=16*1024*1024,ProductionError::InvalidConfiguration,"Whole recipe definition exceeds 16 MiB snapshot budget");
     require(recipe.definition["editor"].toObject()["schemaVersion"]==9,ProductionError::InvalidConfiguration,"Explicit editor9 required");validateEditorDefinition(recipe.definition);
     const auto graph=validateSourceGraph(editorTools(recipe.definition),editorConnections(recipe.definition));require(graph.valid() && !graph.requiredSources.isEmpty(),ProductionError::InvalidConfiguration,"Invalid/empty multi-source graph");
-    const auto set=provider_(recipe);require(set.sources.size()==graph.requiredSources.size(),ProductionError::DependencyChanged,"Missing/foreign source snapshot set");Prepared out;QJsonObject sourceSet;QSet<QString> devices;
+    const auto set=provider_(recipe);require(set.experimentalCalibrations.isEmpty(),ProductionError::DependencyChanged,"Experimental models cannot enter trusted Runtime");require(set.sources.size()==graph.requiredSources.size(),ProductionError::DependencyChanged,"Missing/foreign source snapshot set");Prepared out;QJsonObject sourceSet;QSet<QString> devices;
     const auto configured=editorTools(recipe.definition);bool hasIndustrial=false;
     for(const auto& t:configured)if(t.enabled && t.kind=="industrial_camera")hasIndustrial=true;
     require(hasIndustrial==bool(set.industrial),ProductionError::DependencyChanged,"Missing/foreign industrial execution composition");

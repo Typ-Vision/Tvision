@@ -4,36 +4,30 @@
 
 ## Devam noktası
 
-**Sonraki görev: [CCUX-12](architecture/camera-setup/12-runtime-metric.md).**
-**CCUX-11 tamamlandı:** yeni/düzenle penceresinde genel referanslar yok; üç tür
-boş kaynakla DRAFT açılır. Metadata edit legacy/scoped bağ ve no-op hash'i korur;
-proje referansları Ayrıntılar'da kalır, miras alınmaz. Release + 7 ilgili test geçti,
-iki boyutta görseller incelendi. Genel shell temiz producer fixture'ıyla yine eski
-Runtime Stop/retry beklentisinde kaldı. Yeni kanıt/sınırlar
-[kapanışta](archive/2026-10-22-ccux-11.md), `build/ccux/ccux-11/`.
-**CCUX-10 tamamlandı:** kaynakta kamera ID/ad seçimi default kurulum/profil ile
-atomik bağlanır; aynı kamera ayarı Run Flow’da snapshot/DRAFT/dirty yeniler.
-Geometri/seri/legacy otomatik onarılmaz. Ayrı typed deneysel canlı/replay mm
-resolver/cache kökeni korunur. Yazılım/görsel kanıt
-[kapanışta](archive/2026-10-22-ccux-10.md), `build/ccux/ccux-10/`.
-Fiziksel mm/native DPI kabulü değildir; Runtime mm CCUX-12.
-**CCUX-09 tamamlandı:** kamera merkezli özet, iki yöntem, immutable hedef ve tek
-Kaydet ve kullan; kısmi kayıt/ret/retry ve deneysel etiket. Yeni yazılım/görsel
-kanıt [kapanışta](archive/2026-10-22-ccux-09.md), `build/ccux/ccux-09/`.
-Fiziksel kamera/mm ve native DPI kabulü değildir.
-**CCUX-08 tamamlandı:** exact hedef/revision/generation ve son commit gate'li
-tek application komutu; Failed/CandidateSaved/Activated, idempotent retry ve
-ayrı deneysel typed snapshot. [Kapanış](archive/2026-10-22-ccux-08.md),
-`build/ccux/ccux-08/`. Fiziksel mm ve Runtime mm henüz yapılmadı.
-**CCUX-07 tamamlandı:** reçetesiz immutable deneysel canlı Calibration lease ve
-exact PGM+JSON replay; source schema2/adayı schema6 typed köken/hash taşır.
-Replay dosya kalır; trusted active/system/completion reddedilir.
-[Kapanış](archive/2026-10-22-ccux-07.md), `build/ccux/ccux-07/`.
-Fixture kaliper/plaka fiziksel mm kabulü değildir; Runtime mm CCUX-12.
-**CCUX-06 tamamlandı:** kayıtlı tercih, matematik uyumu ve oturum izni ayrı;
-yeni probe ile prepareRemembered; optik değişim pending revision üretir.
-Restart/replug izin başlatmaz; exposure/gain yeniden fit yerine yeni denetim ister.
-[Kapanış](archive/2026-10-22-ccux-06.md), `build/ccux/ccux-06/`.
+**Sonraki görev: [CCUX-13](architecture/camera-setup/13-runtime-ui.md).**
+**CCUX-12 tamamlandı:** kaynak başına ayrı typed deneysel model snapshot'ı,
+karma Raw/px + mm yürütme ve runtime2 kalıcı codec var. Model/version/content,
+ayar/köken/geometri ve port birimleri doğrulanır; runtime1 Raw/px geçmişi korunur.
+Parça kararı NOT_EVALUATED, PLC/robot kapalı; retry frozen payload'ı yazar.
+Yeni yazılım kanıtı [kapanışta](archive/2026-10-22-ccux-12.md),
+`build/ccux/ccux-12/`. Fiziksel mm ve Runtime/Logs/CSV metrik UI kabulü değildir.
+**CCUX-11:** genel reçete referansları kaldırıldı; üç tür boş kaynakla DRAFT,
+metadata edit legacy/scoped bağ ve no-op hash korunur. [Kapanış](archive/2026-10-22-ccux-11.md).
+Genel shell temiz producer fixture'ıyla eski Runtime Stop/retry beklentisinde kaldı.
+**CCUX-10:** kamera seçimi default kurulum/profil ile atomik bağlanır; aynı kamera
+ayarı Run Flow'da snapshot/DRAFT/dirty yeniler. Geometri/seri/legacy otomatik
+onarılmaz; ayrı typed deneysel canlı/replay mm resolver'ı korunur.
+[Kapanış](archive/2026-10-22-ccux-10.md).
+**CCUX-09:** kamera merkezli özet, iki yöntem, immutable hedef ve tek Kaydet ve
+kullan; kısmi kayıt/ret/retry ve deneysel etiket. [Kapanış](archive/2026-10-22-ccux-09.md).
+**CCUX-08:** exact hedef/revision/generation ve son commit gate'li tek application
+komutu, idempotent retry ve ayrı deneysel snapshot. [Kapanış](archive/2026-10-22-ccux-08.md).
+**CCUX-07:** reçetesiz immutable deneysel canlı Calibration lease ve exact PGM+JSON
+replay; typed köken/hash, trusted active/system/completion ayrımı korunur.
+[Kapanış](archive/2026-10-22-ccux-07.md).
+**CCUX-06:** kayıtlı tercih/matematik/oturum izni ayrı; fresh probe ile yeniden
+hazırlama. Restart/replug izin başlatmaz; optik değişim pending revision üretir.
+[Kapanış](archive/2026-10-22-ccux-06.md).
 Kullanıcıya göre kamera bağlı, ortam karanlık; fiziksel mm kabulü yapılmadı.
 **CCUX-05 tamamlandı:** Tek görüntü / Canlı görüntü / Durdur ortak application
 session’ına bağlandı. Gerçek FPS ve edinim türü, generation ile eski kareyi

@@ -26,7 +26,13 @@ struct ProductionDependencies {
     QJsonObject measurementSource;
     QJsonObject industrialSource; // Frozen admission; terminal8 actual evidence stays separate
 };
-struct MultiSourceDependencies {QMap<QString,ProductionDependencies> sources;std::shared_ptr<const IndustrialExecutionInputs> industrial;};
+struct ExperimentalScopedCalibrationSnapshot;
+struct MultiSourceDependencies {
+    QMap<QString,ProductionDependencies> sources;
+    std::shared_ptr<const IndustrialExecutionInputs> industrial;
+    // Separate experimental policy; trusted Runtime rejects this map.
+    QMap<QString,std::shared_ptr<const ExperimentalScopedCalibrationSnapshot>> experimentalCalibrations;
+};
 struct RecipeValidation {
     QString id,principal;
     QByteArray contentId,dependencyId;
