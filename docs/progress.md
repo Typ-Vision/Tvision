@@ -4,28 +4,28 @@
 
 ## Devam noktası
 
-**Sonraki görev: [CCUX-09](architecture/camera-setup/09-calibration-ui.md).**
-**CCUX-08 tamamlandı:** tek application kaydet/kullan komutu; exact hedef,
-revision/generation ve son commit gate/Stop/project/disconnect denetimi.
-Failed/CandidateSaved/Activated ayrımı ve idempotent retry var. Deneysel seçim,
-oturum onayı ve typed snapshot trusted yoldan ayrı; false trigger/production ve
-bağımsız kontrol korunur. Yeni Release + kartın 4 CTest'i ve 3 ilgili suite geçti;
-[kapanış](archive/2026-10-22-ccux-08.md), `build/ccux/ccux-08/`.
-UI bağlantısı CCUX-09; fiziksel kamera/mm kabulü ve Runtime mm henüz yapılmadı.
-**CCUX-07 tamamlandı:** reçetesiz açık deneysel politika, CCUX varsayılanından
-immutable edinim; canlı OECS Calibration lease ve exact PGM+JSON replay. Typed
-köken, source schema2 ve aday schema6 hash içinde kimlik/geometri/profil ile
-korunur; replay dosya kalır, trusted active/system/completion reddedilir.
-Yeni Release + kartın 5 CTest'i (socket suite sandbox dışında yeniden) ve 6 codec/
-aktivasyon regresyonu geçti; [kapanış](archive/2026-10-22-ccux-07.md),
-`build/ccux/ccux-07/`. Fixture kaliper/plaka adayları fiziksel mm kabulü değildir.
-Runtime mm CCUX-12; UI bu kartta eklenmedi.
-**CCUX-06 tamamlandı:** kayıtlı tercih, matematik uyumu ve oturum izni ayrı DTO;
-yeni gerçek probe ile `prepareRemembered`, immutable model + yeni edinim zarf3;
-optik değişikliği bildirimi ilgili kurulumları pending revision'a alır.
-Restart/replug izin başlatmaz; exposure/gain yeniden fit istemez, yeni denetim ister.
-Yeni Release ve kartın 5 CTest'i geçti; [kapanış](archive/2026-10-22-ccux-06.md),
-`build/ccux/ccux-06/`. UI eklenmedi; fiziksel kamera/mm kabulü yapılmadı. Kullanıcıya göre kamera bağlı, ortam karanlık.
+**Sonraki görev: [CCUX-10](architecture/camera-setup/10-editor-binding.md).**
+**CCUX-09 tamamlandı:** kamera merkezli durum/aktif model özeti; Kalibre Et ile
+iki yöntem, immutable varsayılan hedef, tek Kaydet ve kullan komutu ve kısmi
+kayıt/ret/tekrar deneme. Geçmiş/dosya/legacy/optik bildirimi Ayrıntılar'da;
+deneysel köken/etiket, canlı uyum probe'u ve kamera/proje iptali korunur.
+Yeni Release + kartın 5 CTest'i ve 3 servis regresyonu, 0/1/5/10 kamera ve iki
+boyutta offscreen görsel kabul geçti; [kapanış](archive/2026-10-22-ccux-09.md),
+`build/ccux/ccux-09/`. Fiziksel kamera/mm ve native DPI kabulü değildir.
+**CCUX-08 tamamlandı:** exact hedef/revision/generation ve son commit gate'li
+tek application komutu; Failed/CandidateSaved/Activated, idempotent retry ve
+ayrı deneysel typed snapshot. [Kapanış](archive/2026-10-22-ccux-08.md),
+`build/ccux/ccux-08/`. Fiziksel mm ve Runtime mm henüz yapılmadı.
+**CCUX-07 tamamlandı:** reçetesiz immutable deneysel canlı Calibration lease ve
+exact PGM+JSON replay; source schema2/adayı schema6 typed köken/hash taşır.
+Replay dosya kalır; trusted active/system/completion reddedilir.
+[Kapanış](archive/2026-10-22-ccux-07.md), `build/ccux/ccux-07/`.
+Fixture kaliper/plaka fiziksel mm kabulü değildir; Runtime mm CCUX-12.
+**CCUX-06 tamamlandı:** kayıtlı tercih, matematik uyumu ve oturum izni ayrı;
+yeni probe ile prepareRemembered; optik değişim pending revision üretir.
+Restart/replug izin başlatmaz; exposure/gain yeniden fit yerine yeni denetim ister.
+[Kapanış](archive/2026-10-22-ccux-06.md), `build/ccux/ccux-06/`.
+Kullanıcıya göre kamera bağlı, ortam karanlık; fiziksel mm kabulü yapılmadı.
 **CCUX-05 tamamlandı:** Tek görüntü / Canlı görüntü / Durdur ortak application
 session’ına bağlandı. Gerçek FPS ve edinim türü, generation ile eski kareyi
 silme, worker drain sonrası sayfa/proje/pencere geçişi ve yalnız geçerli görünen

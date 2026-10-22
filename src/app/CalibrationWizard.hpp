@@ -2,6 +2,7 @@
 #include "application/CalibrationCapture.hpp"
 #include "application/IndependentCalibrationCapture.hpp"
 #include "application/EditorSession.hpp"
+#include "application/ScopedActiveCalibration.hpp"
 #include <QDialog>
 class QLabel; class QPushButton; class QStackedWidget; class QLineEdit; class QComboBox; class QListWidget; class QDoubleSpinBox; class QSpinBox; class QCheckBox;
 namespace visionflow {
@@ -15,8 +16,17 @@ public:
     ~CalibrationWizard();
     // Same commands used by the file chooser and UI acceptance tests.
     void openFile(const QString&);
+    using SaveUse = std::function<CalibrationSaveUseResult(const CalibrationModelRecord&,const IndependentCalibrationSession&)>;
+    void setSaveAndUse(SaveUse command);
 private:
     void captureIndependent(QString path={});
+    void saveAndUse(const CalibrationModelRecord&);
+    void showSaveResult(const CalibrationSaveUseResult&);
+    SaveUse saveUse_;
+    IndependentCalibrationSession activationProbe_;
+    bool savedAndUsed_=false;
+    std::optional<CalibrationModelRecord> namedRecord_;
+    QString namedBase_;
     std::optional<IndependentCaptureRequest> independentTarget_;
     IndependentCaptureBackend backend_;
     IndependentCalibrationSession independent_;

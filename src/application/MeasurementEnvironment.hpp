@@ -47,7 +47,7 @@ public:
     MeasurementEnvironment commit(const MeasurementEnvironment& expected,MeasurementEnvironment next,Fault=Fault::None) const;
     // Candidate first, selection second. Retry after interruption is idempotent.
     MeasurementEnvironment saveAndRemember(const MeasurementEnvironment& expected,const CalibrationModelRecord&,
-        const SetupReference&,Fault=Fault::None) const;
+        const SetupReference&,Fault=Fault::None,bool selectOperational=false) const;
     // Explicit dependency bundle for Save As/import/export; no legacy auto migration.
     QJsonObject exportBundle() const;
     void importBundle(const QJsonObject&) const; // fresh destination only

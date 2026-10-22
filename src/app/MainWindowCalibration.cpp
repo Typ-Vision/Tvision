@@ -114,7 +114,8 @@ QWidget* MainWindow::makeCalibration() {
     calibrationOverview_->setRecipes([this]{return service_.hasProject() ? service_.project().recipes:QVector<Recipe>{};});
     calibrationOverview_->onChanged=[this]{refreshFlow();refreshMatchOverlay();runtimeResult_.reset();showRuntimeResult();refreshRuntime();};
     stack->addWidget(calibrationOverview_);stack->addWidget(calibrationHome_);stack->addWidget(page);outer->addWidget(stack,1);
-    auto* navigation=new QHBoxLayout;outer->addLayout(navigation);
+    auto* legacyNavigation=new QGroupBox("Ayrıntılar • önceki akış ve eski kanıt ekranları");legacyNavigation->setObjectName("calibrationLegacyNavigation");legacyNavigation->setCheckable(true);legacyNavigation->setChecked(false);auto* legacyLayout=new QVBoxLayout(legacyNavigation);auto* legacyContent=new QWidget;legacyLayout->addWidget(legacyContent);legacyContent->hide();connect(legacyNavigation,&QGroupBox::toggled,legacyContent,&QWidget::setVisible);outer->addWidget(legacyNavigation);
+    auto* navigation=new QHBoxLayout(legacyContent);
     QStringList names{"Sistem özeti","Önceki kalibrasyon akışı","Eski kayıt / kanıt ekranı"};
     for(int i=0;i<names.size();++i){auto* b=new QPushButton(names[i]);b->setObjectName(i==2 ? "calibrationLegacyView":i==1 ? "calibrationPreviousView":"calibrationOverviewView");navigation->addWidget(b);connect(b,&QPushButton::clicked,this,[stack,i]{stack->setCurrentIndex(i);});}
     return wrapper;

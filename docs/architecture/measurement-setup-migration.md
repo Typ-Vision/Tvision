@@ -35,7 +35,11 @@ trusted `snapshots`, legacy aktif servis ve `SystemCalibration` bu modeli
 reddeder. Edinim zarfı schema2 / `experimental-calibration/1`, özgün typed probe,
 backend ve false production/trigger-association/physical-acceptance alanlarını
 taşır. Onayı kapatmak deneysel izinleri siler; tekrar açmak eski izni diriltmez.
-UI bağlantısı CCUX-09, Editor/Runtime metrik tüketimi sonraki kartlardır.
+CCUX-09 UI'sı iki yöntemde bu komutu çağırır. Ready ve tek anlamlı varsayılan
+kurulum exact hedefse, `saveAndUse` operasyonel seçimi ayrı kullanıcı adımı olmadan
+son seçim commit'ine dahil eder. Legacy `activate` açık operasyonel seçim kuralını
+korur; belirsiz/eski varsayılan otomatik seçilmez. Aday sonrası hata operasyonel
+seçimi de değiştirmez. Editor/Runtime metrik tüketimi sonraki kartlardır.
 
 Kabul: `calibration_save_use` ile kartın dört regresyon suite'i. Fixture sonuçları
 fiziksel kamera veya bağımsız mm kabulü değildir.

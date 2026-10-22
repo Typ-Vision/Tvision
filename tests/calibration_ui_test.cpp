@@ -1,4 +1,7 @@
 #include "app/CalibrationWizard.hpp"
+#include "app/CalibrationOverview.hpp"
+#include "OecsExperimentalFixture.hpp"
+#include <QGroupBox>
 #include "app/CalibrationHome.hpp"
 #include "app/ImageViewer.hpp"
 #include "application/CalibrationService.hpp"
@@ -116,6 +119,48 @@ int main(int argc,char** argv){QApplication app(argc,argv);try{
     bool missingRejected=false;try{workspace.associate(original,ref,tmp.filePath("missing.png"));}catch(...){missingRejected=true;}check(missingRejected,"Missing original raster cannot associate");
     QImage changed=stripe;changed.setPixelColor(5,5,Qt::white);const auto changedPath=tmp.filePath("changed.png");changed.save(changedPath);bool changedRejected=false;try{workspace.associate(original,ref,changedPath);}catch(...){changedRejected=true;}check(changedRejected,"Changed raster cannot associate");
     CalibrationWizard independentCancel(false,target,tmp.path(),[](const auto&){throw std::runtime_error("Unexpected independent save");});independentCancel.show();independentCancel.openFile(path);click(independentCancel,"wizardStop");idle(independentCancel);check(!widget<QLabel>(independentCancel,"wizardImageInfo")->text().contains("640"),"Independent Stop rejects late file");
+    // CCUX-09: both methods issue the actual one-command application operation.
+    MeasurementWorkspace commandWorkspace(tmp.filePath("ccux09.vfproject"),"ccux09",[]{return true;});
+    commandWorkspace.replace({{camera},{descriptor}});
+    for(int mode=0;mode<2;++mode){
+        const auto selectedSetup=mode ? plateSetup:descriptor;
+        // A Ready default is enough; no user-facing operational/profile selection.
+        if(mode){commandWorkspace.environment();commandWorkspace.replace({{camera},{descriptor,plateSetup}});commandWorkspace.calibrations().setOperational(camera.id,plateSetup.id);}
+        auto request=IndependentCaptureRequest::fromDefaults(commandWorkspace.environment(),camera.id);
+        const auto raster=mode ? QImage(tmp.filePath("plate0.png")).convertToFormat(QImage::Format_Grayscale8):stripe;
+        IndependentCaptureBackend backend{[&]{return QVector<DeviceBinding>{camera.device};},[raster](const DeviceBinding&,const GeometryDescriptor&){return std::make_unique<CameraFixture>(raster);}};
+        CalibrationWizard commandWizard(mode,request,tmp.path(),[](const auto&){throw std::runtime_error("Separate save callback must not run");},nullptr,backend);
+        const SetupReference commandRef{camera.id,selectedSetup.id,1};const auto base=commandWorkspace.environment().revision;
+        bool fail=true;QString partialId;std::optional<CalibrationSaveUseResult> outcome;
+        commandWizard.setSaveAndUse([&](const auto& record,const auto& probe){outcome=commandWorkspace.calibrations().saveAndUse({commandRef,base,probe.evidence()->generation},record,probe,[]{return true;},fail ? MeasurementEnvironmentRepository::Fault::AfterCandidate:MeasurementEnvironmentRepository::Fault::None);return *outcome;});
+        commandWizard.resize(1400,900);commandWizard.show();app.processEvents();
+        check(!widget<QLineEdit>(commandWizard,"wizardLens")->isVisible(),"Normal camera wizard hides fixed installation fields");
+        // File plus fresh live probe exercises preservation of file provenance.
+        if(mode)commandWizard.openFile(tmp.filePath("plate0.png"));else click(commandWizard,"wizardAcquire");idle(commandWizard);click(commandWizard,"wizardNext");
+        if(mode){widget<QSpinBox>(commandWizard,"wizardColumns")->setValue(9);widget<QDoubleSpinBox>(commandWizard,"wizardSpacing")->setValue(5);}else draw(commandWizard,{20,100},{620,100});
+        click(commandWizard,"wizardDetect");idle(commandWizard);click(commandWizard,"wizardNext");if(!mode)widget<QDoubleSpinBox>(commandWizard,"wizardKnownMm")->setValue(10);click(commandWizard,"wizardNext");
+        const auto previous=commandWorkspace.environment().selections;
+        click(commandWizard,"wizardNext");idle(commandWizard);check(outcome && outcome->state==CalibrationSaveUseState::CandidateSaved && commandWorkspace.environment().selections==previous,"Partial save preserves previous selection");partialId=outcome->contentId;
+        check(widget<QLabel>(commandWizard,"wizardResult")->text().contains("Aday kaydedildi"),"Partial result is readable and retryable");
+        commandWizard.grab().save(QString("../ccux/ccux-09/wizard-%1-partial-1400.png").arg(mode));fail=false;
+        click(commandWizard,"wizardNext");idle(commandWizard);check(outcome->state==CalibrationSaveUseState::Activated && outcome->duplicate && outcome->contentId==partialId,"Retry reuses immutable candidate and activates");
+        check(commandWorkspace.calibrations().snapshots({commandRef}).first().calibration.record.image().origin==(mode ? "setup_file":"acquired"),"Save/use retains acquired/file provenance");
+        commandWizard.resize(850,600);app.processEvents();commandWizard.grab().save(QString("../ccux/ccux-09/wizard-%1-ready-850.png").arg(mode));click(commandWizard,"wizardNext");check(commandWizard.result()==QDialog::Accepted,"Successful workflow closes explicitly");
+    }
+    // Typed experimental image evidence must survive the UI math session.
+    {auto r=oecs_experimental_fixture::request();auto device=oecs_experimental_fixture::state();device->pixels.fill(char(20));for(int y=0;y<2048;++y)for(int x=120;x<520;++x)device->pixels[y*2448+x]=char(220);
+        MeasurementWorkspace experimental(tmp.filePath("ccux09-experimental.vfproject"),"experimental",[]{return true;});experimental.replace({{r.camera},{r.setup},{r.profile}});experimental.calibrations().setExperimental(true);
+        auto request=IndependentCaptureRequest::fromDefaults(experimental.environment(),r.camera.id,CalibrationCapturePolicy::ExperimentalOecs);request.timeoutMs=3000;
+        IndependentCaptureBackend backend;backend.industrialDiscover=[r]{return IndustrialDiscoverySnapshot{{r.device},{},false};};backend.experimentalApi=[device]{return std::make_unique<oecs_experimental_fixture::Api>(device);};
+        CalibrationWizard experimentalWizard(false,request,tmp.path(),[](const auto&){},nullptr,backend);const auto base=experimental.environment().revision;const SetupReference ref{r.camera.id,r.setup.id,1};
+        experimentalWizard.setSaveAndUse([&](const auto& record,const auto& probe){check(record.image().experimental.has_value(),"UI preserves typed experimental raster/model evidence");return experimental.saveAndUseCalibration({ref,base,probe.evidence()->generation,CalibrationCapturePolicy::ExperimentalOecs},record,probe,[]{return true;});});
+        experimentalWizard.resize(1400,900);experimentalWizard.show();app.processEvents();click(experimentalWizard,"wizardAcquire");idle(experimentalWizard);click(experimentalWizard,"wizardNext");draw(experimentalWizard,{20,100},{620,100});click(experimentalWizard,"wizardDetect");idle(experimentalWizard);click(experimentalWizard,"wizardNext");widget<QDoubleSpinBox>(experimentalWizard,"wizardKnownMm")->setValue(10);click(experimentalWizard,"wizardNext");
+        check(widget<QLabel>(experimentalWizard,"wizardResult")->text().startsWith("Deneysel"),"Main result visibly labels experimental calculation");experimentalWizard.grab().save("../ccux/ccux-09/experimental-result-1400.png");click(experimentalWizard,"wizardNext");
+        check(experimental.calibrations().status(ref).sessionPermitted && widget<QLabel>(experimentalWizard,"wizardResult")->text().startsWith("Deneysel"),"UI experimental one-command activation remains experimental");
+        experimentalWizard.resize(850,600);app.processEvents();experimentalWizard.grab().save("../ccux/ccux-09/experimental-ready-850.png");click(experimentalWizard,"wizardNext");
+        CalibrationOverview overview([&]{return &experimental;});overview.resize(850,600);overview.show();app.processEvents();check(widget<QLabel>(overview,"overviewDetail")->text().contains("Deneysel"),"Overview identifies experimental selection");overview.grab().save("../ccux/ccux-09/experimental-overview-850.png");
+        MeasurementWorkspace restart(experimental.projectPath(),"experimental",[]{return true;});CalibrationOverview offline([&]{return &restart;});offline.resize(850,600);offline.show();app.processEvents();check(widget<QLabel>(offline,"overviewDetail")->text().contains("Kayıtlı / bağlantı") && !widget<QLabel>(offline,"overviewDetail")->text().contains("mm/px"),"Restart shows remembered experimental model without active values");offline.grab().save("../ccux/ccux-09/remembered-overview-850.png");
+    }
     check(independentFile.open(QIODevice::ReadOnly) && independentFile.readAll()==emptyProjectBytes,"Independent calibration preserves saved project bytes");
     check(ProjectRepository{}.load(independentPath).recipes.isEmpty(),"Independent methods and origins never create a hidden recipe");
     QTextStream(stdout)<<"PASS "<<checks<<" UI checks; fixtures "<<tmp.path()<<'\n';tmp.setAutoRemove(false);return 0;

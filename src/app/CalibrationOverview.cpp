@@ -36,34 +36,40 @@ QString id(){return QUuid::createUuid().toString(QUuid::WithoutBraces);}
 }
 CalibrationOverview::CalibrationOverview(std::function<MeasurementWorkspace*()> context,QWidget* parent):QWidget(parent),context_(std::move(context)){
 setObjectName("calibrationOverview");auto* outer=new QVBoxLayout(this);auto* scroll=new QScrollArea;scroll->setWidgetResizable(true);scroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);outer->addWidget(scroll);auto* body=new QWidget;auto* layout=new QVBoxLayout(body);scroll->setWidget(body);
-auto* title=label("Kalibrasyon • Sistem özeti");title->setStyleSheet("font-size:22px;font-weight:600");layout->addWidget(title);
+auto* title=label("Kalibrasyon • Kameralar");title->setStyleSheet("font-size:22px;font-weight:600");layout->addWidget(title);
 summary_=label("");summary_->setObjectName("overviewSummary");layout->addWidget(summary_);
-auto* actions=new QGridLayout;layout->addLayout(actions);
+auto* actions=new QGridLayout;
 auto command=[&](QString text,QString name,int row,int col,std::function<void()> f){auto* b=new QPushButton(text);b->setObjectName(name);actions->addWidget(b,row,col);connect(b,&QPushButton::clicked,this,[this,f]{attempt(f);});};
 command("Kamera / kurulum ekle","overviewAdd",0,0,[this]{edit(true);});
 command("Kurulumu düzenle","overviewEdit",0,1,[this]{edit(false);});
 command("Yeni ölçüm kurulumu","overviewAddSetup",1,0,[this]{edit(false,true);});
 command("Cihazları keşfet","overviewDiscover",1,1,[this]{if(onCameraManager){onCameraManager();return;}auto* c=context_();if(!c)throw std::runtime_error("Önce projeyi kaydedin.");c->discover();refresh();});
 cards_=new QWidget;grid_=new QGridLayout(cards_);grid_->setContentsMargins(0,0,0,0);layout->addWidget(cards_);
-auto* selected=new QGroupBox("Seçili kamera ve ölçüm kurulumu");auto* v=new QVBoxLayout(selected);layout->addWidget(selected);
-detail_=label("");detail_->setObjectName("overviewDetail");v->addWidget(detail_);setups_=new QComboBox;setups_->setObjectName("overviewSetups");setups_->setSizeAdjustPolicy(QComboBox::AdjustToMinimumContentsLengthWithIcon);setups_->setMinimumContentsLength(12);v->addWidget(setups_);
-profiles_=new QComboBox;profiles_->setObjectName("overviewProfiles");profiles_->setSizeAdjustPolicy(QComboBox::AdjustToMinimumContentsLengthWithIcon);profiles_->setMinimumContentsLength(12);profiles_->setToolTip("Kalibrasyon edinimi ve etkinleştirme için kayıtlı acquisition profili");v->addWidget(profiles_);
+auto* selected=new QGroupBox("Seçili kamera");auto* v=new QVBoxLayout(selected);layout->addWidget(selected);
+detail_=label("");detail_->setObjectName("overviewDetail");detail_->setTextInteractionFlags(Qt::TextSelectableByMouse|Qt::TextSelectableByKeyboard);v->addWidget(detail_);
+connect(button(v,"Kalibre Et…","overviewCalibrate"),&QPushButton::clicked,this,[this]{attempt([this]{chooseMethod();});});
+auto* experimental=new QCheckBox("Deneysel OECS kalibrasyonu • bu oturum için onayla");experimental->setObjectName("overviewExperimental");experimental->setToolTip("Tetik eşleşmesi ve fiziksel mm kabulü doğrulanmadı. PLC / robot çıkışı kapalıdır. Restart onayı sıfırlar.");v->addWidget(experimental);
+connect(experimental,&QCheckBox::toggled,this,[this,experimental](bool enabled){attempt([&]{auto* c=context_();if(!c)throw std::runtime_error("Önce projeyi kaydedin.");c->calibrations().setExperimental(enabled);experimental_=enabled;refresh();});if(experimental_!=enabled){QSignalBlocker b(experimental);experimental->setChecked(experimental_);}});
+auto* advanced=new QGroupBox("Ayrıntılar • geçmiş / dosya denemesi / kurulum");advanced->setObjectName("overviewDetails");advanced->setCheckable(true);advanced->setChecked(false);v->addWidget(advanced);auto* advancedLayout=new QVBoxLayout(advanced);auto* fields=new QWidget;advancedLayout->addWidget(fields);fields->hide();connect(advanced,&QGroupBox::toggled,fields,&QWidget::setVisible);auto* dv=new QVBoxLayout(fields);dv->addLayout(actions);
+setups_=new QComboBox;setups_->setObjectName("overviewSetups");setups_->setSizeAdjustPolicy(QComboBox::AdjustToMinimumContentsLengthWithIcon);setups_->setMinimumContentsLength(12);dv->addWidget(setups_);
+profiles_=new QComboBox;profiles_->setObjectName("overviewProfiles");profiles_->setSizeAdjustPolicy(QComboBox::AdjustToMinimumContentsLengthWithIcon);profiles_->setMinimumContentsLength(12);profiles_->setToolTip("Kalibrasyon edinimi ve etkinleştirme için kayıtlı acquisition profili");dv->addWidget(profiles_);
 connect(setups_,&QComboBox::currentIndexChanged,this,[this]{if(!refreshing_)refresh();});
-auto* commands=new QHBoxLayout;v->addLayout(commands);
+auto* commands=new QHBoxLayout;dv->addLayout(commands);
 connect(button(commands,"Operasyonel seç","overviewOperational"),&QPushButton::clicked,this,[this]{attempt([this]{auto* c=context_();if(!c || selected_.isEmpty() || setups_->currentData().toString().isEmpty())throw std::runtime_error("Kamera ve kurulum seçin.");c->calibrations().setOperational({selected_},{setups_->currentData().toString()});if(onChanged)onChanged();refresh();});});
 connect(button(commands,"Devre dışı bırak","overviewDeactivate"),&QPushButton::clicked,this,[this]{attempt([this]{auto* c=context_();if(!c || setups_->currentData().toString().isEmpty())throw std::runtime_error("Kurulum seçin.");c->calibrations().deactivate({setups_->currentData().toString()});if(onChanged)onChanged();refresh();});});
-auto* methods=new QGridLayout;v->addLayout(methods);int row=0;
+auto* methods=new QGridLayout;dv->addLayout(methods);int row=0;
 for(const auto& text:QStringList{"Bilinen ölçü","Kalibrasyon plakası","Dosyadan deneme başlat","Etkinleştir","Robot kalibrasyonu"}){auto* b=new QPushButton(text);b->setObjectName("overviewMethod"+QString::number(row));methods->addWidget(b,row/2,row%2);
     if(row<3)connect(b,&QPushButton::clicked,this,[this,row]{attempt([this,row]{if(row==2)startTrial();else wizard(row==1,false);});});
     else if(row==3)connect(b,&QPushButton::clicked,this,[this]{attempt([this]{activate();});});
     else {b->setEnabled(false);b->setToolTip("Robot kalibrasyonu henüz uygulanmadı.");}++row;}
-connect(button(v,"Eski kayıtları kurulumla eşle","overviewMigrate"),&QPushButton::clicked,this,[this]{attempt([this]{migrate();});});
-connect(button(v,"Denemeyi bu kurulumla ilişkilendir","overviewAssociate"),&QPushButton::clicked,this,[this]{attempt([this]{associateTrial();});});
-v->addWidget(label("Kaydet yeni aday oluşturur; etkinleştirme ayrı işlemdir. Kaydetmek fiziksel cihaz ayarı uygulamaz."));
-records_=new QTableWidget(0,3);records_->setObjectName("overviewRecords");records_->setHorizontalHeaderLabels({"Kayıt / sürüm","Seçim","Bağımsız kontrol"});records_->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);records_->setEditTriggers(QAbstractItemView::NoEditTriggers);records_->setSelectionBehavior(QAbstractItemView::SelectRows);records_->setMinimumHeight(140);v->addWidget(records_);
-connect(button(v,"Kamerayı arşivle","overviewArchive"),&QPushButton::clicked,this,[this]{attempt([this]{auto* c=context_();if(!c || selected_.isEmpty())throw std::runtime_error("Kamera seçin.");c->archive({selected_});selected_.clear();refresh();});});
-connect(button(v,"Kurulumu arşivle","overviewArchiveSetup"),&QPushButton::clicked,this,[this]{attempt([this]{auto* c=context_();if(!c || setups_->currentData().toString().isEmpty())throw std::runtime_error("Kurulum seçin.");c->archiveSetup({setups_->currentData().toString()});refresh();});});
-auto* transfers=new QVBoxLayout;layout->addLayout(transfers);for(const auto& action:QStringList{"export","import","copy"}){const QString text=action=="export" ? "Kalibrasyon bağımlılıklarını dışa aktar":action=="import" ? "Boş projeye kalibrasyon bağımlılıklarını al":"Kaydedilmiş projeyi bağımlılıklarıyla farklı kaydet";connect(button(transfers,text,"overviewTransfer_"+action),&QPushButton::clicked,this,[this,action]{attempt([this,action]{transfer(action);});});}
+connect(button(dv,"Eski kayıtları kurulumla eşle","overviewMigrate"),&QPushButton::clicked,this,[this]{attempt([this]{migrate();});});
+connect(button(dv,"Denemeyi bu kurulumla ilişkilendir","overviewAssociate"),&QPushButton::clicked,this,[this]{attempt([this]{associateTrial();});});
+dv->addWidget(label("Geçmiş adaylar etkin seçimden ayrıdır. Normal akışta Kalibre Et → Kaydet ve kullan kullanılır. Bağımsız fiziksel kontrol ayrıca yapılmalıdır."));
+records_=new QTableWidget(0,3);records_->setObjectName("overviewRecords");records_->setHorizontalHeaderLabels({"Kayıt / sürüm","Seçim","Bağımsız kontrol"});records_->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);records_->setEditTriggers(QAbstractItemView::NoEditTriggers);records_->setSelectionBehavior(QAbstractItemView::SelectRows);records_->setMinimumHeight(140);dv->addWidget(records_);
+connect(button(dv,"Kamerayı arşivle","overviewArchive"),&QPushButton::clicked,this,[this]{attempt([this]{auto* c=context_();if(!c || selected_.isEmpty())throw std::runtime_error("Kamera seçin.");c->archive({selected_});selected_.clear();refresh();});});
+connect(button(dv,"Kurulumu arşivle","overviewArchiveSetup"),&QPushButton::clicked,this,[this]{attempt([this]{auto* c=context_();if(!c || setups_->currentData().toString().isEmpty())throw std::runtime_error("Kurulum seçin.");c->archiveSetup({setups_->currentData().toString()});refresh();});});
+connect(button(dv,"Optik / kamera konumu değişti","overviewOpticalChange"),&QPushButton::clicked,this,[this]{attempt([this]{auto* c=context_();if(!c || selected_.isEmpty())throw std::runtime_error("Kamera seçin.");c->notifyOpticalChange({selected_},c->environment().revision);if(onChanged)onChanged();refresh();status_->setText("İlgili kurulumların kullanım izni kesildi. Optik/geometriyi tamamlayıp yeniden kalibre edin.");});});
+auto* transfers=new QVBoxLayout;dv->addLayout(transfers);for(const auto& action:QStringList{"export","import","copy"}){const QString text=action=="export" ? "Kalibrasyon bağımlılıklarını dışa aktar":action=="import" ? "Boş projeye kalibrasyon bağımlılıklarını al":"Kaydedilmiş projeyi bağımlılıklarıyla farklı kaydet";connect(button(transfers,text,"overviewTransfer_"+action),&QPushButton::clicked,this,[this,action]{attempt([this,action]{transfer(action);});});}
 status_=label("");status_->setObjectName("overviewStatus");layout->addWidget(status_);layout->addStretch();refresh();
 }
 void CalibrationOverview::attempt(std::function<void()> f){status_->clear();try{f();}catch(const std::exception& e){status_->setText(QString::fromUtf8(e.what()));}}
@@ -74,6 +80,7 @@ void CalibrationOverview::refresh(){
 if(refreshing_)return;refreshing_=true;
 try{
 status_->clear();for(auto* w:cardWidgets_)delete w;cardWidgets_.clear();records_->setRowCount(0);auto* c=context_();
+if(lastContext_!=c){lastContext_=c;experimental_=false;auto* box=findChild<QCheckBox*>("overviewExperimental");QSignalBlocker b(box);box->setChecked(false);}
 if(!c){summary_->setText("Önce bir proje açın ve kaydedin. Reçete oluşturmanız gerekmez.");detail_->clear();setups_->clear();cards_->hide();refreshing_=false;return;}
 auto e=c->environment();QVector<MeasurementCamera> cameras;for(const auto& camera:e.current.cameras)if(!e.archivedCameras.contains(camera.id.value))cameras.append(camera);
 bool found=false;for(const auto& camera:cameras)if(camera.id.value==selected_)found=true;if(!found)selected_=cameras.isEmpty() ? QString{}:cameras.first().id.value;
@@ -81,29 +88,36 @@ summary_->setText(cameras.isEmpty() ? "Kamera veya ölçüm kurulumu ekleyin vey
 cards_->setVisible(cameras.size()>1);
 for(const auto& camera:cameras){
 auto* card=new QPushButton;card->setObjectName("overviewCamera_"+camera.id.value);card->setCheckable(true);card->setChecked(camera.id.value==selected_);card->setMinimumHeight(108);card->setSizePolicy(QSizePolicy::Ignored,QSizePolicy::Preferred);
-QString setupName="Operasyonel kurulum seçilmedi",choice="Seçili kayıt yok";for(const auto& s:e.current.setups)if(s.id.value==e.operational.value(camera.id.value)){setupName=s.name;for(const auto& r:e.selections)if(r.target.setup==s.id)choice=QString("v%1 • son seçim hatırlanıyor").arg(r.version);}
-QString availability=c->availability(camera);for(const auto& s:e.current.setups)if(s.id.value==e.operational.value(camera.id.value))try{const auto active=c->calibrations().snapshots({{s.camera,s.id,s.revision}});choice=QString("v%1 • seçili").arg(active.first().calibration.selection.version);availability="Kullanılabilir • gerçek kare denetlendi";}catch(const std::exception&){}
-const auto full=camera.name+"\n"+setupName+"\n"+choice+"\n"+availability;card->setToolTip(full);card->setText(camera.name.left(32)+"\n"+setupName.left(32)+"\n"+choice+"\n"+availability.left(36));grid_->addWidget(card);cardWidgets_.append(card);connect(card,&QPushButton::clicked,this,[this,camera]{select(camera.id.value);});}
+const auto defaults=e.defaults(camera.id);QString setupName=defaults.status==CameraDefaultsStatus::Pending ? "Kurulum bilgisi bekleniyor":"Kurulum yok",choice="Kalibrasyon yok";
+for(const auto& s:e.current.setups)if(defaults.setup && s.id==*defaults.setup){if(defaults.status!=CameraDefaultsStatus::Pending)setupName=s.name;const auto state=c->calibrations().status({s.camera,s.id,s.revision});choice=state.state==CalibrationAvailability::None ? "Kalibrasyon yok":state.state==CalibrationAvailability::Remembered ? "Kayıtlı / bağlantı bekleniyor":state.state==CalibrationAvailability::Valid ? "Geçerli":"Yeniden kalibrasyon gerekli";if(state.experimental)choice="Deneysel • "+choice;}
+QString availability=c->availability(camera);
+const auto full=camera.name+"\n"+setupName+"\n"+choice+"\n"+availability;card->setToolTip(full);card->setText((e.registrations.contains(camera.id.value) ? e.registrations[camera.id.value].shortId+" • ":"")+camera.name.left(32)+"\n"+setupName.left(32)+"\n"+choice+"\n"+availability.left(36));grid_->addWidget(card);cardWidgets_.append(card);connect(card,&QPushButton::clicked,this,[this,camera]{select(camera.id.value);});}
 reflow();const auto previous=setups_->currentData().toString();setups_->clear();
 for(const auto& s:e.current.setups)if(s.camera.value==selected_ && !e.archivedSetups.contains(s.id.value))setups_->addItem(s.name+QString(" • r%1").arg(s.revision),s.id.value);
-int index=setups_->findData(previous);if(index<0)index=setups_->findData(e.operational.value(selected_));if(index>=0)setups_->setCurrentIndex(index);
+int index=setups_->findData(previous);if(index<0){const auto defaults=e.defaults({selected_});if(defaults.setup)index=setups_->findData(defaults.setup->value);}if(index>=0)setups_->setCurrentIndex(index);
 const auto priorProfile=profiles_->currentData();profiles_->clear();bool industrial=false;
 for(const auto& camera:cameras)if(camera.id.value==selected_)industrial=camera.physical.has_value();
+findChild<QCheckBox*>("overviewExperimental")->setVisible(industrial);
 for(const auto& p:e.current.profiles)if(p.camera.value==selected_ && p.setup.value==setups_->currentData().toString())profiles_->addItem(p.name+QString(" • r%1").arg(p.revision),p.id.value);
-profiles_->setCurrentIndex(profiles_->findData(priorProfile));if(profiles_->currentIndex()<0 && profiles_->count()==1)profiles_->setCurrentIndex(0);
+const auto defaults=selected_.isEmpty() ? CameraDefaults{}:e.defaults({selected_});profiles_->setCurrentIndex(profiles_->findData(defaults.profile ? QVariant(defaults.profile->value):priorProfile));if(profiles_->currentIndex()<0 && profiles_->count()==1)profiles_->setCurrentIndex(0);
 profiles_->setPlaceholderText("Edinim profili seçin • Camera Manager'da düzenlenir");profiles_->setVisible(industrial);
 detail_->clear();for(const auto& camera:cameras)if(camera.id.value==selected_){
     const auto identity=camera.physical ? camera.physical->vendor+" / "+camera.physical->model+" / Seri: "+camera.physical->serial : camera.device.providerId+" • "+camera.device.adapter;
-    detail_->setText(camera.name+"\n"+c->availability(camera)+"\nCihaz: "+identity+"\nKamera kaydı gerçek edinim veya fiziksel süreklilik kabulü değildir.");
+    detail_->setText((e.registrations.contains(camera.id.value) ? e.registrations[camera.id.value].shortId+" • ":"")+camera.name+"\n"+c->availability(camera)+"\nCihaz: "+identity);
 }
 for(const auto& s:e.current.setups)if(s.id.value==setups_->currentData().toString()){
-detail_->setText(detail_->text()+QString("\n%1 • %2 • %3×%4 px • %5").arg(s.opticalProfile,s.workingPlane).arg(s.geometry.resolution.width()).arg(s.geometry.resolution.height()).arg(e.operational.value(selected_)==s.id.value ? "Operasyonel":"Operasyonel değil"));
+detail_->setText(detail_->text()+QString("\n%1 • %2 • %3×%4 px • %5").arg(s.opticalProfile,s.workingPlane).arg(s.geometry.resolution.width()).arg(s.geometry.resolution.height()).arg(s.pending ? "Kurulum bilgisi bekleniyor":"Kayıtlı kurulum"));
+const auto state=c->calibrations().status({s.camera,s.id,s.revision});
+QString text=state.state==CalibrationAvailability::None ? "Kalibrasyon yok":state.state==CalibrationAvailability::Remembered ? "Kayıtlı / bağlantı ve uyum denetimi bekleniyor":state.state==CalibrationAvailability::Valid ? "Geçerli":"Yeniden kalibrasyon gerekli";
+if(state.experimental)text="Deneysel • "+text;
+if(state.remembered && state.mathematicsCompatible)for(const auto& r:c->calibrations().records({s.camera,s.id,s.revision}))if(r.contentId()==state.remembered->contentId){text+=QString("\n")+(r.model().mapping() ? "Kalibrasyon plakası":"Bilinen ölçü")+" • "+r.recordedAt().toLocalTime().toString("dd.MM.yyyy HH:mm");if(state.sessionPermitted)text+=r.model().mapping() ? QString(" • plaka uyumu RMS %1 mm").arg(r.model().mapping()->fitRmsMillimetres(),0,'g',8):QString(" • %1 mm/px").arg(r.model().millimetresPerPixel(),0,'g',10);else text+=" • kayıtlı model, etkin değer değil";text+=r.controlAccepted() ? (*r.controlAccepted() ? "\nBağımsız kontrol sınır içinde":"\nBağımsız kontrol reddedildi"):"\nBağımsız fiziksel kontrol yapılmadı";}
+detail_->setText(detail_->text()+"\n"+text);
 try{for(const auto& r:c->calibrations().historyRecords(s.id)){int row=records_->rowCount();records_->insertRow(row);const bool old=r.setup().id!=s.id.value+"/"+QString::number(s.revision);QString choice=old ? "Eski kurulum revision • kullanılamaz":"Seçili değil";for(const auto& selection:e.selections)if(selection.contentId==r.contentId() && selection.target.setup==s.id)choice=old ? "Son seçim • eski kurulum revision":"Son seçim • uyum denetimi bekliyor";if(!old)try{const auto active=c->calibrations().snapshots({{s.camera,s.id,s.revision}});if(active.first().calibration.record.contentId()==r.contentId())choice="Seçili • kullanılabilir";}catch(const std::exception&){};
 QString control=r.controlAccepted() ? (*r.controlAccepted() ? "Sınır içinde":"Reddedildi") : r.residualsMillimetres().isEmpty() ? "Yapılmadı":"Sonuç mevcut";
 QStringList cells{r.name()+QString(" • v%1").arg(r.model().dependency().version),choice,control};for(int col=0;col<3;++col){auto* item=new QTableWidgetItem(cells[col]);item->setToolTip(cells[col]);if(col==0)item->setData(Qt::UserRole,r.contentId());records_->setItem(row,col,item);}}}catch(const std::exception& ex){status_->setText(QString::fromUtf8(ex.what()));}
 }
 }catch(const std::exception& e){status_->setText(QString::fromUtf8(e.what()));detail_->clear();records_->setRowCount(0);}
-refreshing_=false;
+detail_->setToolTip(detail_->text());refreshing_=false;
 }
 void CalibrationOverview::configureCapture(IndependentCaptureRequest& request) const {
     if(!request.camera || !request.camera->physical)return;
@@ -147,14 +161,27 @@ void CalibrationOverview::transferFile(const QString& action,const QString& path
     else {QFile file(path);if(!file.open(QIODevice::ReadOnly) || file.size()>12*1024*1024)throw std::runtime_error("Bağımlılık paketi açılamadı / boyut sınırı.");QJsonParseError error;const auto document=QJsonDocument::fromJson(file.readAll(),&error);if(error.error!=QJsonParseError::NoError || !document.isObject())throw std::runtime_error("Geçersiz bağımlılık paketi.");c->importDependencies(document.object());refresh();status_->setText("Bağımlılıklar alındı; seçim hatırlanır, kullanım izni verilmez.");}
 }
 void CalibrationOverview::startTrial(){QDialog d(this);d.setObjectName("trialMethodChoice");d.setWindowTitle("Dosyadan deneme yöntemi");auto* layout=new QVBoxLayout(&d);layout->addWidget(label("Hedef kamera olmadan deneme kaydı oluşturulur. Daha sonra özgün dosyayla ayrı ilişkilendirme yapılabilir."));bool plate=false;connect(button(layout,"Bilinen ölçü","trialKnown"),&QPushButton::clicked,&d,&QDialog::accept);connect(button(layout,"Kalibrasyon plakası","trialPlate"),&QPushButton::clicked,&d,[&]{plate=true;d.accept();});connect(button(layout,"İptal","trialCancel"),&QPushButton::clicked,&d,&QDialog::reject);if(d.exec()==QDialog::Accepted)wizard(plate,true);}
+void CalibrationOverview::chooseMethod(){
+    QDialog choice(this);choice.setObjectName("calibrationMethodChoice");choice.setWindowTitle("Kalibre Et");auto* layout=new QVBoxLayout(&choice);layout->addWidget(label("Seçili kamera için yöntem seçin. Kamera, kurulum ve profil sihirbaz açılırken sabitlenir."));
+    int method=-1;connect(button(layout,"Bilinen ölçü","calibrateKnown"),&QPushButton::clicked,&choice,[&]{method=0;choice.accept();});connect(button(layout,"Kalibrasyon plakası","calibratePlate"),&QPushButton::clicked,&choice,[&]{method=1;choice.accept();});auto* robot=button(layout,"Robot kalibrasyonu • Henüz desteklenmiyor","calibrateRobot");robot->setEnabled(false);robot->setToolTip("Hand-eye bu akışta desteklenmiyor.");connect(button(layout,"İptal","calibrateCancel"),&QPushButton::clicked,&choice,&QDialog::reject);
+    if(choice.exec()==QDialog::Accepted && method>=0)wizard(method==1,false);
+}
 void CalibrationOverview::wizard(bool plate,bool trial){
-    auto* c=context_();if(!c)throw std::runtime_error("Önce projeyi kaydedin.");auto e=c->environment();IndependentCaptureRequest request;
-    if(!trial){for(const auto& camera:e.current.cameras)if(camera.id.value==selected_)request.camera=camera;
-        for(const auto& setup:e.current.setups)if(setup.id.value==setups_->currentData().toString())request.setup=setup;
-        if((!request.camera || !request.setup) && !e.current.cameras.isEmpty())throw std::runtime_error("Hedef kurulum seçin.");}
-    configureCapture(request);
-    CalibrationWizard dialog(plate,request,c->directory(),[c,request](const auto& r){if(r.image().origin=="trial_file")c->saveTrial(r);else c->calibrations().save({request.camera->id,request.setup->id,request.setup->revision},r);},this,backend_);
-    dialog.exec();refresh();
+    auto* c=context_();if(!c)throw std::runtime_error("Önce projeyi kaydedin.");const auto e=c->environment();IndependentCaptureRequest request;
+    if(!trial && !selected_.isEmpty()){
+        const auto defaults=e.defaults({selected_});if(defaults.status!=CameraDefaultsStatus::Ready)throw std::runtime_error("Kamera kurulum bilgisi eksik veya varsayılanı belirsiz. Ayrıntılar / Kameralar ekranında tamamlayın.");
+        bool physical=false;for(const auto& camera:e.current.cameras)if(camera.id.value==selected_)physical=camera.physical.has_value();
+        request=IndependentCaptureRequest::fromDefaults(e,{selected_},experimental_ && physical ? CalibrationCapturePolicy::ExperimentalOecs:CalibrationCapturePolicy::Trusted);
+        if(request.camera->physical && !localSettings_.isEmpty())request.localRoute=CameraLocalConfiguration(localSettings_).route(*request.camera->physical);
+    }
+    const auto cameraId=selected_;const bool policy=experimental_;const auto target=request.setup ? std::optional(SetupReference{request.camera->id,request.setup->id,request.setup->revision}):std::nullopt;
+    CalibrationWizard dialog(plate,request,c->directory(),[this,c,request](const auto& r){if(context_()!=c)throw std::runtime_error("Proje değişti.");if(r.image().origin=="trial_file")c->saveTrial(r);else c->calibrations().save({request.camera->id,request.setup->id,request.setup->revision},r);},this,backend_);
+    const auto current=[this,c,cameraId,policy]{return context_()==c && selected_==cameraId && experimental_==policy;};
+    if(target)dialog.setSaveAndUse([this,c,target,revision=e.revision,request,current](const auto& record,const auto& probe){
+        if(!current()){CalibrationSaveUseResult result;result.error="Kamera / proje / oturum değişti.";return result;}
+        const auto evidence=probe.evidence();auto result=c->saveAndUseCalibration({*target,revision,evidence ? evidence->generation:0,request.policy},record,probe,current);if(result.state==CalibrationSaveUseState::Activated && onChanged)onChanged();return result;
+    });
+    QTimer lifetime;connect(&lifetime,&QTimer::timeout,&dialog,[&]{if(!current())static_cast<QDialog&>(dialog).reject();});lifetime.start(50);dialog.exec();refresh();
 }
 void CalibrationOverview::associateTrial(){
     auto* c=context_();if(!c)throw std::runtime_error("Önce projeyi kaydedin.");auto e=c->environment();std::optional<SetupReference> target;

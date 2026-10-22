@@ -65,7 +65,7 @@ private:
     void owner() const;
     MeasurementSetup installation(const MeasurementEnvironment&,const SetupReference&) const;
     void activateImpl(const SetupReference&,const QString&,const IndependentCalibrationSession&,
-        CalibrationCapturePolicy,MeasurementEnvironmentRepository::Fault,std::function<void()> beforeCommit={});
+        CalibrationCapturePolicy,MeasurementEnvironmentRepository::Fault,std::function<void()> beforeCommit={},bool selectDefault=false);
     QVector<ScopedCalibrationSnapshot> snapshotsImpl(const QVector<SetupReference>&,bool,std::function<void()>) const;
     MeasurementEnvironmentRepository repository_;
     ActiveCalibrationService::ChangeGate gate_;

@@ -38,19 +38,20 @@ CalibrationWizard::CalibrationWizard(bool plate,std::optional<ToolDefinition> so
     auto* body=new QHBoxLayout;viewer_=new ImageViewer;viewer_->setObjectName("wizardViewer");viewer_->setMinimumSize(180,180);body->addWidget(viewer_,3);
     auto* scroll=new QScrollArea;scroll->setWidgetResizable(true);scroll->setMinimumWidth(290);scroll->setMaximumWidth(370);pages_=new QStackedWidget;scroll->setWidget(pages_);body->addWidget(scroll,2);root->addLayout(body,1);
     auto page=[&]{auto* w=new QWidget;auto* v=new QVBoxLayout(w);pages_->addWidget(w);return v;};
-    auto* image=page();image->addWidget(label("Referans aynı çalışma düzleminde olmalı. Image File veya Webcam kaynağı kullanılır."));
+    auto* image=page();auto* intro=label("Referans aynı çalışma düzleminde olmalı. Image File veya Webcam kaynağı kullanılır.");intro->setObjectName("wizardSourceNote");image->addWidget(intro);
     auto* acquire=button(image,"Reçete kaynağından al","wizardAcquire");acquire->setEnabled(source_.has_value());
     connect(acquire,&QPushButton::clicked,this,[this]{if(independentTarget_){attempt([this]{captureIndependent();});return;}attempt([this]{session_.clear();pendingFrame_.reset();setup_.reset();controls_={};captureCancel_=std::make_shared<std::atomic_bool>(false);
         const auto source=*source_;const auto directory=directory_;const auto cancel=captureCancel_;auto* watcher=jobs_.watch<ImageLoad>(this,SessionJob::Image);
         connect(watcher,&QFutureWatcher<ImageLoad>::finished,this,[this,watcher]{auto r=watcher->result();watcher->deleteLater();if(captureCancel_ && !captureCancel_->load()){if(r.frame)presentFrame(*r.frame,false);else status_->setText(r.error);}refresh();});
         jobs_.launch(watcher,[source,directory,cancel]{ImageLoad r;try{r.frame=CalibrationCapture::acquire(source,directory,cancel);}catch(const std::exception& e){r.error=QString::fromUtf8(e.what());}return r;});refresh();});});
-    connect(button(image,"Dosyadan aç","wizardOpenFile"),&QPushButton::clicked,this,[this]{const auto path=QFileDialog::getOpenFileName(this,"Kalibrasyon görüntüsü",{},"Görüntüler (*.png *.jpg *.jpeg *.bmp)");if(!path.isEmpty())openFile(path);});
+    connect(button(image,"Dosyadan aç","wizardOpenFile"),&QPushButton::clicked,this,[this]{const auto path=QFileDialog::getOpenFileName(this,"Kalibrasyon görüntüsü",{},"Görüntüler (*.pgm *.png *.jpg *.jpeg *.bmp)");if(!path.isEmpty())openFile(path);});
     imageInfo_=label("Görüntü yok.");imageInfo_->setObjectName("wizardImageInfo");image->addWidget(imageInfo_);
-    auto* form=new QFormLayout;usage_=new QComboBox;usage_->setObjectName("wizardUsage");usage_->addItems({"Sadece deneme","Bu kurulumdan kaydedilmiş görüntü"});form->addRow("Dosya kullanımı",usage_);
+    auto* sourceDetails=new QGroupBox("Ayrıntılar • dosya denemesi / kurulum");sourceDetails->setObjectName("wizardSourceDetails");sourceDetails->setCheckable(true);sourceDetails->setChecked(false);auto* detailLayout=new QVBoxLayout(sourceDetails);auto* detailFields=new QWidget;detailLayout->addWidget(detailFields);detailFields->hide();connect(sourceDetails,&QGroupBox::toggled,detailFields,&QWidget::setVisible);
+    auto* form=new QFormLayout(detailFields);usage_=new QComboBox;usage_->setObjectName("wizardUsage");usage_->addItems({"Sadece deneme","Bu kurulumdan kaydedilmiş görüntü"});form->addRow("Dosya kullanımı",usage_);
     installation_=new QLineEdit;installation_->setObjectName("wizardInstallation");installation_->setPlaceholderText("Örn. Hat 1 ölçüm istasyonu");form->addRow("Ortak kurulum adı",installation_);
     lens_=new QLineEdit;lens_->setObjectName("wizardLens");form->addRow("Lens / kamera kurulumu",lens_);
-    plane_=new QLineEdit;plane_->setObjectName("wizardPlane");form->addRow("Çalışma düzlemi",plane_);image->addLayout(form);
-    image->addWidget(label("Aynı kurulum beyanı fiziksel cihazı otomatik doğrulamaz. Deneme kayıtları etkinleştirilemez. Webcam index kalıcı cihaz kimliği değildir."));image->addStretch();
+    plane_=new QLineEdit;plane_->setObjectName("wizardPlane");form->addRow("Çalışma düzlemi",plane_);form->addRow(findChild<QPushButton*>("wizardOpenFile"));image->addWidget(sourceDetails);
+    auto* identityNote=label("Aynı kurulum beyanı fiziksel cihazı otomatik doğrulamaz. Deneme kayıtları etkinleştirilemez. Webcam index kalıcı cihaz kimliği değildir.");identityNote->setObjectName("wizardIdentityNote");image->addWidget(identityNote);image->addStretch();
     auto* detectPage=page();method_=new QComboBox;method_->setObjectName("wizardMethod");method_->addItems({"İki kenar bul (Kaliper)","Tek kenar bul"});detectPage->addWidget(method_);
     connect(button(detectPage,"Tarama oku çiz →","wizardDraw"),&QPushButton::clicked,this,[this]{viewer_->beginRoi(0);status_->setText("Kenarları kesecek oku görüntüde sürükleyin. Ok uçları ölçüm noktası değildir.");});
     polarity_=new QComboBox;polarity_->setObjectName("wizardPolarity");polarity_->addItems({"Her iki yön","Koyudan açığa","Açıktan koyuya"});detectPage->addWidget(polarity_);
@@ -87,13 +88,13 @@ CalibrationWizard::CalibrationWizard(bool plate,std::optional<ToolDefinition> so
     if(plate){points_->hide();candidates_->hide();for(int i=0;i<pointActions->count();++i)pointActions->itemAt(i)->widget()->hide();}
     detectPage->addStretch();
     auto* measure=page();measure->addWidget(label(plate ? "Numaralı noktaları ve ölçüm bölgesini inceleyin. Yanlış fiziksel aralık fotoğraftan doğrulanamaz.":"İki gerçek algılanmış noktayı önceki adımda seçin. Yalnız seçilen çift hesaba girer."));
-    distance_=label("");distance_->setObjectName("wizardDistance");measure->addWidget(distance_);known_=number("wizardKnownMm");measure->addWidget(label("Bu iki noktanın gerçek mesafesi [mm]"));measure->addWidget(known_);known_->setVisible(!plate);
+    distance_=label("");distance_->setObjectName("wizardDistance");measure->addWidget(distance_);known_=number("wizardKnownMm");auto* knownLabel=label("Bu iki noktanın gerçek mesafesi [mm]");knownLabel->setVisible(!plate);measure->addWidget(knownLabel);measure->addWidget(known_);known_->setVisible(!plate);
     measure->addWidget(label("Plaka dönüşümü lens bozulmasını düzeltmez. Simetrik desenin orijini fiziksel robot referansı değildir."));measure->addStretch();
     auto* finish=page();result_=label("");result_->setObjectName("wizardResult");finish->addWidget(result_);name_=new QLineEdit;name_->setObjectName("wizardName");name_->setMaxLength(128);name_->setText((plate ? "Plaka ":"Bilinen ölçü ")+QDateTime::currentDateTime().toString("dd.MM.yyyy HH:mm"));finish->addWidget(label("Kayıt adı"));finish->addWidget(name_);
     finish->addWidget(label("İsteğe bağlı bağımsız kontrol: Geri ile yeni kenarlar bulun, iki farklı nokta seçin; kontrol referansını girin. Öğretim çifti/plaka fit noktaları kontrol sayılamaz."));
     connect(button(finish,"Yeni kontrolü iptal et","wizardCancelControl"),&QPushButton::clicked,this,[this]{pendingControl_=false;checking_=false;status_->setText("Yeni kontrol iptal edildi; son hesaplanmış model/kanıt korunur.");refresh();});
     connect(button(finish,"Başka bir mesafeyle kontrol et","wizardBeginControl"),&QPushButton::clicked,this,[this]{attempt([this]{if(!resultRecord_)throw std::runtime_error("Önce modeli hesaplayın.");checking_=true;pendingControl_=true;step_=1;method_->show();polarity_->show();contrast_->show();findChild<QPushButton*>("wizardDraw")->show();points_->show();candidates_->show();pattern_->hide();columns_->hide();rows_->hide();spacing_->hide();lastScan_.clear();refresh();});});
-    controlKnown_=number("wizardControlMm");finish->addWidget(controlKnown_);limited_=new QCheckBox("Kontrol için hata sınırı uygula");limited_->setObjectName("wizardControlUseLimit");finish->addWidget(limited_);limit_=number("wizardControlLimit");finish->addWidget(limit_);
+    auto* controlLabel=label("Kontrol çiftinin gerçek mesafesi [mm]");controlLabel->setObjectName("wizardControlLabel");finish->addWidget(controlLabel);controlKnown_=number("wizardControlMm");finish->addWidget(controlKnown_);limited_=new QCheckBox("Kontrol için hata sınırı uygula");limited_->setObjectName("wizardControlUseLimit");finish->addWidget(limited_);limit_=number("wizardControlLimit");finish->addWidget(limit_);
     connect(button(finish,"Seçili çiftle kontrol et","wizardControl"),&QPushButton::clicked,this,[this]{attempt([this]{if(!resultRecord_ || points_->selectedItems().size()!=2)throw std::runtime_error("Hesaplanmış model ve iki farklı algılanmış nokta seçin.");
         const auto selected=points_->selectedItems();QPointF a,b;for(const auto& p:session_.points()){if(p.id==selected[0]->data(Qt::UserRole).toString())a=p.pixel;if(p.id==selected[1]->data(Qt::UserRole).toString())b=p.pixel;}
         auto controls=controls_;bool replaced=false;for(auto& sample:controls.samples)if((sample.first.position==a && sample.second.position==b) || (sample.first.position==b && sample.second.position==a)){sample.knownMillimetres=controlKnown_->value();replaced=true;break;}if(!replaced)controls.samples.append({uuid(),{a,setup_->source},{b,setup_->source},controlKnown_->value()});controls.limitMillimetres=limited_->isChecked() ? std::optional(limit_->value()):std::nullopt;
@@ -122,36 +123,62 @@ CalibrationWizard::CalibrationWizard(bool plate,IndependentCaptureRequest target
     lens_->setText(independentTarget_->setup ? independentTarget_->setup->opticalProfile:"trial-lens");plane_->setText(independentTarget_->setup ? independentTarget_->setup->workingPlane:"trial-plane");
     for(auto* field:{installation_,lens_,plane_})field->setReadOnly(true);
     usage_->setCurrentIndex(independentTarget_->setup ? 1:0);
+    findChild<QLabel*>("wizardIdentityNote")->setText("Fiziksel mesafe veya plaka aralığını bağımsız referanstan girin. Hesaplanan model tek başına fiziksel doğruluk kabulü değildir.");
+    findChild<QLabel*>("wizardSourceNote")->setText(independentTarget_->camera ? "Seçili kamera: "+independentTarget_->camera->name+"\nReferans aynı çalışma düzleminde olmalı. Hedef bu sihirbaz boyunca sabittir." : "Dosyadan bağımsız deneme. Kamera edinimi ve etkinleştirme oluşturmaz.");
     usage_->setToolTip("Kullanım seçimini dosyayı açmadan önce yapın. Yeni dosya/edinim önceki hesabı temizler.");
+}
+void CalibrationWizard::setSaveAndUse(SaveUse command){saveUse_=std::move(command);refresh();}
+void CalibrationWizard::showSaveResult(const CalibrationSaveUseResult& outcome){
+    status_->clear();
+    const auto prefix=outcome.experimental ? "Deneysel • ":"";
+    const auto control=outcome.independentControlAccepted ? (*outcome.independentControlAccepted ? "Bağımsız kontrol sınır içinde.":"Bağımsız kontrol reddedildi.") : "Bağımsız fiziksel kontrol yapılmadı.";
+    if(outcome.state==CalibrationSaveUseState::Activated){savedAndUsed_=true;result_->setText(QString(prefix)+"Kaydedildi ve bu oturumda kullanıma hazır.\n"+control);back_->setEnabled(false);}
+    else result_->setText(QString(prefix)+(outcome.state==CalibrationSaveUseState::CandidateSaved ? "Aday kaydedildi; kullanıma alınamadı. Önceki seçim korunuyor. Yeniden deneyebilirsiniz.\n":"Kaydet ve kullan tamamlanamadı. Önceki seçim korunuyor.\n")+outcome.error+"\n"+control);
+    refresh();if(savedAndUsed_)back_->setEnabled(false);
+}
+void CalibrationWizard::saveAndUse(const CalibrationModelRecord& record){
+    if(!independentTarget_ || !independentTarget_->camera)throw std::runtime_error("Kaydet ve kullan için kayıtlı kamera gerekir.");
+    const auto proof=independent_.evidence();
+    if(proof && proof->origin==SourceOrigin::CameraAcquired){showSaveResult(saveUse_(record,independent_));return;}
+    // A file retains its provenance. A separate live probe verifies activation.
+    auto request=*independentTarget_;request.origin=SourceOrigin::CameraAcquired;request.filePath.clear();
+    const auto job=activationProbe_.begin(request);const auto backend=backend_;
+    auto* watcher=jobs_.watch<IndependentCaptureResult>(this,SessionJob::Image);
+    connect(watcher,&QFutureWatcher<IndependentCaptureResult>::finished,this,[this,watcher,record]{const auto r=watcher->result();watcher->deleteLater();
+        if(activationProbe_.accept(r))showSaveResult(saveUse_(record,activationProbe_));
+        else if(!r.error().isEmpty())result_->setText("Canlı uyum denetimi tamamlanamadı; önceki seçim korunuyor.\n"+r.error());refresh();});
+    jobs_.launch(watcher,[job,backend]{return IndependentCalibrationSession::run(job,backend);});refresh();
 }
 void CalibrationWizard::captureIndependent(QString path){
     if(jobs_.busy())throw std::runtime_error("Önce devam eden işi durdurun.");
     cancelWork();pendingFrame_.reset();setup_.reset();independentSetup_.reset();resultRecord_.reset();controls_={};lastResult_.reset();viewer_->clearImage();imageInfo_->setText("Görüntü yok.");step_=0;
     auto request=*independentTarget_;request.filePath=path;
     request.origin=path.isEmpty() ? SourceOrigin::CameraAcquired:usage_->currentIndex()==1 ? SourceOrigin::SetupFile:SourceOrigin::TrialFile;
-    if(request.origin==SourceOrigin::TrialFile){request.camera.reset();request.setup.reset();request.profile.reset();request.localRoute.reset();}
+    if(request.origin==SourceOrigin::TrialFile){request.camera.reset();request.setup.reset();request.profile.reset();request.localRoute.reset();request.policy=CalibrationCapturePolicy::Trusted;}
     const auto job=independent_.begin(request);const auto backend=backend_;
     auto* watcher=jobs_.watch<IndependentCaptureResult>(this,SessionJob::Image);
     connect(watcher,&QFutureWatcher<IndependentCaptureResult>::finished,this,[this,watcher]{const auto r=watcher->result();watcher->deleteLater();
         if(independent_.accept(r)){const auto frame=*independent_.math().frame();const auto setup=*independent_.acceptedSetup();const auto evidence=*independent_.evidence();
             presentFrame(frame,evidence.origin!=SourceOrigin::CameraAcquired);independentSetup_=setup;independentOrigin_=evidence.origin==SourceOrigin::CameraAcquired ? "acquired":sourceOriginName(evidence.origin);
-            imageInfo_->setText(QString("%1 • %2×%3 px\nHedef: %4").arg(independentOrigin_).arg(frame.size().width()).arg(frame.size().height()).arg(evidence.target ? evidence.target->setup.value:"Yalnız deneme"));
+            imageInfo_->setText(QString("%1 • %2×%3 px\nHedef: %4").arg(evidence.experimental ? "Deneysel • "+independentOrigin_:independentOrigin_).arg(frame.size().width()).arg(frame.size().height()).arg(evidence.target ? evidence.target->setup.value:"Yalnız deneme"));
         }else if(!r.error().isEmpty())status_->setText(r.error());refresh();});
     jobs_.launch(watcher,[job,backend]{return IndependentCalibrationSession::run(job,backend);});refresh();
 }
 CalibrationWizard::~CalibrationWizard(){cancelWork();}
-void CalibrationWizard::cancelWork(){independent_.cancel();session_.cancel();if(independentTarget_){pendingFrame_.reset();setup_.reset();independentSetup_.reset();resultRecord_.reset();controls_={};step_=0;if(viewer_)viewer_->clearImage();if(imageInfo_)imageInfo_->setText("Görüntü yok.");}if(captureCancel_)captureCancel_->store(true);}
+void CalibrationWizard::cancelWork(){activationProbe_.cancel();savedAndUsed_=false;namedRecord_.reset();independent_.cancel();session_.cancel();if(independentTarget_){pendingFrame_.reset();setup_.reset();independentSetup_.reset();resultRecord_.reset();controls_={};step_=0;if(viewer_)viewer_->clearImage();if(imageInfo_)imageInfo_->setText("Görüntü yok.");}if(captureCancel_)captureCancel_->store(true);}
 void CalibrationWizard::reject(){cancelWork();QDialog::reject();}
 void CalibrationWizard::attempt(std::function<void()> f){try{status_->clear();f();}catch(const std::exception& e){status_->setText(QString::fromUtf8(e.what()));}refresh();}
 void CalibrationWizard::openFile(const QString& path){if(independentTarget_){attempt([this,path]{captureIndependent(path);});return;}attempt([this,path]{if(jobs_.busy())throw std::runtime_error("Önce devam eden işi durdurun.");cancelWork();session_.clear();pendingFrame_.reset();setup_.reset();controls_={};resultRecord_.reset();viewer_->clearImage();captureCancel_=std::make_shared<std::atomic_bool>(false);const auto cancel=captureCancel_;auto* w=jobs_.watch<ImageLoad>(this,SessionJob::Image);connect(w,&QFutureWatcher<ImageLoad>::finished,this,[this,w,cancel]{const auto r=w->result();w->deleteLater();if(!cancel->load()){if(r.frame)presentFrame(*r.frame,true);else status_->setText(r.error);}refresh();});jobs_.launch(w,[path]{ImageLoad r;try{r.frame=ChessboardService::importImage(path).frame;}catch(const std::exception& e){r.error=QString::fromUtf8(e.what());}return r;});});}
 void CalibrationWizard::presentFrame(ImageFrame f,bool imported){pendingFrame_=f;imported_=imported;checking_=false;pendingControl_=false;session_.clear();setup_.reset();controls_={};resultRecord_.reset();lastResult_.reset();step_=0;viewer_->setImage(f.preview());imageInfo_->setText(QString("%1 • %2×%3 px\n%4").arg(imported ? "Dosya kökenli":"Reçete kaynağından edinilmiş").arg(f.size().width()).arg(f.size().height()).arg(QFileInfo(f.path()).fileName()));displayPoints();refresh();}
-void CalibrationWizard::refresh(){pages_->setCurrentIndex(step_);heading_->setText(QString("%1 / 4 — %2").arg(step_+1).arg(QStringList{"Görüntü ve kurulum","Noktaları bul",plateMode_ ? "Noktaları onayla":"Çifti ve mesafeyi onayla","Sonuç ve kayıt"}[step_]));
+void CalibrationWizard::refresh(){pages_->setCurrentIndex(step_);heading_->setText(QString("%1 / 4 — %2").arg(step_+1).arg(QStringList{"Görüntü","Noktaları bul",plateMode_ ? "Noktaları onayla":"Çifti ve mesafeyi onayla","Sonuç ve kayıt"}[step_]));
+    if(saveUse_ && step_==3 && resultRecord_ && resultRecord_->image().experimental && !result_->text().startsWith("Deneysel"))result_->setText("Deneysel • tetik eşleşmesi ve fiziksel mm kabulü doğrulanmadı.\n"+result_->text());
     const bool plate=plateMode_ && !checking_;for(auto* w:QList<QWidget*>{pattern_,columns_,rows_,spacing_,findChild<QComboBox*>("wizardTargets"),findChild<QLineEdit*>("wizardTargetName"),findChild<QPushButton*>("wizardSaveTarget")})w->setVisible(plate);
     for(auto* w:QList<QWidget*>{method_,polarity_,contrast_,points_,candidates_,findChild<QPushButton*>("wizardDraw"),findChild<QPushButton*>("wizardReverse"),findChild<QGroupBox*>("wizardAdvanced"),findChild<QPushButton*>("wizardDelete"),findChild<QPushButton*>("wizardRefind")})w->setVisible(!plate);
     for(auto* f:pages_->findChildren<QFormLayout*>())for(auto* field:QList<QWidget*>{columns_,rows_,spacing_})if(auto* text=f->labelForField(field))text->setVisible(plate);
+    for(auto* field:QList<QWidget*>{controlKnown_,limited_,limit_,findChild<QLabel*>("wizardControlLabel"),findChild<QPushButton*>("wizardControl")})field->setVisible(checking_);
     findChild<QPushButton*>("wizardCancelControl")->setVisible(checking_);findChild<QPushButton*>("wizardCancelControl")->setText(pendingControl_ ? "Yeni kontrolü iptal et":"Kontrol düzenlemesini bitir");
-    back_->setEnabled(step_>0 && !jobs_.busy());next_->setEnabled(!jobs_.busy());next_->setText(QStringList{"Bu görüntüyü kullan",plateMode_ ? "Noktaları incele":"Seçili çifti kullan",plateMode_ ? "Onayla ve hesapla":"Hesapla","Kaydet ve bitir"}[step_]);
-    pages_->setEnabled(!jobs_.busy());usage_->setEnabled(independentTarget_ ? !pendingFrame_ && independentTarget_->setup.has_value():imported_);if(jobs_.busy())status_->setText("İşlem sürüyor… Stop veya İptal kullanılabilir.");}
+    back_->setEnabled(step_>0 && !jobs_.busy());next_->setEnabled(!jobs_.busy());next_->setText(QStringList{"Bu görüntüyü kullan",plateMode_ ? "Noktaları incele":"Seçili çifti kullan",plateMode_ ? "Onayla ve hesapla":"Hesapla",saveUse_ ? (savedAndUsed_ ? "Bitir":resultRecord_ && resultRecord_->image().origin=="trial_file" ? "Denemeyi kaydet":"Kaydet ve kullan"):"Kaydet ve bitir"}[step_]);
+    pages_->setEnabled(!jobs_.busy() && !savedAndUsed_);usage_->setEnabled(independentTarget_ ? !pendingFrame_ && independentTarget_->setup.has_value():imported_);if(jobs_.busy())status_->setText("İşlem sürüyor… Stop veya İptal kullanılabilir.");else if(status_->text()=="İşlem sürüyor… Stop veya İptal kullanılabilir.")status_->clear();}
 void CalibrationWizard::displayPoints(){
     QStringList selected;for(auto* i:points_->selectedItems())selected.append(i->data(Qt::UserRole).toString());
     QSignalBlocker block(points_);points_->clear();QVector<QPointF> pixels;QVector<QLineF> lines;
@@ -172,7 +199,7 @@ void CalibrationWizard::detect(){if(jobs_.busy())return;
 }
 void CalibrationWizard::advance(){
     if(step_==0 && independentTarget_){if(!pendingFrame_ || !independentSetup_)throw std::runtime_error("Önce görüntü alın veya dosya açın.");
-        const auto s=*independentSetup_;if(!setup_ || *setup_!=s || !session_.frame()){session_.useFrame(*pendingFrame_,s,independentOrigin_);setup_=s;controls_={};resultRecord_.reset();checking_=false;}viewer_->setRoiFrame(s.source.id);viewer_->setRoiEditable(true);++step_;
+        const auto s=*independentSetup_;if(!setup_ || *setup_!=s || !session_.frame()){session_.useFrame(*pendingFrame_,s,independentOrigin_,independent_.evidence()->experimental);setup_=s;controls_={};resultRecord_.reset();checking_=false;}viewer_->setRoiFrame(s.source.id);viewer_->setRoiEditable(true);++step_;
     }else if(step_==0){if(!pendingFrame_)throw std::runtime_error("Önce görüntü alın veya dosya açın.");ToolDefinition source;
         if(source_)source=*source_;else {source.kind="image_file";source.parameters={{"path",pendingFrame_->path()}};}
         if(imported_ && usage_->currentIndex()==1 && !source_)throw std::runtime_error("Kurulum ilişkilendirmesi için hedef reçete kaynağını açın.");
@@ -185,7 +212,7 @@ void CalibrationWizard::advance(){
         controls_={};pendingControl_=false;
         result_->setText(record.model().mapping() ? QString("Hesaplandı — plaka uyumu RMS %1 mm; ters dönüşüm RMS %2 px, en fazla %3 px. Bunlar bağımsız fiziksel hata değildir. Lens düzeltmesi uygulanmadı. Bağımsız kontrol yapılmadı.").arg(record.model().mapping()->fitRmsMillimetres(),0,'g',8).arg(record.model().mapping()->inverseRmsPixels(),0,'g',8).arg(record.model().mapping()->maxInversePixels(),0,'g',8):QString("Hesaplandı — %1 mm/px. Bağımsız kontrol yapılmadı.").arg(record.model().millimetresPerPixel(),0,'g',12));
         resultRecord_=record;if(record.model().mapping())viewer_->setValidDomain(record.model().mapping()->regionPixels());++step_;
-    }else {if(pendingControl_)throw std::runtime_error("Yeni kontrolü hesaplayın veya Yeni kontrolü iptal et kullanın.");if(!resultRecord_)throw std::runtime_error("Girdi değişti. Yeniden hesaplayın.");const auto& r=*resultRecord_;auto record=CalibrationModelRecord::create(r.model(),r.setup(),r.image(),controls_).named(name_->text().trimmed());save_(record);accept();}
+    }else {if(savedAndUsed_){accept();return;}if(pendingControl_)throw std::runtime_error("Yeni kontrolü hesaplayın veya Yeni kontrolü iptal et kullanın.");if(!resultRecord_)throw std::runtime_error("Girdi değişti. Yeniden hesaplayın.");const auto& r=*resultRecord_;auto record=CalibrationModelRecord::create(r.model(),r.setup(),r.image(),controls_).named(name_->text().trimmed());if(saveUse_ && record.image().origin!="trial_file"){if(!namedRecord_ || namedRecord_->name()!=record.name() || namedBase_!=r.contentId()){namedRecord_=record;namedBase_=r.contentId();}saveAndUse(*namedRecord_);return;}save_(record);accept();}
     status_->clear();refresh();
 }
 }

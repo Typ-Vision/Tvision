@@ -1,6 +1,6 @@
 # Kamera, kalibrasyon ve Runtime kullanımı
 
-21 Ekim 2026 mevcut uygulama. [CCUX hedef akışı](architecture/camera-setup/README.md)
+22 Ekim 2026 mevcut uygulama. [CCUX hedef akışı](architecture/camera-setup/README.md)
 kartlar halinde uygulanır; güncel tamamlanma durumu [devir özetindedir](progress.md).
 
 
@@ -22,8 +22,16 @@ kartlar halinde uygulanır; güncel tamamlanma durumu [devir özetindedir](progr
    Birden fazla uygun rota veya eski profil belirsizliğinde seçim görünür açılır;
    eski varsayılan profil ayrıca kaydedilir. Bilinmeyen lens/düzlem ölçüm izni vermez.
    Küçük pencerede alt işlemlere dikey kaydırma ile ulaşılır.
-   **Setup → Calibration** aynı kamera kayıtlarını kullanır. Kalibrasyonda kayıtlı edinim
-   profilini seçin; aday kaydı etkin model değildir. Aktivasyon ve kaynak→kurulum bağı ayrıdır.
+   **Setup → Calibration** aynı kamera kayıtlarını kullanır. Kamera → **Kalibre Et**
+   → **Bilinen ölçü** veya **Kalibrasyon plakası** seçin. Hazır varsayılan hedef
+   otomatik geçer; görüntü alıp gerçek kenar/plakayı seçin, fiziksel mesafe/aralığı
+   girin, hesaplayıp **Kaydet ve kullan** komutunu uygulayın. Kısmi aday kaydı ve
+   ret açık görünür; önceki seçim korunur. Dosya kullanımı Ayrıntılar'dadır ve
+   etkinleştirmek ayrıca canlı uyum karesi ister. Deneysel OECS için bu ekranda
+   açık oturum onayı gerekir; sonuçta Deneysel ve bağımsız kontrol yokluğu görünür.
+   Geçmiş/legacy eşleme ve **Optik / kamera konumu değişti** Ayrıntılar'dadır.
+   Kayıtlı / bağlantı bekleniyor durumu kalibrasyon yok anlamına gelmez. Kaynak bağı
+   ve Runtime hazırlığı ayrı kalır.
    Editor’da Industrial Camera ekleyin, Properties üzerinden kayıtlı profili seçip
    **Profili bağla / güncelle** düğmesine basın. **Görüntü al** yeni kare ister; seçim
    tek başına edinim yapmaz. Profil düzenlenirse açıkça yeniden bağlayın.

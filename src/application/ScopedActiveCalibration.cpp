@@ -52,7 +52,7 @@ int ScopedActiveCalibrationService::migrateLegacy(const SetupReference& ref,cons
 void ScopedActiveCalibrationService::activate(const SetupReference& ref,const QString& content,const IndependentCalibrationSession& probe,MeasurementEnvironmentRepository::Fault fault){
     activateImpl(ref,content,probe,CalibrationCapturePolicy::Trusted,fault);
 }
-void ScopedActiveCalibrationService::activateImpl(const SetupReference& ref,const QString& content,const IndependentCalibrationSession& probe,CalibrationCapturePolicy policy,MeasurementEnvironmentRepository::Fault fault,std::function<void()> beforeCommit){
+void ScopedActiveCalibrationService::activateImpl(const SetupReference& ref,const QString& content,const IndependentCalibrationSession& probe,CalibrationCapturePolicy policy,MeasurementEnvironmentRepository::Fault fault,std::function<void()> beforeCommit,bool selectDefault){
     const auto e=environment();require(gate_(),"Runtime/worker/pending record/ACK busy");require(revision_<1000000000,"Activation revision exhausted");
     const auto expected=installation(e,ref);const auto proof=probe.evidence();
     const bool experimental=policy==CalibrationCapturePolicy::ExperimentalOecs;
@@ -64,7 +64,8 @@ void ScopedActiveCalibrationService::activateImpl(const SetupReference& ref,cons
         require(profile && device && device->identity==*c.physical && currentProfile(e,*profile),"Actual industrial probe profile changed; acquire again");
     }
     require(!usedProbes_.contains(proof->frameId),"Acquire a new activation probe");
-    require(e.operational.value(ref.camera.value)==ref.setup.value,"Select operational setup explicitly first");
+    const auto defaults=e.defaults(ref.camera);const bool chooseDefault=selectDefault && defaults.status==CameraDefaultsStatus::Ready && defaults.setup==std::optional(ref.setup);
+    require(e.operational.value(ref.camera.value)==ref.setup.value || chooseDefault,"Select operational setup explicitly first");
     for(const auto& r:records(ref))if(r.contentId()==content){
         if(experimental){
             require(r.experimentallyActivatable(),"Experimental model/control evidence required");
@@ -75,7 +76,7 @@ void ScopedActiveCalibrationService::activateImpl(const SetupReference& ref,cons
         }else require(r.activatable() && (r.image().origin=="acquired" || r.image().origin=="setup_file" || (r.image().origin=="legacy_record" && r.encode()["schemaVersion"]==5)),"Trial/legacy/rejected control cannot activate");
         if(beforeCommit)beforeCommit();
         require(gate_() && probe.evidence()==proof && !probe.busy() && (!experimental || experimental_),"Activation cancelled or gate changed before commit");
-        const auto committed=repository_.saveAndRemember(e,r,ref,fault);
+        const auto committed=repository_.saveAndRemember(e,r,ref,fault,chooseDefault);
         QJsonObject acquisition{{"schemaVersion",experimental ? 2:1},{"probe",proof->toJson()},{"backend",device ? QJsonValue(device->backend.toJson()):QJsonValue()}};
         if(experimental){acquisition["policy"]="experimental-calibration/1";acquisition["productionAdmission"]=false;acquisition["triggerAssociationVerified"]=false;acquisition["physicalAcceptance"]=false;}
         for(const auto& selection:committed.selections)if(selection.target==ref){permissions_.insert(ref.setup.value,{selection,++revision_,profile,device,acquisition,experimental});usedProbes_.insert(proof->frameId);return;}
@@ -105,7 +106,7 @@ CalibrationSaveUseResult ScopedActiveCalibrationService::saveAndUse(const Calibr
         auto beforeCommit=[&]{current();require(environment().encode()==e.encode(),"Environment changed before selection commit");};
         beforeCommit();
         if(!repeated){
-            activateImpl(request.target,record.contentId(),probe,request.policy,fault,beforeCommit);
+            activateImpl(request.target,record.contentId(),probe,request.policy,fault,beforeCommit,true);
             auto& permission=permissions_[request.target.setup.value];permission.commandBase=request.environmentRevision;permission.commandCommitted=environment().revision;
         }
         result.state=CalibrationSaveUseState::Activated;
