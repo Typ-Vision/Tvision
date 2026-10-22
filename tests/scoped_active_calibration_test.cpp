@@ -31,6 +31,7 @@ for(int i=0;i<n;++i){SetupReference ref{c.cameras[i].id,c.setups[i].id,1};refs.a
 auto all=service.snapshots(refs);check(all.size()==n,"all immutable snapshots");for(int i=0;i<n;++i)check(std::abs(all[i].calibration.record.model().millimetresPerPixel()-(10.+i)/400)<1e-8,"different real scales");
 ScopedActiveCalibrationService restart(repo,[]{return true;});reject([&]{restart.snapshots({refs[0]});});check(restart.environment().selections.size()==n,"restart remembers only");
 IndependentCalibrationSession probe;capture(probe,c,0);ready=false;reject([&]{service.activate(refs[0],contents[0],probe);});reject([&]{service.deactivate(refs[0].setup);});ready=true;
+ready=false;reject([&]{service.prepareRemembered(refs[0],probe);});reject([&]{service.notifyOpticalChange(refs[0].camera,service.environment().revision);});ready=true;
 service.activate(refs[0],contents[0],probe,MeasurementEnvironmentRepository::Fault::None);
 IndependentCalibrationSession invalid;capture(invalid,c,0);auto base=calculate(invalid,10);auto image=base.image();image.origin="trial_file";
 auto trial=CalibrationModelRecord::create(base.model(),base.setup(),image);service.save(refs[0],trial);reject([&]{service.activate(refs[0],trial.contentId(),invalid);});
@@ -45,6 +46,10 @@ service.disconnect(refs.last().camera);reject([&]{service.snapshots({refs.last()
 // External registry tamper must fail closed, preserving the last valid bytes.
 QFile file(repo.path());check(file.open(QIODevice::ReadOnly),"read registry");auto bytes=file.readAll();file.close();check(file.open(QIODevice::WriteOnly),"tamper fixture");file.write("{}");file.close();reject([&]{service.snapshots({refs.last()});});check(file.open(QIODevice::WriteOnly),"restore fixture");file.write(bytes);file.close();
 capture(probe,c,n-1);service.activate(refs.last(),contents.last(),probe);service.refreshAvailability({});reject([&]{service.snapshots({refs.last()});});
+if(n>1){capture(probe,c,1);service.prepareRemembered(refs[1],probe);const auto other=service.snapshots({refs[1]}).first().calibration;service.notifyOpticalChange(refs[0].camera,service.environment().revision);check(service.snapshots({refs[1]}).first().calibration.selection==other.selection,"optical change of A preserves B permission");}
+else service.notifyOpticalChange(refs[0].camera,service.environment().revision);
+auto pending=service.environment();check(pending.current.setups[0].pending && !service.status({refs[0].camera,refs[0].setup,2}).sessionPermitted,"physical notification requires new calibration");
+reg.reload();auto redeclared=reg.snapshot().current;redeclared.setups[0]=redeclared.setups[0].revised(c.setups[0]);reg.replace(redeclared);check(service.records({refs[0].camera,refs[0].setup,3}).isEmpty(),"optics A unknown A cannot revive original record");
 auto other=std::async(std::launch::async,[&]{try{service.environment();}catch(const std::exception&){return true;}return false;});check(other.get(),"owner thread");
 // Same dimensions/name cannot adopt another physical installation.
 auto wrong=all[0].calibration.record;reject([&]{service.save(refs.last(),wrong);});

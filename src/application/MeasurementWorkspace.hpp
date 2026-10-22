@@ -18,6 +18,7 @@ public:
         :path_(path),project_(project),registry_(MeasurementEnvironmentRepository(path,project)),active_(MeasurementEnvironmentRepository(path,project),gate),gate_(std::move(gate)),discovery_(std::move(discovery)){}
     MeasurementEnvironment environment(){registry_.reload();return registry_.snapshot();}
     ScopedActiveCalibrationService& calibrations(){return active_;}
+    void notifyOpticalChange(const CameraId& camera,int expectedRevision){active_.notifyOpticalChange(camera,expectedRevision);registry_.reload();}
     QVector<DeviceBinding> discover(){auto devices=discovery_();active_.refreshAvailability(devices);discovered_=devices;discoveryDone_=true;return devices;}
     const QVector<DeviceBinding>& discovered() const{return discovered_;}
     void observeInventory(CameraInventory snapshot){

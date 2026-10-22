@@ -22,7 +22,7 @@ SystemCalibration scope'u bu ortak installation üreticisiyle yeniden doğrular.
 
 Aktivasyon accepted CameraAcquired probe, exact setup ve güncel profile gerektirir.
 Exposure/profile revision değişimi aktif snapshot'ı reddeder; kayıtlı matematik
-korunur, yeni probe ve açık activation ile kullanılabilir. Profile rename izin ve
+korunur, yeni probe ve açık `prepareRemembered` ile kullanılabilir. Profile rename izin ve
 scope hash'ini değiştirmez. Offset/reverse dahil geometri yeni setup revision'dır;
 A→B→A eski kaydı canlandırmaz. Availability inventory kaybı/SDK değişimi izinleri
 iptal eder; replug/restart/import yalnız hatırlanan seçimi tutar. Kullanılmayan
@@ -32,3 +32,33 @@ Kalibrasyon UI kayıtlı profili seçer ve Camera Manager'ın yerel rota ipucunu
 profil seçimi görüntü almaz. Test provider yalnız test composition'ındadır.
 Native capability, industrial Editor/Runtime edinimi ve trusted terminal kabulü
 06b ile açılmaz; sonraki 07/08 kartlarının sorumluluğundadır.
+
+## CCUX-06 — tercih, matematik ve oturum izni
+
+`ScopedActiveCalibrationService::status(ref)` kayıtlı tercihi, matematik uyumunu
+ve oturum kullanım iznini ayrı DTO alanlarında verir. None kalibrasyon tercihi yok;
+Remembered uyumlu kayıt var fakat bağlantı/profil/oturum denetimi bekleniyor;
+Valid güncel izinli; RecalibrationRequired hedef/optik/geometri uyumsuzdur.
+Bu durum üretim veya bağımsız fiziksel doğruluk kabulü değildir. Deneysel edinimin
+ayrı kanıt/opt-in yolu CCUX-07 kapsamındadır; native factory Unavailable kalır.
+
+`prepareRemembered` hatırlanan exact seçimi yeni kabul edilmiş CameraAcquired
+probe ile yeniden hazırlar. Güncel profil, gerçek readback doğrulayan provider,
+fiziksel kimlik ve kurulum denetimi aktivasyonla aynıdır; dosya/discovery tek başına
+izin vermez. Gate, stale/reused probe ve belirsiz backend engelleri korunur.
+Seçim değişmiyorsa katalog/environment yazılmaz; model contentId ve özgün kanıt
+korunur. Restart otomatik capture, opt-in veya Runtime başlatmaz.
+
+Yeni snapshot'ların system evidence **zarf3** biçimi özgün record + scope1/2'ye
+`acquisition` ekler: schemaVersion1, opaque session probe'unun kaynak/raster/target
+kanıtı ve industrial backend kimliği (webcam null). Binding digest bu kanıtı
+içerdiğinden aynı profille yeniden bağlantı da yeni cache/Runtime bağıdır.
+Eski zarf1/2 ve scope2 değişmeden decode/re-encode edilir; eski kayıtlara yeni
+edinim kökeni eklenmez. Çalışan worker kopyaladığı immutable modeli tutar; sonraki
+admission güncel bağı ister. Tetik güveni bu matematik uyumundan türemez.
+
+`MeasurementWorkspace::notifyOpticalChange(camera, expectedRevision)` bütün ilgili
+kurulumları mevcut pending biçimine geçirir: bilinmeyen lens/düzlem/geometri
+beyanı temizlenir, setup revision artar ve kamera izinleri düşer. Kayıtlı seçim ve
+immutable tarihçe kalır. Yeni fiziksel beyan ayrı revision üretir; A→unknown→A
+eski modeli canlandırmaz. Başka kameranın izni değişmez. UI bu kartta eklenmedi.

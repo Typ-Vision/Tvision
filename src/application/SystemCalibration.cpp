@@ -27,6 +27,14 @@ void valid(const ActiveCalibrationSnapshot& snapshot){const auto r=CalibrationMo
             }
         }
         require(r.setup()==IndependentCaptureRequest::installation(camera,setup),"Scoped physical installation/evidence mismatch");
+    }
+    if(!snapshot.acquisition.isEmpty()){
+        const auto a=snapshot.acquisition;
+        require(!snapshot.scope.isEmpty() && a.size()==3 && a["schemaVersion"]==1 && a["probe"].isObject(),"Invalid session acquisition envelope");
+        const auto probe=MeasurementSourceEvidence::fromJson(a["probe"].toObject());
+        require(probe.origin==SourceOrigin::CameraAcquired && probe.sourceKind==SourceIdentityKind::CalibrationSession && probe.target && probe.target->toJson()==snapshot.scope["target"].toObject(),"Session acquisition target/origin mismatch");
+        if(snapshot.scope["schemaVersion"]==2){require(a["backend"].isObject() && snapshot.scope["profile"].isObject(),"Missing session backend/profile");BackendIdentity::fromJson(a["backend"].toObject());}
+        else require(a["backend"].isNull(),"Webcam cannot claim industrial backend");
     }}
 
 QJsonObject selection(const ActiveCalibrationSelection& s){return {{"id",s.id},{"version",s.version},{"contentId",s.contentId},{"revision",s.revision}};}
@@ -48,18 +56,18 @@ bool SystemCalibration::requestsCalibration(const Recipe& recipe,bool optionalPo
 CalibrationDependency SystemCalibration::binding(const ActiveCalibrationSnapshot& s,const QString& tool,const QString& coordinates){
     valid(s);require(!tool.trimmed().isEmpty() && !tool.startsWith("calibration-test:") && (coordinates=="image" || coordinates==tool+"/image"),"Invalid actual execution source/frame");
     auto d=s.record.model().dependency();d.cameraId=tool;d.source.id=coordinates;
-    QJsonObject identity{{"policy","system-model-ready/1"},{"recordContentId",s.record.contentId()},{"selection",selection(s.selection)},{"sourceToolId",tool},{"sourceCoordinates",coordinates}};if(!s.scope.isEmpty())identity["scope"]=s.scope;d.contentId=digest(identity);d.validate();return d;
+    QJsonObject identity{{"policy","system-model-ready/1"},{"recordContentId",s.record.contentId()},{"selection",selection(s.selection)},{"sourceToolId",tool},{"sourceCoordinates",coordinates}};if(!s.scope.isEmpty())identity["scope"]=s.scope;if(!s.acquisition.isEmpty())identity["acquisition"]=s.acquisition;d.contentId=digest(identity);d.validate();return d;
 }
 PlanarCalibration SystemCalibration::executionModel(const ActiveCalibrationSnapshot& s,const QString& tool,const QString& coordinates){
     // Ephemeral geometry adapter: exact raw raster coordinate domain and actual
     // acquisition source are bound separately from immutable teaching evidence.
     auto c=s.record.model();c.dependency_=binding(s,tool,coordinates);c.readyRecordContentId_=s.record.contentId();return c;
 }
-QJsonObject SystemCalibration::evidence(const ActiveCalibrationSnapshot& s,const QString& tool,const QString& coordinates){QJsonObject result{{"schemaVersion",s.scope.isEmpty() ? 1:2},{"policy","system-model-ready/1"},{"record",s.record.encode()},{"selection",selection(s.selection)},{"executionDependency",binding(s,tool,coordinates).toJson()}};if(!s.scope.isEmpty())result["scope"]=s.scope;return result;}
+QJsonObject SystemCalibration::evidence(const ActiveCalibrationSnapshot& s,const QString& tool,const QString& coordinates){QJsonObject result{{"schemaVersion",!s.acquisition.isEmpty() ? 3:(s.scope.isEmpty() ? 1:2)},{"policy","system-model-ready/1"},{"record",s.record.encode()},{"selection",selection(s.selection)},{"executionDependency",binding(s,tool,coordinates).toJson()}};if(!s.scope.isEmpty())result["scope"]=s.scope;if(!s.acquisition.isEmpty())result["acquisition"]=s.acquisition;return result;}
 ActiveCalibrationSnapshot SystemCalibration::decodeEvidence(const QJsonObject& o){
-    const bool scoped=o["schemaVersion"]==2;require(o.size()==(scoped ? 6:5) && (scoped || o["schemaVersion"]==1) && o["policy"]=="system-model-ready/1" && o["record"].isObject() && o["selection"].isObject() && o["executionDependency"].isObject(),"Invalid system calibration envelope");
+    const bool session=o["schemaVersion"]==3;const bool scoped=session || o["schemaVersion"]==2;require(o.size()==(session ? 7:(scoped ? 6:5)) && (scoped || o["schemaVersion"]==1) && o["policy"]=="system-model-ready/1" && o["record"].isObject() && o["selection"].isObject() && o["executionDependency"].isObject(),"Invalid system calibration envelope");
     const auto selection=o["selection"].toObject();require(selection.size()==4 && selection["id"].isString() && selection["contentId"].isString() && selection["version"].isDouble() && selection["version"].toDouble()==selection["version"].toInt() && selection["revision"].isDouble() && selection["revision"].toDouble()==selection["revision"].toInt(),"Invalid system selection schema");
-    ActiveCalibrationSnapshot s{CalibrationModelRecord::decode(o["record"].toObject()),{selection["id"].toString(),selection["contentId"].toString(),selection["version"].toInt(),selection["revision"].toInt()},scoped ? o["scope"].toObject():QJsonObject{}};require(!scoped || !s.scope.isEmpty(),"Missing physical scope");valid(s);const auto d=CalibrationDependency::fromJson(o["executionDependency"].toObject());require(evidence(s,d.cameraId,d.source.id)==o,"System calibration binding/content mismatch");return s;
+    ActiveCalibrationSnapshot s{CalibrationModelRecord::decode(o["record"].toObject()),{selection["id"].toString(),selection["contentId"].toString(),selection["version"].toInt(),selection["revision"].toInt()},scoped ? o["scope"].toObject():QJsonObject{},session ? o["acquisition"].toObject():QJsonObject{}};require((!scoped || !s.scope.isEmpty()) && (!session || !s.acquisition.isEmpty()),"Missing physical scope/session evidence");valid(s);const auto d=CalibrationDependency::fromJson(o["executionDependency"].toObject());require(evidence(s,d.cameraId,d.source.id)==o,"System calibration binding/content mismatch");return s;
 }
 void SystemCalibration::compatible(const ActiveCalibrationSnapshot& s,const Recipe& recipe,const QString& directory,const QSize& size){
     valid(s);const auto tool=source(recipe);const auto& setup=s.record.setup();

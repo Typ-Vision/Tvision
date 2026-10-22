@@ -1,10 +1,17 @@
 # VisionFlow — güncel devir
 
-21 Ekim 2026. [Arşiv](archive/README.md).
+22 Ekim 2026. [Arşiv](archive/README.md).
 
 ## Devam noktası
 
-**Sonraki görev: [CCUX-06](architecture/camera-setup/06-validity.md).**
+**Sonraki görev: [CCUX-07](architecture/camera-setup/07-experimental-calibration.md).**
+**CCUX-06 tamamlandı:** kayıtlı tercih, matematik uyumu ve oturum izni ayrı DTO;
+yeni gerçek probe ile `prepareRemembered`, immutable model + yeni edinim zarf3;
+optik değişikliği bildirimi ilgili kurulumları pending revision'a alır.
+Restart/replug izin başlatmaz; exposure/gain yeniden fit istemez, yeni denetim ister.
+Yeni Release ve kartın 5 CTest'i geçti; [kapanış](archive/2026-10-22-ccux-06.md),
+`build/ccux/ccux-06/`. UI eklenmedi; deneysel edinim/opt-in CCUX-07'de, fiziksel
+kamera/mm kabulü yapılmadı. Kullanıcıya göre kamera bağlı, ortam karanlık.
 **CCUX-05 tamamlandı:** Tek görüntü / Canlı görüntü / Durdur ortak application
 session’ına bağlandı. Gerçek FPS ve edinim türü, generation ile eski kareyi
 silme, worker drain sonrası sayfa/proje/pencere geçişi ve yalnız geçerli görünen

@@ -71,6 +71,7 @@ struct ActiveCalibrationSnapshot {
     CalibrationModelRecord record;
     ActiveCalibrationSelection selection;
     QJsonObject scope; // schema1 exact physical setup; empty for legacy compatibility
+    QJsonObject acquisition; // CCUX-06 fresh session evidence; never rewrites model/scope2
 };
 // One application-owned instance per open project. Owner-thread commands only.
 // The required gate checks Runtime/worker/pending record/ACK before any change.
