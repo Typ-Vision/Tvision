@@ -65,6 +65,49 @@ sınırlı tampon; FPS gerçek tamamlanan karelerden. Kamera değişimi/proje ka
 Stop/kopma eski generation'ı emekliye ayırır. UI SDK çağırmaz. Lease çakışması
 önlenir; aynı kamera Runtime/kalibrasyon tarafından kullanılırken preview açılmaz.
 
+## C2a — Çalışma süresince bağlantı
+
+22 Ekim kullanıcı kararı; **CCUX-22 hedefidir, henüz uygulanmadı**.
+Önceki her-kare kapanışına göre oturum sınırı aşağıdaki gibidir. C2'nin preview,
+tek pending istek, lease ve generation kuralları korunur.
+
+| Kullanıcı eylemi / context | Bağlantı ömrü |
+| --- | --- |
+| Program/proje açılışı, ekran restore, Runtime Load Recipe | Kamera bağlantısı açmaz |
+| Reçeteye çift tıklama veya eşdeğer Editor açma | Etkin bağlı kameraları arka planda hazırlar; açık düzenleme işi boyunca tutar |
+| Editor Kaydet, araç/ROI/Properties sekmesi | Oturum korunur |
+| Editor'dan çıkma, başka reçete/proje, pencere kapatma | Çıkış kararı kabul edilince drain/close; çıkış iptali mevcut oturumu korur |
+| Runtime Run | Yüklü immutable reçetenin gerekli kameralarını hazırlar; tümü başarılı olmadan Running olmaz |
+| Runtime Stop | Starting/idle/çekim durumlarının hepsinde yeni isteği keser ve oturumları kapatır |
+| Kalibrasyon listesi | Kamera açmaz |
+| Seçili kamerada canlı kalibrasyon işlemine giriş | Hedef kamera açılır; aynı işlemdeki çekimler oturumu kullanır |
+| Kalibrasyon başarılı bitiş, iptal, çıkış, kamera/dosya kaynağına geçiş | Mevcut oturum bırakılır; gerekiyorsa yeni hedef ayrı hazırlanır |
+
+Bağlantı hazırlığı çekim veya sonuç üretmez; kullanıcı edinim komutu gerekir.
+Kamera hazır olmasa da Editor çevrimdışı düzenlemeye izin verir. Bağlantı
+beklemesi UI'yi durdurmaz. Kaydet tek başına çıkış değildir; kaydetmeden çıkış
+da kapanış ister. Kalibrasyon kaydetme hatası işlemi açık tutuyorsa bağlantı
+korunabilir; kamera/SDK hatası oturumu fault/drain'e geçirir.
+
+Application servisi sabit owner thread ve fiziksel kimlik başına tek lease ile
+erişimi düzenler. Ekranlar SDK çağırmaz. Context değişimi eski lease temiz
+bırakılmadan yeni sahip açmaz; çalışan Runtime'ın kamerası alınamaz, önce Stop
+gerekir. Runtime çok kamera hazırlığında bir hata bütün hazırlığı geri alır.
+Aynı kameraya çelişen edinim profilleri sessiz seçilmez, hazırlık hatasıdır.
+
+Oturum sağlıklı ve exact kimlik/rota/setup/profile değişmemişse sonraki çekimler
+yeniden keşif/open/tam configure yapmaz. Kaynak/çevrim/frame metadata'sı her
+istekte yenidir; cache yeni çekim yerine sunulmaz. Başarılı stream cleanup sonrası
+kare yayınlanabilir; normal kare yayını için bağlantıyı kapatmak gerekmez.
+Stop/çıkış/kopma generation'ı emekliye ayırır; geç completion yayınlanmaz.
+Kapanış bütçesi aşımı kamera bırakıldı anlamına gelmez; lease karantinası korunur.
+USB geri gelişi veya restart üretimi/çekimi kendiliğinden başlatmaz.
+
+Hazır bağlantı kalibrasyon izni veya production admission değildir. C3/C4
+invalidation ve immutable kuralları sürer. İlk uygulama OECS stream start/stop'u
+kare başına korur; sürekli akış ve pending-command çözümü ayrı konudur.
+[CCUX-22 planı](22-session-lifecycle.md) uygulama kartlarını ve kabulü tanımlar.
+
 ## C3 — Model geçerliliği ve kullanıcı akışı
 
 Kalibrasyon sayfası kamera listesidir; alt bölüm seçili kameranın yöntemi, tarihi,

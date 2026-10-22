@@ -7,10 +7,10 @@
 **CCUX-21 tamamlandı:** Ön işleme → ROI; reçeteye bağlı dikdörtgen Region,
 Blob/Template Match gerçek işlem alanı, Run Tool/Flow, reopen ve immutable Runtime.
 [Kapanış](archive/2026-10-22-ccux-21.md), `build/ccux/ccux-21/`.
-**Öncelik: tek çekim ~2 sn ön incelemesi [CCUX-20b](archive/2026-10-22-ccux-20b.md).**
-Her çekimde keşif/open/configure/close ve kare başına stream start/stop var.
-Sonraki: birlikte ölçüm/kalıcı oturum planı; kod değişmedi. CCUX-20 canlı teyit,
-CCUX-15 fiziksel kabul açık; hash/preview düzeltmesi korunur.
+**Öncelik: [CCUX-22 bağlantı ömrü planı](architecture/camera-setup/22-session-lifecycle.md).**
+Editor aç/çık, Runtime Run/Stop, kalibrasyon başla/bitir; açılışta bağlantı yok.
+Sonraki **22a ölçüm**; kod değişmedi. [Plan kaydı](archive/2026-10-22-ccux-plan-04.md).
+CCUX-20 canlı teyit ve CCUX-15 fiziksel kabul açık; hash/preview korunur.
 [CCUX-20](archive/2026-10-22-ccux-20.md), `build/ccux/ccux-20/`.
 Geçici viewer geometrisi ayrı adlandırılır; araç ROI'leri reçeteye bağlıdır.
 CCUX-16–19 teslimleri [arşivde](archive/README.md); C0 teknik/fiziksel engeller açık.

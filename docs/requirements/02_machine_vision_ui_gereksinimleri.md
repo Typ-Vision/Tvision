@@ -1,5 +1,17 @@
 # Endüstriyel Machine Vision Yazılımı — UI Sayfa ve Ekran Gereksinimleri
 
+## 22 Ekim 2026 — çalışma süresince kamera bağlantısı (plan)
+
+Program/proje açılışı ve Runtime Load Recipe kamera bağlantısı kurmaz. Editor'da
+reçeteyi açma, Runtime Run ve seçili kamerada canlı kalibrasyon işlemine giriş
+bağlantıyı hazırlar; aynı iş içindeki çekimler bu bağlantıyı kullanır. Editor'dan
+çıkış, Runtime Stop, kalibrasyon bitiş/iptali bağlantıyı bırakır. Kaydet tek
+başına bağlantıyı kesmez; iptal edilen çıkış oturumu korur. Kamera yokken reçete
+düzenlenebilir; hazırlık arka planda yapılır, hazır olmadan çekim çalışmaz.
+Bu hedef henüz uygulanmadı. Ayrıntılı yaşam döngüsü
+[C2a sözleşmesinde](../architecture/camera-setup/contract.md#c2a--çalışma-süresince-bağlantı),
+uygulama ve kabul [CCUX-22 planındadır](../architecture/camera-setup/22-session-lifecycle.md).
+
 ## 22 Ekim 2026 — kamera akışının son kullanıcı için sadeleştirilmesi
 
 Kameralar, Kalibrasyon, Editor, Runtime ve Logs'taki “Deneysel OECS” seçimleri,

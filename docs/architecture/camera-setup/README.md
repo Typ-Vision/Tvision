@@ -5,13 +5,20 @@ CCUX-01–14 teslimleri korunur; CCUX-15 fiziksel kabulü kısmen açıktır.
 CCUX-16 politika, CCUX-17 UI, CCUX-18 gezinme temizliği ve CCUX-19 birleşik
 yazılım/görsel kabulü teslim edildi. CCUX-15 fiziksel kabulü açık. Güncel seçili iş ve
 tamamlanan kartlar [progress](../../progress.md) üzerinden izlenir.
-22 Ekim yeni öncelik: **[CCUX-20 görüntü tepkiselliği](20-image-responsiveness.md)
-→ [CCUX-21 PreProcess ROI](21-preprocess-roi.md)**.
-CCUX-21 yazılım/görsel kabulü tamamlandı; CCUX-20 gerçek kamera teyidi açık. CCUX-15'in kalan fiziksel
-kabulü açık kalır; CCUX-16–19 tamamlanmıştır.
+Güncel öncelik: **[CCUX-22 çalışma süresince kamera bağlantısı](22-session-lifecycle.md)**;
+plan hazır, uygulama başlamadı. Sıra 22a ölçüm → 22b servis → 22c Editor →
+22d Runtime → 22e Kalibrasyon → 22f birleşik kabul. Sonraki kart **CCUX-22a**.
+[CCUX-20](20-image-responsiveness.md) hash/preview teslimi ve
+[CCUX-21](21-preprocess-roi.md) ROI yazılım/görsel kabulü korunur;
+CCUX-20 gerçek kamera teyidi ve CCUX-15 fiziksel kabulü açık kalır.
 Eski EXP/KMC sıraları bu sıranın önüne geçmez.
 
 ## 22 Ekim kullanıcı kararı
+
+Bağlantı artık her tek çekimde kurulup kapatılmayacak: Editor reçete açılışı/çıkışı,
+Runtime Run/Stop, canlı kalibrasyon işlem başlangıcı/bitişi sınırlarında tutulacak.
+Program açılışı ve Runtime Load bağlantı kurmaz. Bu yeni hedef
+[C2a](contract.md#c2a--çalışma-süresince-bağlantı) ve CCUX-22'de tanımlıdır.
 
 “Deneysel OECS” seçenekleri ve “Tetik–kare eşleşmesi doğrulanmadı” dahil kamera
 uyarıları görünür ürün akışından kaldırılacak; eşdeğer yeni uyarı/mod eklenmeyecek.
