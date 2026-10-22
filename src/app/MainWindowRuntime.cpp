@@ -41,15 +41,6 @@ QLabel* plain(const QString& value){auto* label=new QLabel(value);label->setWord
 QWidget* MainWindow::makeRuntime() {
     auto* page=new QWidget;auto* layout=new QVBoxLayout(page);
     layout->addWidget(plain("Load Recipe → Run → Tek çevrim. Kamera, ayar veya model değiştiğinde Stop → yeniden Load Recipe → Run. Fiziksel kabul ayrıdır."));
-    auto* experimental=new QCheckBox("Deneysel OECS Runtime / replay (Raw / px + kaynak başına mm)");experimental->setObjectName("experimentalRuntime");layout->addWidget(experimental);
-    auto* notice=plain(ExperimentalOecsAcquisition::notice()+" • PLC / robot çıkışı kapalı");notice->setObjectName("experimentalRuntimeNotice");notice->setStyleSheet("color: #f1c27a;");notice->hide();layout->addWidget(notice);
-    connect(experimental,&QCheckBox::toggled,this,[this,notice](bool on){
-        try{ensureRuntime();if(runtimeJobs_.busy() || runtime_->busy() || (plc_ && plc_->blocking()) || (runtimeCoordinator_ && runtimeCoordinator_->state()==RuntimeState::Running))throw std::runtime_error("Önce Stop ve bekleyen kayıt/teslimi tamamlayın.");
-            if(plc_)plc_->bind(nullptr,nullptr);runtimeCoordinator_.reset();
-            runtime_->setAutomaticAcquisition([this](const Recipe& r){if(!measurementWorkspace_)throw std::runtime_error("Measurement workspace unavailable");IndustrialExecutionInputs inputs;const auto e=measurementWorkspace_->environment();inputs.contract=e.current;for(const auto& c:e.current.cameras)if(c.physical)if(const auto route=CameraLocalConfiguration(settingsFile_).route(*c.physical))inputs.routes[c.id.value]=*route;return measurementWorkspace_->productionSources(r,inputs,true);});
-            runtimeCoordinator_=std::make_unique<RuntimeCoordinator>(*runtime_);if(plc_)plc_->bind(runtime_.get(),runtimeCoordinator_.get(),runtimePath_+".production",runtimePath_+".calibrations.json");runtimeResult_.reset();notice->setVisible(on);showRuntimeResult();refreshRuntime();
-        }catch(const std::exception& e){QSignalBlocker blocker(findChild<QCheckBox*>("experimentalRuntime"));findChild<QCheckBox*>("experimentalRuntime")->setChecked(runtime_ && runtime_->experimental());notice->setVisible(runtime_ && runtime_->experimental());runtimeSummary_->setText(QString::fromUtf8(e.what()));}
-    });
     runtimeStatus_=plain("Aktif sürüm yok; çevrim çalıştırılmadı.");runtimeStatus_->setObjectName("runtimeStatus");layout->addWidget(runtimeStatus_);
     auto* actions=new QHBoxLayout;
     const QVector<QPair<QString,QString>> commands{{"run","Run"},{"stop","Stop"},{"cycle","Tek çevrim"},{"retry","Kaydı tekrar yaz"}};
@@ -71,18 +62,24 @@ QWidget* MainWindow::makeLogs() {
     auto* page=new QWidget;auto* layout=new QVBoxLayout(page);logStatus_=plain("Kalıcı çevrim kaydı yok.");layout->addWidget(logStatus_);
     auto* back=new QPushButton("Runtime'a dön");back->setObjectName("returnToRuntime");layout->addWidget(back);connect(back,&QPushButton::clicked,this,[this]{selectPage("runtime");});
     auto* refresh=new QPushButton("Kayıtları yenile");refresh->setObjectName("refreshLogs");layout->addWidget(refresh);connect(refresh,&QPushButton::clicked,this,[this]{refreshLogs();});
-    auto* exportCsv=new QPushButton("Son kayıtları dışa aktar (CSV)");exportCsv->setObjectName("exportLogsCsv");layout->addWidget(exportCsv);
-    auto* exportExperimental=new QPushButton("Deneysel kayıtları dışa aktar (CSV)");exportExperimental->setObjectName("exportExperimentalCsv");layout->addWidget(exportExperimental);
-    connect(exportExperimental,&QPushButton::clicked,this,[this]{if(!service_.hasProject())return;const auto path=QFileDialog::getSaveFileName(this,"Deneysel çevrim kanıtı",{},"CSV (*.csv)");if(path.isEmpty())return;try{const auto data=ExperimentalRuntime::csv(ProductionStore(service_.path()+".production").recent("experimental_cycles"));QSaveFile f(path);f.setDirectWriteFallback(false);if(!f.open(QIODevice::WriteOnly) || f.write(data)!=data.size() || !f.commit())throw std::runtime_error("Deneysel CSV kayıt başarısız");logStatus_->setText("Deneysel CSV kaydedildi • PLC / robot çıkışı kapalı");}catch(const std::exception& e){logStatus_->setText(QString::fromUtf8(e.what()));}});
+    auto* exportCsv=new QPushButton("Seçili kayıt türünü dışa aktar (CSV)");exportCsv->setObjectName("exportLogsCsv");layout->addWidget(exportCsv);
     connect(exportCsv,&QPushButton::clicked,this,[this]{
-        if(!service_.hasProject())return;
+        if(!service_.hasProject() || !logTable_->item(logTable_->currentRow(),0)){logStatus_->setText("Önce bir kayıt seçin.");return;}
         const auto path=QFileDialog::getSaveFileName(this,"Çevrim kanıtı",{},"CSV (*.csv)");if(path.isEmpty())return;
-        try {const auto data=ProductionResultCodec::csv(ProductionStore(service_.path()+".production").recent("cycles"));QSaveFile f(path);f.setDirectWriteFallback(false);if(!f.open(QIODevice::WriteOnly) || f.write(data)!=data.size() || !f.commit())throw std::runtime_error("CSV atomik kayıt başarısız.");logStatus_->setText("Çevrim kanıtı CSV kaydedildi.");}
+        try {exportLogCsv(path);logStatus_->setText("Çevrim kanıtı CSV kaydedildi.");}
         catch(const std::exception& e){logStatus_->setText(QString::fromUtf8(e.what()));}
     });
     logTable_=new QTableWidget;logTable_->setColumnCount(5);logTable_->setHorizontalHeaderLabels({"UTC / Cycle","Reçete","Execution","Sonuç / birim","İletişim"});logTable_->horizontalHeaderItem(1)->setToolTip("Reçete / sürüm");logTable_->horizontalHeaderItem(3)->setToolTip("Kaynak / sonuç / birim");logTable_->setEditTriggers(QAbstractItemView::NoEditTriggers);logTable_->setSelectionBehavior(QAbstractItemView::SelectRows);logTable_->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);layout->addWidget(logTable_,1);
     auto* detail=new QTextEdit;detail->setReadOnly(true);detail->setObjectName("logDetail");layout->addWidget(detail,1);
     connect(logTable_,&QTableWidget::currentCellChanged,this,[this,detail](int row,int,int,int){const auto* item=logTable_->item(row,0);detail->setPlainText(item ? item->data(Qt::UserRole).toString() : QString{});});return page;
+}
+void MainWindow::exportLogCsv(const QString& path) {
+    const auto* selected=logTable_->item(logTable_->currentRow(),0);
+    if(!service_.hasProject() || !selected)throw std::runtime_error("Önce bir kayıt seçin.");
+    const ProductionStore store(service_.path()+".production");
+    const auto data=selected->data(Qt::UserRole+1).toBool() ? ExperimentalRuntime::csv(store.recent("experimental_cycles")):ProductionResultCodec::csv(store.recent("cycles"));
+    QSaveFile file(path);file.setDirectWriteFallback(false);
+    if(!file.open(QIODevice::WriteOnly) || file.write(data)!=data.size() || !file.commit())throw std::runtime_error("CSV atomik kayıt başarısız.");
 }
 void MainWindow::ensureRuntime() {
     if(!service_.hasProject() || service_.path().isEmpty())throw std::runtime_error("Önce kaydedilmiş bir proje açın.");
@@ -122,7 +119,6 @@ void MainWindow::refreshRuntime() {
         if(plc_)plc_->bind(nullptr,nullptr);runtimeCoordinator_.reset();runtime_.reset();runtimePath_.clear();runtimeResult_.reset();showRuntimeResult();
     }
     const auto state=runtimeCoordinator_ ? runtimeCoordinator_->state() : RuntimeState::Unloaded;
-    {QSignalBlocker blocker(findChild<QCheckBox*>("experimentalRuntime"));findChild<QCheckBox*>("experimentalRuntime")->setChecked(runtime_ && runtime_->experimental());findChild<QLabel*>("experimentalRuntimeNotice")->setVisible(runtime_ && runtime_->experimental());}
     const bool network=plc_ && plc_->listening(),working=runtimeJobs_.busy() || (plc_ && plc_->working()),pending=runtime_ && runtime_->busy();
     updateOperatorMode(state==RuntimeState::Starting || state==RuntimeState::Running || state==RuntimeState::Stopping || working);
     QString status;
@@ -140,10 +136,8 @@ void MainWindow::refreshRuntime() {
     if(pending && !working)status+="\nKAYIT BEKLİYOR — yeni çevrim engelli";
     if(network)status+="\nPLC: "+plc_->state();
     runtimeStatus_->setText(status);
-    if(runtime_ && runtime_->experimental())runtimeStatus_->setText(ExperimentalOecsAcquisition::notice()+"\n"+status);
     refreshRuntimeSources();
     const bool available=!working && !pending && !(plc_ && plc_->blocking()) && !editorSession_.busy() && !cameraSession_.busy();
-    findChild<QCheckBox*>("experimentalRuntime")->setEnabled(available && state!=RuntimeState::Running && state!=RuntimeState::Starting && state!=RuntimeState::Stopping);
     findChild<QPushButton*>("runtime_run")->setEnabled(available && (state==RuntimeState::LoadedStopped || state==RuntimeState::Fault));
     findChild<QPushButton*>("runtime_cycle")->setEnabled(available && state==RuntimeState::Running && runtimeCoordinator_->mode()==RuntimeTrigger::Manual);
     findChild<QPushButton*>("runtime_stop")->setEnabled(state==RuntimeState::Starting || state==RuntimeState::Running || working);
@@ -196,7 +190,7 @@ void MainWindow::refreshRuntimeSources(){
         runtimeSources_->addItem(tool.name,tool.id);const int row=runtimePreparation_->rowCount();runtimePreparation_->insertRow(row);
         QJsonObject deps;if(snapshot && snapshot->recipe().id==recipe->id)deps=snapshot->dependencies().contains("sourceSet") ? snapshot->dependencies()["sourceSet"].toObject()[tool.id].toObject():snapshot->dependencies();
         QString model="Raw / px • metrik model kullanılmıyor";if(deps.contains("systemCalibration")){const auto evidence=SystemCalibration::decodeEvidence(deps["systemCalibration"].toObject());model=QString("Geçerli • mm • %1 v%2").arg(evidence.record.name()).arg(evidence.selection.version);}
-        else if(deps.contains("experimentalCalibration")){const auto record=CalibrationModelRecord::decode(deps["experimentalCalibration"].toObject()["record"].toObject());model=QString("Deneysel • mm • %1 v%2").arg(record.name()).arg(deps["experimentalCalibration"].toObject()["selection"].toObject()["version"].toInt());}
+        else if(deps.contains("experimentalCalibration")){const auto record=CalibrationModelRecord::decode(deps["experimentalCalibration"].toObject()["record"].toObject());model=QString("mm • %1 v%2").arg(record.name()).arg(deps["experimentalCalibration"].toObject()["selection"].toObject()["version"].toInt());}
         else if(SystemCalibration::requestsCalibration(SystemCalibration::branch(*recipe,tool.id),false))model="mm • Exact model gerekli / Run'da doğrulanacak";
         QString actual="Kare yok";if(runtimeResult_)for(const auto& f:runtimeResult_->frames)if(f.sourceId==tool.id)actual=f.frameId;
         QString readiness=deps.isEmpty() ? "Beyan / Run bekleniyor":"Hazırlık snapshot'ı";
@@ -237,7 +231,7 @@ void MainWindow::showRuntimeResult() {
     if(!runtimeResult_){runtimeViewer_->clearImage("Yeni çevrim sonucu yok.");runtimeSummary_->setText("READY — sonuç yok.");QSignalBlocker blocker(runtimeTools_);runtimeTools_->clear();return;}
     const auto& c=*runtimeResult_;const auto snapshot=runtime_ ? runtime_->active() : nullptr;QStringList lines;
     if(snapshot && snapshot->dependencies().contains("systemCalibration")){const auto s=SystemCalibration::decodeEvidence(snapshot->dependencies()["systemCalibration"].toObject());lines<<QString("Sistem kalibrasyonu: %1 v%2 • etkinleştirme %3").arg(s.record.name()).arg(s.selection.version).arg(s.selection.revision)<<(s.record.residualsMillimetres().isEmpty() ? "Bağımsız kontrol yapılmadı":"Bağımsız kontrol kanıtı mevcut");if(!s.scope.isEmpty()){const auto target=SetupReference::fromJson(s.scope["target"].toObject());lines<<QString("Kamera %1 • kurulum %2 r%3").arg(target.camera.value,target.setup.value).arg(target.revision);}}
-    lines<<executionStateName(c.state)+QString(" • %1 ms").arg(c.milliseconds,0,'f',2)<<"Cycle: "+c.cycleId<<"Frame: "+c.frameId<<"Config: "+QString::fromLatin1(c.configId.left(12))<<(runtime_ && runtime_->experimental() ? "Kalıcı kayıt tamamlandı • Parça: NOT_EVALUATED • PLC / robot: BLOCKED_EXPERIMENTAL":plc_ && plc_->listening() ? "Kalıcı kayıt tamamlandı • PLC durumu Communication ekranında" : "Kalıcı kayıt tamamlandı • İletişim: NOT_REQUESTED");
+    lines<<executionStateName(c.state)+QString(" • %1 ms").arg(c.milliseconds,0,'f',2)<<"Cycle: "+c.cycleId<<"Frame: "+c.frameId<<"Config: "+QString::fromLatin1(c.configId.left(12))<<(runtime_ && runtime_->experimental() ? "Kalıcı kayıt tamamlandı • Parça: Değerlendirilmedi • PLC / robot: Kullanılamıyor":plc_ && plc_->listening() ? "Kalıcı kayıt tamamlandı • PLC durumu Communication ekranında" : "Kalıcı kayıt tamamlandı • İletişim: NOT_REQUESTED");
     if(snapshot && snapshot->dependencies().contains("sourceSet")){const auto evidence=snapshot->dependencies()["sourceSet"].toObject()[runtimeSources_->currentData().toString()].toObject()["systemCalibration"].toObject();if(!evidence.isEmpty()){const auto model=SystemCalibration::decodeEvidence(evidence);lines<<QString("Seçili kaynak modeli: %1 v%2").arg(model.record.name()).arg(model.selection.version);}}
     if(snapshot){const auto source=runtimeSources_->currentData().toString();const auto admission=snapshot->dependencies()["sourceSet"].toObject()[source].toObject()["industrialSource"].toObject();if(!admission.isEmpty()){QJsonObject acquisition;if(c.industrialEvidence.contains(source))acquisition=industrialCompletionEvidence(*c.industrialEvidence[source]);lines<<presentIndustrialSource({},admission,acquisition).detail;}}
     if(!c.error.isEmpty())lines<<c.error;
@@ -282,7 +276,7 @@ void MainWindow::showRuntimeResult() {
     if(snapshot && snapshot->validation().scope.startsWith("experimental_runtime/")){
         QStringList headline{"Kaynak: "+runtimeSources_->currentText()};
         if(c.state==ExecutionState::Done)for(const auto& t:c.tools)if(t.state==ExecutionState::Done && graph.toolSources.value(t.toolId)==selectedSource)for(auto i=t.outputs.begin();i!=t.outputs.end();++i)if(i->valid && std::holds_alternative<double>(i->data) && (i->port.unit=="mm" || i->port.unit.startsWith("px")))headline<<i.key()+": "+ToolResultCodec::display(*i)+" "+i->port.unit;
-        headline<<ExperimentalOecsAcquisition::notice()<<"Parça: NOT_EVALUATED • PLC / robot: BLOCKED_EXPERIMENTAL";
+        headline<<"Parça: Değerlendirilmedi • PLC / robot: Kullanılamıyor";
         lines.prepend(headline.join('\n'));lines<<ExperimentalRuntime::sourceSummary(snapshot->dependencies()["sourceSet"].toObject()[selectedSource].toObject(),selectedSource);
     }
     runtimeSummary_->setText((diagnoses+lines).join("\n"));
@@ -307,7 +301,7 @@ void MainWindow::refreshLogs() {
                 }}decisions=metric+pixels;
             }
             const QStringList values{record["completedAtUtc"].toString()+"\n"+record["cycleId"].toString(),record["recipeName"].toString(record["recipeId"].toString().left(8))+QString(" v%1").arg(record["recipeVersion"].toInt()),record["state"].toString(),decisions.isEmpty() ? "NOT_EVALUATED" : decisions.join(experimental ? "\n":"; "),delivery.value(record["cycleId"].toString(),record["communicationState"].toString())};
-            for(int col=0;col<values.size();++col)logTable_->setItem(row,col,new QTableWidgetItem(values[col]));if(experimental){logTable_->item(row,2)->setText("Deneysel • "+record["state"].toString());logTable_->item(row,4)->setText("BLOCKED_EXPERIMENTAL");}for(int col=0;col<values.size();++col)logTable_->item(row,col)->setToolTip(summary);logTable_->item(row,0)->setData(Qt::UserRole,summary+"\n\n"+QString::fromUtf8(QJsonDocument(record).toJson(QJsonDocument::Indented)));}
+            for(int col=0;col<values.size();++col)logTable_->setItem(row,col,new QTableWidgetItem(values[col]));if(experimental){logTable_->item(row,2)->setText(record["state"].toString());logTable_->item(row,4)->setText("Kullanılamıyor");}for(int col=0;col<values.size();++col)logTable_->item(row,col)->setToolTip(summary);logTable_->item(row,0)->setData(Qt::UserRole,experimental ? summary:summary+"\n\n"+QString::fromUtf8(QJsonDocument(record).toJson(QJsonDocument::Indented)));logTable_->item(row,0)->setData(Qt::UserRole+1,experimental);logTable_->item(row,0)->setData(Qt::UserRole+2,record["schema"].toString());}
         logTable_->resizeRowsToContents();for(int row=0;row<logTable_->rowCount();++row)logTable_->setRowHeight(row,std::min(110,logTable_->rowHeight(row)));
     }catch(const std::exception& e){logStatus_->setText("Kayıt okunamadı: "+QString::fromUtf8(e.what()));}
 }

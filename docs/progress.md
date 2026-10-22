@@ -4,19 +4,19 @@
 
 ## Devam noktası
 
-**Güncel devam: [CCUX-17](architecture/camera-setup/17-clean-camera-ui.md).**
-CCUX-16 teslim: normal kamera/kalibrasyon/Editor/Runtime komutları exact OECS
-veya işaretli replay yolunu seçer; opt-in gerekmez. Core 12/12.
-Görünür kutu/uyarıları CCUX-17 kaldıracak. [Kapanış](archive/2026-10-22-ccux-16.md),
-`build/ccux/ccux-16/`. Plan sırası 17→18→19→15; C0 teknik engelleri korur.
+**Güncel devam: [CCUX-18](architecture/camera-setup/18-calibration-navigation.md).**
+CCUX-17: dört edinim seçimi/uyarıları kaldırıldı; Logs tek CSV eylemi seçili
+kayıt türünü kullanır. Kanıt/codec korunur. [Kapanış](archive/2026-10-22-ccux-17.md),
+`build/ccux/ccux-17/`. [CCUX-16 politikası](archive/2026-10-22-ccux-16.md) korunur.
+Sıra 18→19→15; C0 teknik engelleri ve eski gezinme temizliği açıktır.
 
 **CCUX-15 plaka denemesi açık:** 7×7 simetrik daire, kullanıcı beyanı 12 mm.
 56000 µs / 0 dB readback ile ham kare alındı; servis 48 adayla reddediyor,
 tanıdaki 49 aday da doğru grid değil. Model/etkinlik/mm yok.
 [CCUX-15c](archive/2026-10-22-ccux-15c.md), `build/ccux/ccux-15/plate-20261022-02/`.
 [Önceki kare](archive/2026-10-22-ccux-15b.md).
-**CCUX-10b:** Editor kamera seçimi sırasında seçicinin silinmesi düzeltildi.
-Klavye olayı regresyonu ve kanıtlar [kapanışta](archive/2026-10-22-ccux-10b.md).
+**CCUX-10b:** Editor kamera seçicisinin silinmesi düzeltildi;
+[klavye regresyonu/kanıt](archive/2026-10-22-ccux-10b.md).
 **CCUX-03b:** Opto ayar servisi edinimden ayrıldı. Gerçek cihazda kayıt/oku/mevcut
 ayar kaydı doğrulandı; görüntü/mm koşumu değildir.
 [Kanıt](archive/2026-10-22-ccux-03b.md), `build/ccux/ccux-03b/`.
@@ -114,4 +114,4 @@ UI: build/reference-ui/visionflow.exe; core: build/kmc9-core-off.
 PATH/build/test/başlatma README'de; mevcut UI kullanımı
 [kullanım rehberinde](camera-runtime-usage.md). Her kartta yalnız değişen kapsamı
 kanıtla. CCUX-03 fiziksel kamera, native DPI veya kurulum kabulü değildir.
-Detay ve kanıt tarihli kapanıştadır.
+Detay tarihli kapanıştadır.

@@ -191,14 +191,14 @@ int main(int argc,char** argv){QApplication app(argc,argv);try{
     {CameraSession nativeJobs;CameraManager native([&]{return &workspace;},[]{return true;},nativeJobs,dir.path()+"/native.ini",nullptr,scanner);
      native.scan();waitUi([&]{return !nativeJobs.busy();});check(!native.findChild<QPushButton*>("cameraPreview")->isEnabled() && !native.findChild<QPushButton*>("cameraApply")->isEnabled(),"normal composition rejects synthetic native capability");}
     const auto expEvidence=evidence;QDir().mkpath(expEvidence);
-    view.findChild<QCheckBox*>("cameraExperimental")->setChecked(true);
-    view.findChild<QLabel*>("cameraTitle")->setText("Sentetik UI • deneysel mod / edinim yok");
+    check(!view.findChild<QCheckBox*>("cameraExperimental"),"camera has no acquisition opt-in");
+    view.findChild<QLabel*>("cameraTitle")->setText("Sentetik UI • edinim yok");
     view.resize(1400,900);QApplication::processEvents();view.grab().save(expEvidence+"/camera-experimental-normal.png");
     view.resize(850,600);QApplication::processEvents();view.grab().save(expEvidence+"/camera-experimental-small.png");
     view.findChild<QScrollArea*>()->verticalScrollBar()->setValue(view.findChild<QScrollArea*>()->verticalScrollBar()->maximum());QApplication::processEvents();view.grab().save(expEvidence+"/camera-experimental-small-bottom.png");
-    check(view.findChild<QLabel*>("cameraExperimentalNotice")->isVisible() && !view.findChild<QPushButton*>("cameraSaveFrame")->isEnabled(),"persistent experimental notice; no raster means no save");
+    check(!view.findChild<QLabel*>("cameraExperimentalNotice") && !view.findChild<QPushButton*>("cameraSaveFrame")->isEnabled(),"persistent experimental notice; no raster means no save");
     check(view.findChild<QScrollArea*>()->horizontalScrollBar()->maximum()==0,"experimental controls fit small window");
-    view.findChild<QCheckBox*>("cameraExperimental")->setChecked(false);
+
     auto* scroll=view.findChild<QScrollArea*>();for(auto* action:{view.findChild<QPushButton*>("cameraScan"),view.findChild<QPushButton*>("cameraRename"),view.findChild<QPushButton*>("cameraSettingsRead"),preview,live,view.findChild<QPushButton*>("cameraStop")}){scroll->ensureWidgetVisible(action);QApplication::processEvents();check(scroll->viewport()->rect().contains(action->mapTo(scroll->viewport(),action->rect().center())),"small screen main action reachable by scrolling");}
     scroll->verticalScrollBar()->setValue(scroll->verticalScrollBar()->maximum());view.grab().save(evidence+"/camera-small-actions.png");
     {CameraSession emptyJobs;CameraManager empty([]()->MeasurementWorkspace*{return nullptr;},[]{return true;},emptyJobs,dir.path()+"/empty.ini",nullptr,scanner);
@@ -223,7 +223,7 @@ int main(int argc,char** argv){QApplication app(argc,argv);try{
         check(!product.findChild<QPushButton*>("cameraPreview")->isEnabled(),"native preview stays closed");
         read->click();waitUi([&]{return !settingJobs.busy();});
         auto* exposure=product.findChild<QLineEdit*>("cameraExposure");check(exposure->isEnabled() && exposure->text()=="5000" && apply->isEnabled(),"product scalar values enabled from SDK readback");
-        product.findChild<QCheckBox*>("cameraExperimental")->setChecked(true);check(read->isEnabled() && apply->isEnabled(),"experimental opt-in does not disable settings");
+        check(!product.findChild<QCheckBox*>("cameraExperimental"),"product has no acquisition opt-in");check(read->isEnabled() && apply->isEnabled(),"experimental opt-in does not disable settings");
         exposure->setText("6000");apply->click();waitUi([&]{return !settingJobs.busy();});
         check(ws.environment().current.profiles.first().requested.exposureTimeUs==6000 && ws.environment().current.setups.first().pending,"real settings persisted while physical optics remain pending");
         check(hardware->calls.isEmpty() && hardware->nodes["TriggerMode"].value==FeatureValue(QString("On")),"settings do not acquire or retain altered trigger mode");
@@ -248,7 +248,7 @@ int main(int argc,char** argv){QApplication app(argc,argv);try{
         });
         expView.resize(1400,900);expView.show();expView.scan();waitUi([&]{return !expJobs.busy();});
         QFile dll(dir.path()+"/fixture.dll");check(dll.open(QIODevice::WriteOnly),"fixture DLL marker");dll.write("Synthetic API only");dll.close();
-        expView.findChild<QLineEdit*>("cameraExperimentalRuntime")->setText(dll.fileName());check(!expView.findChild<QCheckBox*>("cameraExperimental")->isChecked(),"new session has no experimental opt-in");
+        expView.findChild<QLineEdit*>("cameraExperimentalRuntime")->setText(dll.fileName());check(!expView.findChild<QCheckBox*>("cameraExperimental"),"new session has no experimental opt-in");
         expView.findChild<QSpinBox*>("cameraTimeout")->setValue(3000); // This SDK fixture asserts a 3 s stream budget.
         auto* expSave=expView.findChild<QPushButton*>("cameraSaveFrame");auto* expImage=expView.findChild<QLabel*>("cameraPreviewImage");
         expView.findChild<QPushButton*>("cameraPreview")->click();waitUi([&]{return !expJobs.busy();});

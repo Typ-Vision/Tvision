@@ -76,7 +76,7 @@ public:
             if(!inventoryDone_)return "Keşif yapılmadı • kayıtlı endüstriyel kamera";
             if(inventory_.cancelled || !inventory_.errors.isEmpty())return "Keşif eksik / SDK kullanılamıyor";
             try{const auto routes=resolveRoutes(*c.physical,inventory_.industrial.devices);
-                return routes.size()>1 ? "Keşfedildi • yerel rota seçimi gerekli" : "Keşfedildi • native edinim doğrulanmadı";
+                return routes.size()>1 ? "Keşfedildi • yerel rota seçimi gerekli" : "Keşfedildi";
             }catch(const std::exception&){return "Çevrimdışı / belirsiz • otomatik eşleme yok";}
         }
         if(c.device.adapter!="webcam")return "Desteklenmeyen edinim adapter'ı";

@@ -120,7 +120,7 @@ CycleResult ExperimentalRuntime::execute(const ProductionCycle& c,const std::sha
     auto result=service.withExperimentalEditorReplay().run(s->recipe().definition,s->projectDirectory(),s->recipe().id,s->validation().contentId,cancel,{},{},resolver,nullptr,{{"sources",acquisitions}});
     try{for(const auto& t:result.tools)if(sources.contains(t.toolId))for(const auto& output:t.outputs)if(output.valid && std::holds_alternative<ImageFrame>(output.data))modelFrame(sources[t.toolId].toObject(),SystemCalibration::branch(s->recipe(),t.toolId),std::get<ImageFrame>(output.data));}
     catch(const std::exception& e){EditorSession::suppressCancelled(result);result.state=ExecutionState::Error;result.error=QString::fromUtf8(e.what());}
-    for(auto& t:result.tools){t.decision=PartDecision::NotEvaluated;if(t.calibration)t.message="Experimental metric result; part decision not evaluated.";}
+    for(auto& t:result.tools){t.decision=PartDecision::NotEvaluated;if(t.calibration)t.message="Metrik sonuç; parça kararı değerlendirilmedi.";}
     if(result.state==ExecutionState::Error && result.error.isEmpty())for(const auto& t:result.tools)if(t.state==ExecutionState::Error){if(!result.error.isEmpty())result.error+='\n';result.error+=t.errorCode+" "+t.message;}
     result.experimentalSnapshot_=s;result.experimentalTicket_=c.ticket;result.experimentalDigest_=digest(result);return result;
 }
@@ -206,7 +206,7 @@ QString ExperimentalRuntime::sourceSummary(const QJsonObject& entry,const QStrin
     else if(!camera.isEmpty())text+=" • Kamera: "+camera["id"].toString()+" / "+camera["name"].toString();
     if(model.isEmpty())return text+" • Raw / px • metrik model kullanılmıyor";
     const auto typed=decodeModel(model,source);const auto& active=typed.snapshot.calibration;
-    return text+QString(" • Deneysel • mm • %1 v%2 • Model: %3 • Content: %4 • Bağımsız fiziksel kabul yapılmadı")
+    return text+QString(" • mm • %1 v%2 • Model: %3 • Content: %4 • Bağımsız fiziksel kabul yapılmadı")
         .arg(active.record.name()).arg(active.selection.version).arg(active.selection.id,active.selection.contentId);
 }
 namespace {
@@ -222,7 +222,7 @@ QJsonArray recordedResults(const QJsonObject& r){
 QJsonArray recordedModels(const QJsonObject& r){QJsonArray models;const auto sources=r["dependencies"].toObject()["sourceSet"].toObject();for(auto i=sources.begin();i!=sources.end();++i){const auto entry=i->toObject(),model=entry["experimentalCalibration"].toObject();models.append(QJsonObject{{"sourceId",i.key()},{"experimental",true},{"unit",model.isEmpty()?"px":"mm"},{"model",model.isEmpty()?QJsonObject{}:model["executionDependency"].toObject()},{"description",ExperimentalRuntime::sourceSummary(entry,i.key())}});}return models;}
 }
 QString ExperimentalRuntime::summary(const QJsonObject& r){
-    validateRecord(r);QStringList lines{ExperimentalOecsAcquisition::notice(),r["state"].toString()+" • "+r["cycleId"].toString(),"Parça: NOT_EVALUATED • PLC / robot: BLOCKED_EXPERIMENTAL"};
+    validateRecord(r);QStringList lines{r["state"].toString()+" • "+r["cycleId"].toString(),"Parça: Değerlendirilmedi • PLC / robot: Kullanılamıyor"};
     QMap<QString,QString> names;for(const auto& tool:editorTools(r["configuration"].toObject()["definition"].toObject()))names[tool.id]=tool.name;
     QStringList metric,pixels;const auto sources=r["dependencies"].toObject()["sourceSet"].toObject();
     for(const auto& result:recordedResults(r)){const auto value=result.toObject();const auto source=value["sourceId"].toString(),unit=value["unit"].toString();const auto text=QString("%1 / %2: %3 %4").arg(names.value(source,source),value["portId"].toString()).arg(value["value"].toDouble(),0,'g',12).arg(unit);if(unit=="mm")metric<<text;else if(!sources[source].toObject().contains("experimentalCalibration") && unit.startsWith("px"))pixels<<text;}
@@ -231,7 +231,7 @@ QString ExperimentalRuntime::summary(const QJsonObject& r){
     if(!r["error"].toString().isEmpty())lines<<r["error"].toString();return lines.join('\n');
 }
 QByteArray ExperimentalRuntime::csv(const QVector<QJsonObject>& records){
-    require(records.size()<=256,"Experimental CSV record limit");QByteArray data="schema,cycleId,recipeId,executionState,productionAdmission,triggerAssociationVerified,communicationState,sourceModels,results,evidence\r\n";
+    require(records.size()<=256,"CSV kayıt sınırı");QByteArray data="schema,cycleId,recipeId,executionState,productionAdmission,triggerAssociationVerified,communicationState,sourceModels,results,evidence\r\n";
     for(const auto& r:records){validateRecord(r);QStringList row;for(const auto& key:{"schema","cycleId","recipeId","state"})row<<cell(r[key].toString());row<<"false"<<"false"<<cell("BLOCKED_EXPERIMENTAL")<<cell(QString::fromUtf8(QJsonDocument(recordedModels(r)).toJson(QJsonDocument::Compact)))<<cell(QString::fromUtf8(QJsonDocument(recordedResults(r)).toJson(QJsonDocument::Compact)))<<cell(QString::fromUtf8(QJsonDocument(r).toJson(QJsonDocument::Compact)));data+=row.join(',').toUtf8()+"\r\n";}return data;
 }
 }

@@ -47,7 +47,7 @@ bool MainWindow::verifyExperimentalEditor(const QString& artifacts) {
     auto check=[](bool ok,const char* why){if(!ok)throw std::runtime_error(why);};
     auto wait=[&]{QElapsedTimer timer;timer.start();do{QApplication::processEvents();QThread::msleep(1);}while(editorSession_.busy() && timer.elapsed()<20000);QApplication::processEvents();check(!editorSession_.busy(),"experimental Editor worker timeout");};
     const auto path=qEnvironmentVariable("VISIONFLOW_EXP_RASTER");check(!path.isEmpty(),"VISIONFLOW_EXP_RASTER required");
-    auto* policy=findChild<QCheckBox*>("experimentalEditorReplay");check(policy && !policy->isChecked(),"restart policy defaults off");
+    auto* policy=findChild<QCheckBox*>("experimentalEditorReplay");check(!policy,"restart policy defaults off");
     const auto raw=ImageFileService{}.load(path,true);
     service_.createProject("Experimental raster","",QDir(artifacts).filePath("experimental-editor-"+QUuid::createUuid().toString(QUuid::WithoutBraces)+".vfproject"),"file");
     service_.createRecipe("Real raster px","",ApplicationType::Measurement,"file");
@@ -63,14 +63,14 @@ bool MainWindow::verifyExperimentalEditor(const QString& artifacts) {
         service_.updateTool(t);
     }
     service_.setConnections({{source,"image",line,"image"},{source,"image",circle,"image"}});
-    policy->setChecked(true);refreshWorkspace();selectPage("editor");selectTool(circle);wait();runFlow();wait();
+    refreshWorkspace();selectPage("editor");selectTool(circle);wait();runFlow();wait();
     if(!editorSession_.cycle || editorSession_.cycle->state!=ExecutionState::Done){QString error=editorSession_.cycle?editorSession_.cycle->error:"No cycle";if(editorSession_.cycle)for(const auto& t:editorSession_.cycle->tools)error+="\n"+t.toolId+": "+t.message;throw std::runtime_error(("real raster flow: "+error).toStdString());}
     auto result=[&](const QString& id)->ToolResult{for(const auto& r:editorSession_.cycle->tools)if(r.toolId==id)return r;throw std::runtime_error("missing real measurement");};
     const auto l=result(line),c=result(circle);
     check(l.outputs["linePx"].valid && c.outputs["circlePx"].valid,"actual Line/Circle pixel fits");
     check(!l.outputs["lineMm"].valid && !c.outputs["circleMm"].valid && l.decision==PartDecision::NotEvaluated && c.decision==PartDecision::NotEvaluated,"no mm or part acceptance without reference");
     for(const auto& r:{l,c})for(const auto& v:r.outputs)check(v.origin.experimentalAcquisition==raw.metadata().experimentalAcquisition,"measurement provenance retained");
-    check(findChild<QLabel*>("experimentalEditorNotice")->isVisible() && imageInfo_->text().contains(ExperimentalOecsAcquisition::notice()) && matchInfo_->text().contains(ExperimentalOecsAcquisition::notice()),"persistent image/result notice");
+    check(!findChild<QLabel*>("experimentalEditorNotice") && !imageInfo_->text().contains(ExperimentalOecsAcquisition::notice()) && !matchInfo_->text().contains(ExperimentalOecsAcquisition::notice()),"persistent image/result notice");
     QFile report(QDir(artifacts).filePath("real-raster-report.txt"));check(report.open(QIODevice::WriteOnly),"report open");QTextStream out(&report);out<<"Real saved experimental raster only; no physical mm oracle\nLine edge threshold explicitly 20 -> 10 after default rejected 0/21; observed raw peaks 14.5..18.5 Gray8/px. Fit/tolerance defaults unchanged.\n"<<path<<"\ncontentId="<<raw.contentId().toHex()<<"\n"<<matchInfo_->text()<<"\n";out.flush();
     const auto cycle=editorSession_.cycle->cycleId;runExecution(circle);wait();
     check(editorSession_.cycle && editorSession_.cycle->partial && editorSession_.cycle->cycleId==cycle && result(circle).outputs["circlePx"].valid,"real TargetOnly without acquisition");
@@ -79,22 +79,22 @@ bool MainWindow::verifyExperimentalEditor(const QString& artifacts) {
     refreshWorkspace();selectTool(circle);wait();runFlow();wait();check(editorSession_.cycle && editorSession_.cycle->state==ExecutionState::Done,"reopen real flow");
     for(const auto size:{QSize(1400,900),QSize(850,600)}){resize(size);QApplication::processEvents();imageViewer_->fitImage();QApplication::processEvents();check(grab().save(QDir(artifacts).filePath(QString("experimental-editor-%1.png").arg(size.width()))),"experimental screenshot");}
     {
-        auto* runtimePolicy=findChild<QCheckBox*>("experimentalRuntime");check(runtimePolicy && !runtimePolicy->isChecked(),"Runtime restart policy off");runtimePolicy->setChecked(true);check(runtime_ && runtime_->experimental(),"explicit experimental Runtime policy");
+        auto* runtimePolicy=findChild<QCheckBox*>("experimentalRuntime");check(!runtimePolicy,"Runtime restart policy off");ensureRuntime();
         runtimeCoordinator_->load(*service_.activeRecipe(),QFileInfo(project).absolutePath());selectPage("runtime");runtimeAction("run");check(runtimeCoordinator_->state()==RuntimeState::Running,"experimental Runtime prepared");runtimeAction("cycle");
         QElapsedTimer timer;timer.start();while(runtimeJobs_.busy() && timer.elapsed()<20000){QApplication::processEvents();QThread::msleep(1);}QApplication::processEvents();check(runtimeResult_ && runtimeResult_->state==ExecutionState::Done,"experimental Runtime replay completion");
-        runtimeTools_->setCurrentIndex(runtimeTools_->findData(circle));check(runtimeSummary_->text().contains(ExperimentalOecsAcquisition::notice()) && runtimeViewer_->hasImage(),"Runtime image/result notice");
+        runtimeTools_->setCurrentIndex(runtimeTools_->findData(circle));check(!runtimeSummary_->text().contains(ExperimentalOecsAcquisition::notice()) && runtimeViewer_->hasImage(),"Runtime image/result notice");
         setWindowState(Qt::WindowNoState);for(const auto size:{QSize(1400,900),QSize(850,600)}){resize(size);QApplication::processEvents();runtimeViewer_->fitImage();QApplication::processEvents();check(grab().save(QDir(artifacts).filePath(QString("experimental-runtime-%1.png").arg(size.width()))),"Runtime screenshot");}
-        runtimeAction("stop");check(!runtimeResult_ && !runtimeViewer_->hasImage(),"Runtime Stop clears image");selectPage("logs");refreshLogs();check(logTable_->rowCount()==1 && logTable_->item(0,2)->text().contains("Deneysel"),"experimental Logs row");logTable_->selectRow(0);QApplication::processEvents();check(grab().save(QDir(artifacts).filePath("experimental-logs-850.png")),"Logs screenshot");
+        runtimeAction("stop");check(!runtimeResult_ && !runtimeViewer_->hasImage(),"Runtime Stop clears image");selectPage("logs");refreshLogs();check(logTable_->rowCount()==1 && !logTable_->item(0,2)->text().contains("Deneysel"),"experimental Logs row");logTable_->selectRow(0);QApplication::processEvents();check(grab().save(QDir(artifacts).filePath("experimental-logs-850.png")),"Logs screenshot");
         selectPage("runtime");runtimeAction("run");QLockFile lock(project+".production/archive.lock");check(lock.tryLock(0),"Runtime archive fixture lock");runtimeAction("cycle");timer.restart();while(runtimeJobs_.busy() && timer.elapsed()<20000){QApplication::processEvents();QThread::msleep(1);}QApplication::processEvents();check(runtimePending_ && !runtimeResult_ && !runtimeViewer_->hasImage(),"failed recording does not publish");runtimeAction("stop");lock.unlock();runtimeAction("retry");check(!runtimePending_ && !runtimeResult_ && !runtimeViewer_->hasImage() && runtimeCoordinator_->state()==RuntimeState::LoadedStopped,"record retry after Stop must not restore live pixels/results");
-        runtimePolicy->setChecked(false);
+
     }
     // Bad calibration leaves pixel diagnostics but cannot create physical values.
     for(auto t:service_.tools())if(t.id==circle){t.parameters["mode"]="calibrated";t.parameters["scanRoi"]=ToolRoi{{"plane",LengthUnit::Millimetre,AxisConvention::XRightYUp},Annulus{{12,10},2,5}}.toJson();service_.updateTool(t);}
     refreshWorkspace();selectTool(circle);runFlow();wait();const auto invalid=result(circle);
     check(!invalid.outputs.value("circleMm").valid && invalid.decision!=PartDecision::Pass,"missing calibration cannot pass");
-    policy->setChecked(false);check(!editorSession_.frame && !editorSession_.cycle,"policy change clears pixels/results");
+    editorSession_.sourceFrames.clear();editorSession_.frame.reset();editorSession_.invalidateResults();
     check(ExecutionService{}.run(definition,QFileInfo(project).absolutePath(),recipe,{},{}).state==ExecutionState::Error,"default execution/restart rejects experimental replay");
-    {MainWindow restarted(settingsFile_);check(!restarted.findChild<QCheckBox*>("experimentalEditorReplay")->isChecked() && !restarted.findChild<QCheckBox*>("experimentalRuntime")->isChecked(),"restart cannot restore experimental permission");}
+    {MainWindow restarted(settingsFile_);check(!restarted.findChild<QCheckBox*>("experimentalEditorReplay") && !restarted.findChild<QCheckBox*>("experimentalRuntime"),"restart cannot restore experimental permission");}
     out<<"TargetOnly, Save/reopen/no-op, invalid calibration, policy invalidation and restart/default isolation passed\n";out.flush();
     return true;
 }

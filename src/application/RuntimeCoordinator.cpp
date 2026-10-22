@@ -12,7 +12,7 @@ void RuntimeCoordinator::replaceable() const {
 void RuntimeCoordinator::load(const Recipe& recipe,const QString& directory,RuntimeTrigger mode) {
     replaceable();
     runtime_.checkConfiguration(recipe,directory); // failure preserves previous load
-    if(runtime_.requiresManualCycles(recipe,directory) && mode!=RuntimeTrigger::Manual)throw ProductionException(ProductionError::InvalidConfiguration,"Experimental Runtime permits manual cycles only");
+    if(runtime_.requiresManualCycles(recipe,directory) && mode!=RuntimeTrigger::Manual)throw ProductionException(ProductionError::InvalidConfiguration,"Bu kamera akışı yalnız manuel çevrimleri destekler");
     loaded_=recipe;directory_=directory;mode_=mode;
     ++generation_;error_.clear();state_=RuntimeState::LoadedStopped;
 }

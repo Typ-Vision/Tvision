@@ -41,16 +41,16 @@ public:
             require(hash.addData(&file),"Cannot hash OECS runtime");runtimeHash_=QString::fromLatin1(hash.result().toHex());}
     }
     CameraWorkerResult execute(const CameraTicket& t) override {
-        const auto budget=[&]{require(!t.cancel->load(),"Experimental camera cancelled");const int ms=t.deadline.remainingMs();require(ms>0,"Experimental camera deadline exceeded");return ms;};
+        const auto budget=[&]{require(!t.cancel->load(),"Camera cancelled");const int ms=t.deadline.remainingMs();require(ms>0,"Camera deadline exceeded");return ms;};
         try{
-            budget();require(!fault_,"Experimental camera fault; explicit close/reopen required");
+            budget();require(!fault_,"Camera fault; explicit close/reopen required");
             switch(t.operation){
             case CameraOperation::Connect:{
-                require(!connected_,"Experimental camera already open");const auto& id=request_.device.identity;
+                require(!connected_,"Camera already open");const auto& id=request_.device.identity;
                 session_.open({id.vendor,id.model,id.serial});connected_=true;break;
             }
             case CameraOperation::Configure:{
-                require(connected_ && !started_,"Experimental camera not idle");verifyCleanRaster(session_);budget();
+                require(connected_ && !started_,"Camera not idle");verifyCleanRaster(session_);budget();
                 configured_=IndustrialCameraConfiguration::applyExperimental(session_,request_.device.identity,request_.setup,request_.profile);
                 require(configured_->actual.geometry.resolution==QSize(2448,2048) && configured_->payloadBytes==2448ULL*2048,"Exact clean full sensor raster required");
                 verifyCleanRaster(session_);
@@ -66,14 +66,14 @@ public:
                     {"width",2448},{"height",2048},{"originX",0},{"originY",0},{"pixelFormat","Mono8"}};
                 break;
             }
-            case CameraOperation::Start:require(configured_.has_value(),"Experimental camera not configured");started_=true;break;
+            case CameraOperation::Start:require(configured_.has_value(),"Camera not configured");started_=true;break;
             case CameraOperation::Grab:{
-                require(started_ && configured_.has_value(),"Experimental camera not started");
+                require(started_ && configured_.has_value(),"Camera not started");
                 verifyCleanRaster(session_);budget();std::optional<AcquiredFrame> frame;
                 OecsStreamLimits limits;limits.timeoutMs=budget();
                 session_.experimentalFrame(limits,budget,[&](const OecsBuffer& b){
                     require(b.width==2448 && b.height==2048 && b.stride==2448 && b.bytes==2448ULL*2048,
-                            "Experimental frame differs from configured clean full sensor geometry");
+                            "Frame differs from configured clean full sensor geometry");
                     FrameMetadata m;m.sourceId=request_.sourceId;m.frameId=QUuid::createUuid().toString(QUuid::WithoutBraces);
                     m.cycleId="experimental-preview";m.coordinateSystemId=request_.sourceId+"/image";
                     m.completedAtUtc=QDateTime::currentDateTimeUtc();m.deviceTimestampTicks=b.deviceTicks;
@@ -102,30 +102,30 @@ bool ExperimentalOecsAcquisition::available(const DiscoveredDevice& device,const
     return supported(device.identity) && oecsSdkBindingCompiled() && QFileInfo(dll).isAbsolute() && QFileInfo(dll).isFile();
 }
 std::unique_ptr<CameraWorkerSession> ExperimentalOecsAcquisition::open(const IndustrialCameraRequest& request,const QString& dll,ApiFactory api){
-    request.validate();require(supported(request.device.identity),"Experimental OECS device unsupported");
+    request.validate();require(supported(request.device.identity),"OECS device unsupported");
     require(QFileInfo(dll).isAbsolute() && bool(api),"Absolute OECS runtime and API required");
-    require(request.profile.requested.trigger==TriggerSettings{true,"FrameBurstStart","Software"},"Explicit experimental FrameBurstStart profile required");
+    require(request.profile.requested.trigger==TriggerSettings{true,"FrameBurstStart","Software"},"FrameBurstStart profile required");
     return std::make_unique<CameraWorkerSession>(request.device.identity,CameraLeaseUse::Editor,request.sourceId,FrameQueueMode::PreviewLatest,
         [request,dll,api=std::move(api)]{return std::make_unique<Backend>(request,dll,api);},1);
 }
 std::unique_ptr<CameraWorkerSession> ExperimentalOecsAcquisition::openCalibration(const IndustrialCameraRequest& request,const QString& dll,ApiFactory api){
-    request.validate();require(supported(request.device.identity),"Experimental calibration device unsupported");
+    request.validate();require(supported(request.device.identity),"Calibration device unsupported");
     require(QFileInfo(dll).isAbsolute() && bool(api),"Absolute OECS runtime and API required");
-    require(request.profile.requested.trigger==TriggerSettings{true,"FrameBurstStart","Software"},"Explicit experimental FrameBurstStart profile required");
+    require(request.profile.requested.trigger==TriggerSettings{true,"FrameBurstStart","Software"},"FrameBurstStart profile required");
     return std::make_unique<CameraWorkerSession>(request.device.identity,CameraLeaseUse::Calibration,request.sourceId,FrameQueueMode::PreviewLatest,
         [request,dll,api=std::move(api)]{return std::make_unique<Backend>(request,dll,api);},1);
 }
 void ExperimentalOecsAcquisition::save(const AcquiredFrame& frame,const QString& path){
     const auto& image=frame.image;auto evidence=image.metadata().experimentalAcquisition;
     require(evidence.value("schema")=="visionflow.oecs-experimental1" && evidence.value("policy")=="UnverifiedNextArrival" &&
-            evidence.value("triggerAssociationVerified")==false && evidence.value("productionAdmission")==false,"Experimental provenance required");
+            evidence.value("triggerAssociationVerified")==false && evidence.value("productionAdmission")==false,"Frame provenance required");
     require(image.format()==PixelFormat::Gray8 && QFileInfo(path).isAbsolute() && path.endsWith(".pgm",Qt::CaseInsensitive),"Absolute .pgm path and Mono8 required");
     require(!QFileInfo::exists(path) && !QFileInfo::exists(path+".json"),"Choose a new capture filename");
     evidence["contentId"]=QString::fromLatin1(image.contentId().toHex());evidence["frameId"]=frame.frameId;
     evidence["sourceId"]=frame.sourceId;evidence["completedAtUtc"]=frame.acquiredAtUtc.toString(Qt::ISODateWithMs);
     evidence["rasterFile"]=QFileInfo(path).fileName();
     QSaveFile sidecar(path+".json");const auto json=QJsonDocument(evidence).toJson();
-    require(sidecar.open(QIODevice::WriteOnly) && sidecar.write(json)==json.size() && sidecar.commit(),"Experimental evidence save failed");
+    require(sidecar.open(QIODevice::WriteOnly) && sidecar.write(json)==json.size() && sidecar.commit(),"Frame evidence save failed");
     QSaveFile raster(path);require(raster.open(QIODevice::WriteOnly),"Raster save failed");
     // The in-band marker survives renaming or losing the sidecar. EXP-02 must
     // explicitly admit file replay with its experimental provenance and UI notice.

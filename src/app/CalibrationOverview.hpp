@@ -27,8 +27,6 @@ private:
     IndependentCaptureBackend backend_;
     void startTrial();
     void chooseMethod();
-    bool experimental_=false;
-    MeasurementWorkspace* lastContext_=nullptr;
     void wizard(bool plate,bool trial);
     void associateTrial();
     void edit(bool addCamera,bool addSetup=false);

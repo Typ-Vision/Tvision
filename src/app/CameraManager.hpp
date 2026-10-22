@@ -63,9 +63,7 @@ private:
     QSpinBox* timeout_;
     QPushButton *scan_,*register_,*apply_,*preview_,*live_,*stop_,*check_;
     QTimer* timer_;
-    QCheckBox* experimental_;
     QLineEdit* runtime_;
-    QLabel* experimentalNotice_;
     QPushButton* save_;
     bool experimentalSession_=false;
     std::optional<AcquiredFrame> lastFrame_;

@@ -32,7 +32,7 @@ bool matches(const MeasurementCamera& c,const CameraDiscoveryEntry& d){return c.
 CameraManager::CameraManager(std::function<MeasurementWorkspace*()> context,std::function<bool()> gate,CameraSession& jobs,
     QString settings,QWidget* parent,Scanner scanner,CameraProviderFactory factory,ExperimentalOecsAcquisition::ApiFactory experimentalApi,std::function<QString(QWidget*)> framePathChooser)
     :QWidget(parent),context_(std::move(context)),gate_(std::move(gate)),jobs_(jobs),local_(std::move(settings)),scanner_(std::move(scanner)),factory_(std::move(factory)),experimentalApi_(std::move(experimentalApi)),framePathChooser_(std::move(framePathChooser)) {
-    if(!framePathChooser_)framePathChooser_=[](QWidget* parent){return QFileDialog::getSaveFileName(parent,"Deneysel kare ve doğrulanmamış eşleşme kaydı",{},"Mono8 raster (*.pgm)");};
+    if(!framePathChooser_)framePathChooser_=[](QWidget* parent){return QFileDialog::getSaveFileName(parent,"Kareyi kaydet",{},"Mono8 raster (*.pgm)");};
     setObjectName("cameraManager");if(!scanner_)scanner_=[](const auto& files,const auto& cancel){return CameraService{}.inventory(files,1000,cancel);};
     auto* outer=new QVBoxLayout(this);auto* scroll=new QScrollArea;scroll->setWidgetResizable(true);outer->addWidget(scroll);
     auto* body=new QWidget;scroll->setWidget(body);auto* layout=new QVBoxLayout(body);
@@ -77,10 +77,7 @@ CameraManager::CameraManager(std::function<MeasurementWorkspace*()> context,std:
     exposure_=new QLineEdit;exposure_->setObjectName("cameraExposure");gain_=new QLineEdit;gain_->setObjectName("cameraGain");
     form->addRow("Exposure (µs)",exposure_);form->addRow("Gain (dB)",gain_);
     timeout_=new QSpinBox;timeout_->setObjectName("cameraTimeout");timeout_->setRange(1,30000);timeout_->setValue(5000);timeout_->setSuffix(" ms");af->addRow("İşlem bütçesi",timeout_);
-    experimental_=new QCheckBox("Deneysel OECS edinimini kullan");experimental_->setObjectName("cameraExperimental");layout->addWidget(experimental_);
-    experimentalNotice_=text(ExperimentalOecsAcquisition::notice(),"cameraExperimentalNotice");outer->insertWidget(0,experimentalNotice_);experimentalNotice_->hide();
-    runtime_=new QLineEdit(ExperimentalOecsAcquisition::installedRuntime());runtime_->setObjectName("cameraExperimentalRuntime");af->addRow("Deneysel OECS runtime DLL",runtime_);
-    connect(experimental_,&QCheckBox::toggled,this,[this](bool on){if(previewActive_)stop();experimentalNotice_->setVisible(on);clearFrame();controls();});
+    runtime_=new QLineEdit(ExperimentalOecsAcquisition::installedRuntime());runtime_->setObjectName("cameraExperimentalRuntime");af->addRow("OECS sürücü DLL",runtime_);
     connect(runtime_,&QLineEdit::textChanged,this,[this]{settingsKnown_=false;exposure_->clear();gain_->clear();controls();});
     auto* commands=new QHBoxLayout;layout->addLayout(commands);settingsRead_=button(commands,"Ayarları oku","cameraSettingsRead");apply_=button(commands,"Uygula ve kaydet","cameraApply");preview_=button(commands,"Tek görüntü","cameraPreview");
     auto* previewCommands=new QHBoxLayout;layout->addLayout(previewCommands);live_=button(previewCommands,"Canlı görüntü","cameraLive");stop_=button(previewCommands,"Durdur","cameraStop");
@@ -164,7 +161,7 @@ void CameraManager::controls(){
     if(route){const auto& device=rows_[row].discovery->industrial->routes[routes_->currentIndex()];
         expAvailable=ExperimentalOecsAcquisition::available(device,runtime_->text().trimmed());
         settingsAvailable=CameraSettingsService::available(device,factory_,runtime_->text().trimmed());}
-    experimental_->setEnabled(idle);runtime_->setEnabled(idle);
+    runtime_->setEnabled(idle);
     save_->setEnabled(lastFrame_.has_value() && experimentalSession_ && !closing_ && previewSession_.state()!=PreviewState::Stopping);
     settingsRead_->setEnabled(idle && configured && settingsAvailable);
     exposure_->setEnabled(idle && configured && settingsKnown_ && settingsAvailable && exposureWritable_);gain_->setEnabled(idle && configured && settingsKnown_ && settingsAvailable && gainWritable_);
@@ -177,10 +174,10 @@ void CameraManager::controls(){
     else if(!route)guidance="Kamera kayıtlı. Ayarlar için yeniden tarayın ve gerekirse Ayrıntılar’dan tek bir bağlantı rotası seçin.";
     else if(!configured)guidance="Kamera kayıtlı. Ayrıntılar’dan eski kurulum/profil seçimini tamamlayın.";
     else if(!settingsAvailable)guidance="Kamera kayıtlı; bu cihaz için ayar backend’i veya OECS runtime kullanılamıyor.";
-    else guidance="Kamera kayıtlı. Ayarları oku → exposure/gain → Uygula ve kaydet. Görüntü için Deneysel OECS edinimini kullan seçimini açın.";
+    else guidance="Kamera kayıtlı. Ayarları oku → exposure/gain → Uygula ve kaydet. Görüntü almak için Tek görüntü veya Canlı görüntü kullanın.";
     settingsRead_->setToolTip(guidance);
     if(!settingsKnown_ && !settings_){readback_->setText("Gerçek readback yok. "+guidance);const auto hint=configured && settingsAvailable?"Önce Ayarları oku":"Ayar okuma kullanılamıyor";exposure_->setPlaceholderText(hint);gain_->setPlaceholderText(hint);}
-    preview_->setToolTip(!exp && !caps.preview?"Native edinim doğrulanmadı. Desteklenen Opto kamera için Deneysel OECS edinimini kullan seçimini açın.":"Kayıtlı kurulum/profil ile görüntü testi; ölçüm kabulü değildir.");
+    preview_->setToolTip(!exp && !caps.preview?"Bu kamera için görüntü edinimi kullanılamıyor.":"Kayıtlı kurulum/profil ile görüntü testi; ölçüm kabulü değildir.");
     live_->setToolTip(preview_->toolTip());
     live_->setEnabled(preview_->isEnabled());
     check_->setEnabled(idle && route && rows_[row].discovery->industrial->routes[routes_->currentIndex()].route.backend=="gentl");
@@ -268,7 +265,7 @@ void CameraManager::start(bool live){
     if(jobs_.busy() || previewActive_ || settings_ || !gate_())throw std::runtime_error("Kamera/Runtime meşgul.");
     auto r=request();experimentalSession_=AcquisitionPolicy::camera(r.camera);
     if(experimentalSession_){
-        if(!ExperimentalOecsAcquisition::available(r.device,runtime_->text().trimmed()))throw std::runtime_error("Deneysel OECS runtime veya desteklenen cihaz gerekli.");
+        if(!ExperimentalOecsAcquisition::available(r.device,runtime_->text().trimmed()))throw std::runtime_error("OECS sürücü DLL veya desteklenen cihaz gerekli.");
         AcquisitionPolicy::profile(r.profile);
     }else r.profile.requested.trigger={false,{},{}};
     local_.setRoute(r.device.identity,r.device.route);
@@ -332,7 +329,6 @@ void CameraManager::pollJobs(){
             .arg(liveMode_?"Canlı":"Tek görüntü")
             .arg(frame->kind==PreviewAcquisitionKind::NativeContinuous?"Continuous":"Sıralı tek kare")
             .arg(stats.completed).arg(stats.fps,0,'f',1));
-        if(experimentalSession_)status_->setText(status_->text()+"\n"+ExperimentalOecsAcquisition::notice());
     }
     if(previewSession_.drained()){
         if(closing_ && previewSession_.state()!=PreviewState::Error)status_->setText("Önizleme durduruldu • cihaz serbest.");
@@ -349,7 +345,7 @@ void CameraManager::stop(){
     clearFrame();status_->setText(previewActive_?"Durduruluyor • cihazın kapanması bekleniyor…":"Önizleme durduruldu • görüntü temizlendi.");previewStatus_->setText(status_->text());controls();
 }
 void CameraManager::saveFrame(){
-    if(!lastFrame_ || !experimentalSession_ || closing_ || previewSession_.state()==PreviewState::Stopping)throw std::runtime_error("Kaydedilebilir deneysel kare yok.");
+    if(!lastFrame_ || !experimentalSession_ || closing_ || previewSession_.state()==PreviewState::Stopping)throw std::runtime_error("Kaydedilebilir kare yok.");
     // Hold the visible raster while the chooser runs its nested event loop.
     // Stop/error/selection still retire it, and the revision is rechecked below.
     QScopedValueRollback<bool> dialogGuard(frameDialogOpen_,true);
@@ -357,7 +353,7 @@ void CameraManager::saveFrame(){
     auto path=framePathChooser_(this);
     if(path.isEmpty())return;if(!path.endsWith(".pgm",Qt::CaseInsensitive))path+=".pgm";
     if(!lastFrame_ || !experimentalSession_ || closing_ || revision!=frameRevision_)throw std::runtime_error("Görünen kare değişti veya durduruldu; kayıt iptal edildi.");
-    ExperimentalOecsAcquisition::save(*lastFrame_,path);status_->setText(ExperimentalOecsAcquisition::notice()+"\nKaydedildi: "+path+" + .json");
+    ExperimentalOecsAcquisition::save(*lastFrame_,path);status_->setText("Kaydedildi: "+path+" + .json");
 }
 void CameraManager::checkConnection(){attempt([this]{
     if(jobs_.busy() || !gate_())return;const auto i=table_->currentRow();if(i<0 || !rows_[i].discovery || !rows_[i].discovery->industrial || routes_->currentIndex()<0)return;

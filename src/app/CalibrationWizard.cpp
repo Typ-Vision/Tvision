@@ -130,7 +130,7 @@ CalibrationWizard::CalibrationWizard(bool plate,IndependentCaptureRequest target
 void CalibrationWizard::setSaveAndUse(SaveUse command){saveUse_=std::move(command);refresh();}
 void CalibrationWizard::showSaveResult(const CalibrationSaveUseResult& outcome){
     status_->clear();
-    const auto prefix=outcome.experimental ? "Deneysel • ":"";
+    const auto prefix="";
     const auto control=outcome.independentControlAccepted ? (*outcome.independentControlAccepted ? "Bağımsız kontrol sınır içinde.":"Bağımsız kontrol reddedildi.") : "Bağımsız fiziksel kontrol yapılmadı.";
     if(outcome.state==CalibrationSaveUseState::Activated){savedAndUsed_=true;result_->setText(QString(prefix)+"Kaydedildi ve bu oturumda kullanıma hazır.\n"+control);back_->setEnabled(false);}
     else result_->setText(QString(prefix)+(outcome.state==CalibrationSaveUseState::CandidateSaved ? "Aday kaydedildi; kullanıma alınamadı. Önceki seçim korunuyor. Yeniden deneyebilirsiniz.\n":"Kaydet ve kullan tamamlanamadı. Önceki seçim korunuyor.\n")+outcome.error+"\n"+control);
@@ -160,7 +160,7 @@ void CalibrationWizard::captureIndependent(QString path){
     connect(watcher,&QFutureWatcher<IndependentCaptureResult>::finished,this,[this,watcher]{const auto r=watcher->result();watcher->deleteLater();
         if(independent_.accept(r)){const auto frame=*independent_.math().frame();const auto setup=*independent_.acceptedSetup();const auto evidence=*independent_.evidence();
             presentFrame(frame,evidence.origin!=SourceOrigin::CameraAcquired);independentSetup_=setup;independentOrigin_=evidence.origin==SourceOrigin::CameraAcquired ? "acquired":sourceOriginName(evidence.origin);
-            imageInfo_->setText(QString("%1 • %2×%3 px\nHedef: %4").arg(evidence.experimental ? "Deneysel • "+independentOrigin_:independentOrigin_).arg(frame.size().width()).arg(frame.size().height()).arg(evidence.target ? evidence.target->setup.value:"Yalnız deneme"));
+            imageInfo_->setText(QString("%1 • %2×%3 px\nHedef: %4").arg(independentOrigin_).arg(frame.size().width()).arg(frame.size().height()).arg(evidence.target ? evidence.target->setup.value:"Yalnız deneme"));
         }else if(!r.error().isEmpty())status_->setText(r.error());refresh();});
     jobs_.launch(watcher,[job,backend]{return IndependentCalibrationSession::run(job,backend);});refresh();
 }
@@ -171,7 +171,6 @@ void CalibrationWizard::attempt(std::function<void()> f){try{status_->clear();f(
 void CalibrationWizard::openFile(const QString& path){if(independentTarget_){attempt([this,path]{captureIndependent(path);});return;}attempt([this,path]{if(jobs_.busy())throw std::runtime_error("Önce devam eden işi durdurun.");cancelWork();session_.clear();pendingFrame_.reset();setup_.reset();controls_={};resultRecord_.reset();viewer_->clearImage();captureCancel_=std::make_shared<std::atomic_bool>(false);const auto cancel=captureCancel_;auto* w=jobs_.watch<ImageLoad>(this,SessionJob::Image);connect(w,&QFutureWatcher<ImageLoad>::finished,this,[this,w,cancel]{const auto r=w->result();w->deleteLater();if(!cancel->load()){if(r.frame)presentFrame(*r.frame,true);else status_->setText(r.error);}refresh();});jobs_.launch(w,[path]{ImageLoad r;try{r.frame=ChessboardService::importImage(path).frame;}catch(const std::exception& e){r.error=QString::fromUtf8(e.what());}return r;});});}
 void CalibrationWizard::presentFrame(ImageFrame f,bool imported){pendingFrame_=f;imported_=imported;checking_=false;pendingControl_=false;session_.clear();setup_.reset();controls_={};resultRecord_.reset();lastResult_.reset();step_=0;viewer_->setImage(f.preview());imageInfo_->setText(QString("%1 • %2×%3 px\n%4").arg(imported ? "Dosya kökenli":"Reçete kaynağından edinilmiş").arg(f.size().width()).arg(f.size().height()).arg(QFileInfo(f.path()).fileName()));displayPoints();refresh();}
 void CalibrationWizard::refresh(){pages_->setCurrentIndex(step_);heading_->setText(QString("%1 / 4 — %2").arg(step_+1).arg(QStringList{"Görüntü","Noktaları bul",plateMode_ ? "Noktaları onayla":"Çifti ve mesafeyi onayla","Sonuç ve kayıt"}[step_]));
-    if(saveUse_ && step_==3 && resultRecord_ && resultRecord_->image().experimental && !result_->text().startsWith("Deneysel"))result_->setText("Deneysel • tetik eşleşmesi ve fiziksel mm kabulü doğrulanmadı.\n"+result_->text());
     const bool plate=plateMode_ && !checking_;for(auto* w:QList<QWidget*>{pattern_,columns_,rows_,spacing_,findChild<QComboBox*>("wizardTargets"),findChild<QLineEdit*>("wizardTargetName"),findChild<QPushButton*>("wizardSaveTarget")})w->setVisible(plate);
     for(auto* w:QList<QWidget*>{method_,polarity_,contrast_,points_,candidates_,findChild<QPushButton*>("wizardDraw"),findChild<QPushButton*>("wizardReverse"),findChild<QGroupBox*>("wizardAdvanced"),findChild<QPushButton*>("wizardDelete"),findChild<QPushButton*>("wizardRefind")})w->setVisible(!plate);
     for(auto* f:pages_->findChildren<QFormLayout*>())for(auto* field:QList<QWidget*>{columns_,rows_,spacing_})if(auto* text=f->labelForField(field))text->setVisible(plate);

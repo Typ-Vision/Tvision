@@ -1,6 +1,6 @@
 # CCUX-17 — Kamera, kalibrasyon, Editor ve Runtime seçeneklerini sadeleştirme
 
-Durum: planlandı, uygulanmadı. Önkoşul: CCUX-16.
+Durum: yazılım teslimi tamamlandı. [22 Ekim kapanışı](../../archive/2026-10-22-ccux-17.md). Önkoşul: CCUX-16.
 [Ortak sözleşme](contract.md) C0–C5; [CCUX-16](16-automatic-acquisition.md).
 
 ## Oku

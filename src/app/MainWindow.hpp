@@ -86,6 +86,7 @@ private:
     void runtimeAction(const QString&);
     void showRuntimeResult();
     void refreshLogs();
+    void exportLogCsv(const QString& path);
     void ensureRuntime();
     void initializeCommunication();
     void refreshCalibration();

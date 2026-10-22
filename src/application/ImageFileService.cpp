@@ -18,9 +18,9 @@ ImageFrame ImageFileService::load(const QString& path,bool experimentalEditorRep
     // must not turn a known experimental capture into an ordinary file source.
     if(marked || QFileInfo::exists(path+".json")) {
         QFile sidecar(path+".json");
-        if(marked && !experimentalEditorReplay)throw std::runtime_error("Deneysel dosya için Editor deneysel replay seçimini açın.");
+        if(marked && !experimentalEditorReplay)throw std::runtime_error("Bu dosya için uygun edinim politikası gerekli.");
         const bool readable=sidecar.open(QIODevice::ReadOnly) && sidecar.size()<=1024*1024;
-        if(marked && !readable)throw std::runtime_error("Deneysel raster kanıtı eksik veya geçersiz.");
+        if(marked && !readable)throw std::runtime_error("Raster kanıtı eksik veya geçersiz.");
         QJsonParseError error;const auto doc=QJsonDocument::fromJson(readable ? sidecar.readAll():QByteArray{},&error);
         if(marked && (error.error!=QJsonParseError::NoError || !doc.isObject()))throw std::runtime_error("Raster JSON kanıtı geçersiz.");
         const auto obj=doc.object();
@@ -31,7 +31,7 @@ ImageFrame ImageFileService::load(const QString& path,bool experimentalEditorRep
                obj["width"]!=2448 || obj["height"]!=2048 || obj["originX"]!=0 || obj["originY"]!=0 ||
                obj["pixelFormat"]!="Mono8" || obj["embeddedMetadataEnabled"]!=false || obj["readback"].toObject().isEmpty() ||
                obj["profileSnapshot"].toObject().isEmpty() || obj["acquisitionId"].toString().isEmpty())
-                throw std::runtime_error("Deneysel raster kökeni/geometrisi geçersiz.");
+                throw std::runtime_error("Raster kökeni/geometrisi geçersiz.");
             const auto actual=AcquisitionReadback::fromJson(obj["readback"].toObject());
             const auto profile=AcquisitionProfile::fromJson(obj["profileSnapshot"].toObject());
             const auto geometry=actual.geometry.descriptor();auto requested=profile.requested;
@@ -41,7 +41,7 @@ ImageFrame ImageFileService::load(const QString& path,bool experimentalEditorRep
                actual.geometry.binning!=QSize(1,1) || actual.geometry.decimation!=QSize(1,1) || actual.geometry.reverse!=GeometryMirror{} ||
                actual.settings!=requested || actual.settings.trigger!=TriggerSettings{true,"FrameBurstStart","Software"} ||
                profile.id.value!=obj["profileId"].toString() || double(profile.revision)!=obj["profileRevision"].toDouble())
-                throw std::runtime_error("Deneysel profil/readback kanıtı eşleşmedi.");
+                throw std::runtime_error("Profil/readback kanıtı eşleşmedi.");
             evidence=obj;
         }
     }
@@ -64,7 +64,7 @@ ImageFrame ImageFileService::load(const QString& path,bool experimentalEditorRep
     if(!evidence.isEmpty()) {
         if(frame.format()!=PixelFormat::Gray8 || frame.size()!=QSize(2448,2048) ||
            evidence["contentId"].toString()!=QString::fromLatin1(frame.contentId().toHex()))
-            throw std::runtime_error("Deneysel raster piksel hash/geometri eşleşmedi.");
+            throw std::runtime_error("Raster piksel hash/geometri eşleşmedi.");
         frame.metadata_.experimentalAcquisition=evidence;
     }
     frame.path_=QFileInfo(path).absoluteFilePath(); return frame;

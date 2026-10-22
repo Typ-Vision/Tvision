@@ -18,7 +18,7 @@ struct AcquisitionPolicy {
             throw std::runtime_error("Camera requires an explicit FrameBurstStart / Software profile; update the profile before acquisition.");
     }
     static bool replay(const QString& path) {
-        QFile f(path);if(!f.open(QIODevice::ReadOnly))throw std::runtime_error("Source image unavailable");
+        QFile f(path);if(!f.open(QIODevice::ReadOnly))throw std::runtime_error(("Kaynak görüntü bulunamadı: "+path).toUtf8().constData());
         const bool marked=f.read(64).startsWith("P5\n# VisionFlow-OECS-Experimental-Unverified\n");
         QFile sidecar(path+".json");bool evidence=false;
         if(sidecar.open(QIODevice::ReadOnly) && sidecar.size()<=1024*1024)

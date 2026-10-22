@@ -48,8 +48,6 @@ cards_=new QWidget;grid_=new QGridLayout(cards_);grid_->setContentsMargins(0,0,0
 auto* selected=new QGroupBox("Seçili kamera");auto* v=new QVBoxLayout(selected);layout->addWidget(selected);
 detail_=label("");detail_->setObjectName("overviewDetail");detail_->setTextInteractionFlags(Qt::TextSelectableByMouse|Qt::TextSelectableByKeyboard);v->addWidget(detail_);
 connect(button(v,"Kalibre Et…","overviewCalibrate"),&QPushButton::clicked,this,[this]{attempt([this]{chooseMethod();});});
-auto* experimental=new QCheckBox("Deneysel OECS kalibrasyonu • bu oturum için onayla");experimental->setObjectName("overviewExperimental");experimental->setToolTip("Tetik eşleşmesi ve fiziksel mm kabulü doğrulanmadı. PLC / robot çıkışı kapalıdır. Restart onayı sıfırlar.");v->addWidget(experimental);
-connect(experimental,&QCheckBox::toggled,this,[this,experimental](bool enabled){attempt([&]{auto* c=context_();if(!c)throw std::runtime_error("Önce projeyi kaydedin.");c->calibrations().setExperimental(enabled);experimental_=enabled;refresh();});if(experimental_!=enabled){QSignalBlocker b(experimental);experimental->setChecked(experimental_);}});
 auto* advanced=new QGroupBox("Ayrıntılar • geçmiş / dosya denemesi / kurulum");advanced->setObjectName("overviewDetails");advanced->setCheckable(true);advanced->setChecked(false);v->addWidget(advanced);auto* advancedLayout=new QVBoxLayout(advanced);auto* fields=new QWidget;advancedLayout->addWidget(fields);fields->hide();connect(advanced,&QGroupBox::toggled,fields,&QWidget::setVisible);auto* dv=new QVBoxLayout(fields);dv->addLayout(actions);
 setups_=new QComboBox;setups_->setObjectName("overviewSetups");setups_->setSizeAdjustPolicy(QComboBox::AdjustToMinimumContentsLengthWithIcon);setups_->setMinimumContentsLength(12);dv->addWidget(setups_);
 profiles_=new QComboBox;profiles_->setObjectName("overviewProfiles");profiles_->setSizeAdjustPolicy(QComboBox::AdjustToMinimumContentsLengthWithIcon);profiles_->setMinimumContentsLength(12);profiles_->setToolTip("Kalibrasyon edinimi ve etkinleştirme için kayıtlı acquisition profili");dv->addWidget(profiles_);
@@ -80,7 +78,6 @@ void CalibrationOverview::refresh(){
 if(refreshing_)return;refreshing_=true;
 try{
 status_->clear();for(auto* w:cardWidgets_)delete w;cardWidgets_.clear();records_->setRowCount(0);auto* c=context_();
-if(lastContext_!=c){lastContext_=c;experimental_=false;auto* box=findChild<QCheckBox*>("overviewExperimental");QSignalBlocker b(box);box->setChecked(false);}
 if(!c){summary_->setText("Önce bir proje açın ve kaydedin. Reçete oluşturmanız gerekmez.");detail_->clear();setups_->clear();cards_->hide();refreshing_=false;return;}
 auto e=c->environment();QVector<MeasurementCamera> cameras;for(const auto& camera:e.current.cameras)if(!e.archivedCameras.contains(camera.id.value))cameras.append(camera);
 bool found=false;for(const auto& camera:cameras)if(camera.id.value==selected_)found=true;if(!found)selected_=cameras.isEmpty() ? QString{}:cameras.first().id.value;
@@ -89,7 +86,7 @@ cards_->setVisible(cameras.size()>1);
 for(const auto& camera:cameras){
 auto* card=new QPushButton;card->setObjectName("overviewCamera_"+camera.id.value);card->setCheckable(true);card->setChecked(camera.id.value==selected_);card->setMinimumHeight(108);card->setSizePolicy(QSizePolicy::Ignored,QSizePolicy::Preferred);
 const auto defaults=e.defaults(camera.id);QString setupName=defaults.status==CameraDefaultsStatus::Pending ? "Kurulum bilgisi bekleniyor":"Kurulum yok",choice="Kalibrasyon yok";
-for(const auto& s:e.current.setups)if(defaults.setup && s.id==*defaults.setup){if(defaults.status!=CameraDefaultsStatus::Pending)setupName=s.name;const auto state=c->calibrations().status({s.camera,s.id,s.revision});choice=state.state==CalibrationAvailability::None ? "Kalibrasyon yok":state.state==CalibrationAvailability::Remembered ? "Kayıtlı / bağlantı bekleniyor":state.state==CalibrationAvailability::Valid ? "Geçerli":"Yeniden kalibrasyon gerekli";if(state.experimental)choice="Deneysel • "+choice;}
+for(const auto& s:e.current.setups)if(defaults.setup && s.id==*defaults.setup){if(defaults.status!=CameraDefaultsStatus::Pending)setupName=s.name;const auto state=c->calibrations().status({s.camera,s.id,s.revision});choice=state.state==CalibrationAvailability::None ? "Kalibrasyon yok":state.state==CalibrationAvailability::Remembered ? "Kayıtlı / bağlantı bekleniyor":state.state==CalibrationAvailability::Valid ? "Geçerli":"Yeniden kalibrasyon gerekli";}
 QString availability=c->availability(camera);
 const auto full=camera.name+"\n"+setupName+"\n"+choice+"\n"+availability;card->setToolTip(full);card->setText((e.registrations.contains(camera.id.value) ? e.registrations[camera.id.value].shortId+" • ":"")+camera.name.left(32)+"\n"+setupName.left(32)+"\n"+choice+"\n"+availability.left(36));grid_->addWidget(card);cardWidgets_.append(card);connect(card,&QPushButton::clicked,this,[this,camera]{select(camera.id.value);});}
 reflow();const auto previous=setups_->currentData().toString();setups_->clear();
@@ -97,7 +94,6 @@ for(const auto& s:e.current.setups)if(s.camera.value==selected_ && !e.archivedSe
 int index=setups_->findData(previous);if(index<0 && !selected_.isEmpty()){const auto defaults=e.defaults({selected_});if(defaults.setup)index=setups_->findData(defaults.setup->value);}if(index>=0)setups_->setCurrentIndex(index);
 const auto priorProfile=profiles_->currentData();profiles_->clear();bool industrial=false;
 for(const auto& camera:cameras)if(camera.id.value==selected_)industrial=camera.physical.has_value();
-findChild<QCheckBox*>("overviewExperimental")->setVisible(industrial);
 for(const auto& p:e.current.profiles)if(p.camera.value==selected_ && p.setup.value==setups_->currentData().toString())profiles_->addItem(p.name+QString(" • r%1").arg(p.revision),p.id.value);
 const auto defaults=selected_.isEmpty() ? CameraDefaults{}:e.defaults({selected_});profiles_->setCurrentIndex(profiles_->findData(defaults.profile ? QVariant(defaults.profile->value):priorProfile));if(profiles_->currentIndex()<0 && profiles_->count()==1)profiles_->setCurrentIndex(0);
 profiles_->setPlaceholderText("Edinim profili seçin • Camera Manager'da düzenlenir");profiles_->setVisible(industrial);
@@ -109,7 +105,6 @@ for(const auto& s:e.current.setups)if(s.id.value==setups_->currentData().toStrin
 detail_->setText(detail_->text()+QString("\n%1 • %2 • %3×%4 px • %5").arg(s.opticalProfile,s.workingPlane).arg(s.geometry.resolution.width()).arg(s.geometry.resolution.height()).arg(s.pending ? "Kurulum bilgisi bekleniyor":"Kayıtlı kurulum"));
 const auto state=c->calibrations().status({s.camera,s.id,s.revision});
 QString text=state.state==CalibrationAvailability::None ? "Kalibrasyon yok":state.state==CalibrationAvailability::Remembered ? "Kayıtlı / bağlantı ve uyum denetimi bekleniyor":state.state==CalibrationAvailability::Valid ? "Geçerli":"Yeniden kalibrasyon gerekli";
-if(state.experimental)text="Deneysel • "+text;
 if(state.remembered && state.mathematicsCompatible)for(const auto& r:c->calibrations().records({s.camera,s.id,s.revision}))if(r.contentId()==state.remembered->contentId){text+=QString("\n")+(r.model().mapping() ? "Kalibrasyon plakası":"Bilinen ölçü")+" • "+r.recordedAt().toLocalTime().toString("dd.MM.yyyy HH:mm");if(state.sessionPermitted)text+=r.model().mapping() ? QString(" • plaka uyumu RMS %1 mm").arg(r.model().mapping()->fitRmsMillimetres(),0,'g',8):QString(" • %1 mm/px").arg(r.model().millimetresPerPixel(),0,'g',10);else text+=" • kayıtlı model, etkin değer değil";text+=r.controlAccepted() ? (*r.controlAccepted() ? "\nBağımsız kontrol sınır içinde":"\nBağımsız kontrol reddedildi"):"\nBağımsız fiziksel kontrol yapılmadı";}
 detail_->setText(detail_->text()+"\n"+text);
 try{for(const auto& r:c->calibrations().historyRecords(s.id)){int row=records_->rowCount();records_->insertRow(row);const bool old=r.setup().id!=s.id.value+"/"+QString::number(s.revision);QString choice=old ? "Eski kurulum revision • kullanılamaz":"Seçili değil";for(const auto& selection:e.selections)if(selection.contentId==r.contentId() && selection.target.setup==s.id)choice=old ? "Son seçim • eski kurulum revision":"Son seçim • uyum denetimi bekliyor";if(!old)try{const auto active=c->calibrations().snapshots({{s.camera,s.id,s.revision}});if(active.first().calibration.record.contentId()==r.contentId())choice="Seçili • kullanılabilir";}catch(const std::exception&){};
@@ -175,9 +170,9 @@ void CalibrationOverview::wizard(bool plate,bool trial){
         request.policy=CalibrationCapturePolicy::Automatic; // Re-resolve when wizard switches camera/file source.
         if(request.camera->physical && !localSettings_.isEmpty())request.localRoute=CameraLocalConfiguration(localSettings_).route(*request.camera->physical);
     }
-    const auto cameraId=selected_;const bool policy=experimental_;const auto target=request.setup ? std::optional(SetupReference{request.camera->id,request.setup->id,request.setup->revision}):std::nullopt;
+    const auto cameraId=selected_;const auto target=request.setup ? std::optional(SetupReference{request.camera->id,request.setup->id,request.setup->revision}):std::nullopt;
     CalibrationWizard dialog(plate,request,c->directory(),[this,c,request](const auto& r){if(context_()!=c)throw std::runtime_error("Proje değişti.");if(r.image().origin=="trial_file")c->saveTrial(r);else c->calibrations().save({request.camera->id,request.setup->id,request.setup->revision},r);},this,backend_);
-    const auto current=[this,c,cameraId,policy]{return context_()==c && selected_==cameraId && experimental_==policy;};
+    const auto current=[this,c,cameraId]{return context_()==c && selected_==cameraId;};
     if(target)dialog.setSaveAndUse([this,c,target,revision=e.revision,request,current](const auto& record,const auto& probe){
         if(!current()){CalibrationSaveUseResult result;result.error="Kamera / proje / oturum değişti.";return result;}
         const auto evidence=probe.evidence();auto result=c->saveAndUseCalibration({*target,revision,evidence ? evidence->generation:0,request.policy},record,probe,current);if(result.state==CalibrationSaveUseState::Activated && onChanged)onChanged();return result;

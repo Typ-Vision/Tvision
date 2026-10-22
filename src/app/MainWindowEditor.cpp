@@ -60,11 +60,6 @@ QWidget* MainWindow::makeEditor() {
         "QWidget#editorPage QCheckBox::indicator {width: 12px; height: 12px; border: 1px solid #62768f; border-radius: 2px; background: #111720;}"
         "QWidget#editorPage QCheckBox::indicator:checked {background: #66e3c4; border-color: #66e3c4;}");
     auto* layout=new QVBoxLayout(page); layout->setContentsMargins(0,0,0,0);layout->setSpacing(4);
-    auto* experimental=new QCheckBox("Deneysel OECS kamera / dosyayı Editor'da kullan");experimental->setObjectName("experimentalEditorReplay");
-    experimental->setToolTip("Canlı kamera için açık FrameBurstStart profili; dosyada PGM + JSON gerekir. Tetik eşleşmesi doğrulanmadı; yalnız Editor ölçüm geliştirmesi.");layout->addWidget(experimental);
-    auto* experimentalNotice=note(ExperimentalOecsAcquisition::notice());experimentalNotice->setObjectName("experimentalEditorNotice");experimentalNotice->setStyleSheet("color: #f1c27a;");experimentalNotice->hide();layout->addWidget(experimentalNotice);
-    connect(experimental,&QCheckBox::toggled,experimentalNotice,&QWidget::setVisible);
-    connect(experimental,&QCheckBox::toggled,this,[this]{editorSession_.stop(SessionJob::Image);editorSession_.stop(SessionJob::Execution);++editorSession_.generation;editorSession_.sourceFrames.clear();editorSession_.frame.reset();editorSession_.invalidateResults();imageBinding_.clear();refreshFlow();});
     auto* heading=new QHBoxLayout;heading->setSpacing(8);
     auto* recipeName=new ElidedLabel;recipeName->setObjectName("editorRecipeName");
     recipeName->setStyleSheet("font-weight: 600; color: #edf4fb; font-size: 14px;");heading->addWidget(recipeName,1);
