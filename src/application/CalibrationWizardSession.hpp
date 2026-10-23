@@ -45,6 +45,7 @@ class WizardPlateJob {
     WizardPlateJob()=default;
     ImageFrame frame_;
     CalibrationGridTarget target_;
+    std::optional<QRect> searchRoi_;
     QString ticket_;
     std::shared_ptr<std::atomic_bool> cancel_;
 public:
@@ -83,7 +84,7 @@ public:
     WizardScanJob scanPair(QString scanId,ToolRoi,EdgePairOptions = {});
     static WizardScanResult run(const WizardScanJob&);
     bool accept(const WizardScanResult&);
-    WizardPlateJob scanPlate(CalibrationGridTarget);
+    WizardPlateJob scanPlate(CalibrationGridTarget,std::optional<QRect> searchRoi={});
     static WizardPlateResult run(const WizardPlateJob&);
     bool accept(const WizardPlateResult&);
     void confirmPlate();

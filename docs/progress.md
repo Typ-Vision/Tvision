@@ -4,9 +4,9 @@
 
 ## Devam noktası
 
-**[CCUX-15g tamamlandı](archive/2026-10-23-ccux-15g.md):** Typed çerçeveli
-raw model, v3 hedef/gözlem/hash/yön ve sidecar bağı; solver replay. Release + 9 CTest geçti.
-Kanıt `build/ccux/ccux-15g/`; devam [15h sihirbaz/tanı](architecture/camera-setup/15-plate-calibration-plan.md).
+**[CCUX-15h tamamlandı](archive/2026-10-23-ccux-15h.md):** Açık çerçeveli 7×7,
+aralık teyidi, raw arama ROI, numaralı P1/eksen/tanı ve fit-ret ayrımı.
+Kanıt `build/ccux/ccux-15h/`; devam [15i birleşik kabul](architecture/camera-setup/15-plate-calibration-plan.md).
 [15f algılama](archive/2026-10-23-ccux-15f.md): 56000 µs eski karede 50→49;
 karanlık kare ret. UI profili, fiziksel aynalama/eksen, lens ve mm kabulü açık.
 

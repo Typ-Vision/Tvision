@@ -1,6 +1,7 @@
 #include "CalibrationWizardSession.hpp"
 #include "ChessboardService.hpp"
 #include "CircleGridService.hpp"
+#include "FramedCircleGridService.hpp"
 #include "domain/EdgePointConfig.hpp"
 #include <QCryptographicHash>
 #include <QJsonDocument>
@@ -108,9 +109,9 @@ CalibrationModelRecord CalibrationWizardSession::calculate(const CalibrationCont
     CalibrationSample sample{"selected-pair",{point(first_).pixel,setup_.source},{point(second_).pixel,setup_.source},knownMm_};
     model_=CalibrationModelRecord::create(MeasurementService{}.teach(d,sample),setup_,image_,control);return *model_;
 }
-WizardPlateJob CalibrationWizardSession::scanPlate(CalibrationGridTarget t){
+WizardPlateJob CalibrationWizardSession::scanPlate(CalibrationGridTarget t,std::optional<QRect> roi){
     cancel();plate_.reset();rawPlate_.reset();plateConfirmed_=false;model_.reset();t.validate();require(frame_.has_value(),"Choose a raw frame first");
-    ticket_=id();cancel_=std::make_shared<std::atomic_bool>(false);WizardPlateJob j;j.frame_=*frame_;j.target_=t;j.ticket_=ticket_;j.cancel_=cancel_;return j;
+    ticket_=id();cancel_=std::make_shared<std::atomic_bool>(false);WizardPlateJob j;j.frame_=*frame_;j.target_=t;j.searchRoi_=roi;j.ticket_=ticket_;j.cancel_=cancel_;return j;
 }
 WizardPlateResult CalibrationWizardSession::run(const WizardPlateJob& j){
     WizardPlateResult r;r.ticket_=j.ticket_;
@@ -121,7 +122,7 @@ WizardPlateResult CalibrationWizardSession::run(const WizardPlateJob& j){
             r.observation_->validateRaw();
             r.diagnostics_.status=PlateDetectionStatus::Ready;
         }else{
-            const auto result=CircleGridService::observe(j.frame_,j.target_,j.cancel_);
+            const auto result=j.target_.pattern==CalibrationGridPattern::FramedCircles ? FramedCircleGridService::observe(j.frame_,j.target_,j.cancel_,j.searchRoi_):CircleGridService::observe(j.frame_,j.target_,j.cancel_);
             r.diagnostics_=result.diagnostics();
             if(result.observation()){r.rawPlate_=result.observation();r.observation_=result.observation()->grid();}
             else r.error_=r.diagnostics_.message;

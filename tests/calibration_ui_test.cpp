@@ -40,6 +40,19 @@ public:
     int closeDevice(void* h) override {++*closes_;return Api::closeDevice(h);}
 };
 class CameraFixture:public AcquisitionAdapter {public:QImage image;explicit CameraFixture(QImage im):image(im){}AcquisitionCapabilities capabilities()const override{return {"webcam",true};}ImageFrame acquire(const AcquisitionRequest&)const override{return ImageFrame::fromBuffer(image.constBits(),image.sizeInBytes(),image.width(),image.height(),image.bytesPerLine(),PixelFormat::Gray8);}};
+QImage framedRaster(bool missing=false,bool marker=true,bool clutter=false,bool bent=false){
+    QImage im(900,900,QImage::Format_Grayscale8);
+    for(int y=0;y<900;++y)for(int x=0;x<900;++x){double total=0;
+        for(double dy:{-.25,.25})for(double dx:{-.25,.25}){double u=x+dx,v=y+dy;
+            bool dark=u>=80 && u<=720 && v>=80 && v<=720 && (u<=100 || u>=700 || v<=100 || v>=700);
+            if(marker && u>=100 && v>=100 && u+v<=250)dark=true;
+            int c=int(std::round((u-160)/80));double bend=bent ? 7*std::sin(c*1.2):0;int r=int(std::round((v-160-bend)/80));
+            if(c>=0 && c<7 && r>=0 && r<7 && !(missing && r==2 && c==3) && std::hypot(u-(160+80*c),v-(160+80*r+bend))<22)dark=true;
+            if(clutter)for(int k=0;k<9;++k)if(std::hypot(u-(180+58*k),v-118)<7)dark=true;
+            total+=dark?20:235;
+        }im.scanLine(y)[x]=uchar(std::round(total/4));
+    }return im;
+}
 int checks=0;
 void check(bool b,const char* why){++checks;if(!b)throw std::runtime_error(why);}
 template<class T>T* widget(QWidget& w,const char* name){auto* p=dynamic_cast<T*>(w.findChild<QWidget*>(name));check(p,"Missing widget");return p;}
@@ -90,6 +103,27 @@ int main(int argc,char** argv){QApplication app(argc,argv);try{
     independentProject.createProject("Recipe-free acceptance","",independentPath,"file");
     independentProject.save();
     QFile independentFile(independentPath);
+    // CCUX-15h: normal wizard commands, immutable raw observations and failed fit.
+    for(int scene=0;scene<5;++scene){
+        const auto path=tmp.filePath(QString("framed-%1.png").arg(scene));check(framedRaster(scene==2,scene!=3,scene==1,scene==4).save(path),"framed raster save");
+        CalibrationWizard d(true,source,tmp.path(),[](const auto&){});d.resize(1400,900);d.show();app.processEvents();setup(d);d.openFile(path);idle(d);click(d,"wizardNext");
+        widget<QComboBox>(d,"wizardPattern")->setCurrentIndex(2);check(widget<QSpinBox>(d,"wizardColumns")->value()==7 && !widget<QSpinBox>(d,"wizardRows")->isEnabled(),"explicit locked 7x7 profile");
+        widget<QDoubleSpinBox>(d,"wizardSpacing")->setValue(12);click(d,"wizardDetect");check(widget<QLabel>(d,"wizardStatus")->text().contains("teyit"),"spacing confirmation required");widget<QCheckBox>(d,"wizardSpacingConfirmed")->setChecked(true);
+        auto* viewer=widget<ImageViewer>(d,"wizardViewer");viewer->zoomBy(1.15);
+        if(scene==0){click(d,"wizardPlateRoi");auto a=viewer->mapFromScene(QPointF(50,50)),b=viewer->mapFromScene(QPointF(750,750));QTest::mousePress(viewer->viewport(),Qt::LeftButton,{},a);QTest::mouseMove(viewer->viewport(),b,10);QTest::mouseRelease(viewer->viewport(),Qt::LeftButton,{},b);}
+        click(d,"wizardDetect");CameraFlowSmokeAudit::save(d,evidence+QString("/framed-%1-busy.png").arg(scene));idle(d);
+        const bool ready=scene!=2 && scene!=3;auto text=widget<QLabel>(d,"wizardPlateDiagnostics")->text();check(text.contains(ready?"49 eşleşen":"0 eşleşen"),qPrintable(text));
+        if(scene==1)check(text.contains("58 aday"),"extra candidates distinguished from assigned centres");
+        CameraFlowSmokeAudit::save(d,evidence+QString("/framed-%1-normal.png").arg(scene));d.resize(850,600);viewer->fitImage();app.processEvents();CameraFlowSmokeAudit::save(d,evidence+QString("/framed-%1-small.png").arg(scene));
+        if(ready){click(d,"wizardNext");click(d,"wizardNext");if(scene==4){check(widget<QLabel>(d,"wizardHeading")->text().startsWith("3") && widget<QLabel>(d,"wizardDistance")->text().contains("reddedildi"),"fit reject retains observation without save");CameraFlowSmokeAudit::save(d,evidence+"/framed-fit-reject-small.png");d.resize(1400,900);app.processEvents();CameraFlowSmokeAudit::save(d,evidence+"/framed-fit-reject-normal.png");}else {check(widget<QLabel>(d,"wizardHeading")->text().startsWith("4"),"framed candidate calculated");CameraFlowSmokeAudit::save(d,evidence+QString("/framed-%1-model-small.png").arg(scene));d.resize(1400,900);app.processEvents();CameraFlowSmokeAudit::save(d,evidence+QString("/framed-%1-model-normal.png").arg(scene));}}
+        click(d,"wizardStop");CameraFlowSmokeAudit::save(d,evidence+QString("/framed-%1-stopped.png").arg(scene));
+        d.openFile(path);idle(d);click(d,"wizardNext");widget<QCheckBox>(d,"wizardSpacingConfirmed")->setChecked(true);click(d,"wizardDetect");
+        // Changing the target invalidates an in-flight completion even through programmatic UI input.
+        widget<QDoubleSpinBox>(d,"wizardSpacing")->setValue(13);idle(d);check(widget<QLabel>(d,"wizardPlateDiagnostics")->text().contains("Gözlem yok"),"late detection cannot replace changed target");
+        CameraFlowSmokeAudit::save(d,evidence+QString("/framed-%1-reopened.png").arg(scene));
+        if(scene==0){widget<QCheckBox>(d,"wizardSpacingConfirmed")->setChecked(true);click(d,"wizardDetect");click(d,"wizardStop");idle(d);check(widget<QLabel>(d,"wizardPlateDiagnostics")->text().contains("Gözlem yok"),"stop rejects pending plate result");CameraFlowSmokeAudit::save(d,evidence+"/framed-cancel-normal.png");d.resize(850,600);app.processEvents();CameraFlowSmokeAudit::save(d,evidence+"/framed-cancel-small.png");}
+        d.close();
+    }
     check(independentFile.open(QIODevice::ReadOnly),"Saved empty project readable");
     const auto emptyProjectBytes=independentFile.readAll();independentFile.close();
     check(independentProject.project().recipes.isEmpty(),"Recipe-free acceptance begins with saved empty project");

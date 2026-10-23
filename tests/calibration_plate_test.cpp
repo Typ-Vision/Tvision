@@ -143,7 +143,7 @@ int main(int argc,char** argv){QCoreApplication app(argc,argv);
         if(n==5)bad.framed->orientation=PlateOrientation::Unmarked;if(n==6)bad.pattern=CalibrationGridPattern::SymmetricCircles;
         if(n==7)bad.framed->frameThicknessMm=-1;if(n==8)bad.framed->innerHeightMm=std::numeric_limits<double>::quiet_NaN();
         reject([&]{bad.validate();});}
-    reject([&]{CalibrationTargetLibrary(dir.filePath("framed-target-library.json")).save("framed",framed);});
+    CalibrationTargetLibrary(dir.filePath("framed-target-library.json")).save("framed",framed);check(CalibrationTargetLibrary(dir.filePath("framed-target-library.json")).read()["framed"].toJson()==framed.toJson(),"framed library exact descriptor");
     auto unsupported=CircleGridService::observe(frame(circles(false,1.6)),framed);
     check(unsupported.diagnostics().status==PlateDetectionStatus::NotFound && !unsupported.observation(),"new framed profile cannot silently use generic detector");
     reject([&]{PlateDetectionResult::failure(PlateDetectionStatus::Ready,"not an observation");});

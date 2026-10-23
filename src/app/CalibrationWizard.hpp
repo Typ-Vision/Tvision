@@ -36,6 +36,12 @@ private:
     void refresh();
     void presentFrame(ImageFrame,bool imported);
     void detect();
+    void invalidatePlate();
+    CalibrationGridTarget plateTarget(QString id) const;
+    std::optional<QRect> searchRoi_;
+    std::optional<FramedPlateGeometry> framedGeometry_;
+    QCheckBox* spacingConfirmed_;
+    QLabel* plateDiagnostics_;
     void displayPoints();
     void selectPair();
     void advance();

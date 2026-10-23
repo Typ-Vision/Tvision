@@ -1,7 +1,7 @@
 # CCUX-15e–j — Çerçeveli plaka ile planar kalibrasyon
 
 23 Ekim 2026 — CCUX-PLAN-05. **15e sözleşme ve 15f algılama uygulandı**;
-15g model/kayıt/replay uygulandı; 15h sihirbaz devam noktasıdır. 15h–j ve fiziksel kabul açık kalır.
+15g model/kayıt/replay ve 15h sihirbaz/tanı uygulandı; devam 15i birleşik kabuldür. 15i–j ve fiziksel kabul açık kalır.
 [15f kapsamı ve sınırları](framed-plate-detection.md). Önceki 15a–d işleri yeniden yapılmaz.
 [Araştırma](../../archive/2026-10-23-ccux-15d.md),
 [lens uyumluluğu](../../archive/2026-10-23-ccux-15d-lens.md),
@@ -225,6 +225,8 @@ değişen codec için measurement_environment_persistence/calibration_persistenc
 Kanıt `build/ccux/ccux-15g/`. Devam 15h.
 
 ### CCUX-15h — sihirbaz ve tanı
+
+Durum: yazılım/görsel teslim tamamlandı; [kapanış](../../archive/2026-10-23-ccux-15h.md).
 
 Oku: CalibrationWizard, CalibrationWizardSession, kullanılan image viewer,
 CalibrationAcquisitionSession ve CCUX-22e API; yalnız ilgili UI testleri.

@@ -2,7 +2,7 @@
 
 23 Ekim 2026. 15e servis sınırı; çerçeveli algılama
 [15f'de uygulandı](framed-plate-detection.md). Model/kayıt/replay 15g ile uygulandı;
-görünür sihirbaz akışı 15h kapsamındadır.
+görünür sihirbaz akışı 15h ile uygulanmıştır.
 
 ## Hedef ve uyumluluk
 
@@ -23,9 +23,9 @@ hedef codec'ini CalibrationTargetLibrary ve PlaneMappingService kullanır.
 PlaneMapping v1 chessboard, v2 generic circle olarak kalır. CalibrationService
 ve CalibrationStudyStore legacy recipe/study yolunu chessboard ile sınırlar.
 ActiveCalibrationService generic circle yönünün belirsizliğini korur.
-CalibrationTargetLibrary çerçeveli hedefi okuma/yazmada açıkça reddeder; eski
-UI bir v2 hedefi sessiz generic seçeneğe dönüştüremez. 15h bu kapıyı yeni UI
-ile birlikte açacaktır. Legacy recipe/study yolu çerçeveli hedefi reddeder; yeni model v3 codec'ine gider.
+CalibrationTargetLibrary, 15h ile çerçeveli descriptor okuma/yazımını destekler;
+sihirbaz açık üçüncü profil olarak geri yükler. Bilinmeyen fiziksel alanlar boş
+kalır; merkez aralığı yeni kare/hedef/aralıkta yeniden teyit edilir. Legacy recipe/study yolu çerçeveli hedefi reddeder; yeni model v3 codec'ine gider.
 
 ## Gözlem ve tanı
 
@@ -106,3 +106,23 @@ algılayıcının kanıtıdır; kayıtlı algoritma adı veya yerel hash, imza/s
 veya düşmanca yeniden yazıma karşı fiziksel kanıt değildir. Fiziksel mirror,
 12 mm aralık doğruluğu ve bağımsız mm kabulü açık kalır. Rapor yeni profilde
 üçgen yapısal kanıtını söyler, eski kayıtlara yön bulundu anlamı eklemez.
+
+## CCUX-15h sihirbaz
+
+Çerçeveli 7×7 seçimi eski iki profili dönüştürmez. Aralık için açık teyit gerekir;
+7×7 adet kilitlidir. Arama alanı özgün piksel QRect olarak worker işine taşınır,
+raster kırpılmaz; zoom/pan yalnız görünümü değiştirir. ROI yalnız bu sihirbaz
+karesine aittir ve yeni karede temizlenir. Algılama worker'ı tanıyı/typed gözlemi
+generation ticket ile kabul eder; hedef/aralık/ROI değişimi ve Stop eski işi
+iptal ederek gözlem/onay/adayı birlikte temizler. Dosya/çıkış/SaveUse, 22e drain
+semantiğini kullanır.
+
+Tanı aday sayısı ile eşleşen merkezi ayırır; numaralar, P1/+X/+Y, çerçeve ve
+reddedilmiş/kısmi aday etiketleri raw koordinatlarda gösterilir. Hull yalnız
+hesaplanmış modelde gösterilir. 49 merkez gözlemi fit reddinde korunur; kayıt
+adımı açılmaz. Fiziksel kontrol ayrı bilgidir; aralık teyidi fiziksel kabul değildir.
+
+UI regresyonu sırasında görülen generic OpenCV graph atamasının beyaz arka plan
+konumu gerçek merkez kabul edilmez; mevcut 127 eşikli measured-component fallback
+korunur. Yeni algoritma/fit gevşetmesi yoktur; eski generic tamlık ve model kapıları
+sürer. Chessboard/generic UI adayları da yeniden sınanmıştır.

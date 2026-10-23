@@ -34,6 +34,7 @@ public:
     void setResultAnnotationsVisible(bool visible);
     bool resultAnnotationsVisible() const {return annotationsVisible_;}
     void setCodeOverlay(const CodeResults& codes);
+    void setPlateOverlay(const QVector<QPointF>& points,int columns,const QVector<QPointF>& boundary,const QVector<QPointF>& rejected);
     void setChessboardOverlay(const QVector<QPointF>& points,int columns);
     // Geometry workspace; legacy integer rectangle teaching remains separate.
     void beginRoi(int shapeIndex);

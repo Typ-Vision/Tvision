@@ -27,6 +27,12 @@
    Kaydet ve kullan bağlantıyı bırakır; çıkış kapanış tamamlanana kadar bekler.
    Hesap/kayıt hatasında yeniden denemek için bağlantı korunur.
    Görüntü alın, gerçek kenar/plakayı seçin, bilinen mesafe/aralığı girip hesaplayın.
+   Üçgen işaretli koyu çerçeveli plaka için açık **Çerçeveli daireli plaka (7×7)**
+   profilini seçin; merkez aralığını girip teyit edin. **Plakayı bul** ardından
+   49 merkezi, P1 ve +X/+Y'yi inceleyin. Gerekirse **Arama alanı çiz** ile tüm
+   çerçeve/işareti kapsayan alan seçin; zoom/arama rasteri kırpmaz. Algılama ve
+   model hesabı ayrıdır: 49 merkez bulunup model reddedilebilir; bu durumda kayıt
+   adımı açılmaz. Fit uyumu ve aralık teyidi bağımsız fiziksel doğruluk kabulü değildir.
    **Kaydet ve kullan** aday kaydı ve uygunluk/etkin seçimi tek komutta yapar;
    başarısızlık önceki modeli korur, kısmi kayıt tekrar denenebilir. Dosya kaynağı
    sihirbaz ayrıntılarındadır; hedefli dosya adayını kullanmak canlı uyum karesi

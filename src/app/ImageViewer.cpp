@@ -155,11 +155,16 @@ void ImageViewer::wheelEvent(QWheelEvent* event) {
     if (onPixel) onPixel(imagePixelAt(event->position().toPoint())); event->accept();
 }
 void ImageViewer::setChessboardOverlay(const QVector<QPointF>& points,int columns) {
-    if(columns<2 || points.size()<columns*2)return;
-    setToolOverlay({},points,{QLineF(points[0],points[columns-1]),QLineF(points[0],points[points.size()-columns])});
-    for(const auto& entry:QVector<QPair<QPointF,QString>>{{points[0],"O (0,0)"},{points[columns-1],"+X"},{points[points.size()-columns],"+Y"}}){
-        auto* label=scene_->addSimpleText(entry.second);label->setBrush(QColor("#56b4ff"));label->setPos(entry.first);label->setFlag(QGraphicsItem::ItemIgnoresTransformations);toolOverlay_<<label;
-    }
+    setPlateOverlay(points,columns,{},{});
+}
+void ImageViewer::setPlateOverlay(const QVector<QPointF>& points,int columns,const QVector<QPointF>& boundary,const QVector<QPointF>& rejected) {
+    QVector<QLineF> lines;
+    for(int i=0;i<boundary.size();++i)lines.append({boundary[i],boundary[(i+1)%boundary.size()]});
+    const bool complete=columns>=2 && points.size()>=columns*2;
+    if(complete){lines.append({points[0],points[columns-1]});lines.append({points[0],points[points.size()-columns]});}
+    setToolOverlay({},points,lines,{}, {}, {}, {},rejected);
+    if(complete)for(const auto& entry:QVector<QPair<QPointF,QString>>{{points[0],"P1 (0,0)"},{points[columns-1],"+X"},{points[points.size()-columns],"+Y"}})
+        addResultLabel(entry.second,entry.first+QPointF(8,12),QColor("#56b4ff"),true);
 }
 void ImageViewer::mousePressEvent(QMouseEvent* event) {
     if(event->button()==Qt::MiddleButton && imageItem_){cancelRoi();middlePanning_=true;panStart_=event->position().toPoint();viewport()->setCursor(Qt::ClosedHandCursor);event->accept();return;}

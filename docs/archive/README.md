@@ -6,6 +6,7 @@ görev” ifadeleri yazıldıkları tarihe aittir.
 
 | Dönem / görev | Kayıt |
 | --- | --- |
+| 23 Ekim 2026 — CCUX-15h | [Çerçeveli profil, aralık teyidi, raw ROI ve sihirbaz tanısı](2026-10-23-ccux-15h.md) |
 | 23 Ekim 2026 — CCUX-15g | [Typed raw model, v3 kayıt/replay ve SaveUse bağı](2026-10-23-ccux-15g.md) |
 | 23 Ekim 2026 — CCUX-15f | [Çerçeve/üçgen, raw merkez algılaması ve bağımsız raster regresyonları](2026-10-23-ccux-15f.md) |
 | 23 Ekim 2026 — CCUX-15e | [Typed ham plaka gözlemi, hedef/tanı sözleşmesi ve model fit ayrımı](2026-10-23-ccux-15e.md) |

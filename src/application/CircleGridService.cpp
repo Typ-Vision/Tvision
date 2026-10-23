@@ -37,6 +37,12 @@ CalibrationGridObservation CircleGridService::detect(const ImageFrame& frame,con
         stop();std::vector<cv::Point2f> centres;
         if(!cv::findCirclesGrid(gray,{t.columns,t.rows},centres,flags,detector))continue;
         stop();if(centres.size()!=size_t(t.columns*t.rows))continue;
+        // findCirclesGrid may return graph-interpolated positions on bright
+        // background. Those are not measured dark-circle centres; reject this
+        // assignment and retain the existing measured-component fallback.
+        bool onDarkCircles=true;for(const auto& q:centres){if(!std::isfinite(q.x) || !std::isfinite(q.y)){onDarkCircles=false;break;}const int x=int(std::round(q.x)),y=int(std::round(q.y));
+            if(x<0 || y<0 || x>=gray.cols || y>=gray.rows || gray.at<uchar>(y,x)>=127){onDarkCircles=false;break;}}
+        if(!onDarkCircles)continue;
         CalibrationGridObservation o{t,m,frame.size(),{},{},QString::fromLatin1(frame.contentId().toHex())};
         for(int i=0;i<int(centres.size());++i){const auto q=centres[i];require(std::isfinite(q.x) && std::isfinite(q.y) && q.x>=0 && q.y>=0 && q.x<=gray.cols-1 && q.y<=gray.rows-1,"Invalid circle centre");
             o.pixels.append({q.x,q.y});o.worldMillimetres.append({(i%t.columns)*t.squareMillimetres,(i/t.columns)*t.squareMillimetres});}
