@@ -325,7 +325,7 @@ void MainWindow::displayError(const QString& message) {
     workspaceError_->setText(message); workspaceError_->show(); statusBar()->showMessage(message);
 }
 bool MainWindow::resolveUnsavedChanges() {
-    if(runtimeCoordinator_ && runtimeCoordinator_->state()==RuntimeState::Running){displayError("Proje değiştirmeden/kapatmadan önce Runtime Stop seçin.");return false;}
+    if(runtimeCoordinator_ && (runtimeCoordinator_->state()==RuntimeState::Running || runtimeCoordinator_->state()==RuntimeState::Starting || runtimeCoordinator_->state()==RuntimeState::Stopping)){displayError("Proje değiştirmeden/kapatmadan önce Runtime Stop ve kamera kapanışını tamamlayın.");return false;}
     if(plc_ && plc_->blocking()){displayError("Önce PLC kayıt/ACK tamamlanmalı.");return false;}
     if (!applyToolProperties()) return false;
     if (!service_.dirty()) return true;

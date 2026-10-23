@@ -49,7 +49,10 @@
    eski kalibrasyon/model izni geri gelmez. Yeni ayar snapshot'ıyla reçete
    DRAFT/dirty olur; otomatik kaydedilmez. **Save** ile taslağı kaydedin.
 8. **Load Recipe → Run → Tek çevrim** ile kaydedilmiş immutable sürümü yürütün.
-   Load/Run hazırlığı sonuç üretmez. Kamera/model/ayar değişiminde **Stop → yeniden
+   Load bağlantı açmaz; Run bütün kamera kümesini arka planda hazırlar.
+   Hazırlık sonuç üretmez; tek çevrimler hazır bağlantıları kullanır.
+   Stop gerçek kamera kapanışını bekler; disk kayıt retry kamerayı tutmaz.
+   Kamera/model/ayar değişiminde **Stop → yeniden
    Load Recipe → Run** gerekir. Kaynak tablosu kamera, kalibrasyon ve birimi;
    ipuçları profil/köken ayrıntısını gösterir. Stop geç sonucu ve görüntüyü bastırır.
    OECS sonuçlarında parça kararı NOT_EVALUATED, PLC/robot Kullanılamıyor kalır.

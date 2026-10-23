@@ -1,4 +1,5 @@
 #include "CameraAcquisitionFixture.hpp"
+#include "OecsExperimentalFixture.hpp"
 namespace persistent_fixture {
 void repeatedAndSharing(QJsonObject& report){
     Fixture f("repeat");auto service=std::make_shared<CameraAcquisitionSessions>();check(service->status("editor").drained && *f.discoveries==0,"construction opens nothing");

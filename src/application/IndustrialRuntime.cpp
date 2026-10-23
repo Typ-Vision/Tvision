@@ -1,4 +1,5 @@
 #include "IndustrialRuntime.hpp"
+#include "CameraAcquisitionSessions.hpp"
 #include "SystemCalibration.hpp"
 #include <QJsonDocument>
 #include <QSet>
@@ -27,10 +28,21 @@ IndustrialRuntimeAdmission freezeIndustrialRuntime(const IndustrialExecutionInpu
     for(const auto& t:tools)if(t.enabled && t.kind=="industrial_camera"){
         auto r=industrialExecutionRequest(result.inputs,t);const auto ref=IndustrialSourceReference::fromJson(t.parameters["sourceReference"].toObject());
         const auto key=QJsonDocument(r.camera.physical->toJson()).toJson(QJsonDocument::Compact);
-        require(!physical.contains(key),"Repeated physical industrial source");physical.insert(key);
+        require(!physical.contains(key) || original.sessions,"Repeated physical industrial source");physical.insert(key);
         std::optional<TransportLocator> route;if(original.routes.contains(r.camera.id.value))route=original.routes[r.camera.id.value];
-        const auto scan=original.discover ? original.discover(ref.timeoutMs,{}) : CameraService::industrialSnapshot(CameraService{}.discover(route && !route->producer.isEmpty() ? QStringList{route->producer}:QStringList{},ref.timeoutMs));
-        r.device=CameraService::resolveIndustrial(r.camera,scan,route);r.validate();
+        if(original.sessions){
+            const auto context=original.sourceSessionContexts.value(t.id,original.sessionContext);
+            const auto generation=original.sourceSessionGenerations.value(t.id,original.sessionGeneration);
+            const auto state=original.sessions->status(context);
+            require(state.generation==generation && !state.preparing && !state.closing && state.sources.contains(t.id),"Stale Runtime camera preparation");
+            const auto source=state.sources[t.id];require(source.state==AcquisitionSessionState::Ready && source.request.camera==r.camera && source.request.setup==r.setup && source.request.profile==r.profile,"Runtime camera configuration differs from prepared context");
+            r.device=source.request.device;
+            require(!original.admittedDevices.contains(t.id) || original.admittedDevices[t.id]==r.device,"Prepared Runtime device differs from admission");
+        }else{
+            const auto scan=original.discover ? original.discover(ref.timeoutMs,{}) : CameraService::industrialSnapshot(CameraService{}.discover(route && !route->producer.isEmpty() ? QStringList{route->producer}:QStringList{},ref.timeoutMs));
+            r.device=CameraService::resolveIndustrial(r.camera,scan,route);
+        }
+        r.validate();
         const auto caps=original.factory.capabilities(r.device);
         require(caps.open && caps.configure && caps.softwareTrigger,"Industrial Runtime backend capability unavailable");
         result.inputs.admittedDevices[t.id]=r.device;result.inputs.routes[r.camera.id.value]=r.device.route;

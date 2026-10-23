@@ -45,7 +45,7 @@ MultiSourceRuntimeService::Prepared MultiSourceRuntimeService::capture(const Rec
         const auto tool=SystemCalibration::source(branch);if(tool.kind=="image_file"){const QFileInfo file(QDir(directory).absoluteFilePath(tool.parameters["path"].toString()));require(file.isFile() && file.isReadable(),ProductionError::InvalidConfiguration,"Required source file unavailable");}QString device;
         if(branch.definition.contains("sourceSetup"))device="physical:"+branch.definition["sourceSetup"].toObject()["target"].toObject()["cameraId"].toString();
         else if(tool.kind=="webcam")device="legacy:"+tool.parameters["backend"].toString()+":"+QString::number(tool.parameters["deviceIndex"].toInt());
-        if(!device.isEmpty()){require(!devices.contains(device),ProductionError::InvalidConfiguration,"Repeated physical source requires an explicit reuse policy");devices.insert(device);}
+        if(!device.isEmpty()){require(!devices.contains(device) || (industrialBranch && set.industrial && set.industrial->sessions),ProductionError::InvalidConfiguration,"Repeated physical source requires an explicit reuse policy");devices.insert(device);}
         ProductionRecipeService validator([](const QString&,ProductionAction){return true;},[dependencies](const Recipe&){return dependencies;});validator.industrialAdmission_=industrialBranch;const auto validation=validator.validate(identity_.principal,branch,directory);validator.activate(identity_.principal,validation.id,branch,directory);
         out.branches[source]=validator.active();sourceSet[source]=validator.active()->dependencies();
     }

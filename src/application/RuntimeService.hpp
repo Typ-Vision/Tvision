@@ -6,6 +6,7 @@
 namespace visionflow {
 class MultiSourceRuntimeService;
 class ExperimentalRuntime;
+class RuntimeCameraSessions;
 struct RuntimeIdentity {
     QString principal;
     ProductionRecipeService::Authorize authorize;
@@ -24,6 +25,13 @@ public:
     // Configuration-only preparation; never acquires or asserts actual frame readiness.
     void checkConfiguration(const Recipe&,const QString& projectDirectory) const;
     void prepare(const Recipe&,const QString& projectDirectory);
+    void requestCameraPreparation(const Recipe&,const QString& projectDirectory);
+    bool pollCameras();
+    void stopCameras();
+    bool camerasPending() const;
+    bool camerasDraining() const;
+    QString cameraError() const;
+    bool cameraCloseFailed() const;
     void activate(const Recipe&,const QString& projectDirectory);
     void rollback(const QString& validationId);
     ProductionCycle begin(const QJsonObject& communication={});
@@ -52,6 +60,7 @@ private:
     ProductionDependencies declaredCalibrationDependencies(const Recipe&) const;
     ProductionDependencies dependencies(const Recipe&) const;
     ProductionDependencies declaredDependencies(const Recipe&) const;
+    MultiSourceDependencies cameraComposition(const Recipe&,const MultiProvider&) const;
     std::optional<ProductionDependencies> systemDependencies(const Recipe&) const;
     Recipe systemRecipe(const Recipe&,const QString& directory) const;
     MeasurementExecutionContext completionCalibration(const ImageFrame&) const;
@@ -73,5 +82,6 @@ private:
     bool policyReset_=false;
     bool automaticAcquisition_=true;
     MultiProvider automaticProvider_;
+    std::unique_ptr<RuntimeCameraSessions> cameraSessions_;
 };
 }

@@ -4,7 +4,8 @@
 [Kapanış](../../archive/2026-10-23-ccux-22a.md). **22b ortak servis tamamlandı**
 ([API/ömür](acquisition-sessions.md), [kapanış](../../archive/2026-10-23-ccux-22b.md));
 22c Editor entegrasyonu uygulandı ([kapanış](../../archive/2026-10-23-ccux-22c.md));
-22d–f henüz uygulanmadı. Kullanıcı kararı: program
+22d Runtime uygulandı ([kapanış](../../archive/2026-10-23-ccux-22d.md));
+22e–f henüz uygulanmadı. Kullanıcı kararı: program
 açılışında bağlantı yok; Editor reçete açılışında, Runtime Run'da, kalibrasyon
 işlemine girişte bağlantı kurulur. İlgili iş bitince bırakılır. Her karede yeniden
 keşif/open/configure/close yapılmaz. [C2a](contract.md#c2a--çalışma-süresince-bağlantı)
@@ -42,7 +43,7 @@ Bir oturumda bir alt kart; ajanlar paralel çalışmaz. Her kart kendi kapsam,
 kanıt ve açık sınır kaydıyla kapanır. Yazılım fixture başarısı fiziksel kabul
 değildir; cihaz yoksa ilgili fiziksel satırlar açık kalır. 22a yazılım teslimi tamamlandı;
 23 Ekim fiziksel serisi kamerayı bulamadı. 22b servis ve 22c Editor uygulandı;
-22d–f açık.
+22d Runtime uygulandı; 22e–f açık.
 
 ## CCUX-22a — ölçüm
 

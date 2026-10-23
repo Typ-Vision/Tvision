@@ -86,3 +86,22 @@ MainWindow açık düzenleme komutlarını tek girişte birleştirir; restore bu
 hem execution tesliminin bitmesini bekleyip gezinme/proje/pencere işlemini sürdürür.
 Geç A karesi B reçetesinin cache'ine taşınmaz. Kaydet ve çıkış iptali oturumu tutar.
 OECS stream cleanup kare başına kalır. [22c kapanışı](../../archive/2026-10-23-ccux-22c.md).
+
+## Runtime sahibi
+
+`RuntimeCameraSessions` Run'da immutable kaynak, profil, rota ve model kümesini
+dondurur. Bütün gerekli kameralar ortak serviste hazır olmadan coordinator
+Starting'den Running'e geçmez; ardından güncel generation, izin ve bağımlılıklar
+tekrar doğrulanır. Load SDK çağırmaz; Run tek başına çekim/sonuç üretmez.
+Hazır context/generation capability'si execution'a yalnız bellekte taşınır.
+Native admission kapısı değişmez; OECS kökeni production iznine dönüşmez.
+
+Çevrimler aynı bağlantıları kullanır; aynı fiziksel kameranın uyumlu logical
+kaynakları tek worker paylaşır. Kısmi hazırlık hatası bütün kümeyi kapatır.
+Starting veya çekimde Stop generation'ı emekliye ayırır; geç open/kare kabul
+edilmez. Stopping gerçek SDK drain'i de kapsar. Belirsiz close Fault/karantinadır.
+Disk kayıt retry ayrı kalır: bekleyen terminal kayıt kameranın kapanmasını
+engellemez, retry yeni çekim yapmaz. SDK hatası/kopma kümeyi kapatır; replug
+otomatik Run değildir. Bağımlılık değişimi Stop sonrası açık Load gerektirir.
+UI timer yalnız hazır future'ları tüketir; proje/pencere değişimi Stop ve drain
+tamamlanmasını ister. [22d kapanışı](../../archive/2026-10-23-ccux-22d.md).

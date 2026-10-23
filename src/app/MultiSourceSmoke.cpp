@@ -98,7 +98,7 @@ class RuntimeFixtureAdapter:public AcquisitionAdapter {QImage image_;public:expl
 }
 bool MainWindow::verifyMultiSourceRuntime(const QString& artifacts){
     int checks=0;auto check=[&](bool b,const char* s){++checks;if(!b)throw std::runtime_error(s);};
-    auto wait=[&]{QElapsedTimer timer;timer.start();do{QApplication::processEvents();QThread::msleep(1);}while(runtimeJobs_.busy() && timer.elapsed()<30000);QApplication::processEvents();check(!runtimeJobs_.busy(),"Runtime worker deadline");};
+    auto wait=[&]{QElapsedTimer timer;timer.start();do{QApplication::processEvents();QThread::msleep(1);}while((runtimeJobs_.busy() || (runtime_ && runtime_->camerasPending())) && timer.elapsed()<30000);QApplication::processEvents();check(!runtimeJobs_.busy() && (!runtime_ || !runtime_->camerasPending()),"Runtime worker/preparation deadline");};
     QTemporaryDir dir(QDir(artifacts).filePath("kmc10d-ui-XXXXXX"));check(dir.isValid(),"Build Runtime fixtures");service_.createProject("Multi-source Runtime","",dir.filePath("project.vfproject"),"file");service_.save();
     for(int n:{1,2,8,10})for(const auto type:{ApplicationType::Measurement,ApplicationType::DefectInspection,ApplicationType::RobotGuidance}){
         service_.createRecipe(QString("%1 sources %2").arg(n).arg(typeKey(type)),"",type);service_.enableMultiSource();QVector<QString> sources,edges,metrics;QVector<ToolConnection> links;const bool calibrated=n==2 && type==ApplicationType::Measurement;
@@ -133,8 +133,9 @@ bool MainWindow::verifyMultiSourceRuntime(const QString& artifacts){
         auto combined=measurementWorkspace_->environment().current;combined.cameras+=contract.cameras;combined.setups+=contract.setups;combined.profiles+=contract.profiles;measurementWorkspace_->replace(combined);for(const auto& profile:contract.profiles){const auto source=service_.addTool("industrial_camera");service_.bindIndustrialSource(source,contract,profile.id,1000);}service_.save();refreshWorkspace();ensureRuntime();runtimeCoordinator_->load(*service_.activeRecipe(),dir.path(),RuntimeTrigger::Manual);selectPage("runtime");refreshRuntime();
         check(runtimePreparation_->rowCount()==n && !runtimeResult_ && !runtimeViewer_->hasImage(),"Industrial preparation has no fabricated result");
         for(int i=0;i<n;++i)check(runtimePreparation_->item(i,0)->text().contains("Offline camera "+QString::number(n)+"-"+QString::number(i)) && runtimePreparation_->item(i,1)->toolTip().contains("offline-profile-"+QString::number(n)+"-"+QString::number(i)) && runtimePreparation_->item(i,3)->text()=="Kare yok","Offline industrial serial/setup/profile without actual frame");
-        runtimeAction("run");check(runtimeCoordinator_->state()==RuntimeState::Fault && !runtimeResult_ && !runtimeViewer_->hasImage(),"Native admission stays unavailable");
-        check(runtimePreparation_->item(0,2)->text()=="Kullanılamıyor" && runtimePreparation_->item(0,1)->text().contains("Ölçüm doğrulanmadı"),"Unavailable differs from a raw-only result");
+        runtimeAction("run");wait();check(runtimeCoordinator_->state()==RuntimeState::Fault && !runtimeResult_ && !runtimeViewer_->hasImage(),"Native admission stays unavailable");
+        const auto failedPreparation=runtimePreparation_->item(0,2)->text();
+        check((failedPreparation=="Kullanılamıyor" || failedPreparation=="Edinim hatası") && runtimePreparation_->item(0,1)->text().contains("Ölçüm doğrulanmadı"),"Unavailable or missing device differs from a raw-only result");
         setWindowState(Qt::WindowNoState);resize(1400,900);QApplication::processEvents();check(CameraFlowSmokeAudit::save(*this,output+QString("/industrial-%1-normal.png").arg(n)),"Industrial normal screenshot");resize(850,600);QApplication::processEvents();check(CameraFlowSmokeAudit::save(*this,output+QString("/industrial-%1-small.png").arg(n)),"Industrial small screenshot");
         check(runtimePreparation_->item(n-1,0)->toolTip().contains("SYNTHETIC-"+QString::number(n)+"-"+QString::number(n-1)),"All source details remain accessible");
     }

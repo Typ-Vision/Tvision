@@ -1,14 +1,17 @@
 #pragma once
 #include "application/CameraAcquisitionSessions.hpp"
 #include "application/ProjectService.hpp"
-#include "OecsExperimentalFixture.hpp"
+#include <QCoreApplication>
+#include <QDir>
+#include <QTemporaryDir>
+#include <QThread>
 #include <QJsonDocument>
 #include <QTextStream>
 #include <QSaveFile>
 #include <set>
 using namespace visionflow;
 namespace persistent_fixture {
-void check(bool ok,const char* text){if(!ok)throw std::runtime_error(text);}
+inline void check(bool ok,const char* text){if(!ok)throw std::runtime_error(text);}
 template<class F> void rejects(F f){bool rejected=false;try{f();}catch(const std::exception&){rejected=true;}check(rejected,"expected rejection");}
 template<class F> void until(F f){Deadline d(5000);while(!f()){check(!d.expired(),"fixture timeout");QThread::msleep(1);}}
 template<class T> T take(std::future<T> future){check(future.wait_for(std::chrono::seconds(6))==std::future_status::ready,"future timeout");return future.get();}
@@ -18,7 +21,7 @@ struct Probe {
     bool failConfigure=false,failGrab=false,failClose=false;
     std::shared_future<void> openGate,grabGate,closeGate;
 };
-IndustrialCameraRequest request(QString serial="persistent"){
+inline IndustrialCameraRequest request(QString serial="persistent"){
     IndustrialCameraRequest r;
     r.device={{"VF","SESSION",serial,DeviceIdentityConfidence::SerialReported},{"oecs",{},"fixture","exact"},{"oecs","fixture",QString(64,'a'),1}};
     r.camera={{serial+"/camera"},"Synthetic camera",{"gentl",{},DeviceIdentityConfidence::Unavailable,1,{}},r.device.identity};

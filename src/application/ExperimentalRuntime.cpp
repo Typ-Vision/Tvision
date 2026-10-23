@@ -74,10 +74,10 @@ std::shared_ptr<const ProductionSnapshot> ExperimentalRuntime::capture(const Rec
     for(const auto& source:graph.requiredSources){const auto branch=SystemCalibration::branch(recipe,source);const bool metric=SystemCalibration::requestsCalibration(branch,false);require(!branch.calibrationBinding && branch.calibrationReference.isEmpty(),"Experimental Runtime forbids legacy/global model fallback");
         const auto t=SystemCalibration::source(branch);QJsonObject entry;
         if(t.kind=="industrial_camera"){
-            const auto request=industrialExecutionRequest(*s->industrial_,t);require(!cameras.contains(request.camera.id.value),"Repeated physical experimental source");cameras.insert(request.camera.id.value);
+            const auto request=industrialExecutionRequest(*s->industrial_,t);require(!cameras.contains(request.camera.id.value) || s->industrial_->sessions,"Repeated physical experimental source");cameras.insert(request.camera.id.value);
             require(request.profile.requested.trigger==TriggerSettings{true,"FrameBurstStart","Software"},"Explicit FrameBurstStart profile required");
             require(request.camera.physical && request.camera.physical->vendor=="Opto Engineering Srl" && request.camera.physical->model=="COE-050-M-USB-050-IR-C" && !request.camera.physical->serial.isEmpty(),"Experimental camera identity unsupported");
-            const auto physical=QString::fromLatin1(hash(request.camera.physical->toJson()));require(!cameras.contains(physical),"Repeated physical experimental device");cameras.insert(physical);
+            const auto physical=QString::fromLatin1(hash(request.camera.physical->toJson()));require(!cameras.contains(physical) || s->industrial_->sessions,"Repeated physical experimental device");cameras.insert(physical);
             entry={{"camera",request.camera.toJson()},{"setup",request.setup.toJson()},{"profile",request.profile.toJson()}};
         }else if(t.kind=="image_file"){
             const auto image=ImageFileService{}.load(QDir(directory).absoluteFilePath(t.parameters["path"].toString()),true);entry={{"contentId",QString::fromLatin1(image.contentId().toHex())},{"experimentalAcquisition",image.metadata().experimentalAcquisition},{"imageInfo",imageInfo(image)}};

@@ -39,6 +39,7 @@ QString MainWindow::editorCameraStatus(const QString& source) const{
     }
 }
 void MainWindow::pollEditorCameras(){
+    if(runtimeCoordinator_ && runtimeCoordinator_->poll())refreshRuntime();
     if(editorCameras_.poll())refreshFlow();
     if(editorCameraAfterDrain_ && !editorCameras_.draining() && !editorSession_.busy()){
         auto after=std::move(editorCameraAfterDrain_);editorCameraAfterDrain_={};after();return;

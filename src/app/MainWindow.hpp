@@ -44,6 +44,7 @@ public:
     bool verifyEditor(const QString& artifactDirectory);
     bool verifySession();
     bool verifyEditorCameraSessions(const QString& artifacts);
+    bool verifyRuntimeCameraSessions(const QString& artifacts);
     bool verifyMatching(const QString& artifacts);
     bool verifyExecution(const QString& artifacts);
     bool verifyRoi(const QString& artifacts);
@@ -87,6 +88,7 @@ private:
     void refreshLogs();
     void exportLogCsv(const QString& path);
     void ensureRuntime();
+    IndustrialExecutionInputs runtimeCameraInputs() const;
     void initializeCommunication();
     void refreshCalibration();
     QWidget* makeProjectManager();
@@ -199,6 +201,7 @@ private:
     QJsonObject editorCalibrationIdentity_;
     JobSession runtimeJobs_;
     std::unique_ptr<RuntimeService> runtime_;
+    std::optional<IndustrialExecutionInputs> runtimeCameraComposition_; // in-memory fixture composition only
     std::unique_ptr<RuntimeCoordinator> runtimeCoordinator_;
     std::unique_ptr<PlcRuntimeSocket> plc_;
     QLineEdit* plcAddress_{};

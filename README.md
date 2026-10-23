@@ -26,6 +26,10 @@ Editor reçetesini açık düzenleme komutuyla açmak bağlı kameraları arka p
 hazırlar; Görüntü al/Run Flow aynı bağlantıyı kullanır. Save bağlantıyı korur;
 kabul edilen çıkış ve Stop kapatır. Program/proje/ekran restore bağlantı açmaz.
 
+Runtime Load çevrimdışıdır. Run bağlı kamera kümesini arka planda hazırlar;
+tümü hazır olunca Running olur. Tek çevrimler aynı bağlantıları kullanır.
+Stop gerçek kamera kapanışını bekler; disk kayıt retry kamerayı tutmaz.
+
 Hazırlık/keşif üretim kabulü değildir; gerçek sonuç olmadan PASS, skor veya
 robot pose gösterilmez. Robot ekranları hazırlıktır. Yazılım testleri fiziksel
 kamera/ölçüm, PLC/robot, lens, native DPI, CUDA veya dağıtım kabulünü kapatmaz.

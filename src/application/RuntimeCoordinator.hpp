@@ -14,6 +14,7 @@ public:
     quint64 requestStart();
     bool completeStart(quint64 generation,const QString& preparationError={});
     void start();
+    bool poll();
     void stop();
     ProductionCycle begin(RuntimeTrigger source,const QJsonObject& communication={});
     void finish(quint64 ticket,const CycleResult& result);
@@ -36,6 +37,7 @@ private:
     QString directory_,error_;
     quint64 generation_=0;
     bool recordingPending_=false,deliveryPending_=false;
+    bool faultAfterDrain_=false,reloadRequired_=false;
     std::shared_ptr<std::atomic_bool> cancel_;
 };
 }

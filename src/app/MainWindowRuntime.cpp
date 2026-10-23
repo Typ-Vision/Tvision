@@ -81,16 +81,21 @@ void MainWindow::exportLogCsv(const QString& path) {
     QSaveFile file(path);file.setDirectWriteFallback(false);
     if(!file.open(QIODevice::WriteOnly) || file.write(data)!=data.size() || !file.commit())throw std::runtime_error("CSV atomik kayıt başarısız.");
 }
+IndustrialExecutionInputs MainWindow::runtimeCameraInputs() const{
+    if(!measurementWorkspace_)throw std::runtime_error("Measurement workspace unavailable");
+    auto inputs=runtimeCameraComposition_.value_or(IndustrialExecutionInputs{});inputs.contract=measurementWorkspace_->environment().current;
+    for(const auto& c:inputs.contract.cameras)if(c.physical)if(const auto route=CameraLocalConfiguration(settingsFile_).route(*c.physical))inputs.routes[c.id.value]=*route;
+    return inputs;
+}
 void MainWindow::ensureRuntime() {
     if(!service_.hasProject() || service_.path().isEmpty())throw std::runtime_error("Önce kaydedilmiş bir proje açın.");
     if(runtime_ && runtimePath_==service_.path())return;
     if(plc_ && plc_->blocking())throw std::runtime_error("Önce PLC kaydı/ACK tamamlanmalı.");
     if(runtimeJobs_.busy() || (runtime_ && runtime_->busy()))throw std::runtime_error("Önce Runtime çevrimini/kaydını tamamlayın.");
-    if(plc_)plc_->bind(nullptr,nullptr);runtimeCoordinator_.reset();runtimePath_=service_.path();runtime_=std::make_unique<RuntimeService>(runtimePath_+".production",runtimePath_+".calibrations.json",RuntimeIdentity::localEngineer(),[this]{return systemCalibrationSnapshot();},[this](const Recipe& r){return systemCalibrationSnapshot(&r);},[this](const Recipe& r){if(!measurementWorkspace_)throw std::runtime_error("Measurement workspace unavailable");return measurementWorkspace_->acquisition(r);},[this](const Recipe& r){if(!measurementWorkspace_)throw std::runtime_error("Measurement workspace unavailable");return measurementWorkspace_->productionSources(r);});
+    if(plc_)plc_->bind(nullptr,nullptr);runtimeCoordinator_.reset();runtimePath_=service_.path();runtime_=std::make_unique<RuntimeService>(runtimePath_+".production",runtimePath_+".calibrations.json",RuntimeIdentity::localEngineer(),[this]{return systemCalibrationSnapshot();},[this](const Recipe& r){return systemCalibrationSnapshot(&r);},[this](const Recipe& r){if(!measurementWorkspace_)throw std::runtime_error("Measurement workspace unavailable");return measurementWorkspace_->acquisition(r);},[this](const Recipe& r){return measurementWorkspace_->productionSources(r,runtimeCameraInputs());});
     runtime_->setAutomaticAcquisition([this](const Recipe& r){
         if(!measurementWorkspace_)throw std::runtime_error("Measurement workspace unavailable");
-        IndustrialExecutionInputs inputs;const auto e=measurementWorkspace_->environment();inputs.contract=e.current;
-        for(const auto& c:e.current.cameras)if(c.physical)if(const auto route=CameraLocalConfiguration(settingsFile_).route(*c.physical))inputs.routes[c.id.value]=*route;
+        const auto inputs=runtimeCameraInputs();
         return measurementWorkspace_->productionSources(r,inputs,true);
     });
     runtimeCoordinator_=std::make_unique<RuntimeCoordinator>(*runtime_);
@@ -127,7 +132,7 @@ void MainWindow::refreshRuntime() {
     case RuntimeState::LoadedStopped:status="Durduruldu — Run bekleniyor";break;
     case RuntimeState::Starting:status="Hazırlanıyor";break;
     case RuntimeState::Running:status=working ? "Çalışıyor — çevrim sürüyor" : (runtimeCoordinator_->mode()==RuntimeTrigger::Manual ? "Çalışıyor — manuel çevrim bekleniyor" : "Çalışıyor — yazılım tetiği bekleniyor");break;
-    case RuntimeState::Stopping:status="Durduruluyor — kayıt bekleniyor";break;
+    case RuntimeState::Stopping:status="Durduruluyor — kamera/kayıt bekleniyor";break;
     case RuntimeState::Fault:status="FAULT — "+runtimeCoordinator_->error();if(runtimeCoordinator_->loaded())for(const auto& t:editorTools(runtimeCoordinator_->loaded()->definition))if(t.enabled && t.kind=="industrial_camera"){status="FAULT — "+acquisitionStatus("ERROR",runtimeCoordinator_->error());break;}break;
     }
     if(runtimeCoordinator_ && runtimeCoordinator_->loaded()){

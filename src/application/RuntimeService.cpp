@@ -4,6 +4,7 @@
 #include "EditorSession.hpp"
 #include "IndustrialExecution.hpp"
 #include "ExperimentalRuntime.hpp"
+#include "RuntimeCameraSessions.hpp"
 #include <QDir>
 #include <QFileInfo>
 #include <QUuid>
@@ -33,16 +34,37 @@ RuntimeService::RuntimeService(QString directory,QString catalogPath,RuntimeIden
      production_(identity_.authorize,[this](const Recipe& r){return dependencies(r);},16,
         [this](const QString& kind,const QString& id,const QJsonObject& o){store_.append(kind,id,o);},[this](const ImageFrame& frame){return completionCalibration(frame);}),multiProvider_(std::move(multi)) {}
 RuntimeService::~RuntimeService()=default;
+MultiSourceDependencies RuntimeService::cameraComposition(const Recipe& r,const MultiProvider& provider) const{
+    auto set=provider?provider(r):MultiSourceDependencies{};
+    return cameraSessions_?cameraSessions_->compose(std::move(set)):set;
+}
+void RuntimeService::requestCameraPreparation(const Recipe& recipe,const QString& directory){
+    bool industrial=false;for(const auto& t:editorTools(recipe.definition))if(t.enabled && t.kind=="industrial_camera")industrial=true;
+    if(!industrial){cameraSessions_.reset();return;}
+    if(identity_.principal.isEmpty() || !identity_.authorize || !identity_.authorize(identity_.principal,ProductionAction::Run) ||
+       !identity_.authorize(identity_.principal,ProductionAction::Validate) || !identity_.authorize(identity_.principal,ProductionAction::Activate))
+        throw ProductionException(ProductionError::Unauthorized,"Runtime camera preparation denied");
+    const bool experimental=requiresManualCycles(recipe,directory);const auto& provider=experimental?automaticProvider_:multiProvider_;
+    if(!provider)throw ProductionException(ProductionError::InvalidConfiguration,"Runtime source-set provider required");
+    if(!cameraSessions_)cameraSessions_=std::make_unique<RuntimeCameraSessions>();
+    cameraSessions_->start(recipe,provider(recipe),experimental);
+}
+bool RuntimeService::pollCameras(){return cameraSessions_ && cameraSessions_->poll();}
+void RuntimeService::stopCameras(){if(cameraSessions_)cameraSessions_->stop();}
+bool RuntimeService::camerasPending() const{return cameraSessions_ && cameraSessions_->pending();}
+bool RuntimeService::camerasDraining() const{return cameraSessions_ && cameraSessions_->draining();}
+QString RuntimeService::cameraError() const{return cameraSessions_?cameraSessions_->error():QString{};}
+bool RuntimeService::cameraCloseFailed() const{return cameraSessions_ && cameraSessions_->closeFailed();}
 bool RuntimeService::busy() const {return production_.busy() || (multi_ && multi_->busy()) || (experimental_ && experimental_->busy());}
 void RuntimeService::setAutomaticAcquisition(MultiProvider provider){
     if(busy())throw ProductionException(ProductionError::Busy,"Runtime cycle/recording pending");
-    automaticAcquisition_=true;automaticProvider_=std::move(provider);
+    stopCameras();automaticAcquisition_=true;automaticProvider_=std::move(provider);
     experimental_.reset();multi_.reset();multiMode_=false;validation_.reset();policyReset_=true;
 }
 void RuntimeService::setExperimental(bool enabled,MultiProvider provider){
     if(busy())throw ProductionException(ProductionError::Busy,"Runtime cycle/recording pending");
-    automaticAcquisition_=false;
-    if(enabled)experimental_=std::make_unique<ExperimentalRuntime>(identity_,std::move(provider),[this](const QString& kind,const QString& id,const QJsonObject& o){store_.append(kind,id,o);});else experimental_.reset();
+    stopCameras();automaticAcquisition_=false;
+    if(enabled){automaticProvider_=std::move(provider);experimental_=std::make_unique<ExperimentalRuntime>(identity_,[this](const Recipe& r){return cameraComposition(r,automaticProvider_);},[this](const QString& kind,const QString& id,const QJsonObject& o){store_.append(kind,id,o);});}else experimental_.reset();
     // Switching policies must not resurrect a previous prepared production lease.
     multi_.reset();multiMode_=false;validation_.reset();policyReset_=true;
 }
@@ -146,7 +168,7 @@ void RuntimeService::prepare(const Recipe& r,const QString& directory) {
     if(automaticAcquisition_){
         const bool selected=requiresManualCycles(r,directory);
         if(selected){
-            auto candidate=std::make_unique<ExperimentalRuntime>(identity_,automaticProvider_,[this](const QString& kind,const QString& id,const QJsonObject& o){store_.append(kind,id,o);});
+            auto candidate=std::make_unique<ExperimentalRuntime>(identity_,[this](const Recipe& recipe){return cameraComposition(recipe,automaticProvider_);},[this](const QString& kind,const QString& id,const QJsonObject& o){store_.append(kind,id,o);});
             candidate->prepare(r,directory);experimental_=std::move(candidate);multi_.reset();multiMode_=false;validation_=experimental_->active()->validation();policyReset_=false;return;
         }
         if(experimental_){experimental_.reset();validation_.reset();policyReset_=true;}
@@ -155,7 +177,7 @@ void RuntimeService::prepare(const Recipe& r,const QString& directory) {
     if(identity_.principal.isEmpty() || !identity_.authorize || !identity_.authorize(identity_.principal,ProductionAction::Run))throw ProductionException(ProductionError::Unauthorized,"Runtime Run denied.");
     if(r.definition["editor"].toObject()["schemaVersion"]==9){
         if(!multiProvider_)throw ProductionException(ProductionError::InvalidConfiguration,"Whole source-set provider required");
-        if(!multi_)multi_=std::make_unique<MultiSourceRuntimeService>(identity_,multiProvider_,[this](const QString& kind,const QString& id,const QJsonObject& record){store_.append(kind,id,record);});
+        if(!multi_)multi_=std::make_unique<MultiSourceRuntimeService>(identity_,[this](const Recipe& recipe){return cameraComposition(recipe,multiProvider_);},[this](const QString& kind,const QString& id,const QJsonObject& record){store_.append(kind,id,record);});
         multi_->prepare(r,directory);multiMode_=true;validation_=multi_->active()->validation();policyReset_=false;return;
     }
     checkConfiguration(r,directory);
