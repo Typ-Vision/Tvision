@@ -1,5 +1,6 @@
 #include "application/CalibrationWizardSession.hpp"
 #include "application/CircleGridService.hpp"
+#include "application/CalibrationTargetLibrary.hpp"
 #include "application/CalibrationService.hpp"
 #include "application/CalibrationStudyStore.hpp"
 #include "application/ImageFileService.hpp"
@@ -123,6 +124,66 @@ int main(int argc,char** argv){QCoreApplication app(argc,argv);
         if(n==3)bad["origin"]="corner_1";if(n==4)bad["axes"]="robot";if(n==5)bad["spacingMm"]=0;if(n==6)bad["spacingMm"]=-1;
         if(n==7)bad["columns"]=3.5;if(n==8)bad["rows"]=33;if(n==9)bad["unknown"]=true;if(n==10)bad.remove("spacingMm");if(n==11)bad["spacingMm"]="10";if(n==12){bad["columns"]=32;bad["rows"]=32;}
         reject([&]{CalibrationGridTarget::fromJson(bad);});}
+    // Descriptor v2 is explicit; v1 aggregates/aliases and bytes stay unchanged.
+    CalibrationGridTarget framed{"framed-7x7",7,7,12,CalibrationGridPattern::FramedCircles,FramedPlateGeometry{}};
+    check(CalibrationGridTarget::fromJson(framed.toJson()).toJson()==framed.toJson(),"framed descriptor v2 roundtrip with unknown physical sizes absent");
+    framed.framed->frameThicknessMm=3;framed.framed->circleDiameterMm=4;
+    check(CalibrationGridTarget::fromJson(framed.toJson()).toJson()==framed.toJson(),"optional physical geometry roundtrip");
+    const QJsonObject legacyTarget{{"schemaVersion",1},{"id","circle plate"},{"kind","symmetric_circle_grid"},{"columns",8},{"rows",6},{"spacingMm",10},{"origin","centre_1"},{"axes","columns_rows"}};
+    check(QJsonDocument(target.toJson()).toJson(QJsonDocument::Compact)==QJsonDocument(legacyTarget).toJson(QJsonDocument::Compact),"legacy descriptor byte contract unchanged");
+    for(int n=0;n<7;++n){auto bad=framed.toJson();auto geometry=bad["geometry"].toObject();
+        if(n==0)bad["schemaVersion"]=3;if(n==1)bad["origin"]="centre_1";if(n==2)geometry["unknown"]=1;
+        if(n==3)geometry["circleDiameterMm"]="4";if(n==4)geometry["polarity"]="light_on_dark";
+        if(n==5)geometry.remove("orientation");if(n==6)bad["unknown"]=1;bad["geometry"]=geometry;
+        reject([&]{CalibrationGridTarget::fromJson(bad);});}
+    for(int n=0;n<9;++n){auto bad=framed;
+        if(n==0)bad.framed.reset();if(n==1)bad.columns=8;if(n==2)bad.framed->circleDiameterMm=0;
+        if(n==3)bad.framed->innerWidthMm=std::numeric_limits<double>::infinity();
+        if(n==4)bad.framed->polarity=static_cast<PlatePolarity>(99);
+        if(n==5)bad.framed->orientation=PlateOrientation::Unmarked;if(n==6)bad.pattern=CalibrationGridPattern::SymmetricCircles;
+        if(n==7)bad.framed->frameThicknessMm=-1;if(n==8)bad.framed->innerHeightMm=std::numeric_limits<double>::quiet_NaN();
+        reject([&]{bad.validate();});}
+    reject([&]{CalibrationTargetLibrary(dir.filePath("framed-target-library.json")).save("framed",framed);});
+    auto unsupported=CircleGridService::observe(frame(circles(false,1.6)),framed);
+    check(unsupported.diagnostics().status==PlateDetectionStatus::Unsupported && !unsupported.observation(),"new framed profile cannot silently use generic detector");
+    reject([&]{PlateDetectionResult::failure(PlateDetectionStatus::Ready,"not an observation");});
+    CalibrationWizardSession unsupportedSession;auto uf=frame(circles(false,1.6));unsupportedSession.useFrame(uf,setup(uf.size()),"acquired");
+    const auto ur=CalibrationWizardSession::run(unsupportedSession.scanPlate(framed));
+    check(ur.diagnostics().status==PlateDetectionStatus::Unsupported && unsupportedSession.accept(ur) && !unsupportedSession.plate(),"wizard preserves typed unsupported result");
+    reject([&]{unsupportedSession.confirmPlate();});reject([&]{unsupportedSession.calculatePlate();});
+    // Independent non-projective raw raster. Each column has a sinusoidal y
+    // displacement; this is an observation/model boundary test, not a lens solver.
+    QImage bent(640,460,QImage::Format_Grayscale8);bent.fill(245);
+    cv::Mat bentPixels(bent.height(),bent.width(),CV_8UC1,bent.bits(),bent.bytesPerLine());
+    for(int r=0;r<6;++r)for(int c=0;c<8;++c)cv::circle(bentPixels,{80+65*c,80+55*r+int(std::round(5*std::sin(c*1.3)))},9,cv::Scalar(20),-1);
+    const auto bf=frame(bent,"bent");const auto detected=CircleGridService::observe(bf,target);
+    check(detected.diagnostics().status==PlateDetectionStatus::Ready && detected.observation(),"non-H grid remains a ready raw observation");
+    const auto raw=*detected.observation();reject([&]{PlaneMappingService::fit(raw);});
+    check(raw.coordinateSpace()=="raw_pixel_centres/1" && raw.orientation().kind==PlateOrientation::Unmarked,"raw identity and legacy unmarked direction explicit");
+    for(int n=0;n<17;++n){auto grid=raw.grid();auto centres=raw.centres();auto direction=raw.orientation();QString space=raw.coordinateSpace(),algorithm=raw.algorithmVersion();
+        if(n==0)centres[1].column=0;if(n==1)centres.removeLast();if(n==2)centres[0].rawPixel.setX(0);
+        if(n==3)centres[0].uncertaintyPixels=-1;if(n==4)centres[0].uncertaintyPixels=std::numeric_limits<double>::quiet_NaN();
+        if(n==5)grid.pixelHash="bad";if(n==6)grid.source.frameId.clear();if(n==7)grid.resolution={16000001,1};
+        if(n==8)grid.pixels[1]=grid.pixels[0];if(n==9)grid.worldMillimetres[1]={999,0};
+        if(n==10)grid.pixels[0].setX(std::numeric_limits<double>::infinity());if(n==11)direction.kind=PlateOrientation::TriangleCorner;
+        if(n==12)space="undistorted_pixel_centres/1";if(n==13)algorithm.clear();if(n==14)grid.source.coordinateSystemId="plane/mm";
+        if(n==15)direction.triangleRaw=QPointF(0,0);if(n==16)direction.quarterTurns=4;
+        reject([&]{RawPlateObservation::create(grid,centres,direction,algorithm,space);});}
+    // A framed observation can exist before its future detector/codec/solver.
+    auto fg=raw.grid();fg.target=framed;fg.pixels.clear();fg.worldMillimetres.clear();QVector<PlateCentre> fc;
+    for(int r=0;r<7;++r)for(int c=0;c<7;++c){QPointF p{80.+60*c,60.+50*r+5*std::sin(c*1.3)};fg.pixels.append(p);fg.worldMillimetres.append({12.*c,12.*r});fc.append({r,c,p,.2});}
+    auto oriented=RawPlateObservation::create(fg,fc,{PlateOrientation::TriangleCorner,0,false,QPointF(40,30)},"contract_fixture/1");
+    check(oriented.centres().size()==49,"complete identified framed raw observation independent from H");
+    reject([&]{RawPlateObservation::create(fg,fc,{},"contract_fixture/1");});
+    reject([&]{RawPlateObservation::create(fg,fc,{PlateOrientation::TriangleCorner,0,false,QPointF(500,400)},"contract_fixture/1");});
+    reject([&]{RawPlateObservation::create(fg,fc,{PlateOrientation::TriangleCorner,0,true,QPointF(40,30)},"contract_fixture/1");});
+    reject([&]{PlaneMappingService::fit(oriented);});reject([&]{PlaneMappingService::fit(fg);});
+    CalibrationWizardSession bentSession;bentSession.useFrame(bf,setup(bf.size()),"acquired");
+    const auto br=CalibrationWizardSession::run(bentSession.scanPlate(target));
+    check(br.error().isEmpty() && bentSession.accept(br) && bentSession.plate(),"worker and accept retain non-H raw observation");
+    bentSession.confirmPlate();check(!bentSession.calculated(),"session confirmation is not model acceptance");
+    reject([&]{bentSession.calculatePlate();});check(bentSession.plate() && !bentSession.calculated(),"fit rejection preserves observation but no model");
+    bent.save(dir.filePath("non-projective-raw.png"));
     double lowBias=0,highBias=0;QJsonArray metrics;
     for(bool perspective:{false,true})for(double radius:{1.6,3.4}){
         const auto im=circles(perspective,radius);const auto f=frame(im);const auto o=CircleGridService::detect(f,target);
@@ -173,7 +234,7 @@ int main(int argc,char** argv){QCoreApplication app(argc,argv);
     const auto severeResult=CalibrationWizardSession::run(severeSession.scanPlate(target));check(severeSession.accept(severeResult),"severe grid completion accounted");
     // A strong perspective can exceed the detector's ordering capability. The
     // completed job may only offer a replayable non-duplicate grid or an error.
-    if(severeResult.observation())check(PlaneMappingService::fit(*severeResult.observation()).maxInversePixels()<=1,"strong grid passes full geometry gates");
+    if(severeResult.observation()){severeResult.observation()->validateRaw();check(!severeSession.calculated(),"strong grid observation never implies accepted H");}
     else check(!severeResult.error().isEmpty() && !severeSession.plate() && !severeSession.calculated(),"strong malformed ordering yields no stale observation/model");
     metrics.append(QJsonObject{{"severePerspectiveAccepted",bool(severeResult.observation())},{"error",severeResult.error()}});
     const auto gray=circles(false,1.6);

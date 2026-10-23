@@ -146,7 +146,9 @@ native capability ve güncel kimlik/probe/izin ömrü sınırlarını aşamaz.
 
 ## C3a — Çerçeveli plaka kalibrasyonu
 
-23 Ekim CCUX-PLAN-05 hedefi; **henüz uygulanmadı**.
+23 Ekim hedefi; **CCUX-15e gözlem/model servis ayrımı uygulandı**
+([API ve sınırlar](plate-observations.md)). Çerçeveli algılama/model/UI 15f–h
+hedefidir; çerçeveli hedef şu an açık Unsupported döndürür.
 [CCUX-15e–j planı](15-plate-calibration-plan.md) koyu çerçeveli, köşe işaretli
 7×7 plaka için C3'teki mevcut plaka algılamasını genişletir. Lens solver'ı,
 distorsiyon düzeltmesi, remap ve robot bu kapsamda yoktur.

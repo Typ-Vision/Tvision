@@ -29,9 +29,11 @@ double number(const QJsonObject& o,const char* key){require(o[key].isDouble() &&
 void keys(const QJsonObject& o,const QSet<QString>& expected){require(o.size()==expected.size(),"Missing/unknown plane fields");for(auto it=o.begin();it!=o.end();++it)require(expected.contains(it.key()),"Unknown plane field");}
 QVector<QPointF> readPoints(const QJsonValue& v){require(v.isArray(),"Invalid point array");auto a=v.toArray();require(a.size()<=512,"Plane point limit exceeded");QVector<QPointF> result;for(auto item:a){require(item.isArray(),"Invalid point");const auto p=item.toArray();require(p.size()==2 && p[0].isDouble() && p[1].isDouble(),"Invalid point components");QPointF q{p[0].toDouble(),p[1].toDouble()};require(finite(q),"Nonfinite point");result.append(q);}return result;}
 }
+PlaneMapping PlaneMappingService::fit(const RawPlateObservation& o,double limit){return fit(o.grid(),limit);}
 PlaneMapping PlaneMappingService::fit(const ChessboardObservation& o,double limit) {
     const auto& t=o.target;const auto n=o.pixels.size();
     t.validate();
+    require(t.pattern!=CalibrationGridPattern::FramedCircles,"Framed plate model/persistence integration is not implemented");
     if(t.pattern==CalibrationGridPattern::SymmetricCircles){require(o.pixelHash.size()==64,"Circle observation requires decoded raster hash");for(auto c:o.pixelHash)require((c>='0' && c<='9') || (c>='a' && c<='f'),"Invalid circle raster hash");}
     require(n==t.columns*t.rows && n<=512 && o.worldMillimetres.size()==n,"Invalid calibration grid geometry/count");
     require(std::isfinite(t.squareMillimetres) && t.squareMillimetres>0 && t.squareMillimetres<=1000000,"Invalid target spacing");

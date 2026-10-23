@@ -55,8 +55,10 @@ class WizardPlateResult {
     WizardPlateResult()=default;
     QString ticket_,error_;
     std::optional<CalibrationGridObservation> observation_;
+    PlateDetectionDiagnostics diagnostics_;
 public:
     const QString& error() const {return error_;}
+    const PlateDetectionDiagnostics& diagnostics() const {return diagnostics_;}
     const std::optional<CalibrationGridObservation>& observation() const {return observation_;}
 };
 // Owner-thread draft only. It never edits a recipe, saves or activates a model.

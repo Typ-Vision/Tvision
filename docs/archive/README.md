@@ -6,6 +6,7 @@ görev” ifadeleri yazıldıkları tarihe aittir.
 
 | Dönem / görev | Kayıt |
 | --- | --- |
+| 23 Ekim 2026 — CCUX-15e | [Typed ham plaka gözlemi, hedef/tanı sözleşmesi ve model fit ayrımı](2026-10-23-ccux-15e.md) |
 | 23 Ekim 2026 — CCUX-PLAN-05 | [Çerçeveli plaka kalibrasyonu, lenssiz 15e–j ayrıntılı uygulama/kabul planı](2026-10-23-ccux-plan-05.md) |
 | 23 Ekim 2026 — CCUX-15d-LENS | [Plaka gözlemi/model kabulü ayrımı ve gelecekte lens kalibrasyonu](2026-10-23-ccux-15d-lens.md) |
 | 23 Ekim 2026 — CCUX-15d | [Çerçeveli 7×7 plaka tanıma: NI/HALCON ön araştırması ve uygulama önerisi](2026-10-23-ccux-15d.md) |

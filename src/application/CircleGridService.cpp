@@ -1,5 +1,4 @@
 #include "CircleGridService.hpp"
-#include "PlaneMappingService.hpp"
 #include "vision/ImageAccess.hpp"
 #include <opencv2/features.hpp>
 #include <opencv2/objdetect.hpp>
@@ -32,7 +31,7 @@ CalibrationGridObservation CircleGridService::detect(const ImageFrame& frame,con
         QString("Circle count differs from declared full grid: detected %1, expected %2 (partial/clutter unsupported)")
             .arg(qulonglong(blobs.size())).arg(t.columns*t.rows).toStdString());
     // A returned count alone is insufficient: some cluster assignments repeat
-    // a blob or fold rows under perspective. Accept only a full geometric replay.
+    // a blob or fold rows under perspective. Validate topology without fitting H.
     for(int flags:{int(cv::CALIB_CB_SYMMETRIC_GRID),int(cv::CALIB_CB_SYMMETRIC_GRID | cv::CALIB_CB_CLUSTERING)}){
         stop();std::vector<cv::Point2f> centres;
         if(!cv::findCirclesGrid(gray,{t.columns,t.rows},centres,flags,detector))continue;
@@ -40,7 +39,7 @@ CalibrationGridObservation CircleGridService::detect(const ImageFrame& frame,con
         CalibrationGridObservation o{t,m,frame.size(),{},{},QString::fromLatin1(frame.contentId().toHex())};
         for(int i=0;i<int(centres.size());++i){const auto q=centres[i];require(std::isfinite(q.x) && std::isfinite(q.y) && q.x>=0 && q.y>=0 && q.x<=gray.cols-1 && q.y<=gray.rows-1,"Invalid circle centre");
             o.pixels.append({q.x,q.y});o.worldMillimetres.append({(i%t.columns)*t.squareMillimetres,(i/t.columns)*t.squareMillimetres});}
-        try{PlaneMappingService::fit(o);}catch(const std::exception&){continue;}
+        try{o.validateRaw();}catch(const std::exception&){continue;}
         stop();return o;
     }
     // OpenCV 5 may return repeated assignments even for an axis-aligned full
@@ -63,7 +62,21 @@ CalibrationGridObservation CircleGridService::detect(const ImageFrame& frame,con
             if(row>0 && std::abs(q.x-blobs[col].pt.x)>.05*spacing)regular=false;
         }
     }
-    if(regular){stop();PlaneMappingService::fit(aligned);return aligned;}
+    if(regular){stop();aligned.validateRaw();return aligned;}
     throw std::runtime_error("Full symmetric circle grid with consistent order/geometry not found");
+}
+}
+
+namespace visionflow {
+PlateDetectionResult CircleGridService::observe(const ImageFrame& frame,const CalibrationGridTarget& target,const std::shared_ptr<std::atomic_bool>& cancel){
+    try{target.validate();}catch(const std::exception& e){return PlateDetectionResult::failure(PlateDetectionStatus::InvalidInput,QString::fromUtf8(e.what()));}
+    if(cancel && cancel->load())return PlateDetectionResult::failure(PlateDetectionStatus::Cancelled,"Plate detection cancelled");
+    if(target.pattern==CalibrationGridPattern::FramedCircles)return PlateDetectionResult::failure(PlateDetectionStatus::Unsupported,"Framed circle detector is not implemented");
+    if(target.pattern!=CalibrationGridPattern::SymmetricCircles)return PlateDetectionResult::failure(PlateDetectionStatus::Unsupported,"Circle detector requires a circle target");
+    try{
+        auto grid=detect(frame,target,cancel);QVector<PlateCentre> centres;
+        for(int i=0;i<grid.pixels.size();++i)centres.append({i/target.columns,i%target.columns,grid.pixels[i],{}});
+        return PlateDetectionResult::ready(RawPlateObservation::create(std::move(grid),std::move(centres),{},"generic_circle_grid/1"));
+    }catch(const std::exception& e){return PlateDetectionResult::failure(cancel && cancel->load() ? PlateDetectionStatus::Cancelled:PlateDetectionStatus::NotFound,QString::fromUtf8(e.what()));}
 }
 }

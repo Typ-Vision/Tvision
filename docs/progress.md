@@ -4,8 +4,11 @@
 
 ## Devam noktası
 
-**[PLAN-05](archive/2026-10-23-ccux-plan-05.md):** Plaka planı hazır, kod değişmedi.
-Başlangıç [15e](architecture/camera-setup/15-plate-calibration-plan.md); lens kapalı.
+**[CCUX-15e tamamlandı](archive/2026-10-23-ccux-15e.md):** Ham gözlem/tanı,
+çerçeveli hedef ve H fit ayrımı; Release + 4 CTest geçti.
+Kanıt `build/ccux/ccux-15e/`.
+Devam [15f algılama](architecture/camera-setup/15-plate-calibration-plan.md).
+Çerçeveli algoritma Unsupported; lens ve fiziksel kabul açık.
 
 **[CCUX-22e yazılımı tamamlandı](archive/2026-10-23-ccux-22e.md):** Kalibrasyon
 bağlantı ömrü, dosya/iptal/SaveUse drain. Kanıt: `build/ccux/ccux-22e/`.
@@ -110,7 +113,3 @@ sırasıyla sürer; **Hand-eye kapsam dışı.** Tamamlanmış KMC/ICM/EXP işle
   robot/PLC fiziksel kabulü, lens, native DPI/çoklu monitör, CUDA ve dağıtım açık.
   [Cancel incelemesi](archive/2026-10-18-icm-04d-cancel-audit.md): AcquisitionAbort
   yok; DeviceReset garantisiz ve çalıştırılmadı; üretici soruları gönderilmedi.
-
-## Çalışma ve kapanış
-
-Komutlar README; UI [kullanım rehberi](camera-runtime-usage.md); kanıtlar arşivde.

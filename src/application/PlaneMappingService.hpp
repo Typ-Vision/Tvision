@@ -24,6 +24,7 @@ private:
 struct PlaneDistance {QPointF firstMillimetres,secondMillimetres;double pixels=0,millimetres=0;};
 class PlaneMappingService {
 public:
+    static PlaneMapping fit(const RawPlateObservation&,double maxInverseErrorPixels=1.0);
     static PlaneMapping fit(const ChessboardObservation&,double maxInverseErrorPixels=1.0);
     static QPointF map(const PlaneMapping&,QPointF rawPixel);
     // Controlled target-local mm -> raw; rejects horizon, bounds and hull extrapolation.

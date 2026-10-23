@@ -2,7 +2,9 @@
 
 23 Ekim 2026 — **CCUX-PLAN-05: çerçeveli plaka kalibrasyonu planı**.
 Yeni kullanıcı yönlendirmesi: [CCUX-15e–j](15-plate-calibration-plan.md) ayrıntılı
-planı hazırlandı; uygulama başlamadı. Başlangıç 15e gözlem/model ayrımıdır.
+planı hazırlandı; **15e gözlem/model servis ayrımı tamamlandı**
+([kapanış](../../archive/2026-10-23-ccux-15e.md), [API](plate-observations.md)).
+Devam 15f algılamadır; çerçeveli algoritma şu an Unsupported döndürür.
 Distorsiyon çözümü devreye alınmayacak. [C3a](contract.md#c3a--çerçeveli-plaka-kalibrasyonu)
 hedef sözleşmedir. [Kapanış](../../archive/2026-10-23-ccux-plan-05.md).
 

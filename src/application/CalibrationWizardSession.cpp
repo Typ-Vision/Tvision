@@ -116,11 +116,20 @@ WizardPlateResult CalibrationWizardSession::run(const WizardPlateJob& j){
     WizardPlateResult r;r.ticket_=j.ticket_;
     try{
         require(!j.cancel_->load(),"Plate detection cancelled");
-        r.observation_=j.target_.pattern==CalibrationGridPattern::Chessboard ? ChessboardService::detect(j.frame_,j.target_):CircleGridService::detect(j.frame_,j.target_,j.cancel_);
+        if(j.target_.pattern==CalibrationGridPattern::Chessboard){
+            r.observation_=ChessboardService::detect(j.frame_,j.target_);
+            r.observation_->validateRaw();
+            r.diagnostics_.status=PlateDetectionStatus::Ready;
+        }else{
+            const auto result=CircleGridService::observe(j.frame_,j.target_,j.cancel_);
+            r.diagnostics_=result.diagnostics();
+            if(result.observation())r.observation_=result.observation()->grid();
+            else r.error_=r.diagnostics_.message;
+        }
         require(!j.cancel_->load(),"Plate detection cancelled");
-        // Count/order/convexity/fit gates before offering observations to confirm.
-        PlaneMappingService::fit(*r.observation_);
-    }catch(const std::exception& e){r.error_=QString::fromUtf8(e.what());r.observation_.reset();}return r;
+    }catch(const std::exception& e){r.error_=QString::fromUtf8(e.what());r.observation_.reset();
+        r.diagnostics_={j.cancel_->load() ? PlateDetectionStatus::Cancelled:PlateDetectionStatus::NotFound,r.error_,{}};}
+    return r;
 }
 bool CalibrationWizardSession::accept(const WizardPlateResult& r){
     if(ticket_.isEmpty() || r.ticket_!=ticket_ || !cancel_ || cancel_->load())return false;
