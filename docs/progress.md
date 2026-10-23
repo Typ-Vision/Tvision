@@ -4,13 +4,13 @@
 
 ## Devam noktası
 
-**[CCUX-15i yazılım kabulü](archive/2026-10-23-ccux-15i.md):**
-Framed SaveUse/Editor/Runtime/Logs, üç tür/iki fixture kamera.
-Kanıt `build/ccux/ccux-15i/`;
-`multi_source_production_contract`: Missing result sürüyor.
-Devam [15j fiziksel kabul](architecture/camera-setup/15-plate-calibration-plan.md).
-[15f algılama](archive/2026-10-23-ccux-15f.md): 56000 µs eski karede 50→49;
-karanlık kare ret; fiziksel aynalama/eksen, lens ve mm kabulü açık.
+**[CCUX-15j fiziksel kabul açık](archive/2026-10-23-ccux-15j.md):**
+Exact SDK raw/sidecar: 56000 µs/0 dB kare karanlık/odak dışı,
+0 merkez; model yok. Kanıt `build/ccux/ccux-15j/`.
+Devam: ışık/odak/düzlem; referans/tolerans ve operatör kabulü.
+[15i yazılım kabulü](archive/2026-10-23-ccux-15i.md) korunur;
+`multi_source_production_contract`: Missing result açık.
+[15f](archive/2026-10-23-ccux-15f.md): eski kare 50→49; fiziksel eksen/mm açık.
 
 **[CCUX-22e yazılımı tamamlandı](archive/2026-10-23-ccux-22e.md):** Kalibrasyon
 bağlantı ömrü, dosya/iptal/SaveUse drain. Kanıt: `build/ccux/ccux-22e/`.
