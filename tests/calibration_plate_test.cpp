@@ -145,11 +145,11 @@ int main(int argc,char** argv){QCoreApplication app(argc,argv);
         reject([&]{bad.validate();});}
     reject([&]{CalibrationTargetLibrary(dir.filePath("framed-target-library.json")).save("framed",framed);});
     auto unsupported=CircleGridService::observe(frame(circles(false,1.6)),framed);
-    check(unsupported.diagnostics().status==PlateDetectionStatus::Unsupported && !unsupported.observation(),"new framed profile cannot silently use generic detector");
+    check(unsupported.diagnostics().status==PlateDetectionStatus::NotFound && !unsupported.observation(),"new framed profile cannot silently use generic detector");
     reject([&]{PlateDetectionResult::failure(PlateDetectionStatus::Ready,"not an observation");});
     CalibrationWizardSession unsupportedSession;auto uf=frame(circles(false,1.6));unsupportedSession.useFrame(uf,setup(uf.size()),"acquired");
     const auto ur=CalibrationWizardSession::run(unsupportedSession.scanPlate(framed));
-    check(ur.diagnostics().status==PlateDetectionStatus::Unsupported && unsupportedSession.accept(ur) && !unsupportedSession.plate(),"wizard preserves typed unsupported result");
+    check(ur.diagnostics().status==PlateDetectionStatus::NotFound && unsupportedSession.accept(ur) && !unsupportedSession.plate(),"wizard preserves framed detection rejection on unframed raster");
     reject([&]{unsupportedSession.confirmPlate();});reject([&]{unsupportedSession.calculatePlate();});
     // Independent non-projective raw raster. Each column has a sinusoidal y
     // displacement; this is an observation/model boundary test, not a lens solver.
@@ -169,7 +169,7 @@ int main(int argc,char** argv){QCoreApplication app(argc,argv);
         if(n==12)space="undistorted_pixel_centres/1";if(n==13)algorithm.clear();if(n==14)grid.source.coordinateSystemId="plane/mm";
         if(n==15)direction.triangleRaw=QPointF(0,0);if(n==16)direction.quarterTurns=4;
         reject([&]{RawPlateObservation::create(grid,centres,direction,algorithm,space);});}
-    // A framed observation can exist before its future detector/codec/solver.
+    // A framed observation can exist before its model codec/solver integration.
     auto fg=raw.grid();fg.target=framed;fg.pixels.clear();fg.worldMillimetres.clear();QVector<PlateCentre> fc;
     for(int r=0;r<7;++r)for(int c=0;c<7;++c){QPointF p{80.+60*c,60.+50*r+5*std::sin(c*1.3)};fg.pixels.append(p);fg.worldMillimetres.append({12.*c,12.*r});fc.append({r,c,p,.2});}
     auto oriented=RawPlateObservation::create(fg,fc,{PlateOrientation::TriangleCorner,0,false,QPointF(40,30)},"contract_fixture/1");

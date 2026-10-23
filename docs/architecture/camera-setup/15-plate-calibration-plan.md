@@ -1,8 +1,8 @@
 # CCUX-15e–j — Çerçeveli plaka ile planar kalibrasyon
 
-23 Ekim 2026 — CCUX-PLAN-05. Durum: **planlandı, uygulanmadı**.
-Kullanıcı yalnız plaka yöntemi için ayrıntılı plan istedi; bu oturum uygulama
-yetkisi/teslimi değildir. Başlangıç kartı 15e. Önceki 15a–d işleri yeniden yapılmaz.
+23 Ekim 2026 — CCUX-PLAN-05. **15e sözleşme ve 15f algılama uygulandı**;
+model/kayıt 15g devam noktasıdır. 15h–j ve fiziksel kabul açık kalır.
+[15f kapsamı ve sınırları](framed-plate-detection.md). Önceki 15a–d işleri yeniden yapılmaz.
 [Araştırma](../../archive/2026-10-23-ccux-15d.md),
 [lens uyumluluğu](../../archive/2026-10-23-ccux-15d-lens.md),
 [ortak sözleşme](contract.md#c3a--çerçeveli-plaka-kalibrasyonu).

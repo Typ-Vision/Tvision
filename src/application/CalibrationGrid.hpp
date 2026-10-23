@@ -69,11 +69,14 @@ struct PlateDetectionDiagnostics {
     PlateDetectionStatus status=PlateDetectionStatus::NotFound;
     QString message;
     QVector<QPointF> partialCandidates; // Never model input.
+    QVector<QPointF> assignedCandidates,rejectedCandidates,frameBoundary;
+    QString algorithmVersion;
+    QJsonObject parameters,stageMilliseconds;
 };
 class PlateDetectionResult {
 public:
-    static PlateDetectionResult ready(RawPlateObservation);
-    static PlateDetectionResult failure(PlateDetectionStatus,QString);
+    static PlateDetectionResult ready(RawPlateObservation,PlateDetectionDiagnostics={});
+    static PlateDetectionResult failure(PlateDetectionStatus,QString,PlateDetectionDiagnostics={});
     const PlateDetectionDiagnostics& diagnostics() const {return diagnostics_;}
     const std::optional<RawPlateObservation>& observation() const {return observation_;}
 private:

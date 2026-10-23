@@ -4,11 +4,10 @@
 
 ## Devam noktası
 
-**[CCUX-15e tamamlandı](archive/2026-10-23-ccux-15e.md):** Ham gözlem/tanı,
-çerçeveli hedef ve H fit ayrımı; Release + 4 CTest geçti.
-Kanıt `build/ccux/ccux-15e/`.
-Devam [15f algılama](architecture/camera-setup/15-plate-calibration-plan.md).
-Çerçeveli algoritma Unsupported; lens ve fiziksel kabul açık.
+**[CCUX-15f tamamlandı](archive/2026-10-23-ccux-15f.md):** Çerçeve/üçgen,
+raw 49 merkez; 56000 µs karede 50→49, karanlık kare ret. Release + 6 CTest geçti.
+Kanıt `build/ccux/ccux-15f/`; devam [15g model/kayıt](architecture/camera-setup/15-plate-calibration-plan.md).
+UI profili, fiziksel aynalama/eksen, lens ve mm kabulü açık.
 
 **[CCUX-22e yazılımı tamamlandı](archive/2026-10-23-ccux-22e.md):** Kalibrasyon
 bağlantı ömrü, dosya/iptal/SaveUse drain. Kanıt: `build/ccux/ccux-22e/`.
@@ -23,8 +22,8 @@ CCUX-20 canlı teyit ve CCUX-15 fiziksel kabul açık; hash/preview korunur.
 Geçici viewer geometrisi ayrı adlandırılır; araç ROI'leri reçeteye bağlıdır.
 CCUX-16–19 teslimleri [arşivde](archive/README.md); C0 teknik/fiziksel engeller açık.
 
-**CCUX-15 plaka denemesi açık:** 7×7 simetrik daire, kullanıcı beyanı 12 mm.
-56000 µs / 0 dB ham kare: 48 aday ret, tanıdaki 49 da yanlış grid. Model/mm yok.
+**CCUX-15 fiziksel açık:** 7×7 daire, 12 mm kullanıcı beyanı.
+15c'nin 48/yanlış 49 reddi tarihseldir; 15f yeni gözlem. Model/mm yok.
 [CCUX-15c](archive/2026-10-22-ccux-15c.md), `build/ccux/ccux-15/plate-20261022-02/`.
 [Önceki kare](archive/2026-10-22-ccux-15b.md).
 **CCUX-10b:** [Editor seçici/klavye düzeltmesi](archive/2026-10-22-ccux-10b.md).

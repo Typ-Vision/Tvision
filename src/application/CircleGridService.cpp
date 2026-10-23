@@ -1,4 +1,5 @@
 #include "CircleGridService.hpp"
+#include "FramedCircleGridService.hpp"
 #include "vision/ImageAccess.hpp"
 #include <opencv2/features.hpp>
 #include <opencv2/objdetect.hpp>
@@ -71,7 +72,7 @@ namespace visionflow {
 PlateDetectionResult CircleGridService::observe(const ImageFrame& frame,const CalibrationGridTarget& target,const std::shared_ptr<std::atomic_bool>& cancel){
     try{target.validate();}catch(const std::exception& e){return PlateDetectionResult::failure(PlateDetectionStatus::InvalidInput,QString::fromUtf8(e.what()));}
     if(cancel && cancel->load())return PlateDetectionResult::failure(PlateDetectionStatus::Cancelled,"Plate detection cancelled");
-    if(target.pattern==CalibrationGridPattern::FramedCircles)return PlateDetectionResult::failure(PlateDetectionStatus::Unsupported,"Framed circle detector is not implemented");
+    if(target.pattern==CalibrationGridPattern::FramedCircles)return FramedCircleGridService::observe(frame,target,cancel);
     if(target.pattern!=CalibrationGridPattern::SymmetricCircles)return PlateDetectionResult::failure(PlateDetectionStatus::Unsupported,"Circle detector requires a circle target");
     try{
         auto grid=detect(frame,target,cancel);QVector<PlateCentre> centres;

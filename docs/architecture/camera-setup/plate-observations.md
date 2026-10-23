@@ -1,7 +1,8 @@
 # Ham plaka gözlemi — CCUX-15e API
 
-23 Ekim 2026. Bu kart servis sınırını uygular; çerçeveli algılama 15f,
-model/kayıt/replay 15g, görünür sihirbaz akışı 15h kapsamındadır.
+23 Ekim 2026. 15e servis sınırı; çerçeveli algılama
+[15f'de uygulandı](framed-plate-detection.md). Model/kayıt/replay 15g,
+görünür sihirbaz akışı 15h kapsamındadır.
 
 ## Hedef ve uyumluluk
 
@@ -47,13 +48,15 @@ açıktır. İşaret, dört grid köşesi içinde P1’e tekil olarak yakın olm
 mirror bayrağı raw hücrenin yön işaretiyle tutarlı olmalıdır. Kanonik P1=(satır 0,sütun 0), +X sütun, +Y satırdır. Generic/chessboard
 `Unmarked` taşır; üçgen/dönüş/mirror kanıtı uydurulmaz. Bu factory yapısal bir
 sözleşmedir; üçgenin rasterde gerçekten varlığını kanıtlayan algoritma değildir.
-O denetim ve dönmüş kimliklerin doğruluğu 15f'de uygulanacaktır.
+O denetim ve dönmüş kimliklerin doğruluğu 15f algılayıcısında uygulanır;
+fiziksel aynalama kanıtı ile raster hücre yönü ayrımı ilgili sınır belgesindedir.
 
 `PlateDetectionResult` private kuruculu Ready+immutable gözlem veya
 Unsupported/InvalidInput/NotFound/Cancelled tanısıdır. Tanı kısmi adayları model
 girdisi değildir; tanıyı Ready ilan ederek gözlem üretilemez.
 `CircleGridService::observe` generic algılayıcıyı bu sözleşmeye uyarlar;
-çerçeveli hedef Unsupported döndürür. Eski `detect` exception API'si korunur.
+çerçeveli hedefi `FramedCircleGridService` servisine yollar. Eski `detect`
+exception API'si yalnız generic anlamını korur.
 Generic algılayıcı belirsizlik tahmin etmez; değer boş kalır.
 
 ## Model ve oturum sınırı

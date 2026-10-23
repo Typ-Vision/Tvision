@@ -91,11 +91,11 @@ RawPlateObservation RawPlateObservation::create(CalibrationGridObservation grid,
         if(p.uncertaintyPixels)require(std::isfinite(*p.uncertaintyPixels) && *p.uncertaintyPixels>=0 && *p.uncertaintyPixels<=100);}
     RawPlateObservation result;result.grid_=std::move(grid);result.centres_=std::move(centres);result.orientation_=direction;result.algorithm_=algorithm;result.space_=space;return result;
 }
-PlateDetectionResult PlateDetectionResult::ready(RawPlateObservation observation){
-    PlateDetectionResult r;r.diagnostics_.status=PlateDetectionStatus::Ready;r.observation_=std::move(observation);return r;
+PlateDetectionResult PlateDetectionResult::ready(RawPlateObservation observation,PlateDetectionDiagnostics diagnostics){
+    PlateDetectionResult r;r.diagnostics_=std::move(diagnostics);r.diagnostics_.status=PlateDetectionStatus::Ready;r.observation_=std::move(observation);return r;
 }
-PlateDetectionResult PlateDetectionResult::failure(PlateDetectionStatus status,QString message){
+PlateDetectionResult PlateDetectionResult::failure(PlateDetectionStatus status,QString message,PlateDetectionDiagnostics diagnostics){
     require(status!=PlateDetectionStatus::Ready && (status==PlateDetectionStatus::Unsupported || status==PlateDetectionStatus::InvalidInput || status==PlateDetectionStatus::NotFound || status==PlateDetectionStatus::Cancelled));
-    PlateDetectionResult r;r.diagnostics_={status,std::move(message),{}};return r;
+    PlateDetectionResult r;r.diagnostics_=std::move(diagnostics);r.diagnostics_.status=status;r.diagnostics_.message=std::move(message);return r;
 }
 }
