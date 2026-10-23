@@ -19,7 +19,7 @@ QString CalibrationWizardSession::configurationId(const QJsonObject& config){
 }
 void CalibrationWizardSession::cancel(){if(cancel_)cancel_->store(true);ticket_.clear();cancel_.reset();}
 void CalibrationWizardSession::invalidateSelection(){first_.clear();second_.clear();model_.reset();}
-void CalibrationWizardSession::clear(){cancel();frame_.reset();points_.clear();scans_.clear();invalidateSelection();knownMm_=0;modelId_.clear();plate_.reset();plateConfirmed_=false;}
+void CalibrationWizardSession::clear(){cancel();frame_.reset();points_.clear();scans_.clear();invalidateSelection();knownMm_=0;modelId_.clear();plate_.reset();rawPlate_.reset();plateConfirmed_=false;}
 void CalibrationWizardSession::useFrame(ImageFrame f,MeasurementSetup s,QString origin,std::optional<ExperimentalCalibrationEvidence> experimental){
     // Failed replacement must not leave the previous draft available as current.
     clear();s.validate();const auto& m=f.metadata();
@@ -109,7 +109,7 @@ CalibrationModelRecord CalibrationWizardSession::calculate(const CalibrationCont
     model_=CalibrationModelRecord::create(MeasurementService{}.teach(d,sample),setup_,image_,control);return *model_;
 }
 WizardPlateJob CalibrationWizardSession::scanPlate(CalibrationGridTarget t){
-    cancel();plate_.reset();plateConfirmed_=false;model_.reset();t.validate();require(frame_.has_value(),"Choose a raw frame first");
+    cancel();plate_.reset();rawPlate_.reset();plateConfirmed_=false;model_.reset();t.validate();require(frame_.has_value(),"Choose a raw frame first");
     ticket_=id();cancel_=std::make_shared<std::atomic_bool>(false);WizardPlateJob j;j.frame_=*frame_;j.target_=t;j.ticket_=ticket_;j.cancel_=cancel_;return j;
 }
 WizardPlateResult CalibrationWizardSession::run(const WizardPlateJob& j){
@@ -123,7 +123,7 @@ WizardPlateResult CalibrationWizardSession::run(const WizardPlateJob& j){
         }else{
             const auto result=CircleGridService::observe(j.frame_,j.target_,j.cancel_);
             r.diagnostics_=result.diagnostics();
-            if(result.observation())r.observation_=result.observation()->grid();
+            if(result.observation()){r.rawPlate_=result.observation();r.observation_=result.observation()->grid();}
             else r.error_=r.diagnostics_.message;
         }
         require(!j.cancel_->load(),"Plate detection cancelled");
@@ -133,7 +133,7 @@ WizardPlateResult CalibrationWizardSession::run(const WizardPlateJob& j){
 }
 bool CalibrationWizardSession::accept(const WizardPlateResult& r){
     if(ticket_.isEmpty() || r.ticket_!=ticket_ || !cancel_ || cancel_->load())return false;
-    cancel();plate_=r.observation_;plateConfirmed_=false;model_.reset();return true;
+    cancel();plate_=r.observation_;rawPlate_=r.rawPlate_;plateConfirmed_=false;model_.reset();return true;
 }
 void CalibrationWizardSession::confirmPlate(){require(!busy() && plate_.has_value(),"Current complete grid required");plateConfirmed_=true;}
 CalibrationModelRecord CalibrationWizardSession::calculatePlate(const CalibrationControl& control){
@@ -141,6 +141,6 @@ CalibrationModelRecord CalibrationWizardSession::calculatePlate(const Calibratio
     require(plate_->source.frameId==image_.frameId && plate_->pixelHash==image_.pixelHash,"Plate/frame raster mismatch");
     require(setup_.target.axes==AxisConvention::XRightYDown,"Plate target-local axes are columns-right/rows-down");
     CalibrationDependency d{modelId_,1,"pending",image_.sourceToolId,setup_.lensId,setup_.resolution,setup_.planeId,setup_.source,setup_.target};
-    model_=CalibrationModelRecord::create(MeasurementService{}.teachHomography(d,PlaneMappingService::fit(*plate_)),setup_,image_,control);return *model_;
+    model_=CalibrationModelRecord::create(MeasurementService{}.teachHomography(d,(rawPlate_ ? PlaneMappingService::fit(*rawPlate_):PlaneMappingService::fit(*plate_))),setup_,image_,control);return *model_;
 }
 }

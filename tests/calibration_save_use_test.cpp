@@ -18,6 +18,15 @@ CalibrationModelRecord calculate(IndependentCalibrationSession& session,double m
     auto& m=session.math();check(m.accept(CalibrationWizardSession::run(m.scanPair("pair",{{"image"},ScanSegment{{20,100},{620,100},4}}))),"fixture caliper");
     m.setKnownMillimetres(mm);return m.calculate();
 }
+// Structural model fixture: verifies catalog/selection transactions, not raster detection or physical accuracy.
+CalibrationModelRecord framedCandidate(IndependentCalibrationSession& session){
+    auto seed=calculate(session);const auto& f=*session.math().frame();CalibrationGridObservation grid;
+    grid.target={"transaction-framed",7,7,12,CalibrationGridPattern::FramedCircles,FramedPlateGeometry{}};
+    grid.source=f.metadata();grid.resolution=f.size();grid.pixelHash=QString::fromLatin1(f.contentId().toHex());QVector<PlateCentre> centres;
+    for(int r=0;r<7;++r)for(int c=0;c<7;++c){QPointF p{150.+40*c,40.+20*r};grid.pixels.append(p);grid.worldMillimetres.append({12.*c,12.*r});centres.append({r,c,p,{}});}
+    auto raw=RawPlateObservation::create(grid,centres,{PlateOrientation::TriangleCorner,0,false,QPointF(130,20)},"transaction-fixture/1");
+    return CalibrationModelRecord::create(MeasurementService{}.teachHomography(seed.model().dependency(),PlaneMappingService::fit(raw)),seed.setup(),seed.image());
+}
 CalibrationSaveUseRequest command(ScopedActiveCalibrationService& s,const SetupReference& ref,const IndependentCalibrationSession& probe,CalibrationCapturePolicy policy=CalibrationCapturePolicy::Trusted){
     return {ref,s.environment().revision,probe.evidence()->generation,policy};
 }
@@ -31,7 +40,7 @@ void nativeChecks(const QString& path){
     IndependentCaptureRequest request;request.origin=SourceOrigin::CameraAcquired;request.camera=camera;request.setup=setup;
     IndependentCaptureBackend backend{[&]{return QVector<DeviceBinding>{camera.device};},[](const DeviceBinding&,const GeometryDescriptor&){return std::make_unique<Adapter>();}};
     IndependentCalibrationSession probe;auto capture=[&]{check(probe.accept(IndependentCalibrationSession::run(probe.begin(request),backend)),"native adapter fixture acquired");};
-    capture();auto first=calculate(probe);auto input=command(service,ref,probe);
+    capture();auto first=framedCandidate(probe);auto input=command(service,ref,probe);
     auto result=service.saveAndUse(input,first,probe,[]{return true;});
     check(result.state==CalibrationSaveUseState::Activated && !result.duplicate && !result.independentControlAccepted,"single command native fixture, control absent");
     const auto frozen=service.snapshots({ref}).first().calibration;const auto committed=service.environment().encode();

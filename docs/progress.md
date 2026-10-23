@@ -4,10 +4,11 @@
 
 ## Devam noktası
 
-**[CCUX-15f tamamlandı](archive/2026-10-23-ccux-15f.md):** Çerçeve/üçgen,
-raw 49 merkez; 56000 µs karede 50→49, karanlık kare ret. Release + 6 CTest geçti.
-Kanıt `build/ccux/ccux-15f/`; devam [15g model/kayıt](architecture/camera-setup/15-plate-calibration-plan.md).
-UI profili, fiziksel aynalama/eksen, lens ve mm kabulü açık.
+**[CCUX-15g tamamlandı](archive/2026-10-23-ccux-15g.md):** Typed çerçeveli
+raw model, v3 hedef/gözlem/hash/yön ve sidecar bağı; solver replay. Release + 9 CTest geçti.
+Kanıt `build/ccux/ccux-15g/`; devam [15h sihirbaz/tanı](architecture/camera-setup/15-plate-calibration-plan.md).
+[15f algılama](archive/2026-10-23-ccux-15f.md): 56000 µs eski karede 50→49;
+karanlık kare ret. UI profili, fiziksel aynalama/eksen, lens ve mm kabulü açık.
 
 **[CCUX-22e yazılımı tamamlandı](archive/2026-10-23-ccux-22e.md):** Kalibrasyon
 bağlantı ömrü, dosya/iptal/SaveUse drain. Kanıt: `build/ccux/ccux-22e/`.
@@ -20,10 +21,10 @@ Ek `multi_source_production_contract` önceki hatası 22d kapanışında korunur
 CCUX-20 canlı teyit ve CCUX-15 fiziksel kabul açık; hash/preview korunur.
 [CCUX-20](archive/2026-10-22-ccux-20.md), `build/ccux/ccux-20/`.
 Geçici viewer geometrisi ayrı adlandırılır; araç ROI'leri reçeteye bağlıdır.
-CCUX-16–19 teslimleri [arşivde](archive/README.md); C0 teknik/fiziksel engeller açık.
+CCUX-16–19 [arşivde](archive/README.md); C0 engelleri açık.
 
-**CCUX-15 fiziksel açık:** 7×7 daire, 12 mm kullanıcı beyanı.
-15c'nin 48/yanlış 49 reddi tarihseldir; 15f yeni gözlem. Model/mm yok.
+**CCUX-15 fiziksel açık:** 7×7, 12 mm kullanıcı beyanı.
+15c 48/yanlış 49 reddi tarihseldir; 15f yeni gözlem; fiziksel mm yok.
 [CCUX-15c](archive/2026-10-22-ccux-15c.md), `build/ccux/ccux-15/plate-20261022-02/`.
 [Önceki kare](archive/2026-10-22-ccux-15b.md).
 **CCUX-10b:** [Editor seçici/klavye düzeltmesi](archive/2026-10-22-ccux-10b.md).
@@ -40,7 +41,7 @@ açık. [Önceki teyit](archive/2026-10-22-ccux-15-teyit.md) tarihsel durumdur.
 **[CCUX-14 tamamlandı](archive/2026-10-22-ccux-14.md):** 1/5 kamera, üç tür,
 Stop/retry yazılım/görsel kabulü; fiziksel açık. `build/ccux/ccux-14/`.
 
-CCUX-01–13 tamamlandı; ayrıntılı kayıtlar [arşiv dizinindedir](archive/README.md).
+CCUX-01–13 tamamlandı; [arşiv](archive/README.md).
 - Kamera immutable ID/kısa ID ve atomik varsayılan kurulum/profil; belirsiz eski
   profil/rota açık seçim ister. Exposure/gain gerçek readback ile kaydedilir.
   Pending optik kurulum ölçüm izni değildir; Opto/OECS ayar servisi edinimden ayrıdır.
@@ -63,8 +64,8 @@ CCUX-01–13 tamamlandı; ayrıntılı kayıtlar [arşiv dizinindedir](archive/R
   üretmez, restart geçmişi okur. PLC/robot kapalıdır.
 
 Yeni raster karanlık/kısmen bulanık; **bağımsız fiziksel mm kabulü açık**.
-CCUX-14 fixture başarısı bunu kapatmaz. [CCUX planı](architecture/camera-setup/README.md)
-sırasıyla sürer; **Hand-eye kapsam dışı.** Tamamlanmış KMC/ICM/EXP işleri yeniden başlatılmaz.
+CCUX-14 fixture bunu kapatmaz. [CCUX planı](architecture/camera-setup/README.md) sürer;
+**Hand-eye kapsam dışı.** KMC/ICM/EXP yeniden başlatılmaz.
 
 ## Hazır olanlar
 

@@ -2,6 +2,7 @@
 #include "application/CircleGridService.hpp"
 #include "application/ImageFileService.hpp"
 #include "application/PlaneMappingService.hpp"
+#include "application/CalibrationWizardSession.hpp"
 #include "vision/ImageAccess.hpp"
 #include <QGuiApplication>
 #include <QTransform>
@@ -112,6 +113,11 @@ int main(int argc,char** argv){qputenv("QT_QPA_PLATFORM","offscreen");QGuiApplic
     Options bent;bent.bent=true;auto bentResult=run("limited-curvature",identity,bent,true);
     auto bentGrid=bentResult.observation()->grid();bentGrid.target.pattern=CalibrationGridPattern::SymmetricCircles;bentGrid.target.framed.reset();bool fitRejected=false;try{PlaneMappingService::fit(bentGrid);}catch(const std::exception&){fitRejected=true;}check(fitRejected,"non-H raw observation does not relax existing inverse fit gate");
     auto clean=raster(identity);auto f=frame(clean);
+    CalibrationWizardSession session;MeasurementSetup setup{"bench","image_file",QString(64,'a'),"lens","plane",f.size(),{"image"},{"plane/mm",LengthUnit::Millimetre,AxisConvention::XRightYDown}};
+    session.useFrame(f,setup,"setup_file");auto job=session.scanPlate(target);check(session.accept(CalibrationWizardSession::run(job)),"framed wizard accepts typed observation");session.confirmPlate();
+    const auto record=session.calculatePlate();check(record.model().mapping() && PlaneMappingService::encode(*record.model().mapping())["schemaVersion"]==3,"wizard retains orientation through model creation");
+    check(CalibrationModelRecord::decode(record.encode()).encode()==record.encode(),"wizard record persistence");
+    auto changed=target;changed.squareMillimetres=13;auto stale=session.scanPlate(changed);check(!session.plate() && !session.calculated(),"target spacing scan invalidates observation/model");session.invalidatePlate();check(!session.accept(CalibrationWizardSession::run(stale)),"cancelled typed completion cannot restore model");
     auto roiResult=FramedCircleGridService::observe(f,target,{},QRect(50,50,720,720));check(roiResult.observation() && roiResult.observation()->grid().pixels==CircleGridService::observe(f,target).observation()->grid().pixels,"ROI raw coordinates preserved");
     auto cropped=FramedCircleGridService::observe(f,target,{},QRect(120,120,600,600));evidence("framed-evidence/cropped",clean,cropped,f);check(!cropped.observation(),"clipped frame/marker rejected");
     QImage blank(900,900,QImage::Format_Grayscale8);blank.fill(255);check(!CircleGridService::observe(frame(blank),target).observation(),"blank saturation rejected");

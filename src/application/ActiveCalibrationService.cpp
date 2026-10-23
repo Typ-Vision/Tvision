@@ -49,8 +49,12 @@ CalibrationModelRecord CalibrationModelRecord::create(const PlanarCalibration& m
     if(image.experimental){const auto& e=*image.experimental;e.validate();require(s==IndependentCaptureRequest::installation(e.camera,e.setup) && image.pixelHash==e.acquisition["contentId"] && image.origin==(e.origin==SourceOrigin::CameraAcquired ? "experimental_acquired":"experimental_setup_file"),"Experimental model installation/raster/origin mismatch");}
     require(!d.cameraId.startsWith("calibration-test:") || image.origin!="acquired","Test image cannot become acquired evidence");
     if(m.mapping())require(m.mapping()->observation().source.frameId==image.frameId,"Mapping image frame mismatch");
-    if(m.mapping() && m.mapping()->observation().target.pattern==CalibrationGridPattern::SymmetricCircles)
+    if(m.mapping() && m.mapping()->observation().target.pattern!=CalibrationGridPattern::Chessboard)
         require(m.mapping()->observation().pixelHash==image.pixelHash,"Circle mapping raster evidence mismatch");
+    if(m.mapping() && m.mapping()->observation().target.pattern==CalibrationGridPattern::FramedCircles){
+        require(image.experimental.has_value()==!m.mapping()->observation().source.experimentalAcquisition.isEmpty(),"Framed acquisition evidence cannot be removed");
+        if(image.experimental)require(m.mapping()->observation().source.experimentalAcquisition==image.experimental->acquisition,"Framed acquisition sidecar mismatch");
+    }
     if(m.manualProvenance())require(m.manualProvenance()->frameId==image.frameId && (m.manualProvenance()->origin!="file_test" || image.origin!="acquired"),"Manual image evidence mismatch");
     require(control.samples.size()<=256 && (!control.limitMillimetres || (!control.samples.isEmpty() && std::isfinite(*control.limitMillimetres) && *control.limitMillimetres>=0)),"Invalid independent control limit/count");
     CalibrationModelRecord r(std::move(replay),s,image,control);QSet<QString> ids;double maximum=0;

@@ -1,7 +1,7 @@
 # Ham plaka gözlemi — CCUX-15e API
 
 23 Ekim 2026. 15e servis sınırı; çerçeveli algılama
-[15f'de uygulandı](framed-plate-detection.md). Model/kayıt/replay 15g,
+[15f'de uygulandı](framed-plate-detection.md). Model/kayıt/replay 15g ile uygulandı;
 görünür sihirbaz akışı 15h kapsamındadır.
 
 ## Hedef ve uyumluluk
@@ -16,7 +16,7 @@ alan yazılmaz. Aralık kullanıcı beyanıdır, fiziksel doğrulama değildir.
 Eski chessboard/generic hedef JSON'u v1 olarak aynı alanlarla yazılır.
 Çerçeveli descriptor v2, `framed_circle_grid`, `marked_centre_1` ve açık
 `geometry` alanıyla ayrılır; bilinmeyen alan/sürüm reddedilir. Bu descriptor
-codec'idir; yeni model/gözlem kalıcılığı henüz uygulanmadı.
+codec'idir; yeni model/gözlem kalıcılığı aşağıdaki v3 yolundadır.
 
 Kaynak envanteri: aggregate çağrıları Wizard, testler ve EditorSmoke'tadır;
 hedef codec'ini CalibrationTargetLibrary ve PlaneMappingService kullanır.
@@ -25,8 +25,7 @@ ve CalibrationStudyStore legacy recipe/study yolunu chessboard ile sınırlar.
 ActiveCalibrationService generic circle yönünün belirsizliğini korur.
 CalibrationTargetLibrary çerçeveli hedefi okuma/yazmada açıkça reddeder; eski
 UI bir v2 hedefi sessiz generic seçeneğe dönüştüremez. 15h bu kapıyı yeni UI
-ile birlikte açacaktır. Model fit'i hem legacy gözlem
-hem typed gözlem girişinde açık ret verir. Var olan codec'e kaçamaz.
+ile birlikte açacaktır. Legacy recipe/study yolu çerçeveli hedefi reddeder; yeni model v3 codec'ine gider.
 
 ## Gözlem ve tanı
 
@@ -66,8 +65,7 @@ OpenCV tekrar eden/katlanan atamaları hâlâ reddedilir. Generic algoritmanın
 önceki tam blob sayısı ve dar eksen hizalı fallback politikası korunur;
 yeni çerçeve/topoloji algoritması bu karta dahil değildir.
 
-WizardSession worker'ındaki ikinci fit de kaldırıldı. Worker/accept yalnız
-güncel raw gözlemi sunar; ticket/iptal/eski completion koruması değişmedi.
+WizardSession worker'ındaki ikinci fit de kaldırıldı. Worker/accept typed yön kanıtıyla güncel raw gözlemi sunar; ticket/iptal/eski completion koruması değişmedi.
 `confirmPlate` grid incelemesidir, model kabulü değildir. `calculatePlate`
 (ayrı `teachPlate` sembolü mevcut kaynakta yok) hâlâ PlaneMappingService::fit
 ve CalibrationModelRecord::create çağırır. Fit reddi gözlemi korur, hesaplanmış
@@ -76,8 +74,35 @@ model bırakmaz. SaveUse'e yalnız gözlem/tanı verilemez.
 PlaneMappingService'in model kapıları değiştirilmedi: tam sıra/sayı, duplicate,
 konvekslik, hull, kararlı H ve varsayılan maksimum 1 px inverse hata; wrapper'ın
 bağımsız kontrol koşulları da korunur. Typed raw overload aynı fit'e gider.
-Çerçeveli model entegrasyonu tamamlanana dek açıkça reddedilir.
+Çerçeveli hedef yalnız typed gözlem overload'ıyla ve en fazla 1 px sınırla hesaplanır; çıplak grid overload'ı reddedilir.
 
 `calibration_plate_contract` bağımsız sinüzoidal sütun kaymalı raster ile
 algılama → worker → accept → confirm başarısını, ardından H hesabının reddini
 sınar. Bu lens solver testi veya fiziksel kamera/mm kabulü değildir.
+
+## CCUX-15g model ve replay
+
+PlaneMapping v3 (`raw_planar_homography/3`) descriptor v2, raster hash,
+49 row/column/raw merkez, isteğe bağlı belirsizlik, algoritma/uzay sürümü,
+üçgen konumu/dönüş/mirror ve acquisition sidecar nesnesini saklar.
+`observationId`, solver çıktıları hariç hedef/kaynak/raster/gözlem alanlarının
+canonical compact JSON SHA-256 bağıdır. PlaneMapping::rawPlate() ve Wizard
+result/session rawPlate() bu typed kanıtı görünüm katmanına açar.
+V1/v2 yazımı ve hash anlamı korunur; yeni profil eski codec'e indirgenmez.
+
+Decode yalnız H veya başarı bayrağına güvenmez: tam şema/alanlar, hedef,
+merkez kimlikleri, topoloji/yön factory denetimi, raw bounds ve mevcut solver
+kapıları yeniden çalışır; yeniden encode tüm kayıtla birebir eşleşir.
+CalibrationModelRecord ayrıca raster hash ve varsa exact acquisition sidecar
+bağını doğrular. ExperimentalCalibrationEvidence mevcut kamera/geometri,
+origin/crop, readback ve raster kapılarını korur. SaveUse mevcut atomik katalog/
+revision/generation/iptal/ret sözleşmesini kullanır; bağımsız kontrol, hull ve
+1 px inverse kapıları gevşetilmez. Yeni scan, invalidatePlate veya kare değişimi
+typed gözlemi/onayı/modeli birlikte siler.
+
+Bu replay rasteri yeniden algılamaz; yön factory'si işaretin grid köşesine
+tekil yakınlığını ve raw hücre yönünü denetler. Üçgenin rasterde varlığı ilk
+algılayıcının kanıtıdır; kayıtlı algoritma adı veya yerel hash, imza/sertifika
+veya düşmanca yeniden yazıma karşı fiziksel kanıt değildir. Fiziksel mirror,
+12 mm aralık doğruluğu ve bağımsız mm kabulü açık kalır. Rapor yeni profilde
+üçgen yapısal kanıtını söyler, eski kayıtlara yön bulundu anlamı eklemez.

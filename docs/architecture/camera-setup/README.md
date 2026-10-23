@@ -5,7 +5,7 @@ Yeni kullanıcı yönlendirmesi: [CCUX-15e–j](15-plate-calibration-plan.md) ay
 planı hazırlandı; **15e gözlem/model servis ayrımı tamamlandı**
 ([kapanış](../../archive/2026-10-23-ccux-15e.md), [API](plate-observations.md)).
 **15f algılama servisi tamamlandı** ([kapanış](../../archive/2026-10-23-ccux-15f.md),
-[sınırlar](framed-plate-detection.md)); devam 15g model/kayıttır.
+[sınırlar](framed-plate-detection.md)); 15g model/kayıt/replay tamamlandı ([API](plate-observations.md)); devam 15h sihirbazdır.
 56000 µs eski karede 49 merkez bulundu; karanlık ilk kare ret kalır.
 Distorsiyon çözümü devreye alınmayacak. [C3a](contract.md#c3a--çerçeveli-plaka-kalibrasyonu)
 hedef sözleşmedir. [Kapanış](../../archive/2026-10-23-ccux-plan-05.md).

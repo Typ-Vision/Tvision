@@ -148,7 +148,7 @@ native capability ve güncel kimlik/probe/izin ömrü sınırlarını aşamaz.
 
 23 Ekim hedefi; **CCUX-15e gözlem/model servis ayrımı uygulandı**
 ([API ve sınırlar](plate-observations.md)). **15f algılama servisi uygulandı**
-([algoritma/sınırlar](framed-plate-detection.md)); model/UI 15g–h hedefidir.
+([algoritma/sınırlar](framed-plate-detection.md)); 15g model/kayıt/replay uygulandı; UI 15h hedefidir.
 [CCUX-15e–j planı](15-plate-calibration-plan.md) koyu çerçeveli, köşe işaretli
 7×7 plaka için C3'teki mevcut plaka algılamasını genişletir. Lens solver'ı,
 distorsiyon düzeltmesi, remap ve robot bu kapsamda yoktur.

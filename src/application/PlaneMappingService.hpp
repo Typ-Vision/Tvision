@@ -9,6 +9,7 @@ class PlaneMapping {
 public:
     const std::array<double,9>& matrix() const {return h_;}
     const ChessboardObservation& observation() const {return observation_;}
+    const std::optional<RawPlateObservation>& rawPlate() const {return rawPlate_;}
     const QVector<QPointF>& regionPixels() const {return hull_;}
     double fitRmsMillimetres() const {return fitRms_;}
     double inverseRmsPixels() const {return inverseRms_;}
@@ -19,6 +20,7 @@ private:
     std::array<double,9> h_{};
     ChessboardObservation observation_;
     QVector<QPointF> hull_;
+    std::optional<RawPlateObservation> rawPlate_;
     double fitRms_=0,inverseRms_=0,inverseMax_=0,fitLimit_=0;
 };
 struct PlaneDistance {QPointF firstMillimetres,secondMillimetres;double pixels=0,millimetres=0;};
@@ -33,5 +35,7 @@ public:
     static QJsonObject encode(const PlaneMapping&);
     // Bounded evidence replay; saved fit flags/matrix are never trusted.
     static PlaneMapping decode(const QJsonObject&);
+private:
+    static PlaneMapping fitGrid(const ChessboardObservation&,double,bool framed);
 };
 }
