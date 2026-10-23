@@ -4,6 +4,9 @@
 
 ## Devam noktası
 
+**[CCUX-15d](archive/2026-10-23-ccux-15d.md):** NI/HALCON plaka ön araştırması;
+algoritma değişmedi. Önerilen plaka devamı 15e; genel sıra 22f.
+
 **[CCUX-22e yazılımı tamamlandı](archive/2026-10-23-ccux-22e.md):** Kalibrasyon
 bağlantı ömrü, dosya/iptal/SaveUse drain. Kanıt: `build/ccux/ccux-22e/`.
 Fiziksel denemede SDK kayıtlı kamerayı bulamadı; kare/mm kabulü yok. Sonraki 22f.
@@ -18,8 +21,7 @@ Geçici viewer geometrisi ayrı adlandırılır; araç ROI'leri reçeteye bağl�
 CCUX-16–19 teslimleri [arşivde](archive/README.md); C0 teknik/fiziksel engeller açık.
 
 **CCUX-15 plaka denemesi açık:** 7×7 simetrik daire, kullanıcı beyanı 12 mm.
-56000 µs / 0 dB readback ile ham kare alındı; servis 48 adayla reddediyor,
-tanıdaki 49 aday da doğru grid değil. Model/etkinlik/mm yok.
+56000 µs / 0 dB ham kare: 48 aday ret, tanıdaki 49 da yanlış grid. Model/mm yok.
 [CCUX-15c](archive/2026-10-22-ccux-15c.md), `build/ccux/ccux-15/plate-20261022-02/`.
 [Önceki kare](archive/2026-10-22-ccux-15b.md).
 **CCUX-10b:** [Editor seçici/klavye düzeltmesi](archive/2026-10-22-ccux-10b.md).
@@ -33,8 +35,8 @@ readback reddi açık. [Kanıt](archive/2026-10-22-ccux-15a.md),
 ışık/odak, bağımsız referansın ölçü/kökeni, tolerans/mm ve kullanıcı işlem kabulü
 açık. [Önceki teyit](archive/2026-10-22-ccux-15-teyit.md) tarihsel durumdur.
 
-**CCUX-14 tamamlandı:** [1/5 kamera, üç applicationType yazılım/görsel kabulü ve
-Stop/retry](archive/2026-10-22-ccux-14.md); fiziksel kabul açık. `build/ccux/ccux-14/`.
+**[CCUX-14 tamamlandı](archive/2026-10-22-ccux-14.md):** 1/5 kamera, üç tür,
+Stop/retry yazılım/görsel kabulü; fiziksel açık. `build/ccux/ccux-14/`.
 
 CCUX-01–13 tamamlandı; ayrıntılı kayıtlar [arşiv dizinindedir](archive/README.md).
 - Kamera immutable ID/kısa ID ve atomik varsayılan kurulum/profil; belirsiz eski
@@ -111,5 +113,4 @@ sırasıyla sürer; **Hand-eye kapsam dışı.** Tamamlanmış KMC/ICM/EXP işle
 
 ## Çalışma ve kapanış
 
-UI: build/reference-ui/visionflow.exe; core: build/kmc9-core-off.
-Komutlar README'de; UI [kullanım rehberinde](camera-runtime-usage.md), kanıtlar arşivdedir.
+Komutlar README; UI [kullanım rehberi](camera-runtime-usage.md); kanıtlar arşivde.
