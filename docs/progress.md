@@ -4,6 +4,13 @@
 
 ## Devam noktası
 
+**Öncelik: [CCUX-23a Editor gecikme analizi](archive/2026-10-23-ccux-23a.md).**
+Kullanıcı plaka kalibrasyonunu başardı; bağımsız mm kabulü ayrıdır.
+Kamerasız yeni fixture ölçümü: Save 961 ms, parametre 509 ms;
+tekrarlı katalog/model replay ve çift UI refresh. Ürün kodu değişmedi.
+Sonraki CCUX-23b: refresh daraltma, doğrulanmış snapshot paylaşımı/invalidation,
+aynı baseline ve canlı proje karşılaştırması. Kanıt `build/ccux/ccux-23a/`.
+
 **[CCUX-15j fiziksel kabul açık](archive/2026-10-23-ccux-15j.md):**
 Exact SDK raw/sidecar: 56000 µs/0 dB kare karanlık/odak dışı,
 0 merkez; model yok. Kanıt `build/ccux/ccux-15j/`.
@@ -18,27 +25,20 @@ SDK kayıtlı kamerayı bulamadı; kare/mm kabulü yok. 22f açık.
 [22d Runtime](archive/2026-10-23-ccux-22d.md), [22c Editor](archive/2026-10-23-ccux-22c.md),
 [API/ömür](architecture/camera-setup/acquisition-sessions.md).
 Ek `multi_source_production_contract` önceki hatası 22d kapanışında korunur.
-**[22a ölçümü](archive/2026-10-23-ccux-22a.md):** yazılım tamam; fiziksel baseline/paint açık.
-**[21 ROI tamamlandı](archive/2026-10-22-ccux-21.md)**.
-CCUX-20 canlı teyit ve CCUX-15 fiziksel kabul açık; hash/preview korunur.
-[CCUX-20](archive/2026-10-22-ccux-20.md), `build/ccux/ccux-20/`.
+**[22a](archive/2026-10-23-ccux-22a.md):** yazılım tamam; fiziksel baseline/paint açık.
+**[21 ROI](archive/2026-10-22-ccux-21.md) tamam.**
+[20 hash/preview](archive/2026-10-22-ccux-20.md) korunur; canlı teyit açık.
 Geçici viewer geometrisi ayrı adlandırılır; araç ROI'leri reçeteye bağlıdır.
 CCUX-16–19 [arşivde](archive/README.md); C0 açık.
 
-**CCUX-15 fiziksel açık:** 7×7, 12 mm kullanıcı beyanı.
-15c 48/yanlış 49 reddi tarihseldir; 15f yeni gözlem; fiziksel mm yok.
-[CCUX-15c](archive/2026-10-22-ccux-15c.md), `build/ccux/ccux-15/plate-20261022-02/`.
-[Önceki kare](archive/2026-10-22-ccux-15b.md).
+**CCUX-15 fiziksel açık:** 7×7, 12 mm kullanıcı beyanı; tarihsel retler ve
+[15c kanıtı](archive/2026-10-22-ccux-15c.md) arşivdedir, güncel kullanıcı başarısı yukarıda.
 **CCUX-10b:** [Editor seçici/klavye düzeltmesi](archive/2026-10-22-ccux-10b.md).
 **CCUX-03b:** [Ayrı Opto ayar servisi ve fiziksel readback](archive/2026-10-22-ccux-03b.md);
 görüntü/mm kabulü değildir.
-**CCUX-15a önceki plakasız kontroller:** 60 s / 558 kare / 9,36 FPS, Stop/reopen,
-USB, Editor 3 ve Runtime 10 Raw/px çevrim/CSV. O koşum sonu 6000 µs / 0 dB;
-yanlış seri/geometri reddi var. SDK kopma stop temizleme hatası ve 7000 µs / 1 dB
-readback reddi açık. [Kanıt](archive/2026-10-22-ccux-15a.md),
-`build/ccux/ccux-15/no-plate-20261022/`. **CCUX-15 tamamlanmadı:** lens/düzlem,
-ışık/odak, bağımsız referansın ölçü/kökeni, tolerans/mm ve kullanıcı işlem kabulü
-açık. [Önceki teyit](archive/2026-10-22-ccux-15-teyit.md) tarihsel durumdur.
+**[15a tarihsel plakasız kanıt](archive/2026-10-22-ccux-15a.md):** SDK kopma/Stop
+temizleme hatası ve 7000 µs / 1 dB readback reddi açık. CCUX-15 bağımsız referans,
+tolerans/mm, lens/düzlem ve belgeli fiziksel kabulü tamamlanmadı.
 
 **[CCUX-14 tamamlandı](archive/2026-10-22-ccux-14.md):** 1/5 kamera, üç tür,
 Stop/retry yazılım/görsel kabulü; fiziksel açık. `build/ccux/ccux-14/`.
@@ -65,7 +65,7 @@ CCUX-01–13 tamamlandı; [arşiv](archive/README.md).
   Load ister. Deneysel runtime1/2 Logs/CSV birimleri/kökeni korur; hata/Stop sonuç
   üretmez, restart geçmişi okur. PLC/robot kapalıdır.
 
-Yeni raster karanlık/kısmen bulanık; **bağımsız fiziksel mm kabulü açık**.
+Arşiv rasteri karanlık/kısmen bulanık; **bağımsız fiziksel mm kabulü açık**.
 CCUX-14 fixture bunu kapatmaz. [CCUX planı](architecture/camera-setup/README.md) sürer;
 **Hand-eye kapsam dışı.** KMC/ICM/EXP yeniden başlatılmaz.
 
