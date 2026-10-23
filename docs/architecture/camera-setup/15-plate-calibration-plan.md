@@ -1,7 +1,9 @@
 # CCUX-15e–j — Çerçeveli plaka ile planar kalibrasyon
 
 23 Ekim 2026 — CCUX-PLAN-05. **15e sözleşme ve 15f algılama uygulandı**;
-15g model/kayıt/replay ve 15h sihirbaz/tanı uygulandı; devam 15i birleşik kabuldür. 15i–j ve fiziksel kabul açık kalır.
+15g model/kayıt/replay ve 15h sihirbaz/tanı uygulandı; 15i birleşik yazılım kabulü
+[kapanıştadır](../../archive/2026-10-23-ccux-15i.md). Bilinen multi-source production
+regresyonu korunur; devam 15j ve fiziksel kabuldür.
 [15f kapsamı ve sınırları](framed-plate-detection.md). Önceki 15a–d işleri yeniden yapılmaz.
 [Araştırma](../../archive/2026-10-23-ccux-15d.md),
 [lens uyumluluğu](../../archive/2026-10-23-ccux-15d-lens.md),

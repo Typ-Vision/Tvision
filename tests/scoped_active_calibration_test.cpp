@@ -1,3 +1,4 @@
+#include "FramedModelFixture.hpp"
 #include "application/ScopedActiveCalibration.hpp"
 #include <QCoreApplication>
 #include <QTemporaryDir>
@@ -19,7 +20,7 @@ IndependentCaptureRequest req;req.origin=SourceOrigin::CameraAcquired;req.camera
 IndependentCaptureBackend b{[&]{return QVector<DeviceBinding>{c.cameras[i].device};},[](const DeviceBinding&,const GeometryDescriptor&){return std::make_unique<Adapter>();}};
 check(session.accept(IndependentCalibrationSession::run(session.begin(req),b)),"accepted fixture probe");
 }
-CalibrationModelRecord calculate(IndependentCalibrationSession& session,double mm){auto& m=session.math();EdgePairOptions o;o.profile={.5,1,1};check(m.accept(CalibrationWizardSession::run(m.scanPair("pair",{{"image"},ScanSegment{{20,100},{620,100},4}},o))),"actual edge math");m.setKnownMillimetres(mm);return m.calculate();}
+CalibrationModelRecord calculate(IndependentCalibrationSession& session,double mm){auto& m=session.math();EdgePairOptions o;o.profile={.5,1,1};check(m.accept(CalibrationWizardSession::run(m.scanPair("pair",{{"image"},ScanSegment{{20,100},{620,100},4}},o))),"actual edge math");m.setKnownMillimetres(mm);return test::framedModel(m.calculate(),*m.frame(),mm);}
 }
 int main(int argc,char** argv){QCoreApplication app(argc,argv);try{
 QTemporaryDir dir(QDir::currentPath()+"/scoped-XXXXXX");check(dir.isValid(),"build fixture dir");
@@ -28,7 +29,7 @@ MeasurementEnvironmentRepository repo(dir.filePath(QString::number(n)+".vfprojec
 for(int i=0;i<n;++i){const auto id=QString::number(i);c.cameras.append({{"c"+id},"Same camera name",{"webcam","provider-"+id,DeviceIdentityConfidence::ProviderReported,1,{true,true,false,false}}});c.setups.append({{"s"+id},c.cameras.last().id,"Same setup name","lens","plane",1,1,{{640,200},{},{},true}});}reg.replace(c);
 bool ready=true;ScopedActiveCalibrationService service(repo,[&]{return ready;});QVector<SetupReference> refs;QVector<QString> contents;
 for(int i=0;i<n;++i){SetupReference ref{c.cameras[i].id,c.setups[i].id,1};refs.append(ref);service.setOperational(ref.camera,ref.setup);IndependentCalibrationSession s;capture(s,c,i);auto r=calculate(s,10+i);contents.append(r.contentId());service.save(ref,r);check(service.environment().selections.size()==i,"save is candidate only");service.activate(ref,r.contentId(),s);check(service.snapshots({ref})[0].calibration.record.contentId()==r.contentId(),"exact activation");reject([&]{service.activate(ref,r.contentId(),s);});}
-auto all=service.snapshots(refs);check(all.size()==n,"all immutable snapshots");for(int i=0;i<n;++i)check(std::abs(all[i].calibration.record.model().millimetresPerPixel()-(10.+i)/400)<1e-8,"different real scales");
+auto all=service.snapshots(refs);check(all.size()==n,"all immutable snapshots");for(int i=0;i<n;++i)check(std::abs(PlaneMappingService::distance(*all[i].calibration.record.model().mapping(),{120,100},{520,100}).millimetres-(10.+i))<1e-8,"different real scales");
 ScopedActiveCalibrationService restart(repo,[]{return true;});reject([&]{restart.snapshots({refs[0]});});check(restart.environment().selections.size()==n,"restart remembers only");
 IndependentCalibrationSession probe;capture(probe,c,0);ready=false;reject([&]{service.activate(refs[0],contents[0],probe);});reject([&]{service.deactivate(refs[0].setup);});ready=true;
 ready=false;reject([&]{service.prepareRemembered(refs[0],probe);});reject([&]{service.notifyOpticalChange(refs[0].camera,service.environment().revision);});ready=true;
@@ -36,7 +37,7 @@ service.activate(refs[0],contents[0],probe,MeasurementEnvironmentRepository::Fau
 IndependentCalibrationSession invalid;capture(invalid,c,0);auto base=calculate(invalid,10);auto image=base.image();image.origin="trial_file";
 auto trial=CalibrationModelRecord::create(base.model(),base.setup(),image);service.save(refs[0],trial);reject([&]{service.activate(refs[0],trial.contentId(),invalid);});
 capture(invalid,c,0);base=calculate(invalid,10);
-CalibrationControl control;control.limitMillimetres=0.01;control.samples.append({"independent",{{10,10},base.setup().source},{{20,10},base.setup().source},100});
+CalibrationControl control;control.limitMillimetres=0.01;control.samples.append({"independent",{{125,105},base.setup().source},{{515,105},base.setup().source},100});
 auto failedControl=CalibrationModelRecord::create(base.model(),base.setup(),base.image(),control);check(!failedControl.activatable(),"control rejection distinct from mathematical readiness");
 service.save(refs[0],failedControl);reject([&]{service.activate(refs[0],failedControl.contentId(),invalid);});
 capture(probe,c,0);auto replacement=calculate(probe,30);service.save(refs[0],replacement);reject([&]{service.activate(refs[0],replacement.contentId(),probe,MeasurementEnvironmentRepository::Fault::BeforeCommit);});check(service.snapshots(refs).size()==n,"failed commit preserves active selection");

@@ -1,3 +1,4 @@
+#include "FramedModelFixture.hpp"
 #include "OecsExperimentalFixture.hpp"
 #include "application/MeasurementWorkspace.hpp"
 #include <QCryptographicHash>
@@ -13,9 +14,10 @@ QByteArray hash(const QJsonObject& o){return QCryptographicHash::hash(QJsonDocum
 void dump(const CycleResult& c){if(c.state!=ExecutionState::Done){QTextStream(stderr)<<c.error<<'\n';for(const auto& t:c.tools)QTextStream(stderr)<<t.toolId<<": "<<t.message<<'\n';}}
 }
 int main(int argc,char** argv){QCoreApplication app(argc,argv);try{
-    QTemporaryDir dir(QDir::currentPath()+"/ccux12-XXXXXX");check(dir.isValid(),"build fixture directory");
+    for(const auto applicationType:{ApplicationType::Measurement,ApplicationType::DefectInspection,ApplicationType::RobotGuidance}){
+    QTemporaryDir dir(QDir::currentPath()+"/ccux15i-XXXXXX");check(dir.isValid(),"build fixture directory");
     if(argc>2 && QString::fromLocal8Bit(argv[2])=="--keep-ui-fixture")dir.setAutoRemove(false);
-    ProjectService project;project.createProject("Metric runtime","",dir.filePath("runtime.vfproject"),"file");project.createRecipe("Mixed metric","",ApplicationType::Measurement,"file");
+    ProjectService project;project.createProject("Metric runtime","",dir.filePath("runtime.vfproject"),"file");project.createRecipe("Mixed metric","",applicationType,"file");
     auto first=request(),second=request();second.camera.id={"camera2"};second.camera.physical->serial="SN2";second.device.identity.serial="SN2";second.setup.id={"setup2"};second.setup.camera=second.camera.id;second.profile.id={"profile2"};second.profile.camera=second.camera.id;second.profile.setup=second.setup.id;
     MeasurementWorkspace workspace(project.path(),project.project().id,[]{return true;});workspace.replace({{first.camera,second.camera},{first.setup,second.setup},{first.profile,second.profile}});auto& active=workspace.calibrations();
     QStringList sources,metrics;QMap<QString,QString> replayPaths;
@@ -25,7 +27,7 @@ int main(int argc,char** argv){QCoreApplication app(argc,argv);try{
         IndependentCaptureRequest request;request.origin=SourceOrigin::CameraAcquired;request.camera=r.camera;request.setup=r.setup;request.profile=r.profile;request.policy=CalibrationCapturePolicy::Automatic;request.timeoutMs=3000;
         IndependentCaptureBackend backend;backend.industrialDiscover=[r]{return IndustrialDiscoverySnapshot{{r.device},{},false};};backend.experimentalApi=[hardware,r]{return std::make_unique<IdentityApi>(hardware,r.device.identity);};
         IndependentCalibrationSession probe;const auto captured=IndependentCalibrationSession::run(probe.begin(request),backend);if(!captured.error().isEmpty())throw std::runtime_error(captured.error().toStdString());check(probe.accept(captured),"independent experimental fixture capture");
-        auto& math=probe.math();check(math.accept(CalibrationWizardSession::run(math.scanPair("pair",{{"image"},ScanSegment{{20,100},{620,100},4}}))),"fixture caliper");math.setKnownMillimetres(sources.isEmpty()?10:20);const auto record=math.calculate().named(sources.isEmpty()?"Fixture scale A":"Fixture scale B");
+        auto& math=probe.math();check(math.accept(CalibrationWizardSession::run(math.scanPair("pair",{{"image"},ScanSegment{{20,100},{620,100},4}}))),"fixture caliper");math.setKnownMillimetres(sources.isEmpty()?10:20);const auto record=test::framedModel(math.calculate(),*math.frame(),sources.isEmpty()?10:20).named(sources.isEmpty()?"Framed fixture A":"Framed fixture B");
         const auto saved=active.saveAndUse({ref,active.environment().revision,probe.evidence()->generation,CalibrationCapturePolicy::ExperimentalOecs},record,probe,[]{return true;});check(saved.state==CalibrationSaveUseState::Activated,"fixture experimental activation");
         const auto image=*probe.math().frame();const auto metadata=image.metadata();const auto path=dir.filePath(r.camera.id.value+".pgm");ExperimentalOecsAcquisition::save({image,metadata.sourceId,metadata.cycleId,metadata.frameId,metadata.completedAtUtc},path);
         const auto source=project.addTool("image_file");project.setImageFile(path,source);project.enableMultiSource();project.bindCameraSource(source,active.environment(),ref.camera);sources<<source;replayPaths[source]=path;
@@ -67,5 +69,6 @@ int main(int argc,char** argv){QCoreApplication app(argc,argv);try{
     ProjectService rawProject;rawProject.createProject("old raw","",dir.filePath("raw.vfproject"),"file");rawProject.createRecipe("raw","",ApplicationType::Measurement,"file");rawProject.setImageFile(rawPath);rawProject.enableMultiSource();RuntimeService old(dir.filePath("old"),{},RuntimeIdentity::localEngineer());MeasurementWorkspace rawWorkspace(rawProject.path(),rawProject.project().id,[]{return true;});old.setExperimental(true,[&](const Recipe& r){return rawWorkspace.productionSources(r,{},true);});old.prepare(*rawProject.activeRecipe(),dir.path());auto rawLease=old.begin();auto rawResult=RuntimeService::execute(rawLease,{},{});old.finish(rawLease.ticket,rawResult);auto legacy=ProductionStore(dir.filePath("old")).recent("experimental_cycles").first();legacy["schema"]="visionflow.experimental-runtime1";legacy["schemaVersion"]=1;auto deps=legacy["dependencies"].toObject();deps["scope"]="experimental_runtime/1";auto entries=deps["sourceSet"].toObject();for(auto i=entries.begin();i!=entries.end();++i){auto e=i->toObject();e.remove("imageInfo");i.value()=e;}deps["sourceSet"]=entries;legacy["dependencies"]=deps;legacy["dependencyId"]=QString::fromLatin1(hash(deps));auto tools=legacy["tools"].toArray();for(int n=0;n<tools.size();++n){auto t=tools[n].toObject();t.remove("calibration");tools[n]=t;}legacy["tools"]=tools;ExperimentalRuntime::validateRecord(legacy);rejects([&]{ProductionResultCodec::validate(legacy);});
     if(argc>2)ProductionStore(archive).append("experimental_cycles",legacy["recordId"].toString(),legacy);
     check(ExperimentalRuntime::summary(legacy).contains("Raw / px") && ExperimentalRuntime::csv({legacy,record}).contains("visionflow.experimental-runtime1"),"mixed legacy/new CSV remains experimental");
-    QTextStream(stdout)<<"PASS: two exact experimental models, mixed raw/mm, negative model/geometry/sidecar/ports, frozen retry, Stop, restart and legacy v1; fixture only\n";return 0;
+    QTextStream(stdout)<<"PASS: two exact experimental models, mixed raw/mm, negative model/geometry/sidecar/ports, frozen retry, Stop, restart and legacy v1; fixture only: "<<typeKey(applicationType)<<'\n';}
+    return 0;
 }catch(const std::exception& e){QTextStream(stderr)<<"FAIL: "<<e.what()<<'\n';return 1;}}

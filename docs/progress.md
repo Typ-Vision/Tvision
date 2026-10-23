@@ -4,11 +4,13 @@
 
 ## Devam noktası
 
-**[CCUX-15h tamamlandı](archive/2026-10-23-ccux-15h.md):** Açık çerçeveli 7×7,
-aralık teyidi, raw arama ROI, numaralı P1/eksen/tanı ve fit-ret ayrımı.
-Kanıt `build/ccux/ccux-15h/`; devam [15i birleşik kabul](architecture/camera-setup/15-plate-calibration-plan.md).
+**[CCUX-15i yazılım kabulü](archive/2026-10-23-ccux-15i.md):**
+Framed SaveUse/Editor/Runtime/Logs, üç tür/iki fixture kamera.
+Kanıt `build/ccux/ccux-15i/`;
+`multi_source_production_contract`: Missing result sürüyor.
+Devam [15j fiziksel kabul](architecture/camera-setup/15-plate-calibration-plan.md).
 [15f algılama](archive/2026-10-23-ccux-15f.md): 56000 µs eski karede 50→49;
-karanlık kare ret. UI profili, fiziksel aynalama/eksen, lens ve mm kabulü açık.
+karanlık kare ret; fiziksel aynalama/eksen, lens ve mm kabulü açık.
 
 **[CCUX-22e yazılımı tamamlandı](archive/2026-10-23-ccux-22e.md):** Kalibrasyon
 bağlantı ömrü, dosya/iptal/SaveUse drain. Kanıt: `build/ccux/ccux-22e/`.
@@ -21,7 +23,7 @@ Ek `multi_source_production_contract` önceki hatası 22d kapanışında korunur
 CCUX-20 canlı teyit ve CCUX-15 fiziksel kabul açık; hash/preview korunur.
 [CCUX-20](archive/2026-10-22-ccux-20.md), `build/ccux/ccux-20/`.
 Geçici viewer geometrisi ayrı adlandırılır; araç ROI'leri reçeteye bağlıdır.
-CCUX-16–19 [arşivde](archive/README.md); C0 engelleri açık.
+CCUX-16–19 [arşivde](archive/README.md); C0 açık.
 
 **CCUX-15 fiziksel açık:** 7×7, 12 mm kullanıcı beyanı.
 15c 48/yanlış 49 reddi tarihseldir; 15f yeni gözlem; fiziksel mm yok.
