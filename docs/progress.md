@@ -4,13 +4,14 @@
 
 ## Devam noktası
 
-**CCUX-21 tamamlandı:** Ön işleme → ROI; reçeteye bağlı dikdörtgen Region,
-Blob/Template Match gerçek işlem alanı, Run Tool/Flow, reopen ve immutable Runtime.
-[Kapanış](archive/2026-10-22-ccux-21.md), `build/ccux/ccux-21/`.
-**CCUX-22a yazılım ölçümü tamamlandı:** [kapanış](archive/2026-10-23-ccux-22a.md),
-`build/ccux/ccux-22a/`. 14 CTest; 3×20 tanı açık/kapalı fixture.
-Fiziksel baseline/paint açık; kamera erişilemedi.
-**Sıradaki: [CCUX-22b servis](architecture/camera-setup/22-session-lifecycle.md)**; başlatılmadı.
+**CCUX-22b tamamlandı:** ortak sabit owner/generation/lease servisi;
+[API/ömür](architecture/camera-setup/acquisition-sessions.md),
+[kapanış](archive/2026-10-23-ccux-22b.md), `build/ccux/ccux-22b/`.
+Ekran entegrasyonu yok. **Sıradaki: [22c Editor](architecture/camera-setup/22-session-lifecycle.md)**.
+Ek `multi_source_production_contract` hatası HEAD kontrolünde de var; kapanışta.
+**22a yazılım ölçümü tamamlandı:** [kapanış](archive/2026-10-23-ccux-22a.md),
+`build/ccux/ccux-22a/`; fiziksel baseline/paint açık, kamera erişilemedi.
+**[21 ROI tamamlandı](archive/2026-10-22-ccux-21.md)**, `build/ccux/ccux-21/`.
 CCUX-20 canlı teyit ve CCUX-15 fiziksel kabul açık; hash/preview korunur.
 [CCUX-20](archive/2026-10-22-ccux-20.md), `build/ccux/ccux-20/`.
 Geçici viewer geometrisi ayrı adlandırılır; araç ROI'leri reçeteye bağlıdır.
@@ -32,9 +33,8 @@ readback reddi açık. [Kanıt](archive/2026-10-22-ccux-15a.md),
 ışık/odak, bağımsız referansın ölçü/kökeni, tolerans/mm ve kullanıcı işlem kabulü
 açık. [Önceki teyit](archive/2026-10-22-ccux-15-teyit.md) tarihsel durumdur.
 
-**CCUX-14 tamamlandı:** 1/5 kamera fixture'ı ve üç applicationType yazılım/görsel
-kabulü; fiziksel kabul değildir. Stop/retry engeli kapandı.
-[Matris/kanıt](archive/2026-10-22-ccux-14.md), `build/ccux/ccux-14/`.
+**CCUX-14 tamamlandı:** [1/5 kamera, üç applicationType yazılım/görsel kabulü ve
+Stop/retry](archive/2026-10-22-ccux-14.md); fiziksel kabul açık. `build/ccux/ccux-14/`.
 
 CCUX-01–13 tamamlandı; ayrıntılı kayıtlar [arşiv dizinindedir](archive/README.md).
 - Kamera immutable ID/kısa ID ve atomik varsayılan kurulum/profil; belirsiz eski
@@ -112,5 +112,4 @@ sırasıyla sürer; **Hand-eye kapsam dışı.** Tamamlanmış KMC/ICM/EXP işle
 ## Çalışma ve kapanış
 
 UI: build/reference-ui/visionflow.exe; core: build/kmc9-core-off.
-PATH/build/test/başlatma README'de; mevcut UI kullanımı
-[kullanım rehberinde](camera-runtime-usage.md). Kapsam ve kanıt ayrıntıları tarihli kapanıştadır.
+Komutlar README'de; UI [kullanım rehberinde](camera-runtime-usage.md), kanıtlar arşivdedir.

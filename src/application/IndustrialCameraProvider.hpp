@@ -44,6 +44,7 @@ public:
 class CameraProviderFactory {
 public:
     CameraProviderFactory()=default;
+    bool sameComposition(const CameraProviderFactory& other) const {return injected_==other.injected_;}
     std::unique_ptr<AcquisitionAdapter> webcam(const MeasurementCamera&,const QVector<DeviceBinding>&,QSize resolution={}) const;
     static CameraProviderFactory forTests(std::shared_ptr<const IndustrialCameraProvider>);
     IndustrialCameraCapabilities capabilities(const DiscoveredDevice&) const;

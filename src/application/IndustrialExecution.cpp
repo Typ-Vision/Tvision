@@ -1,5 +1,6 @@
 #include "IndustrialExecution.hpp"
 #include "ExperimentalOecsAcquisition.hpp"
+#include "CameraAcquisitionSessions.hpp"
 #include <QThread>
 #include <stdexcept>
 
@@ -22,6 +23,18 @@ IndustrialExecutionFrame acquireIndustrial(const IndustrialExecutionInputs& inpu
     AcquisitionTimingBinding timingBinding(inherited.request.isEmpty()?AcquisitionTiming::request(inputs.leaseUse==CameraLeaseUse::Runtime?"runtime":"editor"):inherited);
     AcquisitionTimingSpan timing("industrial.acquire");
     require(!experimentalEditor || (inputs.leaseUse==CameraLeaseUse::Editor && inputs.admittedDevices.isEmpty()),"Experimental acquisition requires Editor lease without production admission");
+    if(inputs.sessions){
+        Deadline cachedDeadline(timeout);
+        std::optional<DiscoveredDevice> admitted;
+        if(inputs.admittedDevices.contains(request.sourceId))admitted=inputs.admittedDevices[request.sourceId];
+        try {
+            auto result=inputs.sessions->acquire(inputs.sessionContext,inputs.sessionGeneration,std::move(request),cycle,frame,
+                timeout,cancel,experimentalEditor,admitted).get();
+            require(!(cancel && cancel->load()) && !cachedDeadline.expired() &&
+                inputs.sessions->status(inputs.sessionContext).generation==inputs.sessionGeneration,"Retired prepared execution completion");
+            timing.finish();return result;
+        }catch(...){timing.finish(cancel && cancel->load()?"cancelled":cachedDeadline.expired()?"timeout":"error");throw;}
+    }
     Deadline deadline(timeout);
     auto live=[&]{require(!(cancel && cancel->load()) && !deadline.expired(),"Industrial execution cancelled/deadline exceeded");};
     std::unique_ptr<CameraWorkerSession> session;

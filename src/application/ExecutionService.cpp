@@ -81,12 +81,14 @@ CycleResult ExecutionService::run(const QJsonObject& definition,const QString& d
         if(automaticAcquisition_ && !targetOnly)experimentalEditorReplay=AcquisitionPolicy::sources(tools,directory);
         auto graph=multi ? validateSourceGraph(tools,connections):validateGraph(tools,connections);
         if(!graph.valid())throw std::runtime_error(graph.errors.join("\n").toUtf8().constData());
-        QSet<QString> industrialDevices;
+        QMap<QString,QJsonObject> industrialDevices;
         for(const auto& t:editorTools(definition))if(t.enabled && t.kind=="industrial_camera" && t.parameters["sourceReference"].isObject()){
             const auto ref=IndustrialSourceReference::fromJson(t.parameters["sourceReference"].toObject());
             const auto identity=QString::fromUtf8(QJsonDocument(ref.physical.toJson()).toJson(QJsonDocument::Compact));
-            if(industrialDevices.contains(identity))throw std::runtime_error("Same physical industrial camera assigned to multiple sources");
-            industrialDevices.insert(identity);
+            auto binding=t.parameters["sourceReference"].toObject();binding.remove("timeoutMs");
+            if(industrialDevices.contains(identity) && (!industrial_ || !industrial_->sessions || industrialDevices[identity]!=binding))
+                throw std::runtime_error("Same physical industrial camera requires a prepared context and identical acquisition profiles");
+            industrialDevices[identity]=binding;
         }
         cycle.state=ExecutionState::Busy;QMap<QString,ToolResult> completed;bool error=false,stopped=false;MeasurementExecutionContext measurement;
         QMap<QString,QString> frameIds;QMap<QString,MeasurementExecutionContext> measurements;
