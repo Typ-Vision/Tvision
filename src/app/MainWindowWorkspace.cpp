@@ -11,6 +11,8 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QFormLayout>
+#include <QStackedWidget>
+#include <QScopedValueRollback>
 #include <QGroupBox>
 #include <QHeaderView>
 #include <QLabel>
@@ -58,8 +60,7 @@ QWidget* MainWindow::makeProjectManager() {
     layout->addWidget(projectTree_,1);
     connect(projectTree_,&QTreeWidget::itemDoubleClicked,this,[this](QTreeWidgetItem* item){
         const auto id=item->data(0,Qt::UserRole).toString(); if (id.isEmpty()) return;
-        try { service_.selectRecipe(id); refreshWorkspace(); selectPage("editor"); }
-        catch (const std::exception& e) { displayError(QString::fromUtf8(e.what())); }
+        openEditorRecipe(id);
     });
     return page;
 }
@@ -147,7 +148,9 @@ void MainWindow::showProjectDialog(bool edit) {
                 ProjectService candidate;
                 candidate.createProject(name->text(),description->text(),location->text(),camera->text(),robot->text(),protocol->text(),calibration->text());
                 if (!resolveUnsavedChanges()) return;
-                service_=std::move(candidate);
+                auto replacement=std::make_shared<ProjectService>(std::move(candidate));
+                auto apply=[this,replacement]{service_=std::move(*replacement);editorCameraExitAccepted_=true;refreshWorkspace();selectPage("projects");editorCameraExitAccepted_=false;};
+                if(!drainEditorCameras(apply))apply();dialog.accept();return;
             }
             refreshWorkspace(); selectPage("projects"); dialog.accept();
         } catch (const std::exception& e) { error->setText(QString::fromUtf8(e.what())); }
@@ -162,8 +165,9 @@ void MainWindow::openProjectDialog() {
         ProjectService candidate; candidate.openProject(path);
         if (!resolveUnsavedChanges()) return;
         // If Save was chosen for the same path, load the newly saved content.
-        candidate.openProject(path); service_=std::move(candidate);
-        refreshWorkspace(); selectPage("projects");
+        candidate.openProject(path);auto replacement=std::make_shared<ProjectService>(std::move(candidate));
+        auto apply=[this,replacement]{service_=std::move(*replacement);editorCameraExitAccepted_=true;refreshWorkspace();selectPage("projects");editorCameraExitAccepted_=false;};
+        if(!drainEditorCameras(apply))apply();
     } catch (const std::exception& e) { displayError(QString::fromUtf8(e.what())); }
 }
 void MainWindow::showRecipeDialog(bool edit) {
@@ -200,16 +204,21 @@ void MainWindow::showRecipeDialog(bool edit) {
     connect(buttons,&QDialogButtonBox::accepted,&dialog,[&]{
         try {
             if (edit) service_.editRecipeMetadata(original.id,name->text(),description->text());
-            else service_.createRecipe(name->text(),description->text(),static_cast<ApplicationType>(group->checkedId()));
-            refreshWorkspace(); selectPage("editor"); dialog.accept();
+            else {
+                if(service_.activeRecipe() && pages_->currentIndex()==pageIds_.indexOf("editor") && !resolveUnsavedChanges())return;
+                auto create=[this,n=name->text(),d=description->text(),type=static_cast<ApplicationType>(group->checkedId())]{
+                    try{service_.createRecipe(n,d,type);refreshWorkspace();selectPage("editor");syncEditorCameras({},true);}
+                    catch(const std::exception& e){displayError(QString::fromUtf8(e.what()));}};
+                if(!drainEditorCameras(create))create();dialog.accept();return;
+            }
+            refreshWorkspace(); selectPage("editor");syncEditorCameras({},true);dialog.accept();
         } catch (const std::exception& e) { error->setText(QString::fromUtf8(e.what())); }
     });
     dialog.exec();
 }
 void MainWindow::openSelectedRecipe() {
     const auto id=selectedRecipeId(recipeTable_); if (id.isEmpty()) return;
-    try { service_.selectRecipe(id); refreshWorkspace(); selectPage("editor"); }
-    catch (const std::exception& e) { displayError(QString::fromUtf8(e.what())); }
+    openEditorRecipe(id);
 }
 void MainWindow::loadSelectedRecipe() {
     const auto id=selectedRecipeId(recipeTable_); if(id.isEmpty())return;
@@ -233,7 +242,9 @@ void MainWindow::loadSelectedRecipe() {
         const auto options=saved.activeRecipe()->definition["runtime"].toObject();
         runtimeCoordinator_->load(*saved.activeRecipe(),QFileInfo(service_.path()).absolutePath(),options["trigger"]=="SoftwareTrigger" ? RuntimeTrigger::SoftwareTrigger : RuntimeTrigger::Manual);
         if(plc_)plc_->setMapping(options["measurementToolId"].toString());
-        runtimeResult_.reset();showRuntimeResult();refreshRecipes();refreshRuntime();selectPage("runtime");
+        runtimeResult_.reset();showRuntimeResult();refreshRecipes();refreshRuntime();
+        auto leave=[this]{QScopedValueRollback<bool> accepted(editorCameraExitAccepted_,true);selectPage("runtime");};
+        if(!drainEditorCameras(leave))leave();
     } catch(const std::exception& e) {
         const auto previous=runtimeCoordinator_ && runtimeCoordinator_->loaded() ? runtimeCoordinator_->loaded()->name+QString(" v%1").arg(runtimeCoordinator_->loaded()->recipeVersion) : QString("yok");
         const auto message="Load başarısız: "+QString::fromUtf8(e.what())+"\nKorunan yüklü reçete: "+previous;
@@ -322,7 +333,7 @@ bool MainWindow::resolveUnsavedChanges() {
     const auto choice=QMessageBox::warning(this,"Kaydedilmemiş değişiklikler",
         "Proje veya reçete değişikliklerini kaydetmek ister misiniz?",QMessageBox::Save|QMessageBox::Discard|QMessageBox::Cancel,QMessageBox::Save);
     if (choice==QMessageBox::Cancel) return false;
-    if (choice==QMessageBox::Discard) { service_.discardChanges(); refreshWorkspace(); return true; }
+    if (choice==QMessageBox::Discard) { QScopedValueRollback<bool> accepted(editorCameraExitAccepted_,true);service_.discardChanges(); refreshWorkspace(); return true; }
     saveProject(); return !service_.dirty();
 }
 bool MainWindow::verifyWorkspace(const QString& artifacts) {

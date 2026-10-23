@@ -81,7 +81,7 @@ QWidget* MainWindow::makeEditor() {
     annotations->setToolTip("Sonuç etiketlerini gösterir; geometri ve Results tablosu görünür kalır.");
     annotations->setChecked(QSettings(settingsFile_,QSettings::IniFormat).value("editor/showResultAnnotations",false).toBool());
     connect(annotations,&QCheckBox::toggled,this,[this](bool visible){imageViewer_->setResultAnnotationsVisible(visible);QSettings(settingsFile_,QSettings::IniFormat).setValue("editor/showResultAnnotations",visible);});
-    auto* stop=new QPushButton("Stop");stop->setObjectName("stopFlow");commands->addWidget(stop);connect(stop,&QPushButton::clicked,this,[this]{pendingDrawTool_.clear();imageViewer_->cancelRoi();imageViewer_->drawRegion(false);editorSession_.stop(SessionJob::Execution);editorSession_.stop(SessionJob::Teaching);});
+    auto* stop=new QPushButton("Stop");stop->setObjectName("stopFlow");commands->addWidget(stop);connect(stop,&QPushButton::clicked,this,[this]{pendingDrawTool_.clear();editorCameraPendingExecution_.reset();imageViewer_->cancelRoi();imageViewer_->drawRegion(false);editorSession_.stop(SessionJob::Execution);editorSession_.stop(SessionJob::Teaching);editorCameras_.stop();refreshFlow();});
     commands->addWidget(annotations);commands->addStretch();
     auto* more=new QPushButton("...");more->setObjectName("editorMore");more->setCheckable(true);more->setAccessibleName("Reçete ayrıntıları");more->setToolTip("Reçete bilgileri ve çok kaynaklı Editor");commands->addWidget(more);
     connect(more,&QPushButton::toggled,details,&QWidget::setVisible);layout->addLayout(commands);layout->addWidget(details);details->hide();
@@ -173,6 +173,7 @@ void MainWindow::showFlowMenu(const QPoint& position) {
     menu->popup(flowTools_->viewport()->mapToGlobal(position));
 }
 void MainWindow::refreshEditor() {
+    syncEditorCameras();
     const auto* recipe=service_.activeRecipe(); const QString recipeId=recipe ? service_.project().id+"/"+recipe->id : "";
     if (recipeId!=editorRecipeId_) {editorSession_.sourceFrames.clear();editorSession_.frame.reset();editorSession_.invalidateResults();matchInfo_->clear();imageInfo_->setText("Görüntü yok.");pendingDrawTool_.clear();imageViewer_->cancelRoi();selectedToolId_.clear(); editorRecipeId_=recipeId; imageBinding_.clear();}
     const auto tools=recipe ? service_.tools() : QVector<ToolDefinition>{};

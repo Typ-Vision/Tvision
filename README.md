@@ -22,6 +22,10 @@ UI algoritma veya donanım SDK'sını doğrudan çağırmaz.
   kaydedilir; bu işlem görüntü edinim izninden bağımsızdır. Industrial Run
   tam native kabul ister. Native production kapalıdır; mevcut COE-U için normal kamera komutları OECS edinim yolunu seçer.
 
+Editor reçetesini açık düzenleme komutuyla açmak bağlı kameraları arka planda
+hazırlar; Görüntü al/Run Flow aynı bağlantıyı kullanır. Save bağlantıyı korur;
+kabul edilen çıkış ve Stop kapatır. Program/proje/ekran restore bağlantı açmaz.
+
 Hazırlık/keşif üretim kabulü değildir; gerçek sonuç olmadan PASS, skor veya
 robot pose gösterilmez. Robot ekranları hazırlıktır. Yazılım testleri fiziksel
 kamera/ölçüm, PLC/robot, lens, native DPI, CUDA veya dağıtım kabulünü kapatmaz.

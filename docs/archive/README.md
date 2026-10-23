@@ -6,6 +6,7 @@ görev” ifadeleri yazıldıkları tarihe aittir.
 
 | Dönem / görev | Kayıt |
 | --- | --- |
+| 23 Ekim 2026 — CCUX-22c | [Editor kamera açılış/çıkış ömrü, hazır oturumdan edinim ve UI kabulü](2026-10-23-ccux-22c.md) |
 | 23 Ekim 2026 — CCUX-22b | [Ortak edinim oturumu, generation/lease, asenkron drain ve yazılım kabulü](2026-10-23-ccux-22b.md) |
 | 23 Ekim 2026 — CCUX-22a | [Aşama tanısı, Release yazılım baseline ve açık fiziksel seri](2026-10-23-ccux-22a.md) |
 | 22 Ekim 2026 — CCUX-PLAN-04 | [Editor/Runtime/Kalibrasyon bağlantı ömrü; CCUX-22a–f uygulama planı](2026-10-22-ccux-plan-04.md) |

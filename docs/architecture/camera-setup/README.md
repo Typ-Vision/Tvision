@@ -9,8 +9,9 @@ Güncel öncelik: **[CCUX-22 çalışma süresince kamera bağlantısı](22-sess
 **22a yazılım ölçümü tamamlandı**, fiziksel baseline kamera erişimi bekliyor.
 [Kapanış](../../archive/2026-10-23-ccux-22a.md). **22b ortak servis tamamlandı**
 ([API/ömür](acquisition-sessions.md), [kapanış](../../archive/2026-10-23-ccux-22b.md)).
-Sonraki kart **22c Editor**; ardından 22d Runtime → 22e Kalibrasyon → 22f birleşik kabul.
-Ekranların kalıcı bağlantı entegrasyonu henüz uygulanmadı.
+**22c Editor entegrasyonu uygulandı** ([kapanış](../../archive/2026-10-23-ccux-22c.md)).
+Sonraki plan kartı 22d Runtime → 22e Kalibrasyon → 22f birleşik kabul;
+bu ekranların bağlantı entegrasyonu henüz uygulanmadı.
 [CCUX-20](20-image-responsiveness.md) hash/preview teslimi ve
 [CCUX-21](21-preprocess-roi.md) ROI yazılım/görsel kabulü korunur;
 CCUX-20 gerçek kamera teyidi ve CCUX-15 fiziksel kabulü açık kalır.

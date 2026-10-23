@@ -18,6 +18,7 @@
 #include <QStackedWidget>
 #include <QStatusBar>
 #include <QTabWidget>
+#include <QTimer>
 #include <QVBoxLayout>
 
 namespace visionflow {
@@ -35,6 +36,7 @@ QFrame* card(const QString& title, const QString& text) {
 MainWindow::~MainWindow(){delete cameraManager_;cameraManager_=nullptr;}
 MainWindow::MainWindow(const QString& settingsFile) : settingsFile_(settingsFile) {
     smokeMode_=QCoreApplication::arguments().contains("--roi-smoke") || QCoreApplication::arguments().contains("--recipe-fields-smoke") || QCoreApplication::arguments().contains("--experimental-editor-smoke") || QCoreApplication::arguments().contains("--multi-source-runtime-smoke") || QCoreApplication::arguments().contains("--multi-source-smoke") || QCoreApplication::arguments().contains("--system-calibration-smoke") || QCoreApplication::arguments().contains("--usability-smoke") || QCoreApplication::arguments().contains("--smoke-test") || QCoreApplication::arguments().contains("--circle-smoke") || QCoreApplication::arguments().contains("--geometry-smoke");
+    smokeMode_=smokeMode_ || QCoreApplication::arguments().contains("--editor-camera-sessions-smoke");
     setWindowTitle("VisionFlow Industrial Vision Suite"); resize(1400,900); setMinimumSize(850,600);
     auto* file = menuBar()->addMenu("File");
     auto* create=file->addAction("New Project"); create->setShortcut(QKeySequence::New);
@@ -47,7 +49,7 @@ MainWindow::MainWindow(const QString& settingsFile) : settingsFile_(settingsFile
     exit->setShortcut(QKeySequence::Quit); connect(exit,&QAction::triggered,this,&QWidget::close);
     auto* view = menuBar()->addMenu("View");
     auto* editor = view->addAction("Recipe Editor");
-    connect(editor,&QAction::triggered,this,[this]{selectPage("editor");});
+    connect(editor,&QAction::triggered,this,[this]{if(service_.activeRecipe())openEditorRecipe(service_.activeRecipe()->id);else selectPage("editor");});
     auto* reset = view->addAction("Panel düzenini sıfırla");
     reset->setObjectName("resetPanels");
     connect(reset,&QAction::triggered,this,[this]{workspacePanel_->setPinned(true);horizontal_->setSizes({170,780,280}); vertical_->setSizes({640,160});});
@@ -115,6 +117,8 @@ MainWindow::MainWindow(const QString& settingsFile) : settingsFile_(settingsFile
     QSettings settings(settingsFile_,QSettings::IniFormat);
     restoreGeometry(settings.value("window/geometry").toByteArray());
     restoreLayout(); refreshWorkspace(); selectPage("dashboard");
+    auto* editorCameraTimer=new QTimer(this);editorCameraTimer->setInterval(25);
+    connect(editorCameraTimer,&QTimer::timeout,this,&MainWindow::pollEditorCameras);editorCameraTimer->start();
     if (!smokeMode_) restoreSession();
     initializeCommunication();
 }
@@ -136,6 +140,14 @@ void MainWindow::selectPage(const QString& id) {
     // Operator history is read-only and has an explicit return to Runtime.
     if(operatorMode_ && id!="runtime" && id!="logs")return;
     const int index = pageIds_.indexOf(id); if (index<0) return;
+    if(id!="editor" && pages_->currentIndex()==pageIds_.indexOf("editor") && !editorCameraExitAccepted_){
+        if(editorCameraAfterDrain_)return;
+        if(!resolveUnsavedChanges()){
+            const QSignalBlocker guard(navigation_);for(int row=0;row<navigation_->count();++row)if(navigation_->item(row)->data(Qt::UserRole).toString()=="recipes")navigation_->setCurrentRow(row);
+            return;
+        }
+        if(drainEditorCameras([this,id]{editorCameraExitAccepted_=true;selectPage(id);editorCameraExitAccepted_=false;}))return;
+    }
     if(id!="camera" && cameraManager_ && (cameraSession_.busy() || cameraManager_->hasPreview()) && pages_->currentIndex()==pageIds_.indexOf("camera")){
         cameraManager_->leave([this,id]{selectPage(id);});return;
     }
@@ -220,8 +232,9 @@ void MainWindow::closeEvent(QCloseEvent* event) {
     if(cameraManager_ && cameraManager_->hasPreview()){
         cameraManager_->leave([this]{close();});event->ignore();return;
     }
-    if (editorSession_.busy(SessionJob::Teaching) || editorSession_.busy(SessionJob::Execution) || editorSession_.busy(SessionJob::Image) || cameraSession_.busy() || runtimeJobs_.busy() || (runtime_ && runtime_->busy())) {displayError("Arka plan işi tamamlandıktan sonra pencereyi kapatın."); event->ignore(); return;}
-    if (!resolveUnsavedChanges()) { event->ignore(); return; }
+    if ((editorSession_.busy() && !editorCameras_.hasTargets()) || cameraSession_.busy() || runtimeJobs_.busy() || (runtime_ && runtime_->busy())) {displayError("Arka plan işi tamamlandıktan sonra pencereyi kapatın."); event->ignore(); return;}
+    if (!editorCameraExitAccepted_ && !resolveUnsavedChanges()) { event->ignore(); return; }
+    if(drainEditorCameras([this]{editorCameraExitAccepted_=true;close();editorCameraExitAccepted_=false;})){event->ignore();return;}
     saveLayout(); QMainWindow::closeEvent(event);
 }
 bool MainWindow::verifyShell() {

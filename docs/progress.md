@@ -4,11 +4,11 @@
 
 ## Devam noktası
 
-**CCUX-22b tamamlandı:** ortak sabit owner/generation/lease servisi;
-[API/ömür](architecture/camera-setup/acquisition-sessions.md),
-[kapanış](archive/2026-10-23-ccux-22b.md), `build/ccux/ccux-22b/`.
-Ekran entegrasyonu yok. **Sıradaki: [22c Editor](architecture/camera-setup/22-session-lifecycle.md)**.
-Ek `multi_source_production_contract` hatası HEAD kontrolünde de var; kapanışta.
+**CCUX-22c tamamlandı:** Editor açılış/çıkış, hazır oturumdan çekim, Stop/reopen;
+10 CTest. [Kapanış](archive/2026-10-23-ccux-22c.md), `build/ccux/ccux-22c/`.
+22b servis [tamamlandı](archive/2026-10-23-ccux-22b.md);
+[API/ömür](architecture/camera-setup/acquisition-sessions.md). Sonraki plan 22d; başlamadı.
+Ek `multi_source_production_contract` hatası 22b HEAD kontrolünde de var; kapanışta.
 **22a yazılım ölçümü tamamlandı:** [kapanış](archive/2026-10-23-ccux-22a.md),
 `build/ccux/ccux-22a/`; fiziksel baseline/paint açık, kamera erişilemedi.
 **[21 ROI tamamlandı](archive/2026-10-22-ccux-21.md)**, `build/ccux/ccux-21/`.

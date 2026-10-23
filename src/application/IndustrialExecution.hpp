@@ -17,6 +17,8 @@ struct IndustrialExecutionInputs {
     std::shared_ptr<CameraAcquisitionSessions> sessions;
     QString sessionContext;
     quint64 sessionGeneration=0;
+    QMap<QString,QString> sourceSessionContexts;
+    QMap<QString,quint64> sourceSessionGenerations;
 };
 struct IndustrialExecutionEvidence {
     IndustrialCameraRequest request;

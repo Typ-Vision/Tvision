@@ -8,6 +8,7 @@
 #include "application/ExecutionService.hpp"
 #include "application/CameraService.hpp"
 #include "application/EditorSession.hpp"
+#include "application/EditorCameraSessions.hpp"
 #include "application/CalibrationWorkflow.hpp"
 #include "application/ChessboardService.hpp"
 #include "application/PlaneMappingService.hpp"
@@ -42,6 +43,7 @@ public:
     bool verifyWorkspace(const QString& artifactDirectory);
     bool verifyEditor(const QString& artifactDirectory);
     bool verifySession();
+    bool verifyEditorCameraSessions(const QString& artifacts);
     bool verifyMatching(const QString& artifacts);
     bool verifyExecution(const QString& artifacts);
     bool verifyRoi(const QString& artifacts);
@@ -93,6 +95,11 @@ private:
     void openProjectDialog();
     void showRecipeDialog(bool edit = false);
     void openSelectedRecipe();
+    void openEditorRecipe(const QString& id);
+    void syncEditorCameras(const QString& retrySource={},bool activate=false);
+    bool drainEditorCameras(std::function<void()> after);
+    void pollEditorCameras();
+    QString editorCameraStatus(const QString& source) const;
     void loadSelectedRecipe();
     void refreshWorkspace();
     void refreshRecipes();
@@ -157,6 +164,13 @@ private:
     QAction* saveAction_{};
     bool smokeMode_ = false;
     EditorSession editorSession_;
+    EditorCameraSessions editorCameras_;
+    QString editorCameraRecipeKey_;
+    QMap<QString,QString> editorCameraErrors_;
+    std::optional<IndustrialExecutionInputs> editorCameraComposition_; // in-memory smoke composition only
+    std::optional<QString> editorCameraPendingExecution_;
+    bool editorCameraResume_=false,editorCameraExitAccepted_=false;
+    std::function<void()> editorCameraAfterDrain_;
     CameraSession cameraSession_;
     EditorContext editorContext() const;
     std::optional<ActiveCalibrationSnapshot> systemCalibrationSnapshot(const Recipe* recipe=nullptr) const;

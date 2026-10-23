@@ -35,7 +35,7 @@
 namespace visionflow {
 bool MainWindow::verifyMultiSource(const QString& artifacts){
     int checks=0;auto check=[&](bool b,const char* s){++checks;if(!b)throw std::runtime_error(s);};
-    auto wait=[&]{QElapsedTimer timer;timer.start();do{QApplication::processEvents();QThread::msleep(1);}while(editorSession_.busy() && timer.elapsed()<30000);QApplication::processEvents();check(!editorSession_.busy(),"Worker deadline");};
+    auto wait=[&]{QElapsedTimer timer;timer.start();do{QApplication::processEvents();QThread::msleep(1);}while((editorSession_.busy() || editorCameras_.pending() || editorCameraPendingExecution_) && timer.elapsed()<30000);QApplication::processEvents();check(!editorSession_.busy() && !editorCameras_.pending() && !editorCameraPendingExecution_,"Worker/preparation deadline");};
     QTemporaryDir dir(QDir(artifacts).filePath("kmc10b-ui-XXXXXX"));check(dir.isValid(),"Build fixtures");
     service_.createProject("Multi-source Editor","",dir.filePath("project.vfproject"),"file");service_.save();
     for(int n:{1,2,8,10})for(const auto type:{ApplicationType::Measurement,ApplicationType::DefectInspection,ApplicationType::RobotGuidance}){

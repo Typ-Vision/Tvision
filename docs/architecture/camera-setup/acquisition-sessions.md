@@ -1,6 +1,7 @@
 # Application edinim oturumları
 
-CCUX-22b servis sözleşmesi; ekran bağlantıları CCUX-22c–e kapsamındadır.
+CCUX-22b servis sözleşmesi; Editor bağlantısı CCUX-22c'de uygulanmıştır.
+Runtime/kalibrasyon bağlantıları CCUX-22d–e kapsamındadır.
 `CameraAcquisitionSessions` uygulama açılışında cihaz açmaz. Yalnız açık
 `prepare(context, inputs, requests, policy)` komutu keşif/resolve, Connect,
 Configure/readback ve Start yapar; hazırlık Grab veya sonuç üretmez.
@@ -63,3 +64,25 @@ asenkron tamamlatmalı, uygulama çıkışını bunun ardından sürdürmelidir.
 çağrısı cihaz bırakılmış gibi gösterilemez; işletim sistemi kapanışı çözüm değildir.
 
 Yazılım kabulü ve açık fiziksel sınırlar [22b kapanışında](../../archive/2026-10-23-ccux-22b.md).
+
+## Editor sahibi
+
+`EditorCameraSessions` UI thread'inde yalnız politika ve immutable durum tutar;
+her fiziksel hedef için ortak serviste ayrı context kullanır. Kaynak kümesi veya
+ilgili ayar/rota değişirse yalnız o hedef hazırlanır/kapatılır; diğer sağlıklı
+veya hatalı hedefler tekrar denenmez. Aynı fiziksel hedefteki logical kaynaklar
+tek context paylaşır. `IndustrialExecutionInputs.sourceSessionContexts` ve
+`sourceSessionGenerations` her kaynağın hazırlanmış capability'sini taşır.
+
+`poll()` yalnız hazır future'ları tüketir. İlk hazırlık, açık Retry/Görüntü al,
+idle Stop sonrası yeniden açma ve kabul edilmiş çıkış buna dayanır. Hazırlık
+hatası düzenlemeyi engellemez. Aynı kaynak ID'lerinin setup/profile revision'ı
+güncellenirse Editor snapshot'ı DRAFT/dirty olur; kaynak/araç cache'i normal
+invalidation yoluyla emekliye ayrılır. Kamera/seri/device revision veya kayıt ID'si
+değişimi otomatik remap edilmez. Kalibrasyon ve native admission kapıları aynıdır.
+
+MainWindow açık düzenleme komutlarını tek girişte birleştirir; restore bu girişi
+çağırmaz. Dirty kararından sonra çıkış generation'ı kapatır; UI poll hem SDK drain'i
+hem execution tesliminin bitmesini bekleyip gezinme/proje/pencere işlemini sürdürür.
+Geç A karesi B reçetesinin cache'ine taşınmaz. Kaydet ve çıkış iptali oturumu tutar.
+OECS stream cleanup kare başına kalır. [22c kapanışı](../../archive/2026-10-23-ccux-22c.md).

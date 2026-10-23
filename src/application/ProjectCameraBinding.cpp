@@ -46,4 +46,19 @@ void ProjectService::refreshCameraSources(const MeasurementEnvironment& e) {
     }
     *this=std::move(candidate);
 }
+void ProjectService::refreshEditorCameraSources(const MeasurementEnvironment& e) {
+    // An explicitly open Editor follows revisions of its exact selected IDs.
+    // It never chooses a different physical camera, setup or profile/default.
+    for(const auto& tool:tools())if(tool.enabled && tool.kind=="industrial_camera")try{
+        const auto old=IndustrialSourceReference::fromJson(tool.parameters["sourceReference"].toObject());
+        const auto next=IndustrialSourceReference::bind(e.current,old.profile,old.timeoutMs);
+        if(next==old || next.camera!=old.camera || next.setup!=old.setup || next.physical!=old.physical || next.deviceRevision!=old.deviceRevision ||
+           e.archivedCameras.contains(old.camera.value) || e.archivedSetups.contains(old.setup.value))continue;
+        auto candidate=*this;candidate.bindIndustrialSource(tool.id,e.current,old.profile,old.timeoutMs);
+        const auto branch=SystemCalibration::branch(*activeRecipe(),tool.id);const auto scoped=SystemCalibration::setupReference(branch);
+        if(scoped && scoped->camera==old.camera && scoped->setup==old.setup)
+            candidate.bindSourceSetup(tool.id,SetupReference{next.camera,next.setup,next.setupRevision}.toJson());
+        *this=std::move(candidate);
+    }catch(const std::exception&){/* Invalid sources stay invalid; healthy sources still prepare. */}
+}
 }

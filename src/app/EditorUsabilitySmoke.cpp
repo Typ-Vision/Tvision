@@ -113,6 +113,7 @@ bool MainWindow::verifyEditorUsability(const QString& artifacts) {
     const auto source=service_.setImageFile(path);refreshWorkspace();selectPage("editor");wait();
     // EUI-06: input events exercise timed reveal, focus retention and Escape.
     {
+        service_.save();refreshWorkspace(); // Navigation presentation uses a clean recipe; dirty exits have their own lifecycle fixture.
         auto pause=[](int ms){QElapsedTimer t;t.start();while(t.elapsed()<ms){QApplication::processEvents();QThread::msleep(1);}QApplication::processEvents();};
         auto click=[](QWidget* w){const QPointF p=w->rect().center();for(auto type:{QEvent::MouseButtonPress,QEvent::MouseButtonRelease}){QMouseEvent e(type,p,QPointF(w->mapToGlobal(p.toPoint())),Qt::LeftButton,type==QEvent::MouseButtonPress ? Qt::LeftButton:Qt::NoButton,Qt::NoModifier);QApplication::sendEvent(w,&e);}};
         workspacePanel_->setPinned(true);QApplication::processEvents();

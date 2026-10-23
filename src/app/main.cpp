@@ -26,12 +26,14 @@ int main(int argc, char* argv[]) {
     const bool poseOnly=app.arguments().contains("--pose-tracking-smoke");
     const bool experimentalOnly=app.arguments().contains("--experimental-editor-smoke");
     const bool usabilityOnly=app.arguments().contains("--usability-smoke");
-    const bool smoke = roiOnly || app.arguments().contains("--smoke-test") || circleOnly || geometryOnly || poseOnly || usabilityOnly || systemOnly || multiOnly || multiRuntimeOnly || experimentalOnly || recipeFieldsOnly;
+    const bool editorCamerasOnly=app.arguments().contains("--editor-camera-sessions-smoke");
+    const bool smoke = editorCamerasOnly || roiOnly || app.arguments().contains("--smoke-test") || circleOnly || geometryOnly || poseOnly || usabilityOnly || systemOnly || multiOnly || multiRuntimeOnly || experimentalOnly || recipeFieldsOnly;
     const QDir buildDir(smoke ? qEnvironmentVariable("VISIONFLOW_TEST_ARTIFACTS",QCoreApplication::applicationDirPath()):QCoreApplication::applicationDirPath());
     if(smoke)QDir().mkpath(buildDir.absolutePath());
     visionflow::MainWindow window(buildDir.filePath(smoke ? "ui-smoke.ini" : "../config/local.ui.ini"));
     window.show();
     if (smoke) QTimer::singleShot(100, &app, [&]{
+        if(editorCamerasOnly){bool valid=false;try{valid=window.verifyEditorCameraSessions(buildDir.absolutePath());}catch(const std::exception& e){QTextStream(stderr)<<e.what()<<'\n';}window.close();app.exit(valid?0:1);return;}
         if(roiOnly){bool valid=false;try{valid=window.verifyRoi(buildDir.absolutePath());}catch(const std::exception& e){QTextStream(stderr)<<e.what()<<'\n';}QTextStream(stdout)<<(valid ? "PASS":"FAIL")<<": ROI draw/bind/save/reopen/Run Tool/Flow\n";window.close();app.exit(valid ? 0:1);return;}
         if(recipeFieldsOnly){QFontDatabase::addApplicationFont(QDir(qEnvironmentVariable("WINDIR", "C:/Windows")).filePath("Fonts/segoeui.ttf"));bool valid=false;try{window.resize(1400,900);valid=window.verifyWorkspace(buildDir.absolutePath());}catch(const std::exception& e){QTextStream(stderr)<<e.what()<<'\n';}QTextStream(stdout)<<(valid ? "PASS":"FAIL")<<": reference-free recipe dialogs, three types, validation and metadata roundtrip\n";window.close();app.exit(valid ? 0:1);return;}
         if(multiRuntimeOnly){QFontDatabase::addApplicationFont(QDir(qEnvironmentVariable("WINDIR", "C:/Windows")).filePath("Fonts/segoeui.ttf"));bool valid=false;try{valid=window.verifyMultiSourceRuntime(buildDir.absolutePath());}catch(const std::exception& e){QTextStream(stderr)<<e.what()<<'\n';}window.close();app.exit(valid ? 0:1);return;}

@@ -36,6 +36,7 @@ public:
     void bindIndustrialSource(const QString& toolId,const MeasurementSetupContract&,const ProfileId&,int timeoutMs);
     void bindCameraSource(const QString& toolId,const MeasurementEnvironment&,const CameraId&,int timeoutMs=5000);
     void refreshCameraSources(const MeasurementEnvironment&);
+    void refreshEditorCameraSources(const MeasurementEnvironment&);
     void updateTool(const ToolDefinition& tool);
     // Commit teaching and its reference connection as one validated edit.
     void updateToolConnections(const ToolDefinition&,const QVector<ToolConnection>&);

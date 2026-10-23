@@ -1,6 +1,6 @@
 # Kamera, kalibrasyon ve Runtime kullanımı
 
-22 Ekim 2026 mevcut uygulama. [Güncel durum ve açık fiziksel kabul](progress.md).
+23 Ekim 2026 mevcut uygulama. [Güncel durum ve açık fiziksel kabul](progress.md).
 
 ## Kamera → Kalibrasyon → Editor → Runtime
 
@@ -35,11 +35,18 @@
    eski kalibrasyon ekranlarına ayrı geçiş yoktur. Robot yöntemi desteklenmez.
 7. Yeni reçeteyi üç uygulama türünden biriyle açın. Boş reçete DRAFT'tır.
    Ortak Editor'da kaynak ekleyip **Properties → Kamera ID / ad** seçin; varsayılan
-   kurulum/profil atomik bağlanır, seçim kare almaz. Kaynakları ve araçları bağlayın.
+   kurulum/profil atomik bağlanır, seçim kare almaz. Açık reçete düzenleme komutu
+   bağlı kameraları arka planda hazırlar. Sağlıklı bağlantı açık düzenleme boyunca
+   korunur; **Save**, araç/ROI ve Properties sekmesi bağlantıyı kesmez.
+   Kamera hazır değilse dosya düzenleme sürer; diğer hazır kaynaklar çekilebilir.
+   **Görüntü al** başarısız hedefi açıkça yeniden dener; otomatik tekrar yoktur.
+   **Stop** boşta da bağlantıyı bırakır; sonraki edinim yeniden hazırlayabilir.
+   Kaynakları ve araçları bağlayın.
    **Görüntü al / Run Flow** normal komutları canlı veya PGM+JSON kökenini korur.
    Raw/px model istemez; mm aynı kaynağın uygun etkin modelini ister. Başka/global
-   modele fallback yoktur. Kamera/seri/geometri değişimi açık yeniden seçim ister.
-   Aynı kameranın exposure/gain snapshot'ı Run Flow hazırlığında yenilenirse reçete
+   modele fallback yoktur. Kamera/seri değişimi açık yeniden seçim ister.
+   Aynı kayıtlı setup/profile revision değişimi Editor bağlantısını yeniden hazırlar;
+   eski kalibrasyon/model izni geri gelmez. Yeni ayar snapshot'ıyla reçete
    DRAFT/dirty olur; otomatik kaydedilmez. **Save** ile taslağı kaydedin.
 8. **Load Recipe → Run → Tek çevrim** ile kaydedilmiş immutable sürümü yürütün.
    Load/Run hazırlığı sonuç üretmez. Kamera/model/ayar değişiminde **Stop → yeniden
@@ -51,7 +58,8 @@
    version, kaynak, birim ve köken korunur. Hata/Stop sayısal sonuç üretmez. Kayıt
    hatasında **Tekrar yaz** aynı donmuş sonucu kaydeder, yeniden edinim yapmaz.
 
-Sayfa/proje değişimi ve pencere kapanışı session'ı durdurup drain bekler; geç
+Editor çıkışı önce mevcut Kaydet/Vazgeç/İptal kararını çözer; İptal bağlantıyı
+korur. Kabul edilen sayfa/reçete/proje değişimi ve pencere kapanışı drain bekler; geç
 sonuç başka hedefe taşınmaz. Restart/proje açılışı capture veya Run başlatmaz.
 Eski çok profilli projede belirsiz varsayılan bir defa açıkça seçilip kaydedilir;
 çevrimdışı kamera listede kalır. Webcam ayarları/önizlemesi Camera Manager'da

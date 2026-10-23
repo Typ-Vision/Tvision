@@ -24,14 +24,16 @@ IndustrialExecutionFrame acquireIndustrial(const IndustrialExecutionInputs& inpu
     AcquisitionTimingSpan timing("industrial.acquire");
     require(!experimentalEditor || (inputs.leaseUse==CameraLeaseUse::Editor && inputs.admittedDevices.isEmpty()),"Experimental acquisition requires Editor lease without production admission");
     if(inputs.sessions){
+        const auto context=inputs.sourceSessionContexts.value(request.sourceId,inputs.sessionContext);
+        const auto generation=inputs.sourceSessionGenerations.value(request.sourceId,inputs.sessionGeneration);
         Deadline cachedDeadline(timeout);
         std::optional<DiscoveredDevice> admitted;
         if(inputs.admittedDevices.contains(request.sourceId))admitted=inputs.admittedDevices[request.sourceId];
         try {
-            auto result=inputs.sessions->acquire(inputs.sessionContext,inputs.sessionGeneration,std::move(request),cycle,frame,
+            auto result=inputs.sessions->acquire(context,generation,std::move(request),cycle,frame,
                 timeout,cancel,experimentalEditor,admitted).get();
             require(!(cancel && cancel->load()) && !cachedDeadline.expired() &&
-                inputs.sessions->status(inputs.sessionContext).generation==inputs.sessionGeneration,"Retired prepared execution completion");
+                inputs.sessions->status(context).generation==generation,"Retired prepared execution completion");
             timing.finish();return result;
         }catch(...){timing.finish(cancel && cancel->load()?"cancelled":cachedDeadline.expired()?"timeout":"error");throw;}
     }

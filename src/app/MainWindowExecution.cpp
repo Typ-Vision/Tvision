@@ -58,6 +58,10 @@ EditorContext MainWindow::editorContext() const {
 }
 QByteArray MainWindow::flowSignature() const {return editorSession_.signature(editorContext());}
 void MainWindow::refreshFlow() {
+    if(auto* status=propertiesBody_->findChild<QLabel*>("industrialSourceStatus")){
+        if(!status->property("bindingStatus").isValid())status->setProperty("bindingStatus",status->text());
+        status->setText(status->property("bindingStatus").toString()+"\n"+editorCameraStatus(selectedToolId_));
+    }
     if(editorSession_.busy()){imageViewer_->cancelRoi();imageViewer_->drawRegion(false);imageViewer_->setSearchRegionEditing({}, {},false);}
     const auto identity=systemCalibrationIdentity();if(identity!=editorCalibrationIdentity_ && !editorSession_.busy()){if(service_.activeRecipe() && service_.activeRecipe()->definition["editor"].toObject()["schemaVersion"]==9){for(auto i=identity.begin();i!=identity.end();++i)if(editorCalibrationIdentity_[i.key()]!=i.value())editorSession_.calibrationChanged(editorContext(),i.key());}else editorSession_.calibrationChanged(editorContext());editorCalibrationIdentity_=identity;}
     if(!editorSession_.busy() && measurementWorkspace_ && service_.activeRecipe()){
@@ -87,7 +91,7 @@ void MainWindow::refreshFlow() {
         bool source=false,unavailable=false;if(service_.activeRecipe())for(const auto& t:service_.tools())if(t.id==selectedToolId_){source=ToolRegistry::get(t.kind).acquisitionSource;unavailable=t.kind=="industrial_camera" && !t.parameters["sourceReference"].isObject();}
         run->setText(source ? "Görüntü al" : "Run Tool");run->setEnabled(!selectedToolId_.isEmpty() && !editorSession_.busy() && !unavailable);
     }
-    findChild<QPushButton*>("stopFlow")->setEnabled(editorSession_.busy() || !pendingDrawTool_.isEmpty() || imageViewer_->drawingActive());
+    findChild<QPushButton*>("stopFlow")->setEnabled(editorSession_.busy() || !pendingDrawTool_.isEmpty() || imageViewer_->drawingActive() || editorCameras_.hasTargets() || editorCameras_.draining());
     for(const auto name:{"teachPoseReference","clearPoseReference","runSelectedTool"})if(auto* button=findChild<QPushButton*>(name)) {
         bool enabled=!editorSession_.busy();
         if(QString(name)=="runSelectedTool" && service_.activeRecipe())for(const auto& t:service_.tools())if(t.id==selectedToolId_ && t.kind=="industrial_camera" && !t.parameters["sourceReference"].isObject())enabled=false;
@@ -179,9 +183,15 @@ void MainWindow::runFlow() {
     runExecution({});
 }
 void MainWindow::runExecution(const QString& targetTool) {
+    const bool resumed=std::exchange(editorCameraResume_,false);
     if(runtimeJobs_.busy() || (runtime_ && runtime_->busy()) || editorSession_.busy(SessionJob::Execution) || editorSession_.busy(SessionJob::Teaching) || editorSession_.busy(SessionJob::Image) || !applyToolProperties() || !service_.activeRecipe())return;
     const auto timing=AcquisitionTiming::request("editor");const auto commandedAt=AcquisitionTiming::Clock::now();AcquisitionTimingBinding timingBinding(timing);AcquisitionTimingSpan commandTiming("editor.user-command");
-    if(targetTool.isEmpty() && measurementWorkspace_)try{const auto before=service_.activeRecipe()->definition;service_.refreshCameraSources(measurementWorkspace_->environment());if(before!=service_.activeRecipe()->definition){editorSession_.reconcile(editorContext());refreshWorkspace();}}catch(const std::exception& e){matchInfo_->setText(QString::fromUtf8(e.what()));return;}
+    if(targetTool.isEmpty() && measurementWorkspace_)try{const auto before=service_.activeRecipe()->definition;service_.refreshEditorCameraSources(measurementWorkspace_->environment());if(before!=service_.activeRecipe()->definition){editorSession_.reconcile(editorContext());refreshWorkspace();}}catch(const std::exception& e){matchInfo_->setText(QString::fromUtf8(e.what()));return;}
+    bool needsAcquisition=targetTool.isEmpty();for(const auto& tool:service_.tools())if(tool.id==targetTool)needsAcquisition=ToolRegistry::get(tool.kind).acquisitionSource;
+    if(needsAcquisition){
+        syncEditorCameras(resumed?QString{}:targetTool.isEmpty()?QString("*"):targetTool,true);
+        if(editorCameras_.pending(targetTool)){editorCameraPendingExecution_=targetTool;matchInfo_->setText("Kamera bağlantısı hazırlanıyor…");refreshFlow();return;}
+    }
     findChild<QTabWidget*>("editorTabs")->setCurrentWidget(findChild<QScrollArea*>("resultsScroll"));
     const auto recipe=*service_.activeRecipe();const auto definition=recipe.definition;const auto catalogPath=service_.path()+".calibrations.json";const auto resolver=calibrationResolver(recipe);QJsonObject acquisitionPlan;try{if(recipe.definition["editor"].toObject()["schemaVersion"]==9){QJsonObject sources;for(const auto& t:editorTools(definition))if(t.enabled && ToolRegistry::get(t.kind).acquisitionSource && (targetTool.isEmpty() || t.id==targetTool)){const auto branch=SystemCalibration::branch(recipe,t.id);if(branch.definition.contains("sourceSetup")){if(!measurementWorkspace_)throw std::runtime_error("Measurement workspace unavailable");sources[t.id]=measurementWorkspace_->acquisition(branch);}}acquisitionPlan["sources"]=sources;}else if(recipe.definition.contains("sourceSetup")){if(!measurementWorkspace_)throw std::runtime_error("Measurement workspace unavailable");acquisitionPlan=measurementWorkspace_->acquisition(recipe);}}catch(const std::exception& e){matchInfo_->setText(QString::fromUtf8(e.what()));return;}
     bool acquisition=false;for(const auto& t:editorTools(definition))if(t.id==targetTool)acquisition=ToolRegistry::get(t.kind).acquisitionSource;
@@ -216,6 +226,7 @@ void MainWindow::runExecution(const QString& targetTool) {
         for(const auto& t:editorTools(definition))if(t.enabled && t.kind=="industrial_camera"){const auto ref=t.parameters["sourceReference"].toObject();if(e.archivedCameras.contains(ref["cameraId"].toString()) || e.archivedSetups.contains(ref["setupId"].toString())){matchInfo_->setText("Arşivlenmiş kamera/kurulum edinimi reddedildi.");return;}}
         for(const auto& c:industrial.contract.cameras)if(c.physical)if(const auto route=CameraLocalConfiguration(settingsFile_).route(*c.physical))industrial.routes[c.id.value]=*route;
     }
+    industrial=editorCameras_.executionInputs();
     const bool multi=definition["editor"].toObject()["schemaVersion"]==9;
     if(!multi || targetTool.isEmpty())++editorSession_.generation;
 
