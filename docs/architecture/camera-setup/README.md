@@ -1,18 +1,24 @@
 # CCUX — sade kamera ve kalibrasyon uygulama planı
 
-22 Ekim 2026 — **CCUX-PLAN-03: kamera akışını son kullanıcı için sadeleştirme**.
+23 Ekim 2026 — **CCUX-PLAN-05: çerçeveli plaka kalibrasyonu planı**.
+Yeni kullanıcı yönlendirmesi: [CCUX-15e–j](15-plate-calibration-plan.md) ayrıntılı
+planı hazırlandı; uygulama başlamadı. Başlangıç 15e gözlem/model ayrımıdır.
+Distorsiyon çözümü devreye alınmayacak. [C3a](contract.md#c3a--çerçeveli-plaka-kalibrasyonu)
+hedef sözleşmedir. [Kapanış](../../archive/2026-10-23-ccux-plan-05.md).
+
+22 Ekim **CCUX-PLAN-03** kamera akışını sadeleştirme teslimleri korunur.
 CCUX-01–14 teslimleri korunur; CCUX-15 fiziksel kabulü kısmen açıktır.
 CCUX-16 politika, CCUX-17 UI, CCUX-18 gezinme temizliği ve CCUX-19 birleşik
 yazılım/görsel kabulü teslim edildi. CCUX-15 fiziksel kabulü açık. Güncel seçili iş ve
 tamamlanan kartlar [progress](../../progress.md) üzerinden izlenir.
-Güncel öncelik: **[CCUX-22 çalışma süresince kamera bağlantısı](22-session-lifecycle.md)**;
+Önceki çalışma: **[CCUX-22 çalışma süresince kamera bağlantısı](22-session-lifecycle.md)**;
 **22a yazılım ölçümü tamamlandı**, fiziksel baseline kamera erişimi bekliyor.
 [Kapanış](../../archive/2026-10-23-ccux-22a.md). **22b ortak servis tamamlandı**
 ([API/ömür](acquisition-sessions.md), [kapanış](../../archive/2026-10-23-ccux-22b.md)).
 **22c Editor entegrasyonu uygulandı** ([kapanış](../../archive/2026-10-23-ccux-22c.md)).
 **22d Runtime entegrasyonu uygulandı** ([kapanış](../../archive/2026-10-23-ccux-22d.md)).
 **22e Kalibrasyon entegrasyonu uygulandı** ([kapanış](../../archive/2026-10-23-ccux-22e.md)).
-Sonraki plan kartı 22f birleşik kabul; fiziksel kamera doğrulaması açık.
+22f birleşik kabul ve fiziksel kamera doğrulaması açık; yeni plaka planı bunları kapatmaz.
 [CCUX-20](20-image-responsiveness.md) hash/preview teslimi ve
 [CCUX-21](21-preprocess-roi.md) ROI yazılım/görsel kabulü korunur;
 CCUX-20 gerçek kamera teyidi ve CCUX-15 fiziksel kabulü açık kalır.
@@ -102,12 +108,12 @@ birleştirir; her kartta bütün suite'i tekrarlamaz.
 
 ## Kopyalanabilir başlangıç
 
-> CCUX-16 görevini uygula. AGENTS.md, docs/progress.md ve
+> CCUX-15e görevini uygula. AGENTS.md, docs/progress.md ve
 > README.md ardından docs/architecture/camera-setup/README.md, contract.md ve
-> 16-automatic-acquisition.md dosyasını oku. Yalnız bu kartı ve gerekli doğrudan
+> 15-plate-calibration-plan.md tasarım/sınır ve 15e bölümünü oku. Yalnız bu kartı ve gerekli doğrudan
 > bağımlılıklarını tamamla. Karttaki kabul/testleri çalıştır, yeni kanıtı kaydet,
 > progress ve tarihli kapanışı güncelle, görev ID'li tek commit oluştur; push yapma.
-> Hand-eye kapsam dışı. Tamamlanmış KMC/ICM/EXP işlerini yeniden başlatma.
+> Distorsiyon ve hand-eye kapsam dışı. Tamamlanmış KMC/ICM/EXP işlerini yeniden başlatma.
 
 Sonraki oturumda yalnız görev ID'si ve kart dosyası değiştirilir. İlerleme özeti
 kısa tutulur; uygulama ayrıntıları ilgili sözleşmeye, test raporu kapanışa yazılır.

@@ -144,6 +144,32 @@ kamera konumu değişti” bildirimi bulunur. Geometriye etkili ayarlar sırf pr
 adı altında oldukları için exposure gibi ele alınmaz. Restart uyum kontrolü
 native capability ve güncel kimlik/probe/izin ömrü sınırlarını aşamaz.
 
+## C3a — Çerçeveli plaka kalibrasyonu
+
+23 Ekim CCUX-PLAN-05 hedefi; **henüz uygulanmadı**.
+[CCUX-15e–j planı](15-plate-calibration-plan.md) koyu çerçeveli, köşe işaretli
+7×7 plaka için C3'teki mevcut plaka algılamasını genişletir. Lens solver'ı,
+distorsiyon düzeltmesi, remap ve robot bu kapsamda yoktur.
+
+Ham plaka gözlemi, raw planar model hesabı ve fiziksel kabul ayrı aşamalardır.
+Algılama tüm görüntüde tam 49 blob şartı koymaz; çerçeve/işaret içindeki tam ve
+benzersiz 7×7 merkez eşleşmesini arar. Fazla aday geometrik olarak elenebilir;
+eksik merkezler üretilmez. Yeni profilde belirsiz yön model oluşturmaya yetmez.
+Nihai merkezler özgün raw piksel koordinatlarında ve immutable kare kökeniyle
+saklanır; geçici arama ROI/warp işlemleri raster kimliğini değiştirmez.
+
+Gözlem üretmek lenssiz homografi fit başarısına bağımlı olmayacak; mevcut model
+oluşturma yolunun 1 px inverse fit, sıra/tamlık, hull ve bağımsız kontrol
+kapıları korunacak. Böylece ileride lens solver'ı ham gözlemi kullanabilir;
+bugün kötü raw fit kalibrasyon kabulü olmaz. Gözlem başarısı SaveUse veya mm
+izni değildir. UI tanı/overlay ile model ve fiziksel kabulü ayrı gösterir.
+
+Yeni hedef/yön kanıtı gerekli şemalarda sürümlenir. Eski generic simetrik grid
+ve chessboard kayıtlarının no-op/hash/yön anlamı korunur. Eski raw H gelecekte
+düzeltilmiş piksele uygulanamaz; yeni koordinat uzayı ve lens bağı ayrı iştir.
+Yeni çekim/hedef/aralık/arama ROI'si eski gözlem/onay/adayı geçersiz kılar.
+Ret/iptal/yazma hatasında önceki etkin seçim korunur; C0/C2a/C4/C5 geçerlidir.
+
 ## C4 — Kaynak bağı ve immutable yürütme
 
 Editor'da kamera ID'si seçimi mevcut kayıtlı varsayılan setup/profile bağını

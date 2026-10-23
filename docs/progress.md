@@ -4,12 +4,12 @@
 
 ## Devam noktası
 
-**[CCUX-15d](archive/2026-10-23-ccux-15d.md):** NI/HALCON plaka ön araştırması;
-kod değişmedi. [Lens uyumu](archive/2026-10-23-ccux-15d-lens.md). Devam: 15e/22f.
+**[PLAN-05](archive/2026-10-23-ccux-plan-05.md):** Plaka planı hazır, kod değişmedi.
+Başlangıç [15e](architecture/camera-setup/15-plate-calibration-plan.md); lens kapalı.
 
 **[CCUX-22e yazılımı tamamlandı](archive/2026-10-23-ccux-22e.md):** Kalibrasyon
 bağlantı ömrü, dosya/iptal/SaveUse drain. Kanıt: `build/ccux/ccux-22e/`.
-Fiziksel denemede SDK kayıtlı kamerayı bulamadı; kare/mm kabulü yok. Sonraki 22f.
+SDK kayıtlı kamerayı bulamadı; kare/mm kabulü yok. 22f açık.
 [22d Runtime](archive/2026-10-23-ccux-22d.md), [22c Editor](archive/2026-10-23-ccux-22c.md),
 [API/ömür](architecture/camera-setup/acquisition-sessions.md).
 Ek `multi_source_production_contract` önceki hatası 22d kapanışında korunur.
