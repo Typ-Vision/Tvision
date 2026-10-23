@@ -69,8 +69,8 @@ Stop/kopma eski generation'ı emekliye ayırır. UI SDK çağırmaz. Lease çak�
 
 22 Ekim kullanıcı kararı; **CCUX-22 hedefidir**. Ortak application servisi 22b'de
 uygulandı ([API/ömür](acquisition-sessions.md)); Editor bağlantısı 22c'de
-uygulandı; Runtime bağlantısı 22d'de uygulandı. Kalibrasyon bağlantısı 22e'de yapılacak; aşağıdaki ürün
-akışı henüz bütünüyle uygulanmadı.
+uygulandı; Runtime bağlantısı 22d, Kalibrasyon bağlantısı 22e'de uygulandı.
+Birleşik/fiziksel kabul 22f'de açık kalır.
 Önceki her-kare kapanışına göre oturum sınırı aşağıdaki gibidir. C2'nin preview,
 tek pending istek, lease ve generation kuralları korunur.
 

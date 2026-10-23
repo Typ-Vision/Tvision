@@ -4,13 +4,13 @@
 
 ## Devam noktası
 
-**[CCUX-22d tamamlandı](archive/2026-10-23-ccux-22d.md):** Runtime Run/Stop,
-çok kamera hazırlığı/drain; Release, 12 CTest ve görsel kontrol. `build/ccux/ccux-22d/`.
-[22c Editor](archive/2026-10-23-ccux-22c.md), [22b servis](archive/2026-10-23-ccux-22b.md);
-[API/ömür](architecture/camera-setup/acquisition-sessions.md). Sonraki plan 22e.
-Ek `multi_source_production_contract` hatası 22b HEAD kontrolünde de var; kapanışta.
-**22a yazılım ölçümü tamamlandı:** [kapanış](archive/2026-10-23-ccux-22a.md),
-`build/ccux/ccux-22a/`; fiziksel baseline/paint açık, kamera erişilemedi.
+**[CCUX-22e yazılımı tamamlandı](archive/2026-10-23-ccux-22e.md):** Kalibrasyon
+bağlantı ömrü, dosya/iptal/SaveUse drain. Kanıt: `build/ccux/ccux-22e/`.
+Fiziksel denemede SDK kayıtlı kamerayı bulamadı; kare/mm kabulü yok. Sonraki 22f.
+[22d Runtime](archive/2026-10-23-ccux-22d.md), [22c Editor](archive/2026-10-23-ccux-22c.md),
+[API/ömür](architecture/camera-setup/acquisition-sessions.md).
+Ek `multi_source_production_contract` önceki hatası 22d kapanışında korunur.
+**[22a ölçümü](archive/2026-10-23-ccux-22a.md):** yazılım tamam; fiziksel baseline/paint açık.
 **[21 ROI tamamlandı](archive/2026-10-22-ccux-21.md)**.
 CCUX-20 canlı teyit ve CCUX-15 fiziksel kabul açık; hash/preview korunur.
 [CCUX-20](archive/2026-10-22-ccux-20.md), `build/ccux/ccux-20/`.

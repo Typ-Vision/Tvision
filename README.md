@@ -30,6 +30,10 @@ Runtime Load çevrimdışıdır. Run bağlı kamera kümesini arka planda hazır
 tümü hazır olunca Running olur. Tek çevrimler aynı bağlantıları kullanır.
 Stop gerçek kamera kapanışını bekler; disk kayıt retry kamerayı tutmaz.
 
+Kalibrasyon listesi bağlantı açmaz. Canlı sihirbaz hedef kamerayı arka planda
+hazırlar; çekimler bağlantıyı paylaşır. Dosyaya geçiş, Stop/İptal ve başarılı
+Kaydet ve kullan bağlantıyı kapatır; çıkış gerçek kapanışı bekler.
+
 Hazırlık/keşif üretim kabulü değildir; gerçek sonuç olmadan PASS, skor veya
 robot pose gösterilmez. Robot ekranları hazırlıktır. Yazılım testleri fiziksel
 kamera/ölçüm, PLC/robot, lens, native DPI, CUDA veya dağıtım kabulünü kapatmaz.

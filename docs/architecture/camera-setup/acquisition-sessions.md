@@ -1,7 +1,7 @@
 # Application edinim oturumları
 
 CCUX-22b servis sözleşmesi; Editor bağlantısı CCUX-22c'de uygulanmıştır.
-Runtime/kalibrasyon bağlantıları CCUX-22d–e kapsamındadır.
+Runtime/kalibrasyon bağlantıları CCUX-22d–e'de uygulanmıştır.
 `CameraAcquisitionSessions` uygulama açılışında cihaz açmaz. Yalnız açık
 `prepare(context, inputs, requests, policy)` komutu keşif/resolve, Connect,
 Configure/readback ve Start yapar; hazırlık Grab veya sonuç üretmez.
@@ -105,3 +105,25 @@ engellemez, retry yeni çekim yapmaz. SDK hatası/kopma kümeyi kapatır; replug
 otomatik Run değildir. Bağımlılık değişimi Stop sonrası açık Load gerektirir.
 UI timer yalnız hazır future'ları tüketir; proje/pencere değişimi Stop ve drain
 tamamlanmasını ister. [22d kapanışı](../../archive/2026-10-23-ccux-22d.md).
+
+## Kalibrasyon sahibi
+
+`IndependentCalibrationSession::prepareCamera` açık canlı işlem girişidir;
+SDK hazırlığı ortak coordinator/worker üzerinde yapılır, kare üretmez. Sihirbaz
+bu komutu açılışta ve Stop/dosya sonrası açık kamera dönüşünde çağırır. Sağlıklı
+aynı hedefte hazırlık future'ı ve generation korunur; `begin/run/accept` her
+çekim için yeni metadata ve typed kaynak kanıtı üretir. Eski tek çekim servis
+çağrıları, dosya/replay ve webcam yolları geriye uyumlu kalır.
+
+`closeCamera` generation'ı emekliye ayırır; `cameraStatus` gerçek drain/clean
+bilgisini verir. Stop/İptal, dosyaya geçiş ve başarılı SaveUse bağlantıyı kapatır.
+Hesap/kayıt hatası canlı işlemi açık tutar; edinim hatası fault/drain yapar.
+Dosya adayının ayrı canlı aktivasyon probe'u dosya kökenini değiştirmez.
+Yeni hedef/retry eski matematik/kanıtı temizler; geç iş yeni generation'ı kapatmaz.
+
+Sihirbaz Qt timer ile yalnız hazır durumları yoklar; çıkışta SDK drain ve
+bekleyen işleri bekler. Dosya completion'ı dahil her refresh kapanış sırasında
+edinim düğmelerini kapalı tutar. Editor çıkışının mevcut drain bariyeri ve
+Camera Manager preview/ayarlarının ortak fiziksel lease'i korunur. Runtime
+meşgulse sihirbaz açılışı reddedilir; servis katmanında da lease devralınamaz.
+[22e kapanışı](../../archive/2026-10-23-ccux-22e.md).

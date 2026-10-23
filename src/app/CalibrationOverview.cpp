@@ -162,7 +162,7 @@ void CalibrationOverview::chooseMethod(){
     if(choice.exec()==QDialog::Accepted && method>=0)wizard(method==1,false);
 }
 void CalibrationOverview::wizard(bool plate,bool trial){
-    auto* c=context_();if(!c)throw std::runtime_error("Önce projeyi kaydedin.");const auto e=c->environment();IndependentCaptureRequest request;
+    auto* c=context_();if(!c)throw std::runtime_error("Önce projeyi kaydedin.");if(!c->changeAllowed())throw std::runtime_error("Önce çalışan işlemi durdurun.");const auto e=c->environment();IndependentCaptureRequest request;
     if(!trial && !selected_.isEmpty()){
         const auto defaults=e.defaults({selected_});if(defaults.status!=CameraDefaultsStatus::Ready)throw std::runtime_error("Kamera kurulum bilgisi eksik veya varsayılanı belirsiz. Ayrıntılar / Kameralar ekranında tamamlayın.");
         bool physical=false;for(const auto& camera:e.current.cameras)if(camera.id.value==selected_)physical=camera.physical.has_value();

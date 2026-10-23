@@ -6,6 +6,7 @@ görev” ifadeleri yazıldıkları tarihe aittir.
 
 | Dönem / görev | Kayıt |
 | --- | --- |
+| 23 Ekim 2026 — CCUX-22e | [Kalibrasyon oturum ömrü, dosya/SaveUse/iptal drain ve kamera devri](2026-10-23-ccux-22e.md) |
 | 23 Ekim 2026 — CCUX-22d | [Runtime Run/Stop, çok kamera hazırlığı, drain ve kayıt retry](2026-10-23-ccux-22d.md) |
 | 23 Ekim 2026 — CCUX-22c | [Editor kamera açılış/çıkış ömrü, hazır oturumdan edinim ve UI kabulü](2026-10-23-ccux-22c.md) |
 | 23 Ekim 2026 — CCUX-22b | [Ortak edinim oturumu, generation/lease, asenkron drain ve yazılım kabulü](2026-10-23-ccux-22b.md) |

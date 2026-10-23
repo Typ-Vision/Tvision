@@ -22,6 +22,10 @@
    Stop/kopma/kamera değişimi kareyi emekliye ayırır ve bekleyen kaydı iptal eder.
 5. **Setup → Calibration → kamera → Kalibre Et** ile **Bilinen ölçü** veya
    **Kalibrasyon plakası** seçin. Hazır varsayılan hedef otomatik aktarılır.
+   Liste kamerayı açmaz; canlı sihirbaz açılışı hedefi arka planda hazırlar.
+   Çekimler aynı bağlantıyı kullanır. Dosyaya geçiş/Stop/İptal ve başarılı
+   Kaydet ve kullan bağlantıyı bırakır; çıkış kapanış tamamlanana kadar bekler.
+   Hesap/kayıt hatasında yeniden denemek için bağlantı korunur.
    Görüntü alın, gerçek kenar/plakayı seçin, bilinen mesafe/aralığı girip hesaplayın.
    **Kaydet ve kullan** aday kaydı ve uygunluk/etkin seçimi tek komutta yapar;
    başarısızlık önceki modeli korur, kısmi kayıt tekrar denenebilir. Dosya kaynağı

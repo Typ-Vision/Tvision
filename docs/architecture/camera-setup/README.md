@@ -11,8 +11,8 @@ Güncel öncelik: **[CCUX-22 çalışma süresince kamera bağlantısı](22-sess
 ([API/ömür](acquisition-sessions.md), [kapanış](../../archive/2026-10-23-ccux-22b.md)).
 **22c Editor entegrasyonu uygulandı** ([kapanış](../../archive/2026-10-23-ccux-22c.md)).
 **22d Runtime entegrasyonu uygulandı** ([kapanış](../../archive/2026-10-23-ccux-22d.md)).
-Sonraki plan kartı 22e Kalibrasyon → 22f birleşik kabul;
-kalibrasyon bağlantı entegrasyonu henüz uygulanmadı.
+**22e Kalibrasyon entegrasyonu uygulandı** ([kapanış](../../archive/2026-10-23-ccux-22e.md)).
+Sonraki plan kartı 22f birleşik kabul; fiziksel kamera doğrulaması açık.
 [CCUX-20](20-image-responsiveness.md) hash/preview teslimi ve
 [CCUX-21](21-preprocess-roi.md) ROI yazılım/görsel kabulü korunur;
 CCUX-20 gerçek kamera teyidi ve CCUX-15 fiziksel kabulü açık kalır.

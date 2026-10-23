@@ -1,5 +1,6 @@
 #pragma once
 #include "AcquisitionService.hpp"
+#include "CameraAcquisitionSessions.hpp"
 #include "CalibrationWizardSession.hpp"
 #include "MeasurementSourceIdentity.hpp"
 #include "IndustrialCameraProvider.hpp"
@@ -39,6 +40,8 @@ class IndependentCaptureJob {
     friend class IndependentCalibrationSession;
     IndependentCaptureJob()=default;
     IndependentCaptureRequest request_;
+    std::shared_ptr<CameraAcquisitionSessions> sessions_;
+    std::shared_future<AcquisitionContextStatus> prepared_;
     QString sourceId_,ticket_;
     int generation_=0;
     Deadline deadline_{1};
@@ -69,10 +72,14 @@ public:
     ~IndependentCalibrationSession();
     IndependentCalibrationSession(const IndependentCalibrationSession&)=delete;
     IndependentCalibrationSession& operator=(const IndependentCalibrationSession&)=delete;
+    // Explicit live-operation entry; no capture. Poll status on the owner thread.
+    void prepareCamera(IndependentCaptureRequest,const IndependentCaptureBackend& = {});
+    void closeCamera();
+    AcquisitionContextStatus cameraStatus() const;
     IndependentCaptureJob begin(IndependentCaptureRequest);
     static IndependentCaptureResult run(const IndependentCaptureJob&,const IndependentCaptureBackend& = {});
     bool accept(const IndependentCaptureResult&);
-    void cancel();
+    void cancel(bool closeCamera=true);
     bool busy() const;
     std::optional<MeasurementSourceEvidence> evidence() const;
     std::optional<MeasurementSetup> acceptedSetup() const;
@@ -81,6 +88,10 @@ public:
     CalibrationWizardSession& math(); // existing Edge/Caliper/plate implementation
 private:
     void owner() const;
+    std::shared_ptr<CameraAcquisitionSessions> sessions_;
+    std::shared_ptr<const AcquisitionOecsBackend> oecs_;
+    std::shared_future<AcquisitionContextStatus> prepared_;
+    QByteArray preparedKey_;
     QThread* thread_;
     QString sourceId_,ticket_;
     int generation_=0;

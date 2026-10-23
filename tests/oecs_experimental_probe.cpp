@@ -18,9 +18,9 @@
 using namespace visionflow;
 int main(int argc,char** argv){QCoreApplication app(argc,argv);QJsonObject out{{"productionAdmission",false},{"triggerAssociationVerified",false}};int rc=0;
     try{
-        if(argc!=5 && argc!=6)throw std::runtime_error("usage: oecs_experimental_probe absolute-dll absolute-evidence-directory exposure-us count [--preview-60s|--wrong-camera|--wrong-geometry|--stop-in-flight|--timeout|--disconnect|--editor-run|--runtime-run|--runtime-stop|--runtime-timeout|--runtime-disconnect|--calibration-run]");
+        if(argc!=5 && argc!=6)throw std::runtime_error("usage: oecs_experimental_probe absolute-dll absolute-evidence-directory exposure-us count [--preview-60s|--wrong-camera|--wrong-geometry|--stop-in-flight|--timeout|--disconnect|--editor-run|--runtime-run|--runtime-stop|--runtime-timeout|--runtime-disconnect|--calibration-run|--calibration-session-run]");
         const QString scenario=argc==6?QString::fromLocal8Bit(argv[5]):QString{};
-        if(!scenario.isEmpty() && scenario!="--preview-60s" && scenario!="--wrong-camera" && scenario!="--wrong-geometry" && scenario!="--stop-in-flight" && scenario!="--timeout" && scenario!="--disconnect" && scenario!="--editor-run" && scenario!="--runtime-run" && scenario!="--runtime-stop" && scenario!="--runtime-timeout" && scenario!="--runtime-disconnect" && scenario!="--calibration-run")throw std::runtime_error("unknown manual scenario");
+        if(!scenario.isEmpty() && scenario!="--preview-60s" && scenario!="--wrong-camera" && scenario!="--wrong-geometry" && scenario!="--stop-in-flight" && scenario!="--timeout" && scenario!="--disconnect" && scenario!="--editor-run" && scenario!="--runtime-run" && scenario!="--runtime-stop" && scenario!="--runtime-timeout" && scenario!="--runtime-disconnect" && scenario!="--calibration-run" && scenario!="--calibration-session-run")throw std::runtime_error("unknown manual scenario");
         const QString directory=QString::fromLocal8Bit(argv[2]);QDir().mkpath(directory);
         bool ok=false;const double exposure=QString::fromLocal8Bit(argv[3]).toDouble(&ok);if(!ok)throw std::runtime_error("numeric exposure required");
         const int count=QString::fromLocal8Bit(argv[4]).toInt();if(count<1 || count>1000)throw std::runtime_error("count 1..1000 required");
@@ -59,10 +59,25 @@ int main(int argc,char** argv){QCoreApplication app(argc,argv);QJsonObject out{{
         const auto producer=qEnvironmentVariable("VISIONFLOW_TIMING_PROBE_PRODUCER");
         auto discover=[r,producer](int timeout,const std::shared_ptr<std::atomic_bool>& cancel){return producer.isEmpty()?IndustrialDiscoverySnapshot{{r.device},{},false}:CameraService::industrialSnapshot(CameraService{}.discover({producer},timeout,cancel));};
         out["environment"]=QJsonObject{{"vendor",r.device.identity.vendor},{"model",r.device.identity.model},{"serial",r.device.identity.serial},{"manualFallbackRoute",r.device.route.toJson()},{"producerPath",producer},{"profile",r.profile.toJson()},{"geometry",r.setup.geometry.toJson()},{"timingEnabled",AcquisitionTiming::enabled()},{"uiFirstPaintMeasured",false},{"discoveryScope",producer.isEmpty()?"fixed locator; real SDK enumerates exact serial":"application GenTL discovery, producer hash, exact SDK enumeration"}};
-        if(scenario=="--calibration-run"){
+        if(scenario=="--calibration-run" || scenario=="--calibration-session-run"){
             IndependentCaptureRequest capture;capture.origin=SourceOrigin::CameraAcquired;capture.camera=r.camera;capture.setup=r.setup;capture.profile=r.profile;capture.policy=CalibrationCapturePolicy::ExperimentalOecs;capture.timeoutMs=3000;
-            AcquisitionTimingBinding prepareBinding(AcquisitionTiming::request("calibration-preparation"));AcquisitionTimingSpan preparation("probe.initial-preparation");IndependentCaptureBackend backend;backend.industrialDiscover=[discover]{return discover(3000,{});};IndependentCalibrationSession session;QJsonArray samples;preparation.finish();
+            AcquisitionTimingBinding prepareBinding(AcquisitionTiming::request("calibration-preparation"));AcquisitionTimingSpan preparation("probe.initial-preparation");IndependentCaptureBackend backend;backend.industrialDiscover=[discover]{return discover(3000,{});};IndependentCalibrationSession session;QJsonArray samples;
+            if(scenario=="--calibration-session-run"){
+                session.prepareCamera(capture,backend);Deadline wait(10000);while(session.cameraStatus().preparing && !wait.expired())QThread::msleep(1);
+                if(!session.cameraStatus().allReady()){
+                    QString error="Calibration session preparation failed";for(const auto& source:session.cameraStatus().sources)if(!source.error.isEmpty())error+="; "+source.error;
+                    session.cancel();Deadline drain(10000);while(!session.cameraStatus().drained && !drain.expired())QThread::msleep(1);
+                    out["drained"]=session.cameraStatus().drained;out["clean"]=session.cameraStatus().clean;throw std::runtime_error(error.toStdString());
+                }
+            }
+            preparation.finish();
             for(int i=0;i<count;++i){AcquisitionTimingBinding binding(AcquisitionTiming::request("calibration"));QElapsedTimer timer;timer.start();const auto result=IndependentCalibrationSession::run(session.begin(capture),backend);if(!result.error().isEmpty() || !session.accept(result))throw std::runtime_error(("Calibration capture failed: "+result.error()).toStdString());samples.append(QJsonObject{{"index",i},{"milliseconds",timer.nsecsElapsed()/1e6},{"readback",session.math().frame()->metadata().experimentalAcquisition["readback"]}});}
+            if(scenario=="--calibration-session-run"){
+                session.cancel();Deadline wait(10000);while(!session.cameraStatus().drained && !wait.expired())QThread::msleep(1);
+                out["drained"]=session.cameraStatus().drained;out["clean"]=session.cameraStatus().clean;
+                if(!session.cameraStatus().drained || !session.cameraStatus().clean)throw std::runtime_error("Calibration close failed");
+            }
+            out["scenario"]=scenario;out["physicalMetricAcceptance"]=false;
             out["samples"]=samples;out["count"]=count;out["status"]="CALIBRATION_CAPTURE_COMPLETED";QTextStream(stdout)<<QJsonDocument(out).toJson();return 0;
         }
         if(scenario.startsWith("--runtime-")){

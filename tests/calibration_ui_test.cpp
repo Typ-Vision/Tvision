@@ -2,6 +2,7 @@
 #include "app/CalibrationWizard.hpp"
 #include "app/CalibrationOverview.hpp"
 #include "OecsExperimentalFixture.hpp"
+#include "CameraAcquisitionFixture.hpp"
 #include <QGroupBox>
 #include "application/CalibrationMigration.hpp"
 #include "app/ImageViewer.hpp"
@@ -31,6 +32,13 @@
 #include <stdexcept>
 using namespace visionflow;
 namespace {
+class CountedOecsApi:public oecs_experimental_fixture::Api {
+    std::shared_ptr<std::atomic_int> opens_,closes_;
+public:
+    CountedOecsApi(std::shared_ptr<oecs_experimental_fixture::State> state,std::shared_ptr<std::atomic_int> opens,std::shared_ptr<std::atomic_int> closes):Api(state),opens_(opens),closes_(closes){}
+    int openExclusive(void* h) override {++*opens_;return Api::openExclusive(h);}
+    int closeDevice(void* h) override {++*closes_;return Api::closeDevice(h);}
+};
 class CameraFixture:public AcquisitionAdapter {public:QImage image;explicit CameraFixture(QImage im):image(im){}AcquisitionCapabilities capabilities()const override{return {"webcam",true};}ImageFrame acquire(const AcquisitionRequest&)const override{return ImageFrame::fromBuffer(image.constBits(),image.sizeInBytes(),image.width(),image.height(),image.bytesPerLine(),PixelFormat::Gray8);}};
 int checks=0;
 void check(bool b,const char* why){++checks;if(!b)throw std::runtime_error(why);}
@@ -167,15 +175,33 @@ int main(int argc,char** argv){QApplication app(argc,argv);try{
     {auto r=oecs_experimental_fixture::request();auto device=oecs_experimental_fixture::state();device->pixels.fill(char(20));for(int y=0;y<2048;++y)for(int x=120;x<520;++x)device->pixels[y*2448+x]=char(220);
         MeasurementWorkspace experimental(tmp.filePath("ccux09-experimental.vfproject"),"experimental",[]{return true;});experimental.replace({{r.camera},{r.setup},{r.profile}});
         auto request=IndependentCaptureRequest::fromDefaults(experimental.environment(),r.camera.id);request.timeoutMs=3000;
-        IndependentCaptureBackend backend;backend.industrialDiscover=[r]{return IndustrialDiscoverySnapshot{{r.device},{},false};};backend.experimentalApi=[device]{return std::make_unique<oecs_experimental_fixture::Api>(device);};
+        IndependentCaptureBackend backend;backend.industrialDiscover=[r]{return IndustrialDiscoverySnapshot{{r.device},{},false};};auto opens=std::make_shared<std::atomic_int>(0),closes=std::make_shared<std::atomic_int>(0);backend.experimentalApi=[device,opens,closes]{return std::make_unique<CountedOecsApi>(device,opens,closes);};
         CalibrationWizard experimentalWizard(false,request,tmp.path(),[](const auto&){},nullptr,backend);const auto base=experimental.environment().revision;const SetupReference ref{r.camera.id,r.setup.id,1};
-        experimentalWizard.setSaveAndUse([&](const auto& record,const auto& probe){check(record.image().experimental.has_value(),"UI preserves typed experimental raster/model evidence");return experimental.saveAndUseCalibration({ref,base,probe.evidence()->generation,CalibrationCapturePolicy::Automatic},record,probe,[]{return true;});});
+        bool saveFailure=true;
+        experimentalWizard.setSaveAndUse([&](const auto& record,const auto& probe){check(record.image().experimental.has_value(),"UI preserves typed experimental raster/model evidence");if(saveFailure){CalibrationSaveUseResult failed;failed.error="fixture save failure";return failed;}return experimental.saveAndUseCalibration({ref,base,probe.evidence()->generation,CalibrationCapturePolicy::Automatic},record,probe,[]{return true;});});
         experimentalWizard.resize(1400,900);experimentalWizard.show();app.processEvents();click(experimentalWizard,"wizardAcquire");idle(experimentalWizard);click(experimentalWizard,"wizardNext");draw(experimentalWizard,{20,100},{620,100});click(experimentalWizard,"wizardDetect");idle(experimentalWizard);click(experimentalWizard,"wizardNext");widget<QDoubleSpinBox>(experimentalWizard,"wizardKnownMm")->setValue(10);click(experimentalWizard,"wizardNext");
         check(!widget<QLabel>(experimentalWizard,"wizardResult")->text().isEmpty() && !widget<QLabel>(experimentalWizard,"wizardResult")->text().contains("Deneysel"),"calculation shown without acquisition mode label");CameraFlowSmokeAudit::save(experimentalWizard,evidence+"/experimental-result-1400.png");click(experimentalWizard,"wizardNext");
+        check(*opens==1 && *closes==0 && !experimental.calibrations().status(ref).sessionPermitted,"save failure preserves live connection without activation");saveFailure=false;click(experimentalWizard,"wizardNext");
+        wait([&]{return *closes==1;});idle(experimentalWizard);check(*opens==1,"successful save closes same connection");
         check(experimental.calibrations().status(ref).sessionPermitted && widget<QLabel>(experimentalWizard,"wizardResult")->text().contains("Bağımsız fiziksel kontrol yapılmadı"),"UI experimental one-command activation remains experimental");
         experimentalWizard.resize(850,600);app.processEvents();CameraFlowSmokeAudit::save(experimentalWizard,evidence+"/experimental-ready-850.png");click(experimentalWizard,"wizardNext");
         CalibrationOverview overview([&]{return &experimental;});overview.resize(850,600);overview.show();app.processEvents();check(widget<QLabel>(overview,"overviewDetail")->text().contains("Bağımsız fiziksel kontrol yapılmadı"),"Overview identifies experimental selection");CameraFlowSmokeAudit::save(overview,evidence+"/experimental-overview-850.png");
         MeasurementWorkspace restart(experimental.projectPath(),"experimental",[]{return true;});CalibrationOverview offline([&]{return &restart;});offline.resize(850,600);offline.show();app.processEvents();check(widget<QLabel>(offline,"overviewDetail")->text().contains("Kayıtlı / bağlantı") && !widget<QLabel>(offline,"overviewDetail")->text().contains("mm/px"),"Restart shows remembered experimental model without active values");CameraFlowSmokeAudit::save(offline,evidence+"/remembered-overview-850.png");
+    }
+    // CCUX-22e: real wizard commands, persistent industrial fixture, no solver needed.
+    {
+        persistent_fixture::Fixture f("wizard-session");const auto r=f.requests.first();auto probe=f.first();
+        IndependentCaptureRequest request;request.origin=SourceOrigin::CameraAcquired;request.camera=r.camera;request.setup=r.setup;request.profile=r.profile;request.policy=CalibrationCapturePolicy::Trusted;
+        IndependentCaptureBackend backend;backend.factory=f.inputs.factory;backend.industrialDiscover=[discover=f.inputs.discover]{return discover(5000,{});};
+        CalibrationWizard wizard(true,request,tmp.path(),[](const auto&){},nullptr,backend);wizard.resize(1400,900);wizard.show();
+        wait([&]{return probe->configs==1;});check(probe->grabs==0,"wizard entry opens without capture");
+        for(int n=0;n<20;++n){click(wizard,"wizardAcquire");idle(wizard);check(widget<QLabel>(wizard,"wizardImageInfo")->text().contains("3×2"),"persistent wizard acquired raster");}
+        check(probe->opens==1 && probe->configs==1 && probe->grabs==20 && probe->closes==0 && *f.discoveries==1,"wizard twenty captures reuse connection");
+        CameraFlowSmokeAudit::save(wizard,evidence+"/session-normal.png");wizard.resize(850,600);app.processEvents();CameraFlowSmokeAudit::save(wizard,evidence+"/session-small.png");
+        QImage file(3,2,QImage::Format_Grayscale8);file.fill(17);const auto filePath=tmp.filePath("session-file.png");check(file.save(filePath),"session file fixture");wizard.openFile(filePath);idle(wizard);wait([&]{return probe->closes==1;});check(widget<QLabel>(wizard,"wizardImageInfo")->text().contains("setup_file"),"file switch preserves origin and releases camera");
+        click(wizard,"wizardAcquire");idle(wizard);check(probe->opens==2,qPrintable(QString("explicit camera return reopens: opens=%1 status=%2").arg(probe->opens.load()).arg(widget<QLabel>(wizard,"wizardStatus")->text())));
+        std::promise<void> release;probe->closeGate=release.get_future().share();probe->closeEntered=false;
+        click(wizard,"wizardCancel");wait([&]{return probe->closeEntered.load();});check(wizard.isVisible(),"dialog remains while SDK close pending");release.set_value();wait([&]{return !wizard.isVisible();});check(probe->closes==2 && !probe->wrongThread,"dialog closes only after actual drain");
     }
     check(independentFile.open(QIODevice::ReadOnly) && independentFile.readAll()==emptyProjectBytes,"Independent calibration preserves saved project bytes");
     check(ProjectRepository{}.load(independentPath).recipes.isEmpty(),"Independent methods and origins never create a hidden recipe");

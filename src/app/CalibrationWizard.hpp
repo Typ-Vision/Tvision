@@ -39,7 +39,10 @@ private:
     void displayPoints();
     void selectPair();
     void advance();
-    void cancelWork();
+    void cancelWork(bool closeCamera=true);
+    void pollCamera();
+    void done(int) override;
+    std::optional<int> pendingDone_;
     void reject() override;
     bool plateMode_,imported_=false;
     bool checking_=false;

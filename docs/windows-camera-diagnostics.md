@@ -115,3 +115,19 @@ Başarılı koşum eski scalar değerleri geri yükleyip readback'i raporlar.
 Hata başarı sayılmaz; sonraki `--physical` yeniden açma/readback ile mevcut
 durumu kontrol edin. Bu test görüntü almaz. 22 Ekim denemesinde 7000 µs / 1 dB
 isteği readback farkıyla reddedildi; sessiz tolerans genişletilmedi.
+
+## Az görsel tüketimiyle oturum kontrolü — CCUX-22e
+
+Önce test raporu, open/configure/grab/close sayaçları, readback ve hata kayıtlarını
+inceleyin. Bağlantı ömrü için plaka algılama veya her karenin görsel yorumlanması
+gerekmez. UI kontrolünde değişen akıştan bir normal ve bir küçük pencere görseli
+yeterlidir; yalnız sorun varsa ilgili bölgeyi ayrıca inceleyin. Özgün kanıtları
+`build/ccux/<kart>/` altında koruyun; geçmiş kanıtın üzerine yazmayın.
+
+Manuel `oecs_experimental_probe ... exposure-us 2 --calibration-session-run`
+aynı kalibrasyon oturumunda iki plakasız çekim ve clean/drain kapanışı dener.
+`VISIONFLOW_ACQUISITION_TIMING` ile hazırlık/çekim/kapanış çağrıları kaydedilir.
+Raster dosyası veya plaka analizi üretmez; readback raporu görüntü kalitesi,
+tetik-kare korelasyonu ya da fiziksel mm doğruluğu kabulü değildir. Kamera
+bulunamazsa tekrar tekrar çekim istemeyin; SDK hatasını ve kapanışı kaydedin.
+Eski `--calibration-run` her-kare bağlantı baseline'ını korur.
