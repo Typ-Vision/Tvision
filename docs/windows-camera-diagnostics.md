@@ -17,6 +17,42 @@ Probe üretim admission değildir; native production kapalıdır. Ayrı
 geçici ayarları geri yükler.
 
 
+## İsteğe bağlı aşama süreleri — CCUX-22a
+
+`VISIONFLOW_ACQUISITION_TIMING` değişkenine yazılabilir **mutlak JSONL dosyası**
+verildiğinde normal komutlar istek/oturum ID'si ve monotonic süre kaydeder.
+Ürün ekranına mod veya onay eklenmez; değişken yokken tanı kapalıdır.
+Yazım akışı açık tutulur; kayıtlar worker işlemi, edinim/kapanış ve UI teslim/
+ilk paint sınırlarında flush edilir. Log dosyasını okurken bu sınırı bekleyin.
+
+```powershell
+$env:VISIONFLOW_ACQUISITION_TIMING = 'C:/Projects/Tvision/build/ccux/ccux-22a/manual-trace.jsonl'
+.\scripts\run-local.ps1
+# Uygulama kapandıktan sonra aynı terminalde:
+Remove-Item Env:VISIONFLOW_ACQUISITION_TIMING
+python scripts/summarize-acquisition-timing.py build/ccux/ccux-22a
+```
+
+JSONL aşamaları iç içe **inclusive** aralıklardır; süreleri toplayarak toplam
+gecikme üretmeyin. Başarı, hata, iptal, deadline ve superseded örnekleri ayrıdır.
+`ui.set-image` yalnız atamadır; `ui.command-to-first-paint` Qt paint tamamlanmasına
+kadar olan aralıktır, monitör taraması değildir. Gizli/çizilmeyen viewer için
+başarılı paint örneği oluşmaz. Session close/join ayrı ölçülür; açılış ve her kare
+öncesi hazırlık giderleri stream start/trigger/wait ile karıştırılmaz.
+
+Elle fiziksel servis baseline'ı için, kullanılmamış mutlak kanıt dizini seçin:
+
+```powershell
+.\scripts\measure-acquisition-baseline.ps1 -OutputDirectory 'C:/Projects/Tvision/build/ccux/ccux-22a/new-physical-run'
+```
+
+Bu komut Editor/Runtime/kalibrasyon servislerinde aynı kamera ve 56000 µs/0 dB
+profiliyle üç yeni süreçte 20'şer çekimi tanı kapalı/açık tekrarlar. GenTL keşfi,
+exact SDK enumerate/open ve readback dahildir; gerçek UI tıklama→paint dahil
+değildir. Probe, DLL/producer hash ve ortamı kaydeder; ilk hata seriyi keser.
+Dosyalar ve geçici projeler `build/` altında kalır. Cihaz erişimi yoksa başarısız
+seri fiziksel baseline sayılmaz. UI fiziksel gecikmesi ve native/mm kabulü ayrıdır.
+
 ## Camera Manager ve OECS runtime
 
 Üretim yolu açılmadan yerel x64 OECS SDK ile Release derleyin:

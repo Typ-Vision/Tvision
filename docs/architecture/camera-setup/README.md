@@ -6,8 +6,9 @@ CCUX-16 politika, CCUX-17 UI, CCUX-18 gezinme temizliği ve CCUX-19 birleşik
 yazılım/görsel kabulü teslim edildi. CCUX-15 fiziksel kabulü açık. Güncel seçili iş ve
 tamamlanan kartlar [progress](../../progress.md) üzerinden izlenir.
 Güncel öncelik: **[CCUX-22 çalışma süresince kamera bağlantısı](22-session-lifecycle.md)**;
-plan hazır, uygulama başlamadı. Sıra 22a ölçüm → 22b servis → 22c Editor →
-22d Runtime → 22e Kalibrasyon → 22f birleşik kabul. Sonraki kart **CCUX-22a**.
+**22a yazılım ölçümü tamamlandı**, fiziksel baseline kamera erişimi bekliyor.
+[Kapanış](../../archive/2026-10-23-ccux-22a.md). Sıra 22b servis → 22c Editor →
+22d Runtime → 22e Kalibrasyon → 22f birleşik kabul. Sonraki kart **CCUX-22b**; henüz başlatılmadı.
 [CCUX-20](20-image-responsiveness.md) hash/preview teslimi ve
 [CCUX-21](21-preprocess-roi.md) ROI yazılım/görsel kabulü korunur;
 CCUX-20 gerçek kamera teyidi ve CCUX-15 fiziksel kabulü açık kalır.

@@ -24,6 +24,8 @@ IndustrialExecutionFrame acquireIndustrial(const IndustrialExecutionInputs& inpu
     require(!experimentalEditor || (inputs.leaseUse==CameraLeaseUse::Editor && inputs.admittedDevices.isEmpty()),"Experimental acquisition requires Editor lease without production admission");
     Deadline deadline(timeout);
     auto live=[&]{require(!(cancel && cancel->load()) && !deadline.expired(),"Industrial execution cancelled/deadline exceeded");};
+    std::unique_ptr<CameraWorkerSession> session;
+    try {
     live();
     std::optional<TransportLocator> route;
     if(inputs.routes.contains(request.camera.id.value))route=inputs.routes[request.camera.id.value];
@@ -33,8 +35,7 @@ IndustrialExecutionFrame acquireIndustrial(const IndustrialExecutionInputs& inpu
     live();request.device=CameraService::resolveIndustrial(request.camera,discovery,route);
     discoveryTiming.finish("success",{{"route",request.device.route.toJson()},{"backend",request.device.backend.toJson()}});
     if(inputs.admittedDevices.contains(request.sourceId))require(request.device==inputs.admittedDevices[request.sourceId],"Industrial Runtime device/backend changed; prepare again");
-    auto session=experimentalEditor ? ExperimentalOecsAcquisition::open(request,ExperimentalOecsAcquisition::installedRuntime()):inputs.factory.open(request,inputs.leaseUse,FrameQueueMode::ProductionFifo,1);
-    try {
+    session=experimentalEditor ? ExperimentalOecsAcquisition::open(request,ExperimentalOecsAcquisition::installedRuntime()):inputs.factory.open(request,inputs.leaseUse,FrameQueueMode::ProductionFifo,1);
         auto command=[&](CameraOperation op,CameraState expected){
             live();session->submit(op,deadline.remainingMs());
             for(;;){

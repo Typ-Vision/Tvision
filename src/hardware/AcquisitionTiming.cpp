@@ -5,6 +5,8 @@
 #include <QJsonDocument>
 #include <atomic>
 #include <exception>
+#include <filesystem>
+#include <fstream>
 #include <mutex>
 
 namespace visionflow {
@@ -26,7 +28,21 @@ void AcquisitionTiming::record(const AcquisitionTimingContext& c,const QString& 
             {"flow",c.flow},{"stage",stage},{"startMonotonicNs",ns(start)},{"endMonotonicNs",ns(end)},
             {"durationMs",std::chrono::duration<double,std::milli>(end-start).count()},{"outcome",outcome},{"inclusive",true},{"detail",detail}};
         const auto bytes=QJsonDocument(row).toJson(QJsonDocument::Compact)+'\n';
-        std::lock_guard lock(outputMutex);QFile file(path);if(file.open(QIODevice::WriteOnly|QIODevice::Append))file.write(bytes);
+        // Keep the append stream open. Opening/closing a file at every nested SDK
+        // span can dominate the very latency being measured (e.g. virus scanning).
+        // std::ofstream has no QObject affinity; the mutex serializes all workers.
+        struct Writer {std::string path;std::ofstream file;};
+        static Writer writer;
+        std::lock_guard lock(outputMutex);
+        const auto key=path.toUtf8().toStdString();
+        if(writer.path!=key){writer.file.close();writer.file.clear();writer.path=key;writer.file.open(std::filesystem::u8path(key),std::ios::binary|std::ios::app);}
+        if(!writer.file)return;
+        writer.file.write(bytes.constData(),bytes.size());
+        // Publish complete operation/capture intervals, including failures, while
+        // avoiding a synchronous disk write between every nested measurement.
+        if(stage=="worker.operation" || stage=="industrial.acquire" || stage=="calibration.capture" ||
+           stage=="session.close-and-join" || stage=="ui.command-to-first-paint" ||
+           stage.endsWith("command-to-delivery"))writer.file.flush();
     }catch(...){/* Diagnostics must never change acquisition/error/cleanup behavior. */}
 }
 AcquisitionTimingBinding::AcquisitionTimingBinding(AcquisitionTimingContext c):value_(std::move(c)),previous_(context){context=&value_;}

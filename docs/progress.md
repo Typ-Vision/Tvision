@@ -1,15 +1,16 @@
 # VisionFlow — güncel devir
 
-22 Ekim 2026. [Arşiv](archive/README.md).
+23 Ekim 2026. [Arşiv](archive/README.md).
 
 ## Devam noktası
 
 **CCUX-21 tamamlandı:** Ön işleme → ROI; reçeteye bağlı dikdörtgen Region,
 Blob/Template Match gerçek işlem alanı, Run Tool/Flow, reopen ve immutable Runtime.
 [Kapanış](archive/2026-10-22-ccux-21.md), `build/ccux/ccux-21/`.
-**Öncelik: [CCUX-22 bağlantı ömrü planı](architecture/camera-setup/22-session-lifecycle.md).**
-Editor aç/çık, Runtime Run/Stop, kalibrasyon başla/bitir; açılışta bağlantı yok.
-Sonraki **22a ölçüm**; kod değişmedi. [Plan kaydı](archive/2026-10-22-ccux-plan-04.md).
+**CCUX-22a yazılım ölçümü tamamlandı:** [kapanış](archive/2026-10-23-ccux-22a.md),
+`build/ccux/ccux-22a/`. 14 CTest; 3×20 tanı açık/kapalı fixture.
+Fiziksel baseline/paint açık; kamera erişilemedi.
+**Sıradaki: [CCUX-22b servis](architecture/camera-setup/22-session-lifecycle.md)**; başlatılmadı.
 CCUX-20 canlı teyit ve CCUX-15 fiziksel kabul açık; hash/preview korunur.
 [CCUX-20](archive/2026-10-22-ccux-20.md), `build/ccux/ccux-20/`.
 Geçici viewer geometrisi ayrı adlandırılır; araç ROI'leri reçeteye bağlıdır.

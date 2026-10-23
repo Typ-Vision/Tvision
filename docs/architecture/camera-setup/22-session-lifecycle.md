@@ -1,6 +1,7 @@
 # CCUX-22 — çalışma süresince kamera bağlantısı
 
-22 Ekim 2026. **Plan hazır; uygulama başlamadı.** Kullanıcı kararı: program
+22 Ekim planı; 23 Ekim durumu: **22a yazılım ölçümü tamamlandı; fiziksel baseline açık.**
+[Kapanış](../../archive/2026-10-23-ccux-22a.md). 22b–f henüz uygulanmadı. Kullanıcı kararı: program
 açılışında bağlantı yok; Editor reçete açılışında, Runtime Run'da, kalibrasyon
 işlemine girişte bağlantı kurulur. İlgili iş bitince bırakılır. Her karede yeniden
 keşif/open/configure/close yapılmaz. [C2a](contract.md#c2a--çalışma-süresince-bağlantı)
@@ -36,7 +37,8 @@ Stream iyileştirmesi ancak yeni ölçüm gerektirirse ayrı planlanır.
 
 Bir oturumda bir alt kart; ajanlar paralel çalışmaz. Her kart kendi kapsam,
 kanıt ve açık sınır kaydıyla kapanır. Yazılım fixture başarısı fiziksel kabul
-değildir; cihaz yoksa ilgili fiziksel satırlar açık kalır. Kartlar henüz tamamlanmadı.
+değildir; cihaz yoksa ilgili fiziksel satırlar açık kalır. 22a yazılım teslimi tamamlandı;
+23 Ekim fiziksel serisi kamerayı bulamadı. 22b–f açık.
 
 ## CCUX-22a — ölçüm
 
@@ -214,7 +216,8 @@ Release/görseller `build/ccux/ccux-22e/`.
 
 ## Sonraki adım
 
-**CCUX-22a** ile başlanır. Bu planın hazırlanması uygulama veya fiziksel ölçüm
-yapıldığı anlamına gelmez. CCUX-20 hash/preview kazanımı korunur; CCUX-20 gerçek
-etkileşim teyidi bu paketin ölçümleriyle ilişkilendirilecek, CCUX-15 bağımsız
-fiziksel ölçüm kabulü ayrıca açık kalacaktır.
+**CCUX-22b** sonraki karttır; bu oturum yalnız 22a ile kapandı, sonraki kart başlatılmadı.
+22a tanı/fixture ölçümü C2a oturum ömrünü uygulamaz. Fiziksel 3×20 servis baseline
+ve tıklama→paint kabulü kamera erişimiyle tamamlanmalıdır. CCUX-20 hash/preview
+kazanımı korunur; CCUX-20 gerçek etkileşim ve CCUX-15 bağımsız fiziksel ölçüm
+kabulü ayrıca açık kalır.

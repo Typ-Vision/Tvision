@@ -47,6 +47,8 @@ def main():
         data = json.loads(path.read_text(encoding="utf-8-sig"))
         for flow in sorted({r["flow"] for r in data["samples"]}):
             pair = {str(enabled): stats([r["durationMs"] for r in data["samples"] if r["flow"] == flow and r["timingEnabled"] == enabled]) for enabled in (False, True)}
+            pair["firstCaptures"] = {str(enabled): stats([r["durationMs"] for r in data["samples"] if r["flow"] == flow and r["timingEnabled"] == enabled and r["sample"] == 0]) for enabled in (False, True)}
+            pair["repeatedCaptures"] = {str(enabled): stats([r["durationMs"] for r in data["samples"] if r["flow"] == flow and r["timingEnabled"] == enabled and r["sample"] > 0]) for enabled in (False, True)}
             off, on = pair["False"], pair["True"]
             pair.update({"flow": flow, "kind": data["kind"], "medianDeltaMs": on["medianMs"] - off["medianMs"]})
             result["instrumentationComparison"].append(pair)

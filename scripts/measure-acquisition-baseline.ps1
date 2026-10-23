@@ -6,6 +6,7 @@ param(
     [double]$ExposureUs = 56000
 )
 $ErrorActionPreference = 'Stop'
+if (-not [IO.Path]::IsPathFullyQualified($OutputDirectory)) { throw 'Evidence directory must be absolute so JSONL timing is enabled.' }
 if (Test-Path -LiteralPath $OutputDirectory) { throw 'Choose a new evidence directory.' }
 New-Item -ItemType Directory -Path $OutputDirectory | Out-Null
 $timingBefore = $env:VISIONFLOW_ACQUISITION_TIMING
