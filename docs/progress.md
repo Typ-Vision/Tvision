@@ -5,7 +5,7 @@
 ## Devam noktası
 
 **[CCUX-15d](archive/2026-10-23-ccux-15d.md):** NI/HALCON plaka ön araştırması;
-algoritma değişmedi. Önerilen plaka devamı 15e; genel sıra 22f.
+kod değişmedi. [Lens uyumu](archive/2026-10-23-ccux-15d-lens.md). Devam: 15e/22f.
 
 **[CCUX-22e yazılımı tamamlandı](archive/2026-10-23-ccux-22e.md):** Kalibrasyon
 bağlantı ömrü, dosya/iptal/SaveUse drain. Kanıt: `build/ccux/ccux-22e/`.
