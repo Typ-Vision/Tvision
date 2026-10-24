@@ -1,5 +1,10 @@
 # CCUX — sade kamera ve kalibrasyon uygulama planı
 
+24 Ekim 2026 — **[CCUX-PLAN-06: Editor gecikmesi](23-editor-responsiveness.md)**.
+CCUX-23a analiz olarak tamamlandı. Uygulama CCUX-23b-1–6 sıralı alt kartlarına
+ayrıldı; ilk kart tekrarlanabilir baseline'dır. Sol 6.1 alt görevleri paralel
+çalışmaz. Ürün uygulaması henüz başlamadı. [Kapanış](../../archive/2026-10-24-ccux-plan-06.md).
+
 23 Ekim 2026 — **CCUX-PLAN-05: çerçeveli plaka kalibrasyonu planı**.
 Yeni kullanıcı yönlendirmesi: [CCUX-15e–j](15-plate-calibration-plan.md) ayrıntılı
 planı hazırlandı; **15e gözlem/model servis ayrımı tamamlandı**

@@ -4,12 +4,12 @@
 
 ## Devam noktası
 
-**Öncelik: [CCUX-23a Editor gecikme analizi](archive/2026-10-23-ccux-23a.md).**
+**Öncelik: [CCUX-23b-1 ölçüm altyapısı](architecture/camera-setup/23-editor-responsiveness.md).**
+[CCUX-PLAN-06](archive/2026-10-24-ccux-plan-06.md): Sol 6.1 için altı sıralı kart;
+uygulama başlamadı. [23a analizi](archive/2026-10-23-ccux-23a.md) tamamlandı:
+kamerasız Save 961 ms, parametre 509 ms; tekrarlı replay/refresh.
+Bunlar önceki ölçümler; kanıt `build/ccux/ccux-23a/`.
 Kullanıcı plaka kalibrasyonunu başardı; bağımsız mm kabulü ayrıdır.
-Kamerasız yeni fixture ölçümü: Save 961 ms, parametre 509 ms;
-tekrarlı katalog/model replay ve çift UI refresh. Ürün kodu değişmedi.
-Sonraki CCUX-23b: refresh daraltma, doğrulanmış snapshot paylaşımı/invalidation,
-aynı baseline ve canlı proje karşılaştırması. Kanıt `build/ccux/ccux-23a/`.
 
 **[CCUX-15j fiziksel kabul açık](archive/2026-10-23-ccux-15j.md):**
 Exact SDK raw/sidecar: 56000 µs/0 dB kare karanlık/odak dışı,
