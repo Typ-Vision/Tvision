@@ -78,7 +78,7 @@ void CalibrationOverview::refresh(){
 if(refreshing_)return;refreshing_=true;
 try{
 status_->clear();for(auto* w:cardWidgets_)delete w;cardWidgets_.clear();records_->setRowCount(0);auto* c=context_();
-if(!c){summary_->setText("Önce bir proje açın ve kaydedin. Reçete oluşturmanız gerekmez.");detail_->clear();setups_->clear();cards_->hide();refreshing_=false;return;}
+if(!c){summary_->setText("Önce bir proje açın ve kaydedin. Reçete oluşturmanız gerekmez.");detail_->clear();setups_->clear();profiles_->clear();selected_.clear();cards_->hide();refreshing_=false;return;}
 auto e=c->environment();QVector<MeasurementCamera> cameras;for(const auto& camera:e.current.cameras)if(!e.archivedCameras.contains(camera.id.value))cameras.append(camera);
 bool found=false;for(const auto& camera:cameras)if(camera.id.value==selected_)found=true;if(!found)selected_=cameras.isEmpty() ? QString{}:cameras.first().id.value;
 summary_->setText(cameras.isEmpty() ? "Kamera veya ölçüm kurulumu ekleyin veya dosyadan deneme başlatın.":QString("%1 kamera • yalnız açık görüntü isteği cihazı açar. Kart seçimi görüntü almaz.").arg(cameras.size()));
@@ -111,7 +111,7 @@ try{for(const auto& r:c->calibrations().historyRecords(s.id)){int row=records_->
 QString control=r.controlAccepted() ? (*r.controlAccepted() ? "Sınır içinde":"Reddedildi") : r.residualsMillimetres().isEmpty() ? "Yapılmadı":"Sonuç mevcut";
 QStringList cells{r.name()+QString(" • v%1").arg(r.model().dependency().version),choice,control};for(int col=0;col<3;++col){auto* item=new QTableWidgetItem(cells[col]);item->setToolTip(cells[col]);if(col==0)item->setData(Qt::UserRole,r.contentId());records_->setItem(row,col,item);}}}catch(const std::exception& ex){status_->setText(QString::fromUtf8(ex.what()));}
 }
-}catch(const std::exception& e){status_->setText(QString::fromUtf8(e.what()));detail_->clear();records_->setRowCount(0);}
+}catch(const std::exception& e){status_->setText(QString::fromUtf8(e.what()));summary_->clear();detail_->clear();records_->setRowCount(0);setups_->clear();profiles_->clear();cards_->hide();}
 detail_->setToolTip(detail_->text());refreshing_=false;
 }
 void CalibrationOverview::configureCapture(IndependentCaptureRequest& request) const {

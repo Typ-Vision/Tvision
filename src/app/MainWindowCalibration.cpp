@@ -1,13 +1,14 @@
 #include "application/EditorObservation.hpp"
 #include "MainWindow.hpp"
 #include "CalibrationOverview.hpp"
+#include <QStackedWidget>
 namespace visionflow {
 QWidget* MainWindow::makeCalibration() {
     calibrationOverview_=new CalibrationOverview([this]{return measurementWorkspace();});
     calibrationOverview_->setLocalSettings(settingsFile_);
     calibrationOverview_->onCameraManager=[this]{selectPage("camera");};
     calibrationOverview_->setRecipes([this]{return service_.hasProject() ? service_.project().recipes:QVector<Recipe>{};});
-    calibrationOverview_->onChanged=[this]{refreshFlow();refreshMatchOverlay();runtimeResult_.reset();showRuntimeResult();refreshRuntime();};
+    calibrationOverview_->onChanged=[this]{calibrationRefresh_.invalidate("calibration change");refreshFlow();refreshMatchOverlay();runtimeResult_.reset();showRuntimeResult();refreshRuntime();};
     return calibrationOverview_;
 }
 MeasurementWorkspace* MainWindow::measurementWorkspace(){
@@ -20,7 +21,9 @@ MeasurementWorkspace* MainWindow::measurementWorkspace(){
         }return measurementWorkspace_.get();
 }
 void MainWindow::refreshCalibration() {
+    if(!pages_ || pages_->currentIndex()!=pageIds_.indexOf("calibration"))return;
     editor_observation::Scope observation(editor_observation::Calibration);
     if(calibrationOverview_)calibrationOverview_->refresh();
+    calibrationRefresh_.rendered();
 }
 }

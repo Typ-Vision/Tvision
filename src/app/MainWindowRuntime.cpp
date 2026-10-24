@@ -118,13 +118,18 @@ void MainWindow::updateOperatorMode(bool active) {
         selectPage("runtime");
     }
 }
-void MainWindow::refreshRuntime() {
-    editor_observation::Scope observation(editor_observation::Runtime);
+void MainWindow::refreshRuntime(bool notification) {
     if(!runtimeStatus_)return;
     if(runtime_ && runtimePath_==service_.path() && service_.activeRecipe())runtime_->observeInstallation(*service_.activeRecipe());
     if(runtime_ && runtimePath_!=service_.path() && !runtimeJobs_.busy() && !runtime_->busy() && !(plc_ && plc_->blocking())) {
         if(plc_)plc_->bind(nullptr,nullptr);runtimeCoordinator_.reset();runtime_.reset();runtimePath_.clear();runtimeResult_.reset();showRuntimeResult();
     }
+    // Installation/snapshot invalidation and project retirement are never deferred.
+    // Only a workspace-originated visual rebuild waits for this page to be shown.
+    if(notification)runtimeRefresh_.invalidate("runtime notification / page entry");
+    if(!notification && pages_->currentIndex()!=pageIds_.indexOf("runtime"))return;
+    editor_observation::Scope observation(editor_observation::Runtime);
+    runtimeRefresh_.rendered();
     const auto state=runtimeCoordinator_ ? runtimeCoordinator_->state() : RuntimeState::Unloaded;
     const bool network=plc_ && plc_->listening(),working=runtimeJobs_.busy() || (plc_ && plc_->working()),pending=runtime_ && runtime_->busy();
     updateOperatorMode(state==RuntimeState::Starting || state==RuntimeState::Running || state==RuntimeState::Stopping || working);

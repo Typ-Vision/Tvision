@@ -4,9 +4,9 @@
 
 ## Devam noktası
 
-**Öncelik: [CCUX-23b-3](architecture/camera-setup/23-editor-responsiveness.md).**
-[23b-2](archive/2026-10-24-ccux-23b-2.md) tamam: no-op 0, Save/Add 1 refresh.
-Release/7 test geçti; `build/ccux/ccux-23b-2/`, 1+2 probe, 0 hata.
+**Öncelik: [CCUX-23b-4](architecture/camera-setup/23-editor-responsiveness.md).**
+[23b-3](archive/2026-10-24-ccux-23b-3.md): gizli rebuild 0, giriş 1.
+`build/ccux/ccux-23b-3/`; [23b-2](archive/2026-10-24-ccux-23b-2.md) korunur.
 [23b-1 baseline](archive/2026-10-24-ccux-23b-1.md) 1+20; hız kabulü 23b-6.
 [PLAN-06](archive/2026-10-24-ccux-plan-06.md): altı kart.
 [23a analizi](archive/2026-10-23-ccux-23a.md) korunur.

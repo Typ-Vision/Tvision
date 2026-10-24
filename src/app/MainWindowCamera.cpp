@@ -19,7 +19,7 @@ QWidget* MainWindow::makeCameraManager(){
           !(runtimeCoordinator_ && (runtimeCoordinator_->state()==RuntimeState::Running || runtimeCoordinator_->state()==RuntimeState::Starting || runtimeCoordinator_->state()==RuntimeState::Stopping)) && !(plc_ && plc_->blocking());
     },cameraSession_,settingsFile_);
     cameraManager_->onProject=[this]{selectPage("projects");};
-    cameraManager_->onChanged=[this]{if(calibrationOverview_)calibrationOverview_->refresh();};
+    cameraManager_->onChanged=[this]{calibrationRefresh_.invalidate("camera change");refreshCalibration();};
     return cameraManager_;
 }
 void MainWindow::discoverCameras(){cameraManager_->scan();}

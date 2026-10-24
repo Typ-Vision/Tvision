@@ -30,6 +30,8 @@ applicable, zero model replay for uncalibrated cases, and zero discovery/provide
 calls through an injected counting factory. It has no absolute timing threshold. CCUX-23b-2 additionally requires exactly one
 Workspace/Editor refresh per measured Save/Add/parameter/ROI action. The original
 23b-1 CSV remains the unchanged baseline (Save/Add had two refreshes).
+CCUX-23b-3 requires zero hidden Calibration/Runtime rebuilds for all measured
+Editor actions; page-entry/project-switch checks are in `ui_editor_usability`.
 
 `ui_editor_usability` also runs `editor_property_commits.cpp`: no-op controls
 produce no refresh and preserve exact hash/status/legacy parameters; pending final

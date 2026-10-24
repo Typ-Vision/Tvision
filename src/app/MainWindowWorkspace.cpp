@@ -282,8 +282,7 @@ void MainWindow::refreshRecipes() {
     const auto loaded=runtimePath_==service_.path() && runtimeCoordinator_ && runtimeCoordinator_->loaded() ? runtimeCoordinator_->loaded()->name+QString(" v%1").arg(runtimeCoordinator_->loaded()->recipeVersion) : QString("yok");
     recipeCount_->setText(recipeCount_->text()+"\nEditörde: "+(service_.activeRecipe() ? service_.activeRecipe()->name : QString("yok"))+" | Runtime yüklü: "+loaded);
 }
-void MainWindow::refreshWorkspace() {
-    editor_observation::Scope observation(editor_observation::Workspace);
+void MainWindow::refreshWorkspaceHeader() {
     workspaceError_->hide(); saveAction_->setEnabled(service_.hasProject());
     statusBar()->showMessage("Hazır — Tool yürütmesi: Run Flow / Results.");
     const bool has=service_.hasProject(); const auto* active=service_.activeRecipe();
@@ -291,6 +290,22 @@ void MainWindow::refreshWorkspace() {
     context_->setText(QString("Proje: %1%2   |   Reçete: %3   |   Sistem: yapılandırılmadı")
         .arg(has ? service_.project().name : "seçilmedi",dirty,active ? active->name+" / "+typeLabel(active->applicationType) : "seçilmedi"));
     setWindowTitle("VisionFlow"+(has ? " — "+service_.project().name : " Industrial Vision Suite")+(service_.dirty() ? " *" : ""));
+    if(auto* name=findChild<QLabel*>("editorRecipeName"))name->setText(active ? active->name:"Recipe Editor");
+    editorContext_->setText(active ? QString("%1%2 · %3 · v%4")
+        .arg(statusKey(active->status),service_.recipeDirty(active->id) ? " • Kaydedilmedi":"",typeLabel(active->applicationType),QString::number(active->recipeVersion)) : "Aktif reçete yok");
+    editorContext_->setToolTip(context_->text()+(active ? "\nKaynak: "+active->cameraReference:QString{}));
+    dashboardRecipe_->setText(active ? active->name+" / "+typeLabel(active->applicationType)+" / "+statusKey(active->status) : "Seçilmedi");
+    for (const auto& id : {"newRecipe","saveProject","saveRecipes","editProject"})
+        if (auto* button=findChild<QPushButton*>(id)) button->setEnabled(has);
+    // A clean service can still have an uncommitted Properties spin-box value.
+    if (auto* button=findChild<QPushButton*>("saveWorkspace")) button->setEnabled(has);
+    if (auto* button=findChild<QPushButton*>("editActiveRecipe")) button->setEnabled(active!=nullptr);
+}
+void MainWindow::refreshWorkspace() {
+    editor_observation::Scope observation(editor_observation::Workspace);
+    refreshWorkspaceHeader();
+    const bool has=service_.hasProject();
+    const QString dirty=service_.dirty() ? " • Kaydedilmedi" : "";
     projectTree_->clear();
     if (has) {
         const auto& p=service_.project();
@@ -307,20 +322,16 @@ void MainWindow::refreshWorkspace() {
         new QTreeWidgetItem(projectTree_,{"Variables","Henüz yok"}); new QTreeWidgetItem(projectTree_,{"Logs","Henüz yok"});
         projectTree_->expandAll();
     } else projectSummary_->setText("Proje yok. New Project veya Open Project ile başlayın.");
-    if(auto* name=findChild<QLabel*>("editorRecipeName"))name->setText(active ? active->name:"Recipe Editor");
-    editorContext_->setText(active ? QString("%1%2 · %3 · v%4")
-        .arg(statusKey(active->status),service_.recipeDirty(active->id) ? " • Kaydedilmedi":"",typeLabel(active->applicationType),QString::number(active->recipeVersion)) : "Aktif reçete yok");
-    editorContext_->setToolTip(context_->text()+(active ? "\nKaynak: "+active->cameraReference:QString{}));
-    dashboardRecipe_->setText(active ? active->name+" / "+typeLabel(active->applicationType)+" / "+statusKey(active->status) : "Seçilmedi");
-    for (const auto& id : {"newRecipe","saveProject","saveRecipes","editProject"})
-        if (auto* button=findChild<QPushButton*>(id)) button->setEnabled(has);
-    // A clean service can still have an uncommitted Properties spin-box value.
-    if (auto* button=findChild<QPushButton*>("saveWorkspace")) button->setEnabled(has);
-    if (auto* button=findChild<QPushButton*>("editActiveRecipe")) button->setEnabled(active!=nullptr);
+    // Workspace ownership follows the project even while Calibration is hidden.
+    QString workspaceDiagnostic;
+    try{measurementWorkspace();}catch(const std::exception& e){workspaceDiagnostic=QString::fromUtf8(e.what());}
     refreshRecipes();
     refreshEditor();
+    calibrationRefresh_.invalidate("workspace");
+    runtimeRefresh_.invalidate("workspace");
     refreshCalibration();
-    refreshRuntime();
+    refreshRuntime(false);
+    if(!workspaceDiagnostic.isEmpty())displayError(workspaceDiagnostic);
 }
 void MainWindow::saveProject() {
     const auto commit=commitToolProperties();

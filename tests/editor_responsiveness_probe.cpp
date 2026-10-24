@@ -154,6 +154,7 @@ bool MainWindow::verifyEditorResponsiveness(const QString& artifacts){
                         requireProbe(sample.calls[AtomicWrite]==(operation=="save_dirty" ? 1u:0u),"dirty/no-op atomic write semantics");
                         requireProbe(ProjectRepository{}.load(path).recipes.first().definition==service_.project().recipes.first().definition,"saved recipe roundtrip");
                     }else requireProbe(service_.dirty() && service_.activeRecipe()->definition!=definitionBefore,"edit actually changed serialized recipe");
+                    requireProbe(sample.calls[Calibration]==0 && sample.calls[Runtime]==0,"hidden pages are not rebuilt");
                     requireProbe(sample.calls[Context]>0 && sample.calls[Workspace]==1 && sample.calls[Editor]==1,"one refresh per Editor action");
                     requireProbe(old ? sample.calls[CatalogRead]>0 && sample.calls[CatalogDecode]>0 && sample.calls[ModelDecode]>0 && sample.calls[PlaneReplay]>0 : sample.calls[ModelDecode]==0 && sample.calls[PlaneReplay]==0,"catalog/decode/replay counter semantics");
                 }catch(const std::exception& e){success=false;error+=QString::fromUtf8(e.what());}

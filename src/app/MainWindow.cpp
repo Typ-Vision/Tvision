@@ -164,7 +164,7 @@ void MainWindow::selectPage(const QString& id) {
     for (int i=0;i<navigation_->count();++i) {
         auto* item = navigation_->item(i);
         if (item->data(Qt::UserRole).toString()==navId) {
-            if (navigation_->currentItem()!=item) navigation_->setCurrentItem(item);
+            if (navigation_->currentItem()!=item) {const QSignalBlocker guard(navigation_);navigation_->setCurrentItem(item);}
             pageTitle_->setText(id=="editor" ? "Recipe Editor" : item->text()); break;
         }
     }
@@ -174,7 +174,7 @@ void MainWindow::selectPage(const QString& id) {
         contentLayout->setContentsMargins(id=="editor" ? 8:20,id=="editor" ? 6:16,id=="editor" ? 8:20,id=="editor" ? 6:16);
         contentLayout->setSpacing(id=="editor" ? 4:6);
     }
-    if(id=="calibration")refreshCalibration();
+    if(id=="calibration"){calibrationRefresh_.invalidate("page entry / external changes");refreshCalibration();}
     if(id=="camera" && cameraManager_)cameraManager_->refresh();
     if(id=="runtime")refreshRuntime();
     if(id=="communication")refreshCommunication();

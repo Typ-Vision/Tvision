@@ -13,6 +13,7 @@
 #include <QPointer>
 #include <QPushButton>
 #include <QSignalBlocker>
+#include <QStackedWidget>
 #include <QTemporaryDir>
 #include <QTextStream>
 #include <stdexcept>
@@ -53,6 +54,7 @@ bool MainWindow::verifyEditorPropertyCommits(const QString& artifacts) {
         check(sample.calls[Workspace]==0 && sample.calls[Editor]==0 && sample.calls[Context]==0,"no-op Properties must not refresh");
         check(!w.service_.dirty() && w.service_.activeRecipe()->status==status && QCryptographicHash::hash(ProjectRepository::encode(w.service_.project()),QCryptographicHash::Sha256)==hash,"no-op hash/status/dirty");
         {Binding binding(sample);w.saveProject();}
+        check(sample.calls[Calibration]==0 && sample.calls[Runtime]==0,"Save must not rebuild hidden pages");
         check(sample.calls[Editor]==1 && sample.calls[ProjectSave]==1 && sample.calls[AtomicWrite]==0,"no-op Save single refresh and no write");
         check(ProjectRepository::encode(ProjectRepository{}.load(w.service_.path()))==before,"no-op disk/reopen equality");
         w.propertiesBody_->findChild<QLineEdit*>("toolName")->setText(tool.name+" edited");
@@ -114,11 +116,33 @@ bool MainWindow::verifyEditorPropertyCommits(const QString& artifacts) {
     for(const auto size:{QSize(1400,900),QSize(850,600)}){w.resize(size);for(int settle=0;settle<3;++settle)QApplication::processEvents();check(w.grab().save(QDir(artifacts).filePath(QString("property-commits-%1.png").arg(size.width()))),"Properties visuals");}
     w.service_.openProject(w.service_.path());w.service_.selectRecipe(recipe);
     check(!w.service_.dirty(),"Properties final reopen clean");
+    Sample headerOnly;{Binding binding(headerOnly);w.refreshWorkspaceHeader();}
+    check(headerOnly.calls[Editor]==0 && headerOnly.calls[Calibration]==0 && headerOnly.calls[Runtime]==0,"header update does not rebuild content");
+    // A hidden page accumulates invalidations, then consumes them once on entry.
+    w.refreshWorkspace();
+    check(w.calibrationRefresh_.generation>w.calibrationRefresh_.renderedGeneration && !w.calibrationRefresh_.reason.isEmpty(),"hidden Calibration pending generation/reason");
+    Sample calibrationEntry;{Binding binding(calibrationEntry);w.selectPage("calibration");}
+    check(calibrationEntry.calls[Calibration]==1 && w.calibrationRefresh_.generation==w.calibrationRefresh_.renderedGeneration && w.calibrationRefresh_.reason.isEmpty(),"Calibration entry consumes generation exactly once");
+    Sample runtimeEntry;{Binding binding(runtimeEntry);w.selectPage("runtime");}
+    check(runtimeEntry.calls[Runtime]==1 && w.runtimeRefresh_.generation==w.runtimeRefresh_.renderedGeneration,"Runtime entry consumes generation once");
+    // Changing projects while pages are hidden cannot retain the old model/cards.
+    w.service_.createProject("Empty next project","",dir.filePath("next.vfproject"),"");w.service_.save();
+    w.refreshWorkspace();w.selectPage("calibration");
+    check(w.findChild<QLabel*>("overviewDetail")->text().isEmpty(),"new project clears old Calibration detail");
+    for(const auto size:{QSize(1400,900),QSize(850,600)}){w.resize(size);QApplication::processEvents();check(w.grab().save(QDir(artifacts).filePath(QString("page-refresh-%1.png").arg(size.width()))),"page refresh visuals");}
+    w.selectPage("runtime");
+    check(w.findChild<QLabel*>("runtimeStatus")->text().contains("Load Recipe"),"new project Runtime unloaded");
+    w.service_.createProject("Broken environment","",dir.filePath("broken.vfproject"),"");w.service_.save();
+    QFile broken(w.service_.path()+".measurement-environment.json");check(broken.open(QIODevice::WriteOnly),"error fixture sidecar");broken.write("{}");broken.close();
+    w.refreshWorkspace();check(!w.workspaceError_->isHidden(),"workspace initialization error remains visible");w.selectPage("calibration");
+    check(!w.findChild<QLabel*>("overviewStatus")->text().isEmpty() && w.findChild<QLabel*>("overviewDetail")->text().isEmpty(),"error entry clears obsolete Calibration details");
+    w.service_.openProject(dir.filePath("fixture.vfproject"));w.service_.selectRecipe(recipe);w.refreshWorkspace();w.selectPage("calibration");
+    check(w.calibrationRefresh_.generation==w.calibrationRefresh_.renderedGeneration,"return project consumes new generation");
     QFile report(QDir(artifacts).filePath("property-commits.json"));check(report.open(QIODevice::WriteOnly),"Properties report");
     report.write(QJsonDocument(QJsonObject{{"status","PASS"},{"uneditedToolKinds",14},{"noOpPropertyRefreshes",0},
         {"pendingSaveEditorRefreshes",static_cast<int>(saved.calls[Editor])},{"pendingAddEditorRefreshes",static_cast<int>(added.calls[Editor])},
         {"failedSaveEditorRefreshes",static_cast<int>(failedSave.calls[Editor])},{"rejectedSaveCalls",static_cast<int>(rejected.calls[ProjectSave])},
-        {"preservesLegacyAndPreciseParameters",true},{"geometryConnectionCleanup",true},{"saveAndAddFocus",true},{"physicalAcceptance",false}}).toJson());report.close();
+        {"preservesLegacyAndPreciseParameters",true},{"geometryConnectionCleanup",true},{"saveAndAddFocus",true},{"hiddenCalibrationSaveRefreshes",0},{"calibrationEntryRefreshes",static_cast<int>(calibrationEntry.calls[Calibration])},{"runtimeEntryRefreshes",static_cast<int>(runtimeEntry.calls[Runtime])},{"physicalAcceptance",false}}).toJson());report.close();
     w.close();activateWindow();QApplication::processEvents();
     QTextStream(stdout)<<"PASS: Properties no-op, pending Save/Add, conflict, validation, geometry and focus contracts\n";
     return true;

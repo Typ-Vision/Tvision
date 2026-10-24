@@ -80,7 +80,7 @@ private:
     void communicationAction(const QString&);
     void refreshCommunication();
     QWidget* makeLogs();
-    void refreshRuntime();
+    void refreshRuntime(bool notification=true);
     void updateOperatorMode(bool active);
     bool operatorMode_ = false;
     QByteArray operatorGeometry_;
@@ -106,6 +106,7 @@ private:
     QString editorCameraStatus(const QString& source) const;
     void loadSelectedRecipe();
     void refreshWorkspace();
+    void refreshWorkspaceHeader();
     void refreshRecipes();
     void saveProject();
     bool resolveUnsavedChanges();
@@ -158,6 +159,13 @@ private:
     QSplitter* horizontal_{};
     QSplitter* vertical_{};
     QStringList pageIds_;
+    struct PageRefreshState {
+        quint64 generation=0, renderedGeneration=0;
+        QString reason;
+        void invalidate(const QString& why){++generation;reason=why;}
+        void rendered(){renderedGeneration=generation;reason.clear();}
+    };
+    PageRefreshState calibrationRefresh_,runtimeRefresh_;
     ProjectService service_;
     QLabel* context_{};
     QLabel* projectSummary_{};
