@@ -25,16 +25,16 @@ MeasurementSetup ScopedActiveCalibrationService::installation(const MeasurementE
 }
 QVector<CalibrationModelRecord> ScopedActiveCalibrationService::records(const SetupReference& ref) const {
     const auto e=environment();const auto expected=installation(e,ref);QVector<CalibrationModelRecord> out;
-    ActiveCalibrationService catalog(repository_.catalogPath(),e.projectId,gate_);
+    auto catalog=repository_.catalog(gate_);
     for(const auto& r:catalog.records())if(r.setup()==expected)out.append(r);return out;
 }
 void ScopedActiveCalibrationService::save(const SetupReference& ref,const CalibrationModelRecord& r){
     const auto e=environment();require(gate_(),"Runtime/worker/pending record/ACK busy");require(r.setup()==installation(e,ref),"Exact model installation mismatch");
-    ActiveCalibrationService(repository_.catalogPath(),e.projectId,gate_).save(r);
+    repository_.catalog(gate_).save(r);
 }
 QVector<CalibrationModelRecord> ScopedActiveCalibrationService::historyRecords(const SetupId& id) const {
     const auto e=environment();id.validate();QVector<CalibrationModelRecord> out;
-    ActiveCalibrationService catalog(repository_.catalogPath(),e.projectId,gate_);
+    auto catalog=repository_.catalog(gate_);
     for(const auto& r:catalog.records())for(const auto& s:e.history)
         if(s.id==id && r.setup().id==s.id.value+"/"+QString::number(s.revision) && r.setup().resolution==s.geometry.resolution && r.setup().lensId==s.opticalProfile && r.setup().planeId==s.workingPlane){out.append(r);break;}
     return out; // Historical display only; never an activation/resolve path.
@@ -179,7 +179,7 @@ QVector<ExperimentalScopedCalibrationSnapshot> ScopedActiveCalibrationService::e
 QVector<ScopedCalibrationSnapshot> ScopedActiveCalibrationService::snapshotsImpl(const QVector<SetupReference>& refs,bool experimental,std::function<void()> beforeVerify) const {
     auto fingerprint=[&]{QFile f(repository_.catalogPath());if(!f.exists())return QByteArray("missing");require(f.open(QIODevice::ReadOnly) && f.size()<=4*1024*1024,"Catalog snapshot bounded read failed");const auto bytes=f.read(4*1024*1024+1);require(f.error()==QFileDevice::NoError && bytes.size()<=4*1024*1024,"Catalog snapshot read failed");return QCryptographicHash::hash(bytes,QCryptographicHash::Sha256);};
     const auto before=fingerprint();const auto e=environment();const auto permissions=permissions_;
-    const auto models=ActiveCalibrationService(repository_.catalogPath(),e.projectId,gate_).records();QVector<ScopedCalibrationSnapshot> out;QSet<QString> seen;
+    const auto models=repository_.catalog(gate_).records();QVector<ScopedCalibrationSnapshot> out;QSet<QString> seen;
     for(const auto& ref:refs){require(!seen.contains(ref.setup.value),"Duplicate snapshot target");seen.insert(ref.setup.value);
         const auto expected=installation(e,ref);require(e.operational.value(ref.camera.value)==ref.setup.value && permissions_.contains(ref.setup.value),"Installation requires explicit activation");
         const auto p=permissions_.value(ref.setup.value);require(p.experimental==experimental,"Calibration permission policy mismatch");if(p.profile)require(currentProfile(e,*p.profile),"Acquisition profile changed; reactivate without refitting model");require(p.selection.target==ref && e.selections.contains(p.selection),"Selection changed; reactivate");bool found=false;

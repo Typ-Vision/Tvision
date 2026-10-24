@@ -54,10 +54,15 @@ public:
     QString path() const {return projectPath_+".measurement-environment.json";}
     QString projectPath() const {return projectPath_;}
     QString catalogPath() const {return projectPath_+".active-calibrations.json";}
+    ActiveCalibrationService catalog(ActiveCalibrationService::ChangeGate gate=[]{return true;}) const {
+        return ActiveCalibrationService(catalogPath(),projectId_,std::move(gate),catalog_);
+    }
+    std::shared_ptr<ValidatedCalibrationCatalog> catalogCache() const {return catalog_;}
 private:
     void validateDependencies(const MeasurementEnvironment&) const;
     QString projectPath_,projectId_;
     int capacity_;
+    std::shared_ptr<ValidatedCalibrationCatalog> catalog_=std::make_shared<ValidatedCalibrationCatalog>();
 };
 // Application-owned, owner-thread state; no QWidget/recipe ownership.
 class MeasurementEnvironmentRegistry {

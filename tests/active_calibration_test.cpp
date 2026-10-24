@@ -1,7 +1,9 @@
 #include "application/ActiveCalibrationService.hpp"
+#include "application/EditorObservation.hpp"
 #include <QCoreApplication>
 #include <QDir>
 #include <QFile>
+#include <QFileInfo>
 #include <QJsonDocument>
 #include <QLockFile>
 #include <QTemporaryDir>
@@ -78,6 +80,35 @@ int main(int argc,char** argv){QCoreApplication app(argc,argv);try{
     const auto homography=math.teachHomography(hd,PlaneMappingService::fit(observation));
     CalibrationSample hControl{"independent",{{125,125},setup.source},{{225,125},setup.source},20};
     const auto hRecord=CalibrationModelRecord::create(homography,hSetup,image,{{hControl},0.001});
+    { // One replay per validated content generation; bytes are still read each time.
+        const auto cachedPath=dir.path()+"/cached.json";
+        const auto cache=std::make_shared<ValidatedCalibrationCatalog>();
+        ActiveCalibrationService cached(cachedPath,"project-A",[]{return true;},cache);cached.save(hRecord);
+        editor_observation::Sample cold,warm;
+        std::shared_ptr<const CalibrationCatalogView> original;
+        {editor_observation::Binding observe(cold);original=cached.catalogView();}
+        {editor_observation::Binding observe(warm);
+            ActiveCalibrationService reader(cachedPath,"project-A",[]{return true;},cache);
+            for(int n=0;n<10;++n)check(reader.catalogView()==original && reader.records().size()==1,"shared immutable view reused");
+            check(!reader.active(),"shared mathematics never restores permission");
+        }
+        check(cold.calls[editor_observation::CatalogDecode]==1 && cold.calls[editor_observation::ModelDecode]==1 && cold.calls[editor_observation::PlaneReplay]==1,"one catalog/model/plane replay in cold generation");
+        check(warm.calls[editor_observation::CatalogRead]==21 && warm.calls[editor_observation::CatalogBytesRead]==21 && warm.calls[editor_observation::CatalogDecode]==0 && warm.calls[editor_observation::ModelDecode]==0 && warm.calls[editor_observation::PlaneReplay]==0,"warm reads independently measured; no replay");
+        QTextStream(stdout)<<"cache cold: reads="<<cold.calls[editor_observation::CatalogRead]<<" catalog="<<cold.calls[editor_observation::CatalogDecode]<<" model="<<cold.calls[editor_observation::ModelDecode]<<" replay="<<cold.calls[editor_observation::PlaneReplay]<<"; warm: reads="<<warm.calls[editor_observation::CatalogRead]<<" catalog="<<warm.calls[editor_observation::CatalogDecode]<<" model="<<warm.calls[editor_observation::ModelDecode]<<" replay="<<warm.calls[editor_observation::PlaneReplay]<<'\n';
+        reject([&]{ActiveCalibrationService wrong(cachedPath,"project-B",[]{return true;},cache);},"cache cannot cross project ID");
+        reject([&]{ActiveCalibrationService wrong(dir.path()+"/other.json","project-A",[]{return true;},cache);},"cache cannot cross project path");
+        const auto goodCached=read(cachedPath);QFile stamp(cachedPath);check(stamp.open(QIODevice::ReadOnly),"open timestamp fixture");const auto modified=stamp.fileTime(QFileDevice::FileModificationTime);stamp.close();
+        auto changed=goodCached;const auto at=changed.indexOf("visionflow.active-calibration");check(at>=0,"catalog format fixture");changed[at]='X';write(cachedPath,changed);
+        check(stamp.open(QIODevice::ReadWrite) && stamp.setFileTime(modified,QFileDevice::FileModificationTime),"restore same mtime");stamp.close();
+        check(QFileInfo(cachedPath).size()==goodCached.size() && QFileInfo(cachedPath).lastModified()==modified,"same size/mtime mutation");
+        reject([&]{cached.records();},"full digest rejects same size/mtime corruption");reject([&]{cached.records();},"validation failure never returns stale success");
+        write(cachedPath,goodCached);check(cached.catalogView()!=original && original->records[0].contentId()==hRecord.contentId(),"restored bytes revalidated; old view immutable");
+        auto wrongProject=QJsonDocument::fromJson(goodCached).object();wrongProject["projectId"]="project-B";write(cachedPath,QJsonDocument(wrongProject).toJson());reject([&]{cached.records();},"wrong project disk contents rejected");
+        write(cachedPath,"{");reject([&]{cached.records();},"partial external write rejected");write(cachedPath,goodCached);cached.activate("homography",1,hSetup);
+        const auto activeView=cached.catalogView();check(activeView!=original && cached.resolve(hSetup).record.contentId()==hRecord.contentId(),"activation content generation refreshed");
+        check(QFile::remove(cachedPath) && cached.records().isEmpty(),"deleted catalog clears cached history");reject([&]{cached.resolve(hSetup);},"deleted catalog cannot resolve old active selection");
+        write(cachedPath,goodCached);reject([&]{cached.resolve(hSetup);},"old catalog without selected revision cannot revive permission");
+    }
     check(hRecord.controlAccepted()==true && CalibrationModelRecord::decode(hRecord.encode()).encode()==hRecord.encode(),"homography model/control exact replay");
     auto outside=hControl;outside.second.position={900,700};reject([&]{CalibrationModelRecord::create(homography,hSetup,image,{{outside},std::nullopt});},"homography hull protection");
     auto fitControl=hControl;fitControl.first.position=observation.pixels[0];reject([&]{CalibrationModelRecord::create(homography,hSetup,image,{{fitControl},std::nullopt});},"fit corner is not independent control");

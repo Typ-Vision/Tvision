@@ -19,10 +19,10 @@ QString text(QJsonValue v){require(v.isString(),"Environment string required");C
 QJsonObject object(QJsonValue v){require(v.isObject(),"Environment object required");return v.toObject();}
 QJsonArray array(QJsonValue v){require(v.isArray(),"Environment array required");return v.toArray();}
 QString digest(const QJsonObject& o){return QString::fromLatin1(QCryptographicHash::hash(QJsonDocument(o).toJson(QJsonDocument::Compact),QCryptographicHash::Sha256).toHex());}
-void validateCatalog(const QJsonObject& o,const QString& project){
+QVector<CalibrationModelRecord> validateCatalog(const QJsonObject& o,const QString& project){
     keys(o,{"format","schemaVersion","projectId","records","selection","revision"});require(o["format"]=="visionflow.active-calibration" && integer(o["schemaVersion"],1)==1 && text(o["projectId"])==project,"Invalid bundle catalog");integer(o["revision"]);const auto records=array(o["records"]);require(records.size()<=128,"Catalog capacity");QMap<QString,int> versions;QVector<CalibrationModelRecord> decoded;
     for(const auto& v:records){auto r=CalibrationModelRecord::decode(object(v));const auto& d=r.model().dependency();require(d.version==versions.value(d.calibrationId)+1,"Invalid catalog history");versions[d.calibrationId]=d.version;decoded.append(r);}
-    if(!o["selection"].isNull()){const auto s=object(o["selection"]);keys(s,{"id","version","contentId","revision"});require(integer(s["revision"],1)==integer(o["revision"]),"Invalid catalog selection revision");bool found=false;for(const auto& r:decoded)if(r.model().dependency().calibrationId==text(s["id"]) && r.model().dependency().version==integer(s["version"],1) && r.contentId()==text(s["contentId"]))found=true;require(found,"Dangling bundle catalog selection");}
+    if(!o["selection"].isNull()){const auto s=object(o["selection"]);keys(s,{"id","version","contentId","revision"});require(integer(s["revision"],1)==integer(o["revision"]),"Invalid catalog selection revision");bool found=false;for(const auto& r:decoded)if(r.model().dependency().calibrationId==text(s["id"]) && r.model().dependency().version==integer(s["version"],1) && r.contentId()==text(s["contentId"]))found=true;require(found,"Dangling bundle catalog selection");}return decoded;
 }
 const MeasurementSetupDescriptor& setup(const MeasurementEnvironment& e,const SetupReference& ref){
     ref.validate();for(const auto& s:e.history)if(s.id==ref.setup && s.revision==ref.revision){require(s.camera==ref.camera,"Wrong setup camera");return s;}throw std::runtime_error("Dangling setup reference");
@@ -95,7 +95,7 @@ MeasurementEnvironment MeasurementEnvironment::decode(const QJsonObject& o,int c
 }
 MeasurementEnvironmentRepository::MeasurementEnvironmentRepository(QString p,QString id,int capacity):projectPath_(std::move(p)),projectId_(std::move(id)),capacity_(capacity){require(QFileInfo(projectPath_).isAbsolute() && capacity>0 && capacity<=4096,"Absolute project path/capacity required");CameraId{projectId_}.validate();}
 void MeasurementEnvironmentRepository::validateDependencies(const MeasurementEnvironment& e) const {
-    if(e.selections.isEmpty())return;ActiveCalibrationService catalog(catalogPath(),projectId_,[]{return true;});const auto records=catalog.records();for(const auto& s:e.selections){bool found=false;for(const auto& r:records)if(r.contentId()==s.contentId){association(e,s,r);found=true;}require(found,"Missing selected calibration dependency");}
+    if(e.selections.isEmpty())return;auto catalog=this->catalog();const auto records=catalog.records();for(const auto& s:e.selections){bool found=false;for(const auto& r:records)if(r.contentId()==s.contentId){association(e,s,r);found=true;}require(found,"Missing selected calibration dependency");}
 }
 MeasurementEnvironment MeasurementEnvironmentRepository::load() const {
     MeasurementEnvironment e;e.projectId=projectId_;if(QFileInfo::exists(path()))e=MeasurementEnvironment::decode(readJson(path()),capacity_);require(e.projectId==projectId_,"Environment project isolation failure");validateDependencies(e);return e;
@@ -111,18 +111,19 @@ MeasurementEnvironment MeasurementEnvironmentRepository::commit(const Measuremen
 }
 MeasurementEnvironment MeasurementEnvironmentRepository::saveAndRemember(const MeasurementEnvironment& expected,const CalibrationModelRecord& record,const SetupReference& target,Fault fault,bool selectOperational) const {
     RememberedCalibration selection{target,record.model().dependency().calibrationId,record.contentId(),record.model().dependency().version};association(expected,selection,record);
-    ActiveCalibrationService catalog(catalogPath(),projectId_,[]{return true;});bool exists=false;for(const auto& r:catalog.records())if(r.model().dependency().calibrationId==selection.id && r.model().dependency().version==selection.version){require(r.contentId()==selection.contentId,"Immutable candidate conflict");exists=true;}if(!exists)catalog.save(record);
+    auto catalog=this->catalog();bool exists=false;for(const auto& r:catalog.records())if(r.model().dependency().calibrationId==selection.id && r.model().dependency().version==selection.version){require(r.contentId()==selection.contentId,"Immutable candidate conflict");exists=true;}if(!exists)catalog.save(record);
     require(fault!=Fault::AfterCandidate,"Injected interruption after candidate");auto next=expected;if(selectOperational)next.operational[target.camera.value]=target.setup.value;bool replaced=false;for(auto& s:next.selections)if(s.target.setup==target.setup){s=selection;replaced=true;}if(!replaced)next.selections.append(selection);return commit(expected,next,fault);
 }
 QJsonObject MeasurementEnvironmentRepository::exportBundle() const {
-    QLockFile lock(path()+".lock");require(lock.tryLock(0),"Environment locked");QLockFile catalogLock(catalogPath()+".lock");require(catalogLock.tryLock(0),"Calibration dependency locked");const auto e=load();QJsonValue catalog;if(QFileInfo::exists(catalogPath())){ActiveCalibrationService checked(catalogPath(),projectId_,[]{return true;});checked.records();catalog=readJson(catalogPath());}return {{"format","visionflow.measurement-bundle"},{"schemaVersion",1},{"environment",e.encode(capacity_)},{"catalog",catalog}};
+    QLockFile lock(path()+".lock");require(lock.tryLock(0),"Environment locked");QLockFile catalogLock(catalogPath()+".lock");require(catalogLock.tryLock(0),"Calibration dependency locked");const auto e=load();QJsonValue catalog;if(QFileInfo::exists(catalogPath())){catalog=this->catalog().catalogView()->document;}return {{"format","visionflow.measurement-bundle"},{"schemaVersion",1},{"environment",e.encode(capacity_)},{"catalog",catalog}};
 }
 void MeasurementEnvironmentRepository::importBundle(const QJsonObject& bundle) const {
     keys(bundle,{"format","schemaVersion","environment","catalog"});require(bundle["format"]=="visionflow.measurement-bundle" && integer(bundle["schemaVersion"],1)==1,"Unknown bundle schema");auto e=MeasurementEnvironment::decode(object(bundle["environment"]),capacity_);const auto sourceId=e.projectId;e.projectId=projectId_;e.revision=0;const auto c=bundle["catalog"];require(c.isNull() || (c.isObject() && c.toObject()["projectId"]==sourceId),"Bundle catalog project mismatch");
-    if(c.isObject())validateCatalog(c.toObject(),sourceId);else require(e.selections.isEmpty(),"Missing bundle calibration dependency");
-    if(c.isObject())for(const auto& selection:e.selections){bool found=false;for(const auto& v:c.toObject()["records"].toArray()){auto r=CalibrationModelRecord::decode(v.toObject());if(r.contentId()==selection.contentId){association(e,selection,r);found=true;}}require(found,"Dangling bundle selection");}
+    const auto imported=c.isObject() ? validateCatalog(c.toObject(),sourceId):QVector<CalibrationModelRecord>{};
+    if(!c.isObject())require(e.selections.isEmpty(),"Missing bundle calibration dependency");
+    for(const auto& selection:e.selections){bool found=false;for(const auto& r:imported)if(r.contentId()==selection.contentId){association(e,selection,r);found=true;}require(found,"Dangling bundle selection");}
     QLockFile lock(path()+".lock");require(lock.tryLock(0),"Destination environment locked");QLockFile catalogLock(catalogPath()+".lock");require(catalogLock.tryLock(0),"Destination catalog locked");require(!QFileInfo::exists(path()),"Destination environment exists");
-    if(c.isObject()){auto catalog=c.toObject();catalog["projectId"]=projectId_;if(QFileInfo::exists(catalogPath()))require(readJson(catalogPath())==catalog,"Destination candidate conflict");else writeJson(catalogPath(),catalog,Fault::None);ActiveCalibrationService checked(catalogPath(),projectId_,[]{return true;});checked.records();}
+    if(c.isObject()){auto catalog=c.toObject();catalog["projectId"]=projectId_;if(QFileInfo::exists(catalogPath()))require(readJson(catalogPath())==catalog,"Destination candidate conflict");else writeJson(catalogPath(),catalog,Fault::None);this->catalog().records();}
     else require(!QFileInfo::exists(catalogPath()),"Unexpected destination catalog");validateDependencies(e);writeJson(path(),e.encode(capacity_),Fault::None);
 }
 MeasurementEnvironmentRegistry::MeasurementEnvironmentRegistry(MeasurementEnvironmentRepository r):repository_(std::move(r)),state_(repository_.load()),thread_(QThread::currentThread()){}

@@ -15,7 +15,7 @@ namespace visionflow {
 class MeasurementWorkspace {
 public:
     MeasurementWorkspace(QString path,QString project,ActiveCalibrationService::ChangeGate gate,std::function<QVector<DeviceBinding>()> discovery=WebcamAdapter::discover)
-        :path_(path),project_(project),registry_(MeasurementEnvironmentRepository(path,project)),active_(MeasurementEnvironmentRepository(path,project),gate),legacy_(path+".active-calibrations.json",project,gate),gate_(std::move(gate)),discovery_(std::move(discovery)){}
+        :path_(path),project_(project),repository_(path,project),registry_(repository_),active_(repository_,gate),legacy_(path+".active-calibrations.json",project,gate,repository_.catalogCache()),gate_(std::move(gate)),discovery_(std::move(discovery)){}
     MeasurementEnvironment environment(){registry_.reload();return registry_.snapshot();}
     ActiveCalibrationService& legacyCalibrations(){return legacy_;}
     const ActiveCalibrationService& legacyCalibrations() const{return legacy_;}
@@ -69,7 +69,7 @@ public:
         if(!gate_())throw std::runtime_error("Workspace busy");
         if(!QFileInfo(path_).isFile())throw std::runtime_error("Saved project required");
         if(!inventoryDone_ || inventory_.cancelled || !inventory_.errors.isEmpty())throw std::runtime_error("Complete discovery required");
-        return CameraSettingsService::open(MeasurementEnvironmentRepository(path_,project_),id,expectedRevision,
+        return CameraSettingsService::open(repository_,id,expectedRevision,
             inventory_.industrial,local,factory,ownerGate?std::move(ownerGate):gate_,[this,id]{active_.disconnect(id);},
             MeasurementEnvironmentRepository::Fault::None,std::move(runtime),std::move(api));
     }
@@ -122,7 +122,7 @@ public:
     }
     void observeAcquisition(const Recipe& r,const CycleResult& cycle){const auto ref=SystemCalibration::setupReference(r);if(!ref)return;const auto source=SystemCalibration::source(r);if(source.kind!="webcam")return;for(const auto& result:cycle.tools)if(result.toolId==source.id && result.state==ExecutionState::Error){active_.disconnect(ref->camera);return;}}
     QMap<QString,QVector<CalibrationModelRecord>> legacyHistories() const {
-        QMap<QString,QVector<CalibrationModelRecord>> out;const auto catalog=ActiveCalibrationService(path_+".active-calibrations.json",project_,gate_).records();
+        QMap<QString,QVector<CalibrationModelRecord>> out;const auto catalog=repository_.catalog(gate_).records();
         for(const auto& r:catalog)if(r.encode()["schemaVersion"].toInt()<=3)out["Sistem • "+r.model().dependency().calibrationId].append(r);
         const auto at=QDateTime::currentDateTimeUtc();for(const auto& m:CalibrationService(path_+".calibrations.json").records()){
             const auto& d=m.dependency();std::optional<CalibrationModelRecord> original;for(const auto& r:catalog)if(r.encode()["schemaVersion"]==5){const auto old=r.encode()["original"].toObject();if(old["schemaVersion"]==3 && old["model"].toObject()==MeasurementService{}.encode(m)){original=CalibrationModelRecord::decode(old);break;}}
@@ -130,14 +130,14 @@ public:
             out["Eski matematik • "+d.calibrationId].append(*original);
         }return out;
     }
-    QJsonObject exportDependencies() const {return MeasurementEnvironmentRepository(path_,project_).exportBundle();}
-    void importDependencies(const QJsonObject& bundle){if(!gate_())throw std::runtime_error("Runtime/worker/pending kayıt/ACK meşgul");MeasurementEnvironmentRepository(path_,project_).importBundle(bundle);registry_.reload();}
+    QJsonObject exportDependencies() const {return repository_.exportBundle();}
+    void importDependencies(const QJsonObject& bundle){if(!gate_())throw std::runtime_error("Runtime/worker/pending kayıt/ACK meşgul");repository_.importBundle(bundle);registry_.reload();}
     QString projectPath() const {return path_;}
     QString projectId() const {return project_;}
     bool changeAllowed() const {return gate_();}
     QString directory() const {return QFileInfo(path_).absolutePath();}
-    QVector<CalibrationModelRecord> trials() const {QVector<CalibrationModelRecord> out;for(const auto& r:ActiveCalibrationService(path_+".active-calibrations.json",project_,gate_).records())if(r.image().origin=="trial_file")out.append(r);return out;}
-    void saveTrial(const CalibrationModelRecord& r){if(!gate_() || r.image().origin!="trial_file")throw std::runtime_error("Trial save unavailable");ActiveCalibrationService(path_+".active-calibrations.json",project_,gate_).save(r);}
+    QVector<CalibrationModelRecord> trials() const {QVector<CalibrationModelRecord> out;for(const auto& r:repository_.catalog(gate_).records())if(r.image().origin=="trial_file")out.append(r);return out;}
+    void saveTrial(const CalibrationModelRecord& r){if(!gate_() || r.image().origin!="trial_file")throw std::runtime_error("Trial save unavailable");repository_.catalog(gate_).save(r);}
     std::function<CalibrationModelRecord()> associationJob(const CalibrationModelRecord& original,const SetupReference& ref,const QString& path){
         if(!gate_())throw std::runtime_error("Runtime/worker/pending kayıt/ACK meşgul");auto e=environment();IndependentCaptureRequest request;request.origin=SourceOrigin::SetupFile;request.filePath=path;
         for(const auto& c:e.current.cameras)if(c.id==ref.camera)request.camera=c;
@@ -155,6 +155,7 @@ public:
 
 private:
     QString path_,project_;
+    MeasurementEnvironmentRepository repository_;
     MeasurementEnvironmentRegistry registry_;
     ScopedActiveCalibrationService active_;
     ActiveCalibrationService legacy_;

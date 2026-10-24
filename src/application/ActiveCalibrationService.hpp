@@ -2,6 +2,8 @@
 #include "MeasurementService.hpp"
 #include "ExperimentalCalibrationEvidence.hpp"
 #include <functional>
+#include <memory>
+#include <mutex>
 
 namespace visionflow {
 // Shared installation identity, deliberately independent of acquisition tool IDs.
@@ -51,6 +53,9 @@ public:
     bool activatable() const;
     bool experimentallyActivatable() const;
 private:
+    // Only called after MeasurementService::decode has replayed this exact model.
+    static CalibrationModelRecord createValidated(const PlanarCalibration&,const MeasurementSetup&,
+        const CalibrationImageEvidence&,const CalibrationControl&);
     CalibrationModelRecord(PlanarCalibration,MeasurementSetup,CalibrationImageEvidence,CalibrationControl);
     PlanarCalibration model_;
     MeasurementSetup setup_;
@@ -76,13 +81,29 @@ struct ActiveCalibrationSnapshot {
     QJsonObject scope; // schema1 exact physical setup; empty for legacy compatibility
     QJsonObject acquisition; // CCUX-06 fresh session evidence; never rewrites model/scope2
 };
+// A validated mathematical view, never a session permission. One current,
+// bounded generation per project/path; callers may retain immutable snapshots.
+struct CalibrationCatalogView {
+    QJsonObject document;
+    QVector<CalibrationModelRecord> records;
+    QByteArray digest;
+    bool exists=false;
+};
+class ValidatedCalibrationCatalog {
+    friend class ActiveCalibrationService;
+    std::mutex mutex_;
+    QString path_,project_;
+    std::shared_ptr<const CalibrationCatalogView> current_;
+};
 // One application-owned instance per open project. Owner-thread commands only.
 // The required gate checks Runtime/worker/pending record/ACK before any change.
 // Persistence remembers a choice; construction never restores active permission.
 class ActiveCalibrationService {
 public:
     using ChangeGate=std::function<bool()>;
-    ActiveCalibrationService(QString absolutePath,QString projectId,ChangeGate);
+    ActiveCalibrationService(QString absolutePath,QString projectId,ChangeGate,
+        std::shared_ptr<ValidatedCalibrationCatalog> catalog={});
+    std::shared_ptr<const CalibrationCatalogView> catalogView() const;
     QVector<CalibrationModelRecord> records() const;
     void save(const CalibrationModelRecord&) const;
     void activate(const QString& id,int version,const MeasurementSetup& current);
@@ -98,5 +119,6 @@ private:
     QString path_,projectId_;
     ChangeGate gate_;
     std::optional<ActiveCalibrationSelection> active_;
+    std::shared_ptr<ValidatedCalibrationCatalog> catalog_;
 };
 }

@@ -25,13 +25,17 @@ The default is one discarded warmup plus 20 measured samples per operation and
 case. `--probe-contract` uses one warmup plus two samples, registered as
 `editor_responsiveness_contract`. CTest asserts observer isolation, actual
 serialized mutations, equivalent tool counts, dirty/no-op Save disk-write
-semantics, save/reopen equivalence, positive model replay counters where
-applicable, zero model replay for uncalibrated cases, and zero discovery/provider
+semantics, save/reopen equivalence, and (since CCUX-23b-4) zero catalog/model
+decode and plane replay for warmed unchanged content, independently positive
+catalog reads for calibrated cases, and zero discovery/provider
 calls through an injected counting factory. It has no absolute timing threshold. CCUX-23b-2 additionally requires exactly one
 Workspace/Editor refresh per measured Save/Add/parameter/ROI action. The original
 23b-1 CSV remains the unchanged baseline (Save/Add had two refreshes).
 CCUX-23b-3 requires zero hidden Calibration/Runtime rebuilds for all measured
 Editor actions; page-entry/project-switch checks are in `ui_editor_usability`.
+CCUX-23b-4 preserves inclusive `catalog_read` semantics and adds
+`catalog_bytes_read` for actual bounded byte-read count/time. Hash/JSON/replay
+time is excluded from the latter; missing files do not count as byte reads.
 
 `ui_editor_usability` also runs `editor_property_commits.cpp`: no-op controls
 produce no refresh and preserve exact hash/status/legacy parameters; pending final

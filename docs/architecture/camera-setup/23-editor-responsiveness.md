@@ -1,6 +1,6 @@
 # CCUX-23 — Editor düzenleme gecikmesini giderme planı
 
-24 Ekim 2026 — CCUX-PLAN-06. Durum: 23b-1–3 tamamlandı; devam 23b-4.
+24 Ekim 2026 — CCUX-PLAN-06. Durum: 23b-1–4 tamamlandı; devam 23b-5.
 Uygulayıcı: Codex. Uygulama alt görevleri için kullanıcı tercihi: Sol 6.1.
 
 ## Başlangıç ve sınır
@@ -127,6 +127,20 @@ ve 23b-2'nin etkilenen testleri; Release + normal/küçük görsel kontrol.
 Bağlı: 23b-3. Sahiplik: ActiveCalibrationService, MeasurementEnvironment,
 MeasurementWorkspace, ScopedActiveCalibration ve bu servislerin testleri.
 Önce küçük API/ömür/invalidation tablosunu bu kart altında somutlaştır; sonra uygula.
+
+23b-4 uygulama sözleşmesi:
+
+| API / sahip | Ömür ve invalidation |
+| --- | --- |
+| `ValidatedCalibrationCatalog` / repository-workspace | Tek mutlak yol + proje ID'sine bağlı, mutex korumalı tek immutable nesil; global değil |
+| `ActiveCalibrationService::catalogView()` | Her erişimde bounded tek byte dizisi okunur ve SHA-256 alınır; aynı digest'te doğrulanmış belge/model vektörü paylaşılır |
+| Repository kopyası / scoped / legacy | Aynı proje cache tutamacını paylaşır; yeni proje ve Save As ayrı tutamaç oluşturur |
+| Eksik / bozuk / farklı içerik | Eski görünüm cache'den çıkarılır; yeni içerik tümüyle doğrulanmadan yayınlanmaz; eksik dosya boş katalogdur, seçili bağımlılık reddedilir |
+| Permission / environment | Cache'e alınmaz; revision, profile, exact kurulum, epoch ve işlem sonu fingerprint karşılaştırmaları sürer |
+
+Dosya okuma/hash her erişimde korunur; tasarruf JSON/model decode ve replay'dir.
+Sayaçlar dosya okuma ile replay'i ayrı raporlar. Dönen eski immutable tutamaçlar
+Runtime snapshot'ını değiştirmez; yeni admission eski tutamaçtan izin çıkarmaz.
 
 Proje/workspace ömürlü, sınırlı immutable doğrulanmış katalog görünümü oluştur.
 Aynı içerik decode/replay sonucunu paylaş; environment bağımlılık kontrolü ve

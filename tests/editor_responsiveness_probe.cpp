@@ -156,7 +156,7 @@ bool MainWindow::verifyEditorResponsiveness(const QString& artifacts){
                     }else requireProbe(service_.dirty() && service_.activeRecipe()->definition!=definitionBefore,"edit actually changed serialized recipe");
                     requireProbe(sample.calls[Calibration]==0 && sample.calls[Runtime]==0,"hidden pages are not rebuilt");
                     requireProbe(sample.calls[Context]>0 && sample.calls[Workspace]==1 && sample.calls[Editor]==1,"one refresh per Editor action");
-                    requireProbe(old ? sample.calls[CatalogRead]>0 && sample.calls[CatalogDecode]>0 && sample.calls[ModelDecode]>0 && sample.calls[PlaneReplay]>0 : sample.calls[ModelDecode]==0 && sample.calls[PlaneReplay]==0,"catalog/decode/replay counter semantics");
+                    requireProbe((!old || sample.calls[CatalogBytesRead]>0) && sample.calls[CatalogDecode]==0 && sample.calls[ModelDecode]==0 && sample.calls[PlaneReplay]==0,"warm validated catalog is read but never replayed");
                 }catch(const std::exception& e){success=false;error+=QString::fromUtf8(e.what());}
                 raw<<name<<','<<operation<<','<<iteration<<','<<(iteration==0)<<','<<success<<','<<operationNs/1e6<<','<<paint.first/1e6<<','<<queued/1e6<<','<<before<<','<<service_.tools().size()<<','<<dirtyBefore<<','<<service_.dirty()<<','<<provider->capabilitiesCalls-capabilitiesBefore<<','<<provider->creates-createsBefore<<','<<discoveries-discoveriesBefore;
                 for(int i=0;i<Count;++i)raw<<','<<sample.calls[i]<<','<<sample.nanoseconds[i]/1e6;
