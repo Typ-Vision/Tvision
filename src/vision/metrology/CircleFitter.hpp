@@ -1,4 +1,5 @@
 #pragma once
+#include "FitDiagnostic.hpp"
 #include <QPointF>
 #include <QString>
 #include <QVector>
@@ -19,6 +20,7 @@ struct CircleFitPoint {
     std::optional<double> signedResidual; // distance to centre minus radius
     bool used=false;
     QString reason;
+    ScanRejections rejections;
 };
 struct FittedCircle {
     QPointF centre;

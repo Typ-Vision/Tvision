@@ -1,4 +1,5 @@
 #include "MetrologyEditor.hpp"
+#include "application/MetrologyService.hpp"
 #include <QFormLayout>
 #include <QDoubleSpinBox>
 #include <QComboBox>
@@ -6,18 +7,19 @@
 #include <QPushButton>
 #include <QLabel>
 #include <QMap>
+#include <QSignalBlocker>
 namespace visionflow {
 namespace {
 QString fieldLabel(const QString& key) {
     static const QMap<QString,QString> labels{
-        {"mode","Birim modu"},{"direction","Tarama yönü"},{"selection","Kenar seçimi"},{"polarity","Kenar yönü"},
-        {"minContrast","Min kontrast (gray8/px)"},{"stepPx","Tarama adımı (px)"},{"widthStepPx","Enine adım (px)"},{"sigmaPx","Gaussian sigma (px)"},{"subpixel","Subpixel inceltme"},
-        {"scanCount","Tarama sayısı"},{"scanWidthPx","Tarama genişliği (px)"},{"scanWidth","Tarama genişliği"},
-        {"minWidthPx","Min çift genişliği (px)"},{"maxWidthPx","Max çift genişliği (px)"},{"lower","Alt tolerans"},{"upper","Üst tolerans"},
+        {"mode","Birim modu"},{"direction","Tarama yönü"},{"selection","Kenar seçimi"},{"polarity","Kenar geçişi"},
+        {"minContrast","Kenar eşiği (gray8/örnek)"},{"stepPx","Tarama adımı (px)"},{"widthStepPx","Enine adım (px)"},{"sigmaPx","Gürültü yumuşatma sigma (px)"},{"subpixel","Subpixel inceltme"},
+        {"scanCount","Tarama sayısı"},{"scanWidthPx","Ortalama şerit kalınlığı (px)"},{"scanWidth","Ortalama şerit kalınlığı"},
+        {"minWidthPx","Min çift genişliği (px)"},{"maxWidthPx","Max çift genişliği (px)"},{"lower","Alt destek uzunluğu / genişlik sınırı"},{"upper","Üst destek uzunluğu / genişlik sınırı"},
         {"angleLower","Alt açı toleransı (deg)"},{"angleUpper","Üst açı toleransı (deg)"},
         {"diameterLower","Alt çap toleransı"},{"diameterUpper","Üst çap toleransı"},{"deviationLower","Alt sapma toleransı"},{"deviationUpper","Üst sapma toleransı"},
         {"ransac","Sağlam fit (RANSAC)"},{"minPoints","Min fit noktası"},{"minFoundPoints","Min bulunan nokta"},{"minCoverage","Min gözlem oranı"},{"minFitCoverage","Min fit oranı"},{"minSpanCoverage","Min destek oranı"},
-        {"inlierDistancePx","Inlier mesafesi (px)"},{"inlierDistanceMm","Inlier mesafesi (mm)"},{"inlierDistance","Inlier mesafesi"},
+        {"inlierDistancePx","Fit'e katılma mesafesi (px)"},{"inlierDistanceMm","Fit'e katılma mesafesi (mm)"},{"inlierDistance","Fit'e katılma mesafesi"},
         {"maxRmsPx","Max RMS (px)"},{"maxRmsMm","Max RMS (mm)"},{"maxRms","Max RMS"},{"maxResidualPx","Max residual (px)"},{"maxResidualMm","Max residual (mm)"},{"maxResidual","Max residual"},
         {"minSpanPx","Min destek (px)"},{"minSpanMm","Min destek (mm)"},{"minAngularSpan","Min açısal destek (deg)"},{"maxGapDegrees","Max açısal boşluk (deg)"},{"maxCondition","Max fit koşulu"},{"unitsPerSample","Örnek ölçeği"}};
     return labels.value(key,key);
@@ -29,9 +31,33 @@ MetrologyEditor::MetrologyEditor(const QString& kind,const QJsonObject& p,const 
     auto help=new QLabel((p["poseTracking"].toObject()["schemaVersion"]==2 || p["referenceBinding"].toObject()["mapping"]=="world-reference-v1") ? "World tracking: gerçek raw gözlemler ve current mm refit. accepted yalnız dahil tool toleransıdır; genel karar NOT_EVALUATED. Circle radyal sapma fit dışı gözlemleri de içerir; açı/gap gerçek current world noktalarındandır. Nominal mm ROI öğret düğmesiyle yeniden düzenlenir. Profil, scanWidthPx ve min/maxWidthPx synthetic örnek birimindedir.":"Pixel: diagnostic px. Calibrated: kayıtlı güncel kalibrasyonla mm. accepted yalnız bu aracın dahil tolerans sonucudur; genel parça kararı değildir. Circle: çap ve sampled radyal sapma ayrı limitlerdir; kalite yoksa NOT_EVALUATED. Kalibre ROI koordinatları mm, scanWidth mm, unitsPerSample mm/synthetic px; fit eşikleri seçili birimde. Line açısı seçili koordinat düzleminde hesaplanır. Scan ve residual kanıtı Results / Logs içindedir.");help->setWordWrap(true);f->addRow(help);
     for(auto it=p.begin();it!=p.end();++it){const auto key=it.key();if(key=="scanRoi")continue;
         if(it->isDouble()){auto* s=new QDoubleSpinBox;s->setObjectName("mt_"+key);s->setDecimals(key=="scanCount" || key=="minPoints" || key=="minFoundPoints" || key=="minFoundPoints" ? 0:9);s->setRange(key.startsWith("angle") ? -180:0,key.startsWith("angle") ? 180:1e9);if(key=="stepPx")s->setRange(.05,16);else if(key=="widthStepPx")s->setRange(.25,16);else if(key=="sigmaPx")s->setRange(0,16);else if(key=="minContrast")s->setRange(1e-9,5100);else if(key=="scanCount" || key=="minPoints" || key=="minFoundPoints" || key=="minFoundPoints")s->setRange(3,128);else if(key=="scanWidthPx")s->setRange(1e-9,1024);else if(key=="minCoverage" || key=="minSpanCoverage" || key=="minFitCoverage" || key=="minFitCoverage")s->setRange(1e-9,1);else if(key=="minWidthPx")s->setRange(0,65536);else if(key=="maxWidthPx")s->setRange(1e-9,65536);else if(key.startsWith("minSpan") || key.startsWith("inlierDistance") || key.startsWith("maxRms") || key.startsWith("maxResidual"))s->setMinimum(1e-9);
-            s->setValue(it->toDouble());s->setToolTip(key);QString label=fieldLabel(key);if((p["poseTracking"].toObject()["schemaVersion"]==2 || p["referenceBinding"].toObject()["mapping"]=="world-reference-v1") && (key.endsWith("Px") && !key.startsWith("minSpan") && !key.startsWith("inlierDistance") && !key.startsWith("maxRms") && !key.startsWith("maxResidual")))label+=" (synthetic samples)";if(key=="lower" || key=="upper")label+=" (width / line span; mode px/mm)";if(kind=="circle_fit" && (key.startsWith("diameter") || key.startsWith("deviation") || key=="scanWidth" || key=="inlierDistance" || key=="maxRms" || key=="maxResidual"))label+=" (mode px/mm)";if(kind=="circle_fit" && key=="unitsPerSample")label+=" (mode units / synthetic px)";f->addRow(label,s);connect(s,&QDoubleSpinBox::editingFinished,this,[this]{if(onChanged)onChanged();});}
+            const bool percent=key=="minCoverage" || key=="minSpanCoverage" || key=="minFitCoverage";if(percent){s->setRange(1e-7,100);s->setSuffix(" %");}s->setProperty("displayScale",percent ? 100.:1.);s->setValue(it->toDouble()*(percent ? 100.:1.));s->setProperty("initialDisplayValue",s->value());s->setToolTip(key=="minFitCoverage" ? "Fit'e katılan nokta / istenen tarama (%)":key=="minCoverage" ? (kind=="circle_fit" ? "Bulunan kenar / istenen tarama (%)":"Fit'e katılan nokta / istenen tarama (%)"):key=="minSpanCoverage" ? "İlk ve son katılan tarama ID aralığı / toplam ID aralığı (%)":key);QString label=fieldLabel(key);if(kind=="line_fit" && (key=="lower" || key=="upper"))label=key=="lower" ? "Alt destek uzunluğu sınırı":"Üst destek uzunluğu sınırı";if(kind=="line_fit" && (key=="angleLower" || key=="angleUpper"))label=key=="angleLower" ? "Alt yönlü açı sınırı (deg)":"Üst yönlü açı sınırı (deg)";if((p["poseTracking"].toObject()["schemaVersion"]==2 || p["referenceBinding"].toObject()["mapping"]=="world-reference-v1") && (key.endsWith("Px") && !key.startsWith("minSpan") && !key.startsWith("inlierDistance") && !key.startsWith("maxRms") && !key.startsWith("maxResidual")))label+=" (synthetic samples)";if(key=="lower" || key=="upper")label+=p["mode"]=="pixel" ? " (px)":" (mm)";if(kind=="circle_fit" && (key.startsWith("diameter") || key.startsWith("deviation") || key=="scanWidth" || key=="inlierDistance" || key=="maxRms" || key=="maxResidual"))label+=p["mode"]=="pixel" ? " (px)":" (mm)";if(kind=="circle_fit" && key=="unitsPerSample")label+=" (mode units / synthetic px)";f->addRow(label,s);connect(s,&QDoubleSpinBox::editingFinished,this,[this]{if(onChanged)onChanged();});}
         else if(it->isBool()){auto* c=new QCheckBox(fieldLabel(key));c->setObjectName("mt_"+key);c->setChecked(it->toBool());f->addRow(c);connect(c,&QCheckBox::toggled,this,[this]{if(onChanged)onChanged();});}
-        else if(it->isString()){auto* c=new QComboBox;c->setObjectName("mt_"+key);const auto choices=key=="mode" ? QStringList{"pixel","calibrated"}:key=="direction" ? QStringList{"outward","inward"}:key=="direction" ? QStringList{"outward","inward"}:key=="selection" ? QStringList{"first","last","strongest"}:kind=="edge_pair" ? QStringList{"bright","dark","any"}:QStringList{"rising","falling","any"};c->addItems(choices);c->setCurrentText(it->toString());c->setToolTip(key);f->addRow(fieldLabel(key),c);connect(c,&QComboBox::currentIndexChanged,this,[this]{if(onChanged)onChanged();});}
+        else if(it->isString()){auto* c=new QComboBox;c->setObjectName("mt_"+key);const auto choices=key=="mode" ? QStringList{"pixel","calibrated"}:key=="direction" ? QStringList{"outward","inward"}:key=="direction" ? QStringList{"outward","inward"}:key=="selection" ? QStringList{"first","last","strongest"}:kind=="edge_pair" ? QStringList{"bright","dark","any"}:QStringList{"rising","falling","any"};for(const auto& value:choices){QString text=value;
+                if(key=="polarity" && kind!="edge_pair")text=value=="rising" ? "Siyah → Beyaz":value=="falling" ? "Beyaz → Siyah":"Her ikisi";
+                else if(key=="selection")text=value=="first" ? "İlk":value=="last" ? "Son":"En güçlü";
+                c->addItem(text,value);
+            }c->setCurrentIndex(c->findData(it->toString()));c->setToolTip(key);f->addRow(fieldLabel(key),c);connect(c,&QComboBox::currentIndexChanged,this,[this]{if(onChanged)onChanged();});}
+    }
+    if(kind_=="line_fit" || kind_=="circle_fit") {
+        auto* directionNote=new QLabel("Kenar geçişi ok yönüne göredir: Siyah → Beyaz yükselen, Beyaz → Siyah düşen kenardır. Oklar kenarı kesmeli. Kenar eşiği 0–255 normalize profil değişimidir; görüntü siyah/beyaz eşiği değildir. Şerit kalınlığı kenar boyunca ortalamadır; arama uzunluğu ROI'nin kenarı kestiği mesafedir.");directionNote->setObjectName("metrologyDirectionHelp");directionNote->setWordWrap(true);f->addRow(directionNote);
+        auto* preflight=new QLabel;preflight->setWordWrap(true);preflight->setObjectName("metrologyPreflight");preflight->setTextFormat(Qt::PlainText);f->addRow(preflight);
+        auto update=[this,preflight]{const auto warnings=MetrologyService::configurationWarnings(kind_,parameters());preflight->setText(warnings.join("\n"));preflight->setVisible(!warnings.isEmpty());};
+        update();
+        for(auto* spin:findChildren<QDoubleSpinBox*>())connect(spin,&QDoubleSpinBox::valueChanged,this,[update]{update();});
+        for(auto* combo:findChildren<QComboBox*>())connect(combo,&QComboBox::currentIndexChanged,this,[update]{update();});
+    }
+    if(kind_=="circle_fit") {
+        auto* units=new QLabel("Birim değişince ROI temizlenir; özel sayısal sınırlar korunur, otomatik çevrilmez. Başlangıç düğmesi şerit/fit değerlerini seçili birime göre değiştirir; ürün sınırlarını ayrıca kontrol edin.");units->setWordWrap(true);units->setObjectName("metrologyUnitPolicy");f->addRow(units);
+        auto* profile=new QPushButton("Birim başlangıcını uygula");profile->setObjectName("metrologyUnitProfile");profile->setToolTip("Seçili birimin şerit ve fit başlangıcını uygular; özel şerit ve fit eşikleri değişir.");profile->setSizePolicy(QSizePolicy::Ignored,QSizePolicy::Fixed);f->addRow(profile);
+        connect(profile,&QPushButton::clicked,this,[this]{
+            const bool pixel=findChild<QComboBox*>("mt_mode")->currentText()=="pixel";
+            for(const auto& key:{"scanWidth","inlierDistance","maxResidual","maxRms","unitsPerSample"}) {
+                auto* field=findChild<QDoubleSpinBox*>(QString("mt_")+key);const QSignalBlocker blocker(field);
+                field->setValue(QString(key)=="maxRms" ? (pixel ? .35:.035):(pixel ? 1.:.1));
+            }
+            if(onChanged)onChanged();
+        });
     }
     auto* draw=new QPushButton(kind=="circle_fit" ? "Halka / yay çiz":kind=="edge_pair" ? "Ok çiz (A → B)":"Dönük kutu çiz");draw->setObjectName("metrologyDraw");draw->setEnabled(hasFrame);f->addRow(draw);connect(draw,&QPushButton::clicked,this,[this]{if(onDraw)onDraw();});
     QJsonObject coords;const auto saved=p["scanRoi"].toObject();
@@ -40,8 +66,24 @@ MetrologyEditor::MetrologyEditor(const QString& kind,const QJsonObject& p,const 
     else {RotatedRectangle g{{100,100},{100,40},0};if(!saved.isEmpty())g=std::get<RotatedRectangle>(ToolRoi::fromJson(saved).geometry);coords={{"cx",g.centre.x()},{"cy",g.centre.y()},{"width",g.size.width()},{"height",g.size.height()},{"angle",g.angleDegrees}};}
     for(auto i=coords.begin();i!=coords.end();++i){auto* s=new QDoubleSpinBox;s->setObjectName("mt_roi_"+i.key());s->setDecimals(9);s->setRange(-1e8,1e8);s->setValue(i->toDouble());f->addRow(i.key()+((i.key()=="angle" || i.key()=="start" || i.key()=="sweep") ? " (deg)":((kind=="circle_fit" && p["mode"]=="calibrated") || (p["poseTracking"].toObject()["schemaVersion"]==2 || p["referenceBinding"].toObject()["mapping"]=="world-reference-v1") ? " (nominal world mm)":" (raw px)")),s);}
     auto* apply=new QPushButton("Koordinatları uygula");apply->setObjectName("metrologyApplyRoi");apply->setEnabled(hasFrame);f->addRow(apply);
-    connect(apply,&QPushButton::clicked,this,[this]{auto n=[&](const char* k){return findChild<QDoubleSpinBox*>(QString("mt_roi_")+k)->value();};ToolRoi roi;roi.frame.id=frameId_;if(kind_=="circle_fit")roi.geometry=ArcRoi{{{n("cx"),n("cy")},n("inner"),n("outer")},n("start"),n("sweep")};else if(kind_=="circle_fit")roi.geometry=ArcRoi{{{n("cx"),n("cy")},n("inner"),n("outer")},n("start"),n("sweep")};else if(kind_=="edge_pair")roi.geometry=ScanSegment{{n("ax"),n("ay")},{n("bx"),n("by")},n("width")};else roi.geometry=RotatedRectangle{{n("cx"),n("cy")},{n("width"),n("height")},n("angle")};if(onRoi)onRoi(roi);});
+    connect(apply,&QPushButton::clicked,this,[this]{if(const auto roi=coordinateRoi();roi && onRoi)onRoi(*roi);});
+    if(kind_=="circle_fit")for(const auto& key:{"start","sweep"}) {
+        auto* spin=findChild<QDoubleSpinBox*>(QString("mt_roi_")+key);spin->setRange(-360,360);spin->setKeyboardTracking(true);
+        connect(spin,&QDoubleSpinBox::valueChanged,this,[this]{if(!original_["scanRoi"].toObject().isEmpty())if(const auto roi=coordinateRoi();roi && onPreview)onPreview(*roi);});
+        connect(spin,&QDoubleSpinBox::editingFinished,this,[this]{if(!original_["scanRoi"].toObject().isEmpty())if(const auto roi=coordinateRoi();roi && onRoi)onRoi(*roi);});
+    }
     auto* hint=new QLabel(saved.isEmpty() ? "ROI öğretilmedi; çizim veya koordinatları uygulayın.":"ROI reçeteye bağlıdır. Tutamaçlar / Ctrl+Z / Escape desteklenir. Line genişlik ekseni destek yönü; yükseklik ekseni scan yönüdür.");hint->setWordWrap(true);f->addRow(hint);
 }
-QJsonObject MetrologyEditor::parameters() const {auto p=original_;for(auto i=original_.begin();i!=original_.end();++i){const auto name="mt_"+i.key();if(auto* s=findChild<QDoubleSpinBox*>(name)){if(s->value()!=i->toDouble())p[i.key()]=s->value();}else if(auto* c=findChild<QCheckBox*>(name))p[i.key()]=c->isChecked();else if(auto* c=findChild<QComboBox*>(name))p[i.key()]=c->currentText();}if(kind_=="circle_fit" && p["mode"]!=original_["mode"]){p["scanRoi"]=QJsonObject{};p.remove("worldCalibration");p["unitsPerSample"]=p["mode"]=="pixel" ? 1.:.1;}if(kind_=="circle_fit" && p["mode"]!=original_["mode"]){p["scanRoi"]=QJsonObject{};p.remove("worldCalibration");p["unitsPerSample"]=p["mode"]=="pixel" ? 1.:.1;}return p;}
+std::optional<ToolRoi> MetrologyEditor::coordinateRoi() const {
+    try {
+        auto n=[&](const char* k){return findChild<QDoubleSpinBox*>(QString("mt_roi_")+k)->value();};
+        ToolRoi roi;roi.frame.id=frameId_;
+        if(!original_["scanRoi"].toObject().isEmpty())roi.frame=ToolRoi::fromJson(original_["scanRoi"].toObject()).frame;
+        if(kind_=="circle_fit")roi.geometry=ArcRoi{{{n("cx"),n("cy")},n("inner"),n("outer")},n("start"),n("sweep")};
+        else if(kind_=="edge_pair")roi.geometry=ScanSegment{{n("ax"),n("ay")},{n("bx"),n("by")},n("width")};
+        else roi.geometry=RotatedRectangle{{n("cx"),n("cy")},{n("width"),n("height")},n("angle")};
+        roi.validate();return roi;
+    }catch(const std::exception&){return {};}
+}
+QJsonObject MetrologyEditor::parameters() const {auto p=original_;for(auto i=original_.begin();i!=original_.end();++i){const auto name="mt_"+i.key();if(auto* s=findChild<QDoubleSpinBox*>(name)){if(s->value()!=s->property("initialDisplayValue").toDouble())p[i.key()]=s->value()/s->property("displayScale").toDouble();}else if(auto* c=findChild<QCheckBox*>(name))p[i.key()]=c->isChecked();else if(auto* c=findChild<QComboBox*>(name))p[i.key()]=c->currentData().toString();}if(kind_=="circle_fit" && p["mode"]!=original_["mode"]){p["scanRoi"]=QJsonObject{};p.remove("worldCalibration");p["unitsPerSample"]=p["mode"]=="pixel" ? 1.:.1;}return p;}
 }

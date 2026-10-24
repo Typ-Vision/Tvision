@@ -1,4 +1,7 @@
+#include "MeasurementDiagnostic.hpp"
 #include "ProductionResultCodec.hpp"
+#include "IndustrialRuntime.hpp"
+#include "SourceStatusPresenter.hpp"
 #include "domain/ReferenceBinding.hpp"
 #include "SystemCalibration.hpp"
 #include "SourceFrameIndex.hpp"
@@ -35,13 +38,15 @@ void validateMulti(const QJsonObject& r){
     for(const auto& v:r["frames"].toArray()){require(v.isObject(),"Invalid terminal frame");const auto f=v.toObject();const auto source=f["sourceId"].toString();require(graph.requiredSources.contains(source) && !bySource.contains(source),"Duplicate/foreign terminal source");FrameMetadata m;m.sourceId=source;m.frameId=f["frameId"].toString();m.cycleId=f["cycleId"].toString();m.coordinateSystemId=f["coordinateSystemId"].toString();m.completedAtUtc=QDateTime::fromString(f["completedAtUtc"].toString(),Qt::ISODateWithMs);require(m.completedAtUtc.isValid(),"Missing frame timestamp");frames.append(m);acquired.append(source);bySource[source]=f;}
     if(r["state"]=="DONE")require(acquired.size()==set.size(),"DONE terminal missing source");
     std::optional<SourceFrameIndex> index;if(!frames.isEmpty())index.emplace(r["cycleId"].toString(),acquired,frames);
-    for(const auto& v:r["tools"].toArray()){require(v.isObject(),"Invalid terminal tool");const auto t=v.toObject();const auto id=t["toolId"].toString();auto configured=std::find_if(tools.cbegin(),tools.cend(),[&](const auto& c){return c.id==id;});require(configured!=tools.cend() && !byTool.contains(id) && t["kind"]==configured->kind && t["outputs"].isObject(),"Foreign/duplicate terminal tool");byTool[id]=t;
+    for(const auto& v:r["tools"].toArray()){require(v.isObject(),"Invalid terminal tool");const auto t=v.toObject();const auto id=t["toolId"].toString();auto configured=std::find_if(tools.cbegin(),tools.cend(),[&](const auto& c){return c.id==id;});require(configured!=tools.cend() && !byTool.contains(id) && t["kind"]==configured->kind && t["outputs"].isObject(),"Foreign/duplicate terminal tool");byTool[id]=t;validateMeasurementDiagnostic(t,r);if(t.contains("measurementDiagnostic"))require(t["measurementDiagnostic"].toObject()["sourceId"]==graph.toolSources.value(id),"Diagnostic graph source differs");
         if(!graph.requiredSources.contains(graph.toolSources.value(id)))require(t["state"]=="SKIPPED" && t["outputs"].toObject().isEmpty() && t["decision"]=="NOT_EVALUATED" && t["calibration"].isNull(),"Disabled branch carried evidence");
         const auto outputs=t["outputs"].toObject();for(auto p=outputs.begin();p!=outputs.end();++p){const auto o=p->toObject();if(o.contains("typedPort")){auto value=ToolResultCodec::decode(o["typedPort"].toObject());if(value.valid){require(index.has_value(),"Output without frame");const auto ports=outputPorts(configured->kind);const auto port=std::find_if(ports.cbegin(),ports.cend(),[&](const auto& x){return x.id==p.key();});require(port!=ports.cend(),"Undeclared terminal port");index->validatePort(graph.toolSources.value(id),value,*port);}}else{require(o["type"]=="Image" && o["imageInfo"].isObject() && index.has_value(),"Missing image evidence");const auto& f=index->frame(graph.toolSources.value(id));require(o["sourceId"]==f.sourceId && o["frameId"]==f.frameId && o["cycleId"]==f.cycleId,"Terminal image source/frame swap");}}
     }
     if(r["state"]=="DONE")require(byTool.size()==tools.size(),"DONE terminal missing tool");
     if(r["state"]=="SKIPPED")require(frames.isEmpty(),"Stop retained frame");
-    for(const auto& source:graph.requiredSources){require(set.contains(source) && branches[source].isObject(),"Missing source snapshot");const auto branch=branches[source].toObject();require(branch["schemaVersion"].toInt()>=3 && branch["schemaVersion"].toInt()<=6,"Invalid branch schema");ProductionResultCodec::validate(branch);
+    for(const auto& source:graph.requiredSources){require(set.contains(source) && branches[source].isObject(),"Missing source snapshot");const auto branch=branches[source].toObject();require((branch["schemaVersion"].toInt()>=3 && branch["schemaVersion"].toInt()<=6) || (r["schemaVersion"]==9 && branch["schemaVersion"]==8),"Invalid branch schema");ProductionResultCodec::validate(branch);
+        const auto configured=std::find_if(tools.cbegin(),tools.cend(),[&](const auto& t){return t.id==source;});require(configured!=tools.cend(),"Missing configured source");
+        require((configured->kind=="industrial_camera")== (branch["schemaVersion"]==8),"Source branch schema differs");if(branch["schemaVersion"]==8)decodeIndustrialRuntimeDependency(*configured,branch["industrialSource"].toObject());
         require(branch["dependencies"]==set[source] && branch["cycleId"]==r["cycleId"] && branch["evaluationId"]==r["evaluationId"] && branch["state"]==r["state"] && branch["recipeId"]==r["recipeId"],"Branch immutable identity differs");
         const auto fs=branch["frames"].toArray();require(fs.size()==(bySource.contains(source) ? 1:0) && (fs.isEmpty() || fs.first().toObject()==bySource[source]),"Branch frame missing/swapped");
         QSet<QString> seen;for(const auto& v:branch["tools"].toArray()){const auto t=v.toObject();const auto id=t["toolId"].toString();require(!seen.contains(id) && graph.toolSources.value(id)==source && byTool.contains(id) && byTool[id]==t,"Branch tool missing/swapped");seen.insert(id);}
@@ -52,11 +57,17 @@ void validateMulti(const QJsonObject& r){
 void ProductionResultCodec::validate(const QJsonObject& record) {
     require(QJsonDocument(record).toJson(QJsonDocument::Compact).size()<=maxRecordBytes,"Terminal result exceeds 16 MiB");
     const auto schema=record["schemaVersion"];
-    if(schema==7){validateMulti(record);return;}
+    if(schema==7 || schema==9){
+        bool industrial=false;const auto set=record["dependencies"].toObject()["sourceSet"].toObject();for(const auto& v:set)industrial=industrial || v.toObject().contains("industrialSource");
+        if(schema==9){const QSet<QString> keys{"configuration","schemaVersion","recordId","beginEventId","ticket","principal","recipeId","recipeName","recipeVersion","applicationType","validationId","configId","dependencyId","dependencies","definition","branches","cycleId","evaluationId","state","error","milliseconds","startedAtUtc","completedAtUtc","frames","tools","communicationState","communication"};require(record.size()==keys.size(),"Industrial multi-source fields missing/extra");for(auto i=record.begin();i!=record.end();++i)require(keys.contains(i.key()),"Unknown industrial multi-source field");}
+        require(industrial==(schema==9),"Industrial source set requires terminal9");validateMulti(record);return;
+    }
+    if(schema==8)validateIndustrialTerminal(record);
+    else require(!record.contains("industrialSource") && !record.contains("industrialAcquisition") && !record["dependencies"].toObject().contains("industrialSource"),"Industrial evidence requires terminal8");
     require(!record.contains("branches") && !record["dependencies"].toObject().contains("sourceSet"),"Source set requires terminal schema7");
-    require(schema==1 || schema==2 || schema==3 || schema==4 || schema==5 || schema==6,"Unknown terminal result schema");
+    require(schema==1 || schema==2 || schema==3 || schema==4 || schema==5 || schema==6 || schema==8,"Unknown terminal result schema");
     const bool systemEnvelope=record.contains("systemCalibration");
-    if(schema!=5 && schema!=6)require(!record.contains("systemCalibration") && !record["dependencies"].toObject().contains("systemCalibration"),"System calibration requires terminal schema5");
+    if(schema!=5 && schema!=6 && schema!=8)require(!record.contains("systemCalibration") && !record["dependencies"].toObject().contains("systemCalibration"),"System calibration requires terminal schema5");
     if(schema!=6)require(!record.contains("measurementSource") && !record["dependencies"].toObject().contains("measurementSource"),"Physical source requires terminal schema6");
     if(schema==5)require(record["systemCalibration"].toObject()["schemaVersion"]==1,"Physical calibration requires terminal schema6");
     if(schema==6){
@@ -90,7 +101,7 @@ void ProductionResultCodec::validate(const QJsonObject& record) {
     const auto sourceFrames=record["frames"].toArray();
     if(schema==6){QString frame;const auto source=record["measurementSource"].toObject()["binding"].toObject()["sourceToolId"].toString();for(const auto& f:sourceFrames){const auto o=f.toObject();require(o["sourceId"]==source && o["cycleId"]==record["cycleId"] && !o["frameId"].toString().isEmpty() && (frame.isEmpty() || frame==o["frameId"].toString()),"Terminal physical frame provenance differs");frame=o["frameId"].toString();}}
     for(const auto& item:record["tools"].toArray()) {
-        require(item.isObject(),"Invalid terminal tool");const auto tool=item.toObject();
+        require(item.isObject(),"Invalid terminal tool");const auto tool=item.toObject();validateMeasurementDiagnostic(tool,record);
         if(schema==6)require(tool["kind"]==record["dependencies"].toObject()["tools"].toObject()[tool["toolId"].toString()].toObject()["kind"],"Terminal tool kind differs from snapshot");
         require(tool["outputs"].isObject(),"Invalid terminal outputs");const auto outputs=tool["outputs"].toObject();
         require(outputs.size()<=128,"Terminal port limit");
@@ -118,9 +129,12 @@ void ProductionResultCodec::validate(const QJsonObject& record) {
 }
 QString ProductionResultCodec::summary(const QJsonObject& record) {
     validate(record);QStringList lines;
-    if(record["schemaVersion"]==7){lines<<"Çok kaynaklı tarihsel kanıt • çalışma izni değildir";const auto branches=record["branches"].toObject();for(auto i=branches.begin();i!=branches.end();++i)lines<<"Kaynak: "+i.key()+"\n"+summary(i->toObject());return lines.join('\n');}
+    if((record["schemaVersion"]==7 || record["schemaVersion"]==9)){lines<<"Çok kaynaklı tarihsel kanıt • çalışma izni değildir";const auto branches=record["branches"].toObject();for(auto i=branches.begin();i!=branches.end();++i)lines<<"Kaynak: "+i.key()+"\n"+summary(i->toObject());return lines.join('\n');}
+    if(record["schemaVersion"]==8){const auto a=record["industrialAcquisition"].toObject();lines<<acquisitionStatus(a["status"]=="ACQUIRED" ? "DONE":record["state"].toString(),a["reason"].toString()+" "+a["errorCode"].toString());lines<<presentIndustrialSource({},record["industrialSource"].toObject(),record["industrialAcquisition"].toObject()).detail;lines<<(record.contains("systemCalibration") ? "Kaynağa bağlı ölçüm modeli • karar araç bazında":"Raw / px • ölçüm doğrulanmadı");}
     for(const auto& item:record["tools"].toArray()) {
         const auto t=item.toObject();lines<<t["name"].toString(t["toolId"].toString())+" • "+t["state"].toString()+" • "+t["decision"].toString();
+        if(t.contains("measurementDiagnostic"))lines<<"  "+presentMeasurementDiagnostic(decodeMeasurementDiagnostic(t["measurementDiagnostic"].toObject()));
+        else if(!t["message"].toString().isEmpty())lines<<"  "+t["message"].toString();
         const auto outputs=t["outputs"].toObject();
         for(auto it=outputs.begin();it!=outputs.end();++it)if(it->toObject().contains("typedPort")) {
             const auto v=ToolResultCodec::decode(it->toObject()["typedPort"].toObject());
@@ -140,25 +154,39 @@ QByteArray ProductionResultCodec::csv(const QVector<QJsonObject>& records) {
     require(records.size()<=256,"CSV record limit");
     const bool system=std::any_of(records.cbegin(),records.cend(),[](const auto& r){return r.contains("systemCalibration");});
     const bool physical=std::any_of(records.cbegin(),records.cend(),[](const auto& r){return r["schemaVersion"]==6;});
-    const bool multi=std::any_of(records.cbegin(),records.cend(),[](const auto& r){return r["schemaVersion"]==7;});
-    QString data="cycleId,recipeId,toolId,port,type,unit,valid,diagnostic,frameId,evaluationId,method,methodVersion,value,reason,configId,validationId,dependencyId,referenceBinding"+QString(system ? ",systemCalibration":"")+QString(physical ? ",measurementSource":"")+QString(multi ? ",executionState,sourceId,sourceSet,sourceFrames":"")+"\r\n";
+    const bool multi=std::any_of(records.cbegin(),records.cend(),[](const auto& r){return (r["schemaVersion"]==7 || r["schemaVersion"]==9);});
+    const bool industrial=std::any_of(records.cbegin(),records.cend(),[](const auto& r){return r["schemaVersion"]==9;});
+    QString data="cycleId,recipeId,toolId,port,type,unit,valid,diagnostic,frameId,evaluationId,method,methodVersion,value,reason,configId,validationId,dependencyId,referenceBinding"+QString(system ? ",systemCalibration":"")+QString(physical ? ",measurementSource":"")+QString(multi ? ",executionState,sourceId,sourceSet,sourceFrames":"")+QString(industrial ? ",industrialEvidence":"")+"\r\n";
     for(const auto& record:records) {
-        validate(record);bool emitted=false;
+        validate(record);bool emitted=false;QJsonObject industrialEvidence;const auto branches=record["branches"].toObject();for(auto i=branches.begin();i!=branches.end();++i)if(i->toObject()["schemaVersion"]==8)industrialEvidence[i.key()]=QJsonObject{{"admission",i->toObject()["industrialSource"]},{"acquisition",i->toObject()["industrialAcquisition"]}};
+        const auto industrialCell=cell(QString::fromUtf8(QJsonDocument(industrialEvidence).toJson(QJsonDocument::Compact)));
         for(const auto& item:record["tools"].toArray()) {
             const auto t=item.toObject();const auto outputs=t["outputs"].toObject();
+            if(t.contains("measurementDiagnostic")){
+                QStringList row;for(int j=0;j<18;++j)row<<QString{};
+                row[0]=record["cycleId"].toString();row[1]=record["recipeId"].toString();row[2]=t["toolId"].toString();row[3]="measurementDiagnostic";row[4]="diagnostic/1";const auto evidence=decodeMeasurementDiagnostic(t["measurementDiagnostic"].toObject());row[8]=evidence.frameId;row[6]="false";row[7]="true";row[9]=record["evaluationId"].toString();row[13]=QString::fromUtf8(QJsonDocument(t["measurementDiagnostic"].toObject()).toJson(QJsonDocument::Compact));row[14]=record["configId"].toString();row[15]=record["validationId"].toString();row[16]=record["dependencyId"].toString();
+                QStringList quoted;for(const auto& value:row)quoted<<cell(value);if(system)quoted<<cell({});if(physical)quoted<<cell({});if(multi)quoted<<cell(record["state"].toString())<<cell(evidence.sourceId)<<cell(QString::fromUtf8(QJsonDocument(record["dependencies"].toObject()["sourceSet"].toObject()).toJson(QJsonDocument::Compact)))<<cell(QString::fromUtf8(QJsonDocument(record["frames"].toArray()).toJson(QJsonDocument::Compact)));if(industrial)quoted<<industrialCell;
+                data+=quoted.join(',')+"\r\n";emitted=true;
+            }
             for(auto it=outputs.begin();it!=outputs.end();++it) {
                 const auto o=it->toObject();const auto p=o["typedPort"].toObject();
                 const QStringList row{record["cycleId"].toString(),record["recipeId"].toString(),t["toolId"].toString(),it.key(),o["type"].toString(),o["unit"].toString(),p.isEmpty() ? "legacy":p["valid"].toBool() ? "true":"false",p["diagnostic"].toBool() ? "true":"false",o["frameId"].toString(),p["evaluationId"].toString(),p["method"].toString(),QString::number(p["methodVersion"].toInt()),QString::fromUtf8(QJsonDocument(QJsonArray{o.contains("value") ? o["value"]:o["imageInfo"]}).toJson(QJsonDocument::Compact)),p["invalidReason"].toString(),record["configId"].toString(),record["validationId"].toString(),record["dependencyId"].toString(),QString::fromUtf8(QJsonDocument(record["referenceBindings"].toObject()[t["toolId"].toString()].toObject()).toJson(QJsonDocument::Compact))};
-                QStringList quoted;for(const auto& s:row)quoted<<cell(s);if(system)quoted<<cell(QString::fromUtf8(QJsonDocument(record["systemCalibration"].toObject()).toJson(QJsonDocument::Compact)));if(physical)quoted<<cell(QString::fromUtf8(QJsonDocument(record["measurementSource"].toObject()).toJson(QJsonDocument::Compact)));if(multi){quoted<<cell(record["state"].toString())<<cell(o["sourceId"].toString())<<cell(QString::fromUtf8(QJsonDocument(record["dependencies"].toObject()["sourceSet"].toObject()).toJson(QJsonDocument::Compact)))<<cell(QString::fromUtf8(QJsonDocument(record["frames"].toArray()).toJson(QJsonDocument::Compact)));}data+=quoted.join(',')+"\r\n";emitted=true;
+                QStringList quoted;for(const auto& s:row)quoted<<cell(s);if(system)quoted<<cell(QString::fromUtf8(QJsonDocument(record["systemCalibration"].toObject()).toJson(QJsonDocument::Compact)));if(physical)quoted<<cell(QString::fromUtf8(QJsonDocument(record["measurementSource"].toObject()).toJson(QJsonDocument::Compact)));if(multi){quoted<<cell(record["state"].toString())<<cell(o["sourceId"].toString())<<cell(QString::fromUtf8(QJsonDocument(record["dependencies"].toObject()["sourceSet"].toObject()).toJson(QJsonDocument::Compact)))<<cell(QString::fromUtf8(QJsonDocument(record["frames"].toArray()).toJson(QJsonDocument::Compact)));}if(industrial)quoted<<industrialCell;data+=quoted.join(',')+"\r\n";emitted=true;
                 require(data.size()<=32*1024*1024,"CSV output exceeds limit");
             }
         }
+        if(record["schemaVersion"]==9)for(auto i=industrialEvidence.begin();i!=industrialEvidence.end();++i)if(i->toObject()["acquisition"].toObject()["status"]=="NOT_ACQUIRED"){
+            QStringList row;for(int j=0;j<18;++j)row<<QString{};row[0]=record["cycleId"].toString();row[1]=record["recipeId"].toString();row[2]=i.key();row[13]=i->toObject()["acquisition"].toObject()["reason"].toString();row[14]=record["configId"].toString();row[15]=record["validationId"].toString();row[16]=record["dependencyId"].toString();
+            QStringList quoted;for(const auto& v:row)quoted<<cell(v);if(system)quoted<<cell({});if(physical)quoted<<cell({});
+            quoted<<cell(record["state"].toString())<<cell(i.key())<<cell(QString::fromUtf8(QJsonDocument(record["dependencies"].toObject()["sourceSet"].toObject()).toJson(QJsonDocument::Compact)))<<cell(QString::fromUtf8(QJsonDocument(record["frames"].toArray()).toJson(QJsonDocument::Compact)))<<industrialCell;data+=quoted.join(',')+"\r\n";emitted=true;
+        }
         // Preserve terminal7 failure/Stop evidence even when there is no output row.
-        if(record["schemaVersion"]==7 && !emitted){
+        if((record["schemaVersion"]==7 || record["schemaVersion"]==9) && !emitted){
             QStringList row;for(int i=0;i<18;++i)row<<QString{};row[0]=record["cycleId"].toString();row[1]=record["recipeId"].toString();row[13]=record["error"].toString();row[14]=record["configId"].toString();row[15]=record["validationId"].toString();row[16]=record["dependencyId"].toString();
             QStringList quoted;for(const auto& value:row)quoted<<cell(value);if(system)quoted<<cell(QString{});if(physical)quoted<<cell(QString{});
-            quoted<<cell(record["state"].toString())<<cell(QString{})<<cell(QString::fromUtf8(QJsonDocument(record["dependencies"].toObject()["sourceSet"].toObject()).toJson(QJsonDocument::Compact)))<<cell(QString::fromUtf8(QJsonDocument(record["frames"].toArray()).toJson(QJsonDocument::Compact)));data+=quoted.join(',')+"\r\n";require(data.size()<=32*1024*1024,"CSV output exceeds limit");
+            quoted<<cell(record["state"].toString())<<cell(QString{})<<cell(QString::fromUtf8(QJsonDocument(record["dependencies"].toObject()["sourceSet"].toObject()).toJson(QJsonDocument::Compact)))<<cell(QString::fromUtf8(QJsonDocument(record["frames"].toArray()).toJson(QJsonDocument::Compact)));if(industrial)quoted<<industrialCell;data+=quoted.join(',')+"\r\n";require(data.size()<=32*1024*1024,"CSV output exceeds limit");
         }
+        require(data.size()<=32*1024*1024,"CSV output exceeds limit");
     }return data.toUtf8();
 }
 }

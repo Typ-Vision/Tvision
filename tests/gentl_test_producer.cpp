@@ -6,7 +6,12 @@
 #include <thread>
 #include <chrono>
 namespace {
-int mode=0,initializations=0,systems=0,interfaces=0,devices=0;
+#ifdef VISIONFLOW_EMPTY_GENTL_FIXTURE
+int mode=4;
+#else
+int mode=0;
+#endif
+int initializations=0,systems=0,interfaces=0,devices=0;
 int tlToken,ifToken,devToken;
 uint64_t maxScanWait=0;
 void scan(uint64_t timeout) {

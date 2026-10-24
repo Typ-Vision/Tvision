@@ -55,15 +55,15 @@ Kod dayanakları: `src/hardware/GenTLTransport.hpp/.cpp`,
 ## Önerilen yön
 
 Ürün sınırı marka bağımsız acquisition/device/capability sözleşmesi olarak kalmalı.
-Model ITALA ise başlangıçta Opto ITALA SDK + ITALA View ile donanım ve görüntü doğrulanmalı;
-ardından SDK'nın GenTL producer'ı mevcut probe ile denenmeli. GenICam ile vendor SDK
+Model artık COE-U USB3 olarak biliniyor: başlangıç OECS ve U3V producer'dır.
+Önceki model bilinmeyen ITALA varsayımı bu cihaza uygulanmaz. GenICam ile vendor SDK
 birbirinin alternatifi değildir. GenTL keşif/transport, GenApi/XML nodemap özellik erişimi,
 SFNC ortak feature isimleri için kullanılır. `.cti` keşfi tek başına exposure/trigger
 ayarlarını ve stream tüketimini uygulamaz.
 
 GenTL stream + feature erişimi için kısa bir teknik doğrulama yapılmalı. Mevcut MinGW x64
 ile vendor MSVC C++ kütüphanelerinin doğrudan uyumlu olduğu varsayılmamalı. GenTL C ABI
-ve gerekli GenApi çözümü doğrulanmalı; gerekirse Opto C API aynı ortak adapter arkasında
+ve gerekli GenApi çözümü doğrulanmalı; gerekirse yerel OECS C API aynı ortak adapter arkasında
 ilk çalışan backend olabilir. Bu seçim UI, kalibrasyon matematiği veya recipe modelini
 Opto sınıflarına bağlamamalı. C API varlığı yerel ABI/dağıtım kabulü değildir.
 
@@ -103,11 +103,12 @@ tek application servisiyle yönetilmeli; eşzamanlı farklı ayar yazımı engel
 5. Gerçek kamera ile tekrar açma/kopma/yanlış cihaz/geometri değişimi ve çevrim testleri;
    ardından bağımsız fiziksel kalibrasyon kabulü. Multi-device/senkronizasyon ayrıca genişletilir.
 
-## Bu incelemenin doğrulama sınırları
+## İlk incelemenin tarihsel doğrulama sınırları
 
-Program Files üst düzey ilgili klasörleri, HKLM standart 32/64-bit uninstall kayıtları
+İlk kontrol anında Program Files üst düzey ilgili klasörleri, HKLM standart 32/64-bit uninstall kayıtları
 ve process/machine GENICAM_GENTL64_PATH kontrolünde Opto/ITALA/Basler/Galaxy girdisi
-görülmedi. Bu sınırlı envanter taşınabilir/özel dizin kurulumu olmadığını kanıtlamaz.
+görülmedi. Bu bilgi yukarıdaki sonraki OECS/ITALA envanteriyle güncellendi;
+güncel kurulum yokluğu iddiası değildir.
 Eski başka çalışma ortamına ait SDK kurulum kaydı bu makinede kabul sayılmadı.
 Kamera açılmadı, ağ/driver/firmware ayarı değiştirilmedi. Kaynak/UI değişmedi;
 Release/CTest yeniden çalıştırılmadı. Önceki 87/87 ve 73/73 kabulü progress'teki tarihsel kanıttır.
@@ -119,3 +120,11 @@ Resmî kaynaklar (17 Ekim 2026 incelemesi):
 - [ITALA SDK mimarisi](https://itala-doc.opto-e.com/pages/programmers_guide.html)
 - [Nodemap ve SFNC](https://itala-doc.opto-e.com/pages/programmers_guide/basic_topics/device_configuration.html)
 - [ITALA C API](https://itala-doc.opto-e.com/APIC/index.html)
+
+## Uygulama devri
+
+Kullanıcının plan talebiyle [ICM ana planı](industrial-camera-plan.md), hedef
+sözleşmeler, 24 görev kartı, kabul matrisi ve GPT-6.1-sol / medium devir dosyaları
+hazırlandı. İlk uygulama görevi ICM-00; bu değerlendirme veya planlar ürün grab'inin
+uygulandığı anlamına gelmez. ITALA kaynakları yalnız önceki karşılaştırma bağlamıdır;
+COE-U backend kanıtı yerel OECS ve model belgesinden alınır.

@@ -1,0 +1,73 @@
+#pragma once
+#include "hardware/OecsCApi.hpp"
+#include <QString>
+#include <memory>
+#include <stdexcept>
+#include <thread>
+#include <functional>
+
+namespace visionflow {
+enum class OecsFailure {Unavailable,WrongThread,InvalidState,InvalidSelector,NotFound,Ambiguous,Busy,ApiError,CleanupFailed,ConfigurationFailed};
+class OecsSessionError : public std::runtime_error {
+public:
+    OecsSessionError(OecsFailure failure,QString stage,int code,const QString& message);
+    OecsFailure failure() const;
+    QString stage() const;
+    int code() const;
+private:
+    OecsFailure failure_;
+    QString stage_;
+    int code_;
+};
+// Exact vendor+model+serial; no index or serial-only fallback.
+struct OecsDeviceSelector {QString vendor,model,serial;};
+enum class OecsSessionStage {Unloaded,Open,Faulted};
+// Owner worker = constructing thread. Every SDK call happens there.
+class OecsSession {
+public:
+    OecsSession(std::unique_ptr<OecsCApi> api,QString dllPath);
+    ~OecsSession();
+    OecsSession(const OecsSession&)=delete;
+    OecsSession& operator=(const OecsSession&)=delete;
+    OecsDeviceInfo open(const OecsDeviceSelector& selector);
+    void close();
+    QVector<CameraFeature> features();
+    CameraFeature feature(const QString& name);
+    void writeFeature(const QString& name,const FeatureValue& value);
+    void configurationFault(); // retains handle for owner-thread close; prevents further configure
+    OecsDeviceInfo deviceInfo() const;
+    // Owner worker, idle/open session; no device/stream operations.
+    OecsTriggerCorrelation softwareTriggerCorrelation() const;
+    // Bounded diagnostic acquisition. Consumer must copy; no trigger/freshness admission.
+    void probeFrame(const OecsStreamLimits&,const std::function<void(const OecsBuffer&)>& copy);
+
+    // remaining() checks monotonic deadline/cancel; throws on expiry. No IDs supplied by UI.
+    OecsTriggerArm softwareFrame(const OecsStreamLimits&,const std::function<int()>& remaining,
+                                const std::function<void(const OecsBuffer&)>& copy);
+    // Explicit experimental policy: next arrival has NO proven trigger association.
+    void experimentalFrame(const OecsStreamLimits&,const std::function<int()>& remaining,
+                           const std::function<void(const OecsBuffer&)>& copy);
+    OecsSessionStage stage() const;
+    // A handle or library cleanup failed: the DLL is never unloaded by this session again.
+    bool libraryPinned() const;
+    quint32 sdkVersion() const; // read after successful load, 0 otherwise
+private:
+    std::unique_ptr<OecsCApi> api_;
+    QString dllPath_;
+    std::thread::id owner_;
+    OecsSessionStage stage_=OecsSessionStage::Unloaded;
+    bool pinned_=false;
+    quint32 sdkVersion_=0;
+    void* handle_=nullptr;
+    QString claimKey_;
+    OecsDeviceInfo deviceInfo_;
+    bool configurationFault_=false;
+    bool streaming_=false,bufferHeld_=false,streamDirty_=false,probing_=false;
+    void captureFrame(const OecsStreamLimits&,const std::function<void(const OecsBuffer&)>&,
+                      const std::function<int()>& remaining={},
+                      const std::function<void()>& ready={},
+                      const std::function<void(const OecsBuffer&)>& validate={});
+    QString cleanupStream();
+    void requireOpen() const;
+};
+}

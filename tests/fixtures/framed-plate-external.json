@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "scope": "External immutable camera fixtures; CI must report missing files as skip, not real-raster success. No physical mm oracle.",
+  "missing58Frame": true,
+  "fixtures": [
+    {
+      "id": "plate-1",
+      "sourcePath": "build/ccux/ccux-15/plate-20261022-01/capture-external/frame-0.pgm",
+      "baselinePath": "build/ccux/ccux-15f/baseline/plate-1.pgm",
+      "fileSha256": "c8a6a04b926ddf7e4aac34d13f50fcc52acd9757ea46bfcf019804a99bbc8e5b",
+      "sidecarSha256": "53f0f810012198b4148d2a9e43064145573764936f97878d0b25296739aa1600",
+      "oraclePath": "tests/fixtures/framed-plate-1-oracle.json",
+      "expectedReady": false
+    },
+    {
+      "id": "plate-2",
+      "sourcePath": "build/ccux/ccux-15/plate-20261022-02/capture/frame-0.pgm",
+      "baselinePath": "build/ccux/ccux-15f/baseline/plate-2.pgm",
+      "fileSha256": "5ece7d7686165aefd22499df7f350070216a1f794cbea04340a71deb7077e108",
+      "sidecarSha256": "252bf1371b4d5ba33fa3a4899fd9419296b15a2312aaf9ffc625f13d90073b6f",
+      "oraclePath": "tests/fixtures/framed-plate-2-oracle.json",
+      "expectedReady": true
+    }
+  ],
+  "legacyWrong49": {
+    "sourcePath": "build/ccux/ccux-15/plate-20261022-02/detection-fine-positions.json",
+    "baselinePath": "build/ccux/ccux-15f/baseline/legacy-wrong-49.json",
+    "fileSha256": "24da11bbdcb13c7a72505a2e62d07e24f84c169748bee6dca22db5f0cf6725ce",
+    "meaning": "Historical diagnostic, rejected folded/wrong ordering; never a ready observation or expected answer."
+  }
+}

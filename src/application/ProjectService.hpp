@@ -5,8 +5,11 @@
 #include <QSet>
 #include <optional>
 #include "domain/ReferenceConfig.hpp"
+#include "domain/IndustrialSourceReference.hpp"
+
 
 namespace visionflow {
+struct MeasurementEnvironment;
 class ProjectService {
 public:
     bool hasProject() const { return project_.has_value(); }
@@ -20,7 +23,9 @@ public:
     void openProject(const QString& path);
     void updateProject(QString name, QString description, QString cameraReference,
                        QString robotType, QString protocol, QString calibration);
-    QString createRecipe(QString name, QString description, ApplicationType type, QString camera, QString calibration = {});
+    QString createRecipe(QString name, QString description, ApplicationType type, QString camera = {}, QString calibration = {});
+    void editRecipeMetadata(const QString& id, QString name, QString description);
+    // Explicit legacy reference edit; normal UI edits use editRecipeMetadata.
     void editRecipe(const QString& id, QString name, QString description, QString camera, QString calibration);
     void selectRecipe(const QString& id);
     void save();
@@ -28,6 +33,10 @@ public:
     QVector<ToolDefinition> tools() const;
     void enableMultiSource();
     QString addTool(const QString& kind);
+    void bindIndustrialSource(const QString& toolId,const MeasurementSetupContract&,const ProfileId&,int timeoutMs);
+    void bindCameraSource(const QString& toolId,const MeasurementEnvironment&,const CameraId&,int timeoutMs=5000);
+    void refreshCameraSources(const MeasurementEnvironment&);
+    void refreshEditorCameraSources(const MeasurementEnvironment&);
     void updateTool(const ToolDefinition& tool);
     // Commit teaching and its reference connection as one validated edit.
     void updateToolConnections(const ToolDefinition&,const QVector<ToolConnection>&);

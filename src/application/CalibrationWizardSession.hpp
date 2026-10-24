@@ -45,6 +45,7 @@ class WizardPlateJob {
     WizardPlateJob()=default;
     ImageFrame frame_;
     CalibrationGridTarget target_;
+    std::optional<QRect> searchRoi_;
     QString ticket_;
     std::shared_ptr<std::atomic_bool> cancel_;
 public:
@@ -55,8 +56,12 @@ class WizardPlateResult {
     WizardPlateResult()=default;
     QString ticket_,error_;
     std::optional<CalibrationGridObservation> observation_;
+    PlateDetectionDiagnostics diagnostics_;
+    std::optional<RawPlateObservation> rawPlate_;
 public:
     const QString& error() const {return error_;}
+    const std::optional<RawPlateObservation>& rawPlate() const {return rawPlate_;}
+    const PlateDetectionDiagnostics& diagnostics() const {return diagnostics_;}
     const std::optional<CalibrationGridObservation>& observation() const {return observation_;}
 };
 // Owner-thread draft only. It never edits a recipe, saves or activates a model.
@@ -67,7 +72,7 @@ public:
     CalibrationWizardSession& operator=(const CalibrationWizardSession&)=delete;
     ~CalibrationWizardSession(){cancel();}
     static QString configurationId(const QJsonObject& relevantAdapterConfiguration);
-    void useFrame(ImageFrame,MeasurementSetup,QString origin);
+    void useFrame(ImageFrame,MeasurementSetup,QString origin,std::optional<ExperimentalCalibrationEvidence> = {});
     void importFile(QString path,MeasurementSetup,bool declaredSameSetup);
     void clear();
     void cancel();
@@ -79,11 +84,12 @@ public:
     WizardScanJob scanPair(QString scanId,ToolRoi,EdgePairOptions = {});
     static WizardScanResult run(const WizardScanJob&);
     bool accept(const WizardScanResult&);
-    WizardPlateJob scanPlate(CalibrationGridTarget);
+    WizardPlateJob scanPlate(CalibrationGridTarget,std::optional<QRect> searchRoi={});
     static WizardPlateResult run(const WizardPlateJob&);
     bool accept(const WizardPlateResult&);
     void confirmPlate();
-    void invalidatePlate(){cancel();plate_.reset();plateConfirmed_=false;model_.reset();}
+    void invalidatePlate(){cancel();plate_.reset();rawPlate_.reset();plateConfirmed_=false;model_.reset();}
+    const std::optional<RawPlateObservation>& rawPlate() const {return rawPlate_;}
     const std::optional<CalibrationGridObservation>& plate() const {return plate_;}
     CalibrationModelRecord calculatePlate(const CalibrationControl& = {});
     // Candidate index is from this scan's actual accepted detections, never XY input.
@@ -109,6 +115,7 @@ private:
     double knownMm_=0;
     std::optional<CalibrationModelRecord> model_;
     std::optional<CalibrationGridObservation> plate_;
+    std::optional<RawPlateObservation> rawPlate_;
     bool plateConfirmed_=false;
 };
 }

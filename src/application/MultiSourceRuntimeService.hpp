@@ -1,7 +1,7 @@
 #pragma once
 #include "RuntimeService.hpp"
 namespace visionflow {
-// Whole-set admission controller; an optional archive hook enables terminal7 persistence.
+// Whole-set admission controller; an optional archive hook enables terminal7/9 persistence.
 // One trusted provider must capture the entire required set consistently.
 class MultiSourceRuntimeService {
 public:

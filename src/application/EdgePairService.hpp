@@ -15,6 +15,7 @@ struct EdgePairResult {
     FrameMetadata origin;
     std::optional<CalibrationDependency> calibration;
     QString error;
+    std::optional<FitDiagnostic> diagnostic;
 };
 class EdgePairService {
 public:

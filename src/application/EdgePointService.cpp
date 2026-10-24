@@ -1,4 +1,5 @@
 #include "EdgePointService.hpp"
+#include "MeasurementDiagnostic.hpp"
 #include "domain/ToolRegistry.hpp"
 #include "vision/metrology/EdgeFinder.hpp"
 #include <stdexcept>
@@ -27,6 +28,7 @@ ToolResult EdgePointService::execute(const ToolDefinition& tool,const QMap<QStri
     for(auto i:indices(d.derivativeCount)){const auto& s=result.profile.derivatives[i];d.derivative.append({s.distancePx,s.value});}
     auto shown=indices(d.candidateCount);if(result.selected && !shown.contains(*result.selected)){if(shown.size()==2048)shown.removeLast();shown.append(*result.selected);std::sort(shown.begin(),shown.end());}
     for(auto i:shown){const auto& c=result.candidates[i];d.candidates.append({c.point,c.distancePx,c.signedStrength,c.accepted,result.selected && *result.selected==i,c.reason,c.refinement});}
+    if(!result.selected){r.fitDiagnostic=FitDiagnostic{"EDGE_NOT_FOUND","edge_search",1,0,1,0,scanRejections(result)};r.message=presentMeasurementDiagnostic(*r.fitDiagnostic);}
     r.edgeDiagnostics=std::move(d);
     return r;
 }

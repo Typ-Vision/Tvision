@@ -22,6 +22,7 @@ EdgePairResult EdgePairService::measure(const ImageFrame& image,const ToolRoi& r
         EdgePairResult r;r.origin=image.metadata();
         if(!search.selected) {
             if(mode==EdgePairMode::Calibrated)metric(search.edges.profile.scan.start,search.edges.profile.scan.end);
+            r.diagnostic=FitDiagnostic{"PAIR_NOT_FOUND","pair_search",1,0,1,0,scanRejections(search.edges)};
             stop();r.state=ExecutionState::Done;return r;
         }
         const auto& pair=search.candidates[*search.selected];const auto a=search.edges.candidates[pair.firstEdge].point,b=search.edges.candidates[pair.secondEdge].point;

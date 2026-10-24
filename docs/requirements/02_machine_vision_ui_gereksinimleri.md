@@ -1,16 +1,56 @@
 # Endüstriyel Machine Vision Yazılımı — UI Sayfa ve Ekran Gereksinimleri
 
-17 Ekim KMC-10c2/10d uygulandı: editor9 bütün-set Runtime preparation, terminal7/restart/Logs/CSV ve vf.socket2 scalar mapping; N kaynak hazırlık tablosu, seçili gerçek frame/overlay ve immutable model gösterimi. [Kalıcı Runtime sözleşmesi](../architecture/multi-source-runtime-terminal.md). **KMC-10e B yazılım kabulü ve fiziksel devir dokümanı tamamlandı: tam Release UI/ZXing ON 87/87; Widgets OFF/ZXing OFF 73/73**; [B kabul ve fiziksel devir](../architecture/multi-source-release-acceptance.md). Aşağıdaki tarihli teslim kayıtları kendi kapanış durumlarını anlatır; güncel durum bu paragraftır. Fiziksel/native/lens/industrial/PLC/robot/CUDA/kurulum/dağıtım kabulü açık.
+## 22 Ekim 2026 — çalışma süresince kamera bağlantısı (plan)
 
-17 Ekim KMC-10c1: tek tutarlı source/model snapshot seti, yalnız bellekte immutable admission, ortak Runtime worker ve N-frame trusted completion/replay uygulandı. Kullanıcının kalıcı editor9 production kapısı KMC-10c2 kabulüne kadar kapalıdır. [Programatik kapsam ve sınırlar](../architecture/multi-source-production-contract.md). Sıradaki KMC-10c2.
+Program/proje açılışı ve Runtime Load Recipe kamera bağlantısı kurmaz. Editor'da
+reçeteyi açma, Runtime Run ve seçili kamerada canlı kalibrasyon işlemine giriş
+bağlantıyı hazırlar; aynı iş içindeki çekimler bu bağlantıyı kullanır. Editor'dan
+çıkış, Runtime Stop, kalibrasyon bitiş/iptali bağlantıyı bırakır. Kaydet tek
+başına bağlantıyı kesmez; iptal edilen çıkış oturumu korur. Kamera yokken reçete
+düzenlenebilir; hazırlık arka planda yapılır, hazır olmadan çekim çalışmaz.
+Bu hedef henüz uygulanmadı. Ayrıntılı yaşam döngüsü
+[C2a sözleşmesinde](../architecture/camera-setup/contract.md#c2a--çalışma-süresince-bağlantı),
+uygulama ve kabul [CCUX-22 planındadır](../architecture/camera-setup/22-session-lifecycle.md).
 
-16 Ekim KMC-10b: explicit editor9 ile çok kaynaklı Editor/execution, kaynak başına kare/cache/model, sıralı acquisition ve toplam süre/retained bellek bütçesi uygulandı. Viewer kaynak seçici ve TargetOnly acquisition0 bağlıdır. Production editor9 kapısı KMC-10c2 kabulüne kadar kapalıdır; sıradaki KMC-10c1. [Kullanım, sözleşme ve sınırlar](../architecture/multi-source-execution-editor.md).
+## 22 Ekim 2026 — kamera akışının son kullanıcı için sadeleştirilmesi
 
+Kameralar, Kalibrasyon, Editor, Runtime ve Logs'taki “Deneysel OECS” seçimleri,
+deneysel etiketler ve tetik–kare eşleşmesinin doğrulanmadığını söyleyen uyarılar
+kaldırılır. Yerlerine eşdeğer uyarı, mod veya onay eklenmez. Normal işlem komutu
+uygun edinim yolunu kullanır. Kalibrasyon'da “Önceki akış ve eski kanıt ekranları”
+bölümü kaldırılır; kamera listesi ve iki yöntemli güncel akış kalır.
+[CCUX-16–19 planı](../architecture/camera-setup/README.md) ve
+[C0 sözleşmesi](../architecture/camera-setup/contract.md#c0--22-ekim-sade-ürün-akışı-kararı)
+önceki açık opt-in/kalıcı uyarı gereklerini değiştirir. Bu bölüm hedef davranıştır;
+uygulama durumu progress'tedir. Eski kayıt uyumluluğu ve gerçek veri kontrolleri korunur.
 
-16 Ekim KMC-10a: explicit editor9 çok-source opt-in, dal/port source kimliği ve bounded source-frame indeksi; cross-source bağlantılar reddedilir. Root/recipe1–2 ve legacy codec korunur. Schema9 Editor/execution KMC-10b ile açıldı; production kapısı kapalıdır. [Sözleşme ve sınırlar](../architecture/multi-source-graph-contract.md).
+## 21 Ekim 2026 — kamera merkezli devreye alma hedefi
 
-16 Ekim uygulama durumu — **KMC-0–9 tamamlandı (7a/7b ayrı)**. Reçetesiz iki sihirbaz/dosya denemesi, raster denetimli ayrı association, kurulum başına aktivasyon incelemesi, tek-source Editor/Runtime exact sourceSetup ve terminal6 Logs/CSV uygulandı. Legacy geçmiş açık beyanla bütün sürümleri koruyarak aktarılır; no-op/özgün hash ve eksik raster korunur. Bağımlılık import/export ve saved proje/history Save As bağlıdır; görüntüler otomatik paketlenmez. [Entegrasyon](../architecture/scoped-calibration-integration.md), [migration/taşıma](../architecture/measurement-setup-migration.md). **KMC-9 birleşik A yazılım kabulü: UI/ZXing ON 80/80, Widgets OFF/ZXing OFF 68/68; [kabul matrisi](../architecture/independent-calibration-acceptance.md). N kalibrasyon yönetimi tamamlandı, reçetede tek source sınırı sürüyor. KMC-10a programatik DAG/frame sözleşmesi uygulandı; sıradaki KMC-10c1**; aynı reçetede çok-source B, native/fiziksel/seri numarası/lens/robot/CUDA/dağıtım kabulü açıktır.
+Uygulama bekliyor: [CCUX planı](../architecture/camera-setup/README.md) ve
+[ortak hedef sözleşmesi](../architecture/camera-setup/contract.md) güncel yöndür.
+Setup Kameralar'da tara/ID/exposure/gain/tek-canlı görüntü; Kalibrasyon'da aynı
+kamera listesi, aktif değerler/kalibrasyon yok ve seçili kameradan iki yöntem
+sihirbazı. Kurulum/profil normal akışta otomatik; yeni reçetenin iki genel referansı
+kaldırılır. N kamera ve üç applicationType aynı altyapıyı kullanır. Hand-eye ve
+robot kalibrasyonu bu pakette uygulanmaz. Eski bölümlerin çelişen UI sırası bu
+hedefle değiştirilir; mevcut edinim/üretim kabul kapıları korunur.
 
+## 18 Ekim 2026 — Editor iyileştirme talebi (plan)
+
+Kullanıcı beş talebi fiziksel kamera kabulünden önce önceliklendirdi:
+taşınabilir/boyutlandırılabilir Blob search ROI ve ROI sınırına temas edenleri eleme;
+kompakt, daha geniş ve modern Editor; pin ile sabit/otomatik gizlenen Workspace;
+gruplu Toolbox ve yeni araç kataloğunda Edge yerine Edge Point; açılıp kapatılan,
+zoom ile dengeli görüntü açıklamaları; tarama sayısı/yönüyle eşleşen oklar ve
+start/sweep değişiminde halka/yay önizlemesi.
+[EUI planı](../architecture/editor-refinement-plan.md) davranış, uyumluluk ve kabul
+ölçütlerini tanımlar; uygulama durumu devir özetindedir. Bu talep, aşağıdaki 7 Ekim GUI koruma
+kararını Editor/Toolbox ve ortak Workspace için günceller. Eski Edge reçeteleri
+çalışır kalır; sessiz dönüşüm yoktur. Görünüm tercihleri reçete sonucunu değiştirmez.
+
+Güncel uygulama durumu ve görev sırası [devir özetindedir](../progress.md). Bu belge gereksinimleri taşır; aşağıdaki tarihli planlar tek başına uygulama kabulü değildir. Üç belgede birebir tekrarlanan teslim paragrafları [taşıma öncesi tam kayıtta](../archive/2026-10-17/02_machine_vision_ui_gereksinimleri.md) korunmuştur. Yalnız görevle ilgili bölümleri okuyun; yeni teslim günlüğü eklemeyin.
+
+17 Ekim plan güncellemesi: [ICM UI görevleri](../architecture/industrial-camera-tasks-integration.md) Camera Manager/kayıt, kalibrasyon, Editor ve Runtime için mevcut Qt ekranlarını genişletmeyi tanımlar. Kayıtlı/keşfedilmiş/offline cihaz, preview/production ve seçili model/fiziksel kabul durumları ayrı gösterilecek. Plan hazırdır; endüstriyel grab/UI entegrasyonu uygulanmadı.
 
 16 Ekim 2026 — **KMC-5–8 Sistem özeti ve entegrasyon uygulandı:** Kalibrasyon ana sayfasında
 Sistem özeti seçildi. Kamera sayısı sabit değildir: sıfır kaynakta boş durum,
@@ -20,19 +60,11 @@ Recipe Editor/Runtime ayrı teslimlerdir. [E1–E7 şartnamesi ve KMC kabul plan
 
 15 Ekim — **KUI-5 tamamlandı**: ana sayfa Etki incelemesi ve açık legacy aktarımı, bütün metrik araçlarda ortak etkin model, yeni araçta mm varsayılanı, raw/pointMm ayrımı, cache/TargetOnly/Runtime/Logs/CSV bağlıdır. Eski px tolerans/world ROI sayıları sessizce dönüştürülmez. Çalışan Runtime/worker/pending record/ACK değiştirmeyi engeller; Stop sonrasında açık değişim mümkündür. [Akış ve sınırlar](../architecture/system-calibration.md). Sıradaki KUI-6 tam Release/görsel kabulü. Alttaki kayıtlar tarihseldir.
 
-
 15 Ekim — **KUI-4 tamamlandı**: üç kart, iki ayrı yeniden boyutlandırılan sihirbaz, görüntü üstünde gerçek Edge/Caliper noktaları, chessboard/circle grid, açık dosya/kurulum beyanı, adlandırılmış kayıt/tek etkin seçim ve yalnız robot şablonu. [1400×900/850×600 kabul ve sınırlar](../architecture/calibration-ui-acceptance.md). Bütün ölçüm tüketicileri henüz yeni etkin modele bağlı değildir; sıradaki KUI-5 ve KUI-6. Eski kayıt/kanıt ekranı uyumluluk için korunur. Alttaki kayıtlar tarihseldir.
-
 
 15 Ekim — **KUI-2/KUI-3 application servisleri tamamlandı**; [gerçek nokta/plaka, confirm ve kayıt sözleşmesi](../architecture/calibration-wizard-services.md). UI henüz yeni session'ı kullanmaz. Sıradaki **KUI-4** üç kart, iki ayrı wizard, açık dosya/kurulum beyanı ve yalnız robot şablonu; mevcut eski Calibration ekranı henüz bu akış değildir. Ortak metrik/Runtime KUI-5'te bağlanacaktır.
 
-
 15 Ekim — Kalibrasyon sihirbaz planında **KUI-1 application sözleşmesi tamamlandı**; [hazırlık/bağımsız kontrol/tek etkin seçim ve migration](../architecture/active-calibration-contract.md). Yeni servis mevcut UI/Editor/Runtime'a henüz bağlı değildir. Sıradaki KUI-2 gerçek Edge/Caliper session; ekranlar KUI-4, ortak metrik davranış KUI-5 kapsamındadır.
-
-12 Ekim güncel durum — **R1–R8 tamamlandı.** Yeni ortak Referans binding’leri immutable snapshot ve Runtime’ın süreç içi trusted completion kanıtıyla production yoluna bağlandı; tam kaynak/port/ofset/calibration kimliği terminal schema4, restart, Logs ve CSV’de korunur. Runtime Viewer aynı current resolver’ı kullanır; Stop/missing nominal fallback üretmez. Engine **execution/22**, editor8/raw1/world2/vf.socket2 korunur. Standalone Pattern/Shape ve eski poseTracking production kapısı T8.4.2b.3c corpus kabulüne kadar kapalıdır. **R8 tam Release kabulü: OFF/core 57/57, ON/UI 64/64. Sonraki T8.4.2b.3c** eksik corpus ve bütün production yollarının kapanışıdır. Güncel binary build/reference-ui/visionflow.exe. Alttaki teslim ve sıra kayıtları tarihseldir. [R7 sözleşmesi ve kabul eşlemesi](../architecture/reference-production-acceptance.md). [R8 paket ve devir kanıtı](../architecture/reference-release-acceptance.md).
-
-
-11 Ekim güncel kapsam — **R4, R5a/b ve R6 tamamlandı.** Dört kalibre world tüketicisi ortak Point/Pose referansı ve raw px/açı ofsetini her gerçek sampling tap üzerinde kullanır; nominal mm geometri, current mm refit/metrik/tolerans ve exact calibration alan kontrolleri korunur. Yedi ROI tüketicisinde tek **Referans** bölümü kaynak/port, X/Y ve yalnız gerçek Pose için açı sunar. Seçim pending; Bağla/yeniden kaydet/İptal/kaldır ve atomik ofset düzenlemesi ortak servis yolundadır. Viewer güncel çözülen geometriyi salt okunur gösterir; missing/Stop'ta nominal fallback yoktur. Yeni world kayıt **ReferenceBinding schema2 / world-reference-v1**, raw schema1 ve opt-in editor8 korunur; engine **execution/21**. Eski Edge/raw/world pose kayıtları no-op açma/Save ile dönüştürülmez. **R6 birleşik Editor kabulü tamamlandı; sıradaki R7a immutable production/trusted completion, ardından R7b ve R8 nihai paket**; production yeni binding'i açıkça reddeder. Güncel Release UI binary `build/reference-ui/visionflow.exe`; config/local.ui.ini korunur. Alttaki kapsam/sıra kayıtları tarihseldir. [Sözleşme](../architecture/reference-integration.md).
 
 11 Ekim yeni UI gereksinimi — Tek **Referans** bölümü: Görüntüye sabit veya araç/çıktı seçimi; X ofseti, Y ofseti, Açı ofseti; Referansa bağla/İlişkiyi yeniden kaydet/Referansı kaldır. Point kaynakta açı pasif ve sıfır, gerçek pose kaynakta etkin; çizilmiş ROI'nin temel ilişkisi korunur. Pattern/Shape anchor'ı merkez değilse doğru adlandırılır. Temel ofsetler Basic'te; nominal mm/öğretim ayrıntıları gelişmiş bölümdedir. Seçici değişimi pending, kayıt atomik, eksik/geçersiz referans görünürdür. [Ortak Referans planı](../architecture/reference-system-plan.md) R5a/R5b UI davranışı uygulandı; R1–R4 önkoşulları tamamlandı. R6 birleşik Editor ve R7/R8 production/paket kabulü tamamlandı; sonraki T8.4.2b.3c kalan corpus kabulüdür. Alttaki ROI pose etiketleri mevcut/tarihsel uygulamayı anlatır.
 
@@ -40,57 +72,9 @@ Recipe Editor/Runtime ayrı teslimlerdir. [E1–E7 şartnamesi ve KMC kabul plan
 
 Kullanıcının sekiz talebi [ayrıntılı davranış ve kabul planına](../architecture/editor-usability-plan.md) işlendi: çizim altında kapalı Elle gir koordinatları; yeni araçta Preprocess öncelikli Görüntü kaynağı varsayılanı; kapalı Çıkışlar; Type/ID satırlarının kaldırılması; görüntü tıklamasının araç seçimini değiştirmemesi; Flow sağ tıkla bir sıra yukarı/aşağı; yeni çizilebilir araçta çizime hazırlık; karmaşık araçlarda Basic/Detailed. İki görünüm birbirini dışlayan seçimdir, ayar değerlerini değiştirmez. Manuel bağlantılar ve DAG doğrulaması korunur. Bu güncel istek önceki GUI koruma kararını yalnız belirtilen etkileşimler için günceller. **U1/U2 uygulandı:** dört metrologi aracında Basic/Detailed ve Elle gir, tüm araçlarda kapalı Çıkışlar/Type-ID sadeleşmesi, viewer seçim koruması, yeni araçta atomik varsayılan Image bağlantısı ve güncel rasterla çizim hazırlığı. **U3/U4 tamamlandı:** Flow sağ tık menüsünde kalıcı Bir sıra yukarı/aşağı; sınır ve Editor busy yönleri pasif. Tıklanan araç taşınırken seçili ID, parametre/ROI ve bağlantılar korunur; liste sırası Save/reopen ile kalır, yürütmeyi DAG belirler ve aktif Runtime snapshot değişmez. Tam Release core52/UI59 CTest ile normal 1400×900/küçük 850×600 görsel kabulü geçti. Native DPI/çoklu monitör ve fiziksel kabul açıktır. Sonraki mevcut T8.4.2b.3c.
 
-10 Ekim güncel kapsam: **T8.4.2b.3b — Nominal world ROI authoring ve mm metric/tolerans tamamlandı.** Edge Point/Caliper/Line/Circle için **Nominal mm ROI öğret…** ekranı geometriyi, güncel pose teaching kaydını ve DAG bağlantısını atomik kaydeder; pending/iptal/geçersiz geometri reçeteyi değiştirmez. Caliper gerçek mm genişliğini, Line current mm span/açısını dahil tool toleranslarıyla değerlendirir. Circle tüm gerçek gözlemlerden (fit outlier dahil) radyal sapma, current world açı/gap/observed arc ve kaliteye bağlı tolerans üretir. Raw line/circle fit ve synthetic derivative strength unavailable; genel parça kararı NOT_EVALUATED. Engine **execution/19**, registry16/editor7/terminal3/vf.socket/2 korunur. Production pose whitelist reddi sürer. Sonraki **T8.4.2b.3c — Trusted completion/immutable production Runtime/Logs/restart/CSV ve corpus kabulü**; T8.4 açık. Güncel Release binary: `build/tracking-ui/visionflow.exe`.
-
-Alttaki teslim kayıtları tarihseldir; güncel kapsam yukarıdadır.
-
-10 Ekim güncel kapsam: **T8.4.2b.3a — Shape/Texture teaching ve ortak pose referansı editörü.** Toolbox artık16 araçtır; Pattern Pose / Shape Pose gerçek Gray8 model, explicit model-local anchor, açı/ölçek ve yöntem skor ayarlarıyla öğretilir. Edge Point/Caliper/Line/Circle/Code/Blob için ortak picker, güncel tam producer cache ve bağlı image ile ROI ilişkisini worker üzerinde öğretir; binding ve poseReference tek doğrulanmış edit olarak kaydedilir. Raw çözülen ROI salt okunur gösterilir; unavailable referansta nominal fallback yoktur. Mevcut nominal mm Circle öğretimi ve kayıtlı world envelope yeniden öğretimi aynı servistedir. Yeni Edge/Caliper/Line nominal mm ROI yazma ekranı, world metric/tolerans/current-world arc ve trusted production Runtime/Logs/CSV kabulü sonraki b.3b/b.3c kapsamındadır; **T8.4.2b.3/T8.4 açık**, production pose reddi sürer. Engine execution/18, registry16, editor7 ve terminal3 değişmedi. Güncel binary: `build/tracking-ui/visionflow.exe`. [Kullanım ve sınırlar](../architecture/pose-roi.md).
-
-Alttaki teslim/sıra kayıtları tarihseldir.
-
-10 Ekim güncel durum: **T8.4.2b.2b — Kalibre tracking teaching/recipe/DAG tamamlandı (feature kapsamı).** Ayrı `poseTracking` schema2 / `world-raw-rigid-v1`: nominal mm ROI SHA256, gerçek taught raw Pose2D, producer/model/anchor, kaynak/çözünürlük, exact calibration dependency ve explicit mm sampling unit. World geometri raw local ROI/AABB içine yazılmaz; eski raw envelope/hash korunur. Engine **execution/18**, validated resolver ve immutable mapping snapshot ile Edge Point/Caliper/Line/Circle/negative Arc örneklerini yürütür. Save/reopen/no-op/yeniden öğretme, iki gerçek matcher × üç applicationType, TargetOnly/acquisition0, cache/model/calibration değişimi ve Stop: **722 DAG kontrolü**; non-affine teaching/executor ve önceki sampler korumaları: **2178 world kontrolü**. Edge actual raw point, Caliper raw endpoint/px ve mm mesafe, Line raw observations/current mm fit, Circle/Arc current mm circle refit üretir. Synthetic strength, raw line/circle fit, taşınmış nominal arc açısı, defect/tolerans/accepted/PASS bu yolda explicit invalid kalır. Kullanıcı teaching UI ve production trusted completion/Runtime/Logs/CSV kabulü **T8.4.2b.3** kapsamında açıktır; T8.4 tamamlanmadı. UI/config değişmedi; production pose whitelist reddi korunur. [Sözleşme ve sınırlar](../architecture/pose-roi.md).
-
-Alttaki teslim/binary/sıra kayıtları tarihseldir; güncel kapsam yukarıdadır.
-
-10 Ekim güncel durum: **T8.4.2b.2a — Programatik world sampler/refit tamamlandı; T8.4.2b.2/T8.4 açık.** PoseRoiService::worldMap validated/current exact calibration ve aynı owned image snapshot ile nominal world → taught raw → current raw → current world zincirini kurar. WorldTrackingService Edge Point/Caliper/Line/Circle/Arc için her gerçek longitudinal/transverse tap üzerinde alan kontrolü, mm nokta/mesafe ve taşınmış gözlemlerden line/circle refit sunar. Bağımsız perspektif raster, gerçek iki matcher → uniform/Y-up world edge ve hata/iptal testleri **2134 kontrol** geçti. Bu programatik servis teslimidir; kalibre tracking teaching envelope/recipe/DAG/TargetOnly bağlantısı sıradaki **T8.4.2b.2b** işidir. UI/Runtime/Logs/CSV tracking kabulü b.3 kapsamında açık; production pose whitelist reddi ve execution/17 sürer. Standalone ToolRoi schema2 world scan/rectangle taşır; recipe Edge Point/Caliper/Line config bu world geometrileri henüz reddeder. UI ve yerel config değişmedi. [Sözleşme ve sınırlar](../architecture/pose-roi.md).
-
-10 Ekim T8.4.2b.1 tarihsel durum: **T8.4.2b.1 — Raw Code/Blob tracking bağlantısı tamamlandı; T8.4.2b/T8.4 açık.** Code Read v2 ve Blob v3, shape/texture producer sonucuyla explicit poseTracking teaching ve poseReference DAG/cache yoluna bağlandı. Nominal searchRoi pixel-centre dikdörtgeni rigid taşınır; gerçek dönen maske kullanılır. Blob eşik sonrası maskeler; Code dış pikselleri beyazlayıp tüm decoded köşelerin ROI içinde kalmasını ister. AABB yalnız çalışma tamponudur; clipping/absolute fallback yoktur. Save/reopen/no-op, iki matcher × üç applicationType, TargetOnly/acquisition0, raw alan/delik/merkez, gerçek QR polygon/içerik ve bağımsız 45° maske kabulü eklendi. Engine execution/17; Toolbox14/registry16, editor7/terminal3/vf.socket/2 korunur. UI kaynakları değişmedi; reference picker/teaching ekranı, world sampler/refit ve production trusted completion/immutable Runtime/Logs/CSV tracking kabulü açıktır. Pose production whitelist reddi sürer. [Sözleşme ve sınırlar](../architecture/pose-roi.md).
-
-Alttaki durum/binary/sıra kayıtları tarihseldir; güncel kapsam yukarıdadır.
-
-10 Ekim T8.4.1 tarihsel durum: **T8.4.1 — Shape/texture ROI referans sözleşmesi tamamlandı; T8.4 devam ediyor.** Ortak PoseRoiService artık pattern_pose ve shape_pose kabul eder; kaynak kind için doğru method/version zorunludur. Model/ROI/anchor veya matcher türü değişirse teaching geçersizdir. Gerçek iki matcher ile altı geometri, dönmüş scan → gerçek EdgeFinder, shape kontrast tersleme, gerçek tekrarlı/not-found adaylar ve perspektif/lens korumaları: **398 tracking kontrolü**. Programatik servis kabulüdür; Code/Edge/Caliper/Line/Circle/Blob reference picker, recipe/DAG binding, world sampler ve production Runtime bağlantıları sıradaki **T8.4.2** kapsamındadır. Toolbox14/registry16, execution/15 ve Runtime whitelist reddi sürer; UI değişmedi.
-
-10 Ekim T8.3 tarihsel durum: **T8.3 — Shape Match çekirdeği tamamlandı**. `shape_pose` v1 gradient pyramid adayları ve unsigned orientation-aware chamfer refinement ile gerçek raw Pose2D/ayrı scale üretir. Texture NCC ile skor karşılaştırılmaz; yöntem `unsigned-oriented-chamfer-pyramid` v1. Ambiguity/truncation seçimi varsayılan reddeder; genel karar NOT_EVALUATED. Programatik teaching/DAG/TargetOnly/codec teslimi; Toolbox14/registry16, engine execution/15. Özel UI, shape ROI reference ve production Runtime/completion T8.4 kapsamında, Runtime whitelist reddi sürer. Sonraki **T8.4 — Bütün araçlara bağlama**. [Sözleşme ve sınırlar](../architecture/shape-pose.md).
-
-10 Ekim T8.1 tarihsel durum: **T8.1 — Gerçek Pose2D çekirdeği tamamlandı**. `pattern_pose` v1 programatik teaching/DAG: çok seviyeli açı/ölçek arama, anchor/refinement/NMS, ambiguity ve reject_ambiguous/best politikası. Pose2D gerçek raw açı/anchor taşır; scale ayrı porttur. PartDecision NOT_EVALUATED. Toolbox14 korunur (registry15); yeni özel UI/tracking/production Runtime henüz yok, Runtime açıkça reddeder. Engine execution/14, editor7/terminal3/vf.socket/2 korunur. Sonraki **T8.2 — Pose referanslı ROI**. [Sözleşme ve sınırlar](../architecture/pattern-pose.md).
-
-10 Ekim T7.2 tarihsel kayıt: **T7.2 — Kalibre geometri adapter tamamlandı**. geometry_measurement v1 sabit raw typed feature/örnek girdileri, operation-specific DAG doğrulaması ve tek world düzleminde point mapping / line-circle refit sunar. Line Fit v2 observationsPx; engine execution/12. Alan/current/source/resolution/frame/cycle/evaluation kapıları ve TargetOnly bağlıdır. Programatik Editor/DAG teslimidir; Toolbox, tolerans ve production Runtime/kayıt kabulü **T7.3** sırasındadır. [Girdiler, refit ve sınırlar](../architecture/geometry-measurement-adapter.md).
-
-
-10 Ekim T7.1 tarihsel kayıt: **T7.1 — Geometrik domain matematiği tamamlandı**. Mevcut framed Point2D/Line2D/Circle2D üzerinde mesafe, signed/absolute X/Y ve dik offset, segment uzaklığı, üç açı semantiği, sonsuz çizgi kesişimi/paralel aralık ve radius/diameter seçimi. Domain çekirdeğidir; yeni reçete aracı/UI/Runtime bağlantısı yok. Engine execution/11 ve mevcut UI build/circle-ui/visionflow.exe korunur. Sıradaki **T7.2 — Kalibre adapter**. [Sözleşme ve sınırlar](../architecture/geometry-measurements.md).
-
-
-10 Ekim T6.4 tarihsel kayıt: **T6.4 — Circle / Arc UI ve kalibre Runtime tamamlandı**. Toolbox `circle_fit` v1; raw/world halka-yay öğretme, tutamaçlar, gerçek mm düzleminde fit ve raw inverse overlay. Ayrı çap/sampled sapma dahil limitleri; kalite yoksa NOT_EVALUATED, outlier kusurdan çıkarılmaz. TargetOnly, immutable Runtime, tamper replay, typed Logs/restart/CSV ve Stop bağlıdır. Engine **execution/11**, editor7/terminal3/vf.socket/2 korunur; world ROI opt-in schema2. Güncel Release UI `build/circle-ui/visionflow.exe`. Sonraki **T7.1 — Geometrik domain matematiği**. [Kullanım, birimler ve sınırlar](../architecture/circle-tool.md).
-
-10 Ekim T6.3 tarihsel çekirdek kaydı: **T6.3 — Circle kalite/metrikler tamamlandı**. Fit dışı bulunan noktalar dahil radial min/max, signed inward/outward ve peak-to-valley; found coverage/nominal gap kapıları, full-circle/observed-arc/unavailable kapsamı. Circularity yalnız eksiksiz gerçek basit kapalı polygon'dan 4*pi*A/P²; missing/arc/self-intersection için unavailable, sahte kapanış yok. Yalnız çekirdek; Circle UI/registry/kalibre Runtime/Logs T6.4'tedir. Mevcut UI `build/metrology-ui/visionflow.exe`, execution/10/editor7/terminal3/vf.socket/2 korunur. Release OFF/core **40/40**, yeni metrik592 kontrol. Sonraki **T6.4 — UI ve kalibre Runtime**. [Sözleşme ve kanıt](../architecture/circle-metrics.md).
-
-10 Ekim T5.3 tarihsel kayıt: **T5.3 — UI/kalibrasyon/kabul tamamlandı**. Toolbox Edge Pair / Caliper ve Line Fit; reçeteye bağlı ok/kutu/Properties, gerçek px veya güncel kalibrasyonla mm, world noktalarından yeniden çizgi fit ve fiziksel açı, dahil tool tolerans Boolean’ı ve raw destek/outlier overlay. TargetOnly, immutable Runtime, typed Logs/restart/CSV ve Stop bağlıdır. Genel parça kararı/confidence/pose üretilmez. Engine **execution/10**, editor7/terminal3/vf.socket/2 korunur. Güncel Release binary `build/metrology-ui/visionflow.exe`; kullanıcı uygulaması/config korunur. [Kullanım, portlar, 128-scan reçete sınırı ve kanıt](../architecture/metrology.md). Sonraki **T6.1 — radyal tarama**; fiziksel K4/P7/6D.2/lensT15/kurulum/dağıtım/CUDA kabulü açık. Aşağıdaki kayıtlar tarihseldir.
-
-9 Ekim T4.3 tarihsel kabul: **T4.3 — Editor/Runtime/Measurement tamamlandı**. Toolbox Edge Point, reçeteye bağlı A→B ok çizimi/tutamaç/sayısal koordinatlar/ters yön ve polarity/selection/subpixel/örnekleme ayarları; gerçek ham/Gaussian/signed türev grafiği ve kabul/ret/seçili adaylar. İki yeni point → mevcut Measurement ile bağımsız 400 px stripe → 10 mm, immutable Runtime ve kalıcı typed sonuç/CSV doğrulandı. Canlı profil/aday tanısı gösterimde 2048 örnek/adayla sınırlı; arşivde profil yok, seçim tam veriden hesaplanır. Bulunamadı point invalid/downstream SKIPPED; Stop eski nokta/profil/mm bırakmaz. Execution/9, editor 7, terminal 3/vf.socket/2 korunur. Güncel Release binary `build/edge-editor-ui/visionflow.exe`; açık uygulama/config korunur. [Kullanım ve sınırlar](../architecture/edge-point.md). Sonraki **T5.1 — Edge Pair**. Fiziksel doğruluk/K4, P7/6D.2 ve lens T15 açık; aşağıdaki kayıtlar tarihseldir.
-
-9 Ekim T3.3 tarihsel kabul: **T3.3 — Kod Oku UI ve uçtan uca kabul tamamlandı**. Toolbox Code Read; sekiz format seçimi, reçeteye bağlı raw rectangle ROI, exact/prefix/UTF-16 length/bounded regex, adet ve all/any/seçili sıra ayarları sunar. Editor/Runtime gerçek bounding polygon ve sıra/format/escaped metin/byte listesini gösterir; confidence veya genel parça kararı üretmez. Save/reopen/no-op, TargetOnly/Stop, immutable Runtime ve kalıcı Logs/CSV doğrulandı. Dokuz Toolbox girdisi; ZXing OFF kod girdisi devre dışıdır. Release ON/UI 34/34, OFF/core 31/31; güncel binary `build/preprocess-code-ui/visionflow.exe`. Sonraki **T4.1 — keyfi açılı profil sampler**. Karışık polariteli çoklu 1D tamlığı, fiziksel/hasarlı/DPM corpus açık; length mevcut sürümde UTF-16 birimidir. Editor 7, execution/8, terminal 3 ve vf.socket/2 korunur.
-
-9 Ekim güncel teslim: **T1.3 / T2.1 / T2.2 tamamlandı**. Typed terminal cycle schema 3 replay/Logs CSV; owned görüntü processing provenance ve raw subpixel ROI geometri/çizim/sayısal edit. ROI çalışma alanı geçicidir, reçeteye kaydedilmez/algoritma çalıştırmaz; recipe binding yeni tool paketlerinde. Release OFF/UI 31/31, ON/core 28/28; normal/küçük ekran görselleri incelendi. [Uygulanan sözleşme](../architecture/roi-geometry.md). Sonraki T2.3; aşağıdaki eski sıra ifadeleri tarihseldir.
-
 9 Ekim tool kapsamı onayı: [T0–T15 planı](../architecture/recipe-tools-plan.md) yeni Properties, ok/halka/yay/döndürülmüş ROI/path çizimi, profil/sonuç listeleri, direct mm ve açıklanabilir final karar UI'sını kapsar. Mevcut tema/panel/navigation korunur; bu araçlar için gerekli etkileşim genişletmeleri onaylı kapsamdır. Dairesellikte mm radyal sapma, boyutsuz shape index ve çevre kapsamı ayrıdır; kalibrasyon yoksa sahte mm/PASS yoktur. OCR/renk/kusur/bead plan içinde, lens en son T15. Henüz uygulanmadı; ilk yeni iş T0.1. Eski P9 QR sırası T3 ile güncellendi.
 
 9 Ekim güncel durum: **C1–C5 tamamlandı**. Setup → Calibration üç yöntem ve beş bölüm sunar: Manuel ölçek (px/mm), Bilinen uzunluktan ölçek ve Kalibrasyon plakası (perspektif). Manuel girdi boş başlar; px/mm ve salt okunur tersi, üretim sonucundan ayrı deneme, en az iki bağımsız doğrulama, katalog/recipe Save/reopen, gerçek Edge → Measurement → Runtime ve CSV bağlıdır. Güncel Release binary `build/manual-calibration-ui/visionflow.exe`; Measurement tool 2, execution/6. Sonraki P7/6D.2; K4 fiziksel kabul ertelenmiştir.
-
-
-8 Ekim 2026 P5/P6: Blob min/max dahil alan filtresi (px²), açık/koyu nesne ve 4/8 komşuluk uygulanmıştır. Gerçek kabul edilen piksel maskesi delikleri koruyarak Editor ve Runtime’da kırmızı gösterilir; bu parça kararı değildir. Editor schema 6, Blob tool 2, execution/5; eski reçeteler temiz açılır ve ilk gerçek değişiklikte yükselir. Birleşik kabul: Release UI 23/23, Widgets OFF 21/21; normal/850×600 görseller incelendi. Sıradaki P7 (6D.2) kalıcı dedup/outbox/restart teslim kurtarma; K4 ertelenmiş, P8–P9 gelecektedir.
-
-8 Ekim 2026 P3/P4: bağımsız socket, kalıcı enabled/autoStart/endpoint/ACK ayarları, reçetede Manual/SoftwareTrigger ve Measurement UUID mapping; vf.socket/2 INVALID ve coordinator teslim/cancel korumaları uygulanmıştır. Run Tool aynı ham karede yalnız seçili executor’ı çalıştırır; doğrulanmış upstream cache kullanır, eksik/stale girdide acquisition veya full-flow fallback yapmaz. Kaynak için Görüntü al, tüm akış için Run Flow kullanılır. P5/P6 tamamlandı; güncel Blob ve kabul bilgisi yukarıdadır. K4 ertelenmiş, P7 restart recovery açıktır.
-
 
 8 Ekim 2026 P2 tamamlandı: Recipe Manager tek tıkla yalnız satır seçer; **Load Recipe / Edit Recipe** ayrıdır. Load kaydedilmiş bağımsız kopyayı statik kontrol eder; dirty durumda Kaydet ve yükle / Kaydedilmiş sürümü yükle / İptal sunulur. Runtime **Run / Stop / Tek çevrim** kullanır; Run görüntü veya parça sonucu üretmeden coordinator ile otomatik hazırlanır. Manuel çevrim, cooperative Stop ve aynı terminal kayıt retry coordinator üzerinden geçer. Seçili, editörde açık ve Runtime yüklü reçete ayrıdır. Eski validate/activate/rollback düğmeleri kaldırıldı; rollback servis API’si korunur. Bu P2 geçmiş kaydı P3/P4 ile genişletildi; güncel davranış yukarıdadır. Fiziksel kabul/K4 ertelenmiş kalır.
 
@@ -101,7 +85,6 @@ Alttaki durum/binary/sıra kayıtları tarihseldir; güncel kapsam yukarıdadır
 Kullanıcı mevcut GUI'den memnundur. [Onaylanan mimari plan](../architecture/development-plan.md) uygulanırken tema, görünüm, panel yerleşimleri, menü adları/sırası ve navigasyon değiştirilmeyecektir. Yeni menü, node canvas veya genel görsel yeniden tasarım bu çalışmanın kapsamında değildir. Sonraki işlevler mevcut ayrılmış ekranlara ve kontrollere bağlanır; bugünkü hazırlık ekranları çalışan özellik sayılmaz.
 
 Run Match/Run Flow davranış tutarlılığı ve referans invalidation mevcut kontroller üzerinden düzeltilecek; session/controller ayrımı UI iç yapısında yapılacaktır. UI bağlantısı değişen adımlarda Release, ilgili CTest ve mevcut görünümle görsel karşılaştırma gereklidir. Aşağıdaki eski geliştirme sıralarına göre güncel 6A–6E planı önceliklidir; diğer görsel genişletmeler gelecekte ayrı kapsam kararı gerektirir.
-
 
 **Ürün:** VisionFlow Industrial Vision Suite  
 **Doküman sürümü:** 2.0  
@@ -129,6 +112,12 @@ Panel genişlikleri/yükseklikleri değiştirilebilir, düzen kullanıcı bazın
 ## 2. Ana Menü
 
 ### Sol navigasyon
+
+Workspace ilk kullanımda sabittir. Pin veya View menüsüyle yerel otomatik gizleme
+seçilir; 28 mantıksal px şerit 150 ms hover veya tıklama/klavyeyle açılır. Yüzer
+panel viewer'ı yeniden boyutlandırmaz; çıkışta 350 ms sonra kapanır. Klavye odağı,
+açık menü/modal ve fare sürüklemesi kapanmayı tutar. Escape odağı şeride döndürür.
+Reset sabit moda döner; reçete ve execution kimliği değişmez.
 
 | Grup | Sayfalar |
 | --- | --- |
@@ -189,9 +178,20 @@ Komutlar: New, Open Editor, Copy, Delete, Import, Export, Version History. Delet
 | Defect Inspection | Bölgesel kusurları incele ve PASS/FAIL üret | Image → Reference → Inspection ROI → Defect → Result |
 | Measurement | Mesafe, çap, açı ve özellikleri ölç | Image → Features → Calculate → Limits → Result |
 
-Recipe Name ve Camera girilir. Gerekliyse Calibration Reference ayrıca seçilir. **Create & Open Editor** ortak Recipe Editor'e geçer. Reçete türü `applicationType` alanında saklanır.
+CCUX-11: ad, açıklama ve uygulama türü
+kalır; yeni/düzenlenen reçete penceresinden Görüntü kaynağı referansı ve Kalibrasyon
+referansı kaldırılır. Kamera Editor kaynak düğümünde seçilir; ilgili kalibrasyon
+kaynak üzerinden çözülür. **Create & Open Editor** ortak Recipe Editor'e geçer.
+Reçete türü `applicationType` alanında saklanır. Eski kayıt uyumluluğu ve kamera/
+kalibrasyon sadeleştirmesi [ortak sözleşmede](../architecture/camera-setup/contract.md#c4--kaynak-bağı-ve-immutable-yürütme).
+Yeni reçete proje referans metinlerini miras almaz. Metadata düzenlemesi eski
+referansları ve kaynak/kalibrasyon bağlarını korur; değişmeyen düzenleme dirty,
+sürüm veya içerik değişikliği üretmez. Projedeki eski referans metinleri
+Ayrıntılar'dadır; yeni proje/reçetenin önkoşulu değildir.
 
-İsim benzersizliği, gerekli alanlar ve donanım referansları doğrulanır. Yeni reçete DRAFT durumunda oluşur; yalnızca oluşturulmuş olması onu VALID yapmaz.
+İsim benzersizliği ve gerekli alanlar doğrulanır. Kamera henüz seçilmeden yeni
+reçete DRAFT oluşabilir; yalnızca oluşturulması onu VALID yapmaz. Donanım/model
+uyumluluğu kaynak bağlama ve yürütme hazırlığında doğrulanır.
 
 Mevcut satır açıldığında uygulama türü otomatik yüklenir. Tür değiştirme komutu başlangıç flow'unu sessizce sıfırlamaz; var olan akışın uyumluluğunu doğrular.
 
@@ -201,11 +201,35 @@ Mevcut satır açıldığında uygulama türü otomatik yüklenir. Tür değişt
 
 Üst bölüm: Recipes'e geri dönüş, Recipe Name, Application Type, Camera, Version, Dirty/Draft durumu, Test/Run, Save, Export ve Runtime.
 
+Editor kompakt iki satır kullanır: üstte kısaltılabilir reçete adı ile ayrı görünür
+draft/dirty, tür ve sürüm; altta Recipes, Save, Run Flow, Run Tool/Görüntü al,
+Stop ve açıklama tercihi. İkincil reçete bilgileri/çok kaynak geçişi “...” altında
+katlanır. Viewer Open/kaynak/Fit satırını kullanır; Reload/zoom/ROI komutları ayrı
+“...” menüsündedir. Kaynak/frame kimliği tek satırda kısaltılır; tam metni tooltip
+ve erişilebilirlik korur. Hatalar kısaltılan bilgi alanına taşınmaz; Run Tool
+durum ve hatayı göstermek için Results'ı açar. Yerel tema diğer sayfaları değiştirmez.
+Viewer stretch önceliği, boyutlandırılabilir Toolbox/Properties/alt panel ve
+850×600 komut erişimi korunur. Ayrıntılı kullanım [Editor rehberindedir](../editor-usage.md).
+
 Ana bölümler Toolbox, Image Viewer, Properties ve alt Flow/Result/Log'dur. Uygulama türü toolbox önceliğini, başlangıç flow'unu ve sonuç kartlarını belirler. Ortak araçlar uyumlu oldukları sürece tüm türlerde kullanılabilir.
 
 Kaydedilmemiş değişiklikler görünür olmalıdır. Reçete değiştirme veya ekran kapatma durumunda değişiklikler kaybolmamalı; draft korunmalı veya açık Save/Discard seçimi sunulmalıdır.
 
 ## 7. Toolbox
+
+Ortak Editor'ın mevcut kataloğu Edinim, Ön işleme, Tespit, Eşleştirme, Ölçüm ve
+Hesaplama gruplarını kullanır; tür eşlemesi [EUI-05 kartındadır](../architecture/editor-refinement-plan.md).
+Başlık araç değildir; Add Tool başlıkta veya gizli/backend'i eksik öğede pasiftir.
+Gruplar tıklama, Enter/Space ve sağ/sol tuşlarıyla açılır/kapanır; durum yerel INI'dedir.
+Arama grup içeriğine uygulanır ve eşleşen grupları geçici açar. Temizleme önceki
+tercihi geri getirir. Araçta Enter, çift tık veya Add Tool aynı ekleme yolunu kullanır.
+Edge yeni katalogda sunulmaz; registry/codec ve eski Flow/Properties/yürütme desteği
+korunur. Otomatik dönüşüm yoktur; Edge strength gray8 ve Edge Point gray8/px ayrıdır.
+Bilinmeyen kayıtlı extension türü Diğer grubuna düşer. Industrial Camera görünmesi
+native kabulü açmaz. Grup/arama tercihi recipe hash/dirty veya execution'ı değiştirmez.
+
+Aşağıdaki geniş araç ailesi tablosu ileri ürün kapsamını da içerir; tamamının mevcut
+katalogda çalıştığı anlamına gelmez.
 
 | Kategori | Araçlar |
 | --- | --- |
@@ -236,6 +260,23 @@ Match: kırmızı contour, merkez, X/Y ekseni, angle, score ve seçilen match ID
 Örnek: `X: 124.52 px`, `Y: 235.14 px`, `Angle: −7.2°`, `Score: 96.4%`.
 
 Görüntü piksel koordinatı ile kalibre edilmiş mm/robot koordinatı aynı etikette karıştırılmaz. Her overlay kaynak tool ve cycle ID ile ilişkilidir. Disabled/skipped sonuçlar aktif sonuçlardan ayrılır.
+
+Recipe Editor'da “Açıklamaları göster” yerel tercihi ilk kullanımda kapalıdır;
+yeniden açılışta korunur. Sonuç etiketleri (support/angle/RMS, P1/P2, değer,
+outlier, maske ve kod açıklaması) bu tercihe uyar. Yazı ve arka planı 1:1'de
+11 pt tabanıyla `min(zoom, 1.5)` oranında birlikte ölçeklenir. Geometri,
+ölçüm çizgileri/noktaları, maske, ROI tutamaçları, tarama okları, hata/geçersizlik
+ve kaynak/koordinat bilgisi ile Results sayıları görünür kalır. Tercih execution,
+acquisition, recipe hash/dirty veya aktif Runtime'ı değiştirmez; Calibration ve
+Runtime viewer'ları bu Editor tercihine bağlı değildir.
+
+Seçili Line Fit/Circle için nominal kılavuz Run öncesi de N tarama oku gösterir;
+bulunan nokta sayısıyla azalmaz. Circle iç→dış veya dış→iç yönünü, Line Fit gerçek
+kutu scan eksenini kullanır. Saf yerleşim hesabı yürütücüyle ortaktır; world ROI
+mevcut raw dönüşümünden geçer. Tam dairede uç tekrarı yok, signed yayda iki uç dahil.
+Circle Basic Start/Sweep değişimi nominal geometriyi önizler; editingFinished ve
+Koordinatları uygula aynı doğrulamadan geçer. Geçersiz geçici sayı son geçerli ROI'yi
+bozmaz; önizleme reçeteyi değiştirmez ve eski fit göstermez. Yeni fit yalnız Run'dadır.
 
 ## 10. Tool Selection
 
@@ -274,6 +315,13 @@ Detected Matches sayısı ve her match contour'u görüntü üzerinde gösterili
 Fırça ile işaretlenen bölgeler **result filtering mask** oluşturur; match modelini değiştirmez. Mask referansı Absolute veya Part Reference olarak seçilir. Excluded match sayısı, Undo/Redo ve Clear Mask bulunur.
 
 ## 15. ROI Editor
+
+CCUX-21 ilk işlem alanı: Ön işleme (PreProcess) grubundaki ROI aracı Image
+alır, aynı kaynak/koordinat sisteminde piksel hizalı dikdörtgen Region üretir.
+İsim, alan ve bağlar reçeteye kaydedilir; Region destekli tüketicide gerçek arama
+alanını sınırlar. Görüntü kırpılmaz. Kaynak/koordinat/boyut uyumsuzluğu yeniden
+çizim ister; Region portu olmayan araçlar destekliyormuş gibi sunulmaz. Viewer'ın
+geçici geometri denemesi reçete ROI'sinden ayrı adlandırılır.
 
 Şekiller: Rectangle, Circle, Ellipse, Polygon, Rotated Rectangle, Freehand.
 
@@ -507,7 +555,7 @@ Bağlantı/kalibrasyon/parametre hatası ile normal inspection FAIL ayrı mesajl
 
 ### Ortak başlangıç
 
-Recipe Manager → New Recipe → Application Type + Name + Camera → Create → **Recipe Editor**.
+Recipe Manager → New Recipe → Application Type + Name → Create → **Recipe Editor** → kaynak düğümünde kamera/dosya seçimi.
 
 ### Robot Guidance
 
@@ -606,5 +654,3 @@ Sonraki geliştirme önerisi (henüz uygulanmadı): önce manuel px/mm ve kalibr
 ## 8 Ekim — Manuel ölçek uygulama planı hazır
 
 [Manuel px/mm ve sade Calibration planı](../architecture/manual-scale-calibration-plan.md) önceki kısa kapsam notunun ayrıntılı devamıdır. C1 matematik/codec → C2 katalog/Measurement/Runtime → C3 sade ekran → C4 UI kabul → C5 birleşik test/belgeler. C1–C5 tamamlandı: matematik/codec, katalog/reçete/Runtime/CSV, sade üç yöntem ekranı ve birleşik yazılım kabulü mevcut. Yeni manual_planar_scale/1, record/dependency schema 3, eski hash/encode koruması, beş bölümlü üç yöntem UI ve doğrulamasız deneme/üretim ayrımı tanımlandı. Belgenin 7. bölümü GPT-6.1 Sol medium için kopyalanabilir başlangıç talimatıdır. P7 bu kapsamdan sonra; K4 ertelenmiş kalır.
-
-16 Ekim KMC-6/7a: reçetesiz bilinen ölçü/plaka/dosya sihirbazları ve raster denetimli ayrı deneme türetimi; kaynak properties’de açık source→exact kurulum bağı uygulanmıştır. Bağlama scoped-source/1 politikasına geçer, bağı kaldırmak legacy fallback sağlamaz. Editor yalnız ilgili immutable kurulum modelini kullanır; raw cache/TargetOnly acquisition0 korunur. Tek-source sınırı sürer. [Sözleşme](../architecture/scoped-calibration-integration.md).

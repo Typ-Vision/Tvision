@@ -14,6 +14,44 @@ Record failure ilk terminal nesnesini ve private trusted completion'ı bellekte 
 
 Logs dal başına model sürümü, etkinleştirme, kurulum ve sonuç kanıtını gösterir. CSV legacy kolonlarını korur; schema7 içeren export'a executionState, sourceId, sourceSet ve sourceFrames eklenir. Çıktısı olmayan ERROR/Stop çevrimi boş sonuç hücreleriyle ayrı kanıt satırı olarak korunur; scalar/değer uydurulmaz. sourceSet içindeki referenceBindings/systemCalibration/measurementSource tam tarihsel bağlamı taşır; canlı registry'ye ihtiyaç yoktur. Rasterlar terminal JSON'a gömülmez.
 
+## Industrial terminal8 / terminal9
+
+Industrial dal terminal8, industrial içeren whole-set terminal9 yazar. Eski terminal1–7
+okuyucusu korunur; schema7 industrial alan kabul etmez. Terminal8 exact alan seti,
+industrialSource/1 frozen admission ve ayrı industrialAcquisition/1 taşır. ACQUIRED,
+actual readback, fiziksel/backend/route/profile/setup, özgün backend ve mapped execution
+metadata ve raster content hash'ini bağlar. NOT_ACQUIRED yalnız source/reason/errorCode
+ile kaydedilir; kare, piksel hash'i, scalar veya karar uydurulmaz. Partial ERROR'da
+başarılı dalların gerçek kanıtı korunur; Stop bütün frame/sonuç/industrial evidence'i temizler.
+
+Private completion digest industrial evidence'i de kapsar. Runtime worker dışında
+caller completion yetkisi üretilemez; yanlış raster/request/readback/frame ve değişmiş
+completion ret olur. Record retry frozen payload'ı yeniden yazar; discovery/capture/model
+çözümü yoktur. Tarihsel okuma SDK, registry veya provider gerektirmez. CSV terminal9 için
+industrialEvidence kolonu ve edinilemeyen her industrial kaynak için boş scalar kanıt
+satırı taşır. JSON raster saklamaz; hash dijital imza değildir. Normal ürün factory'si
+native G1 kanıtı olmadan açılmaz; test factory normal ürün yolundan seçilemez.
+
+## Industrial Runtime / Logs sunumu
+
+Industrial içeren editor9 reçetede Load, graph ve sourceReference yapısını kontrol
+eden çevrimdışı beyandır; aktif snapshot veya edinim yetkisi üretmez. Eksik/stale
+registry/model/backend ve bütün required set Run/prepare ile begin'de yeniden tam
+kontrol edilir. Diğer kaynakların Load kontrolleri değişmez. Run görüntü almaz.
+
+N-source tablosu beyan veya immutable snapshot'tan vendor/model/seri, kamera,
+setup/profile revision ve kaynağa bağlı modeli gösterir. Gerçek kare yalnız o
+çevrimin frame eşleşmesinden gelir. SourceStatusPresenter Runtime ve offline Logs
+aynı kimlik/actual/backend/producer kanıtını sunar; SDK veya registry çözmez.
+Unsupported, unavailable, busy ve timeout ayrı metinlerdir; özgün tanı detayda kalır.
+Stop ve çalıştırılmayan dal ayrıdır. Raw / px, ölçüm doğrulaması ve araç bazında
+parça kararı ayrı sunulur. Genel parça PASS üretilmez.
+
+Native admission sağlanmadığında offline Load görüntüsüz kalır ve Run açıkça
+kullanılamıyor döner. UI smoke 1/2/8/10 offline industrial kaynağı normal/küçük
+pencerede, mevcut gerçek file/scoped fixture'ları üç applicationType'ta sınar.
+Test fixture'ı normal uygulamaya industrial provider enjekte etmez.
+
 ## vf.socket/2
 
 Mevcut seçili `measurementToolId` scalar mapping'i bütün çevrim DONE ve ilgili gerçek Measurement sonucu olduğunda yayınlanır. Seçilen araç ikinci veya başka bir kaynağa ait olabilir. Çok output/aggregate karar eklenmedi. Terminal commit → PLC_RESULT event → ACK düzeni, timeout/retry/dedup ve süreç/oturum sınırları değişmedi. İletişim context'i aynı schema7 terminalde saklanır. Localhost fixture gerçek PLC kabulü değildir.
@@ -31,3 +69,30 @@ N>1 kaynak seçici ve klavyeyle gezilebilir tablo Viewer kaynağını seçer; ar
 - Önceki graph/execution/immutable production, legacy typed terminal, scoped runtime, coordinator, socket ve kalibrasyon testleri birleşik kabulde korunur.
 
 Edinim sıralıdır; synchronized trigger, ortak dünya veya robot pose birleşimi eklenmedi. Fiziksel cihaz/seri sürekliliği/transport/kopma/ölçüm doğruluğu/PLC/robot, native DPI/çok monitör, industrial SDK, lens distorsiyonu, CUDA ve kurulum/dağıtım kabulü ayrı açıktır.
+
+## Ölçüm tanı özeti (MUI-03)
+
+Yeni tool kayıtlarında isteğe bağlı `measurementDiagnostic` alt nesnesi schemaVersion=1
+ile saklanır; terminal1–9 dış şemaları ve engine28 değişmez. Alan yoksa eski kayıt
+olduğu gibi okunur. Sabit alan kümesi code/stage, requested/found/required/used,
+polarity/contrast/border/noCandidate sayaçları ve toolId/sourceId/frameId/cycleId/
+evaluationId taşır. Profil/raster veya scan başına aday dizisi gömülmez.
+Kimlik metinleri en çok 256, code 64 karakter; scan ve nokta sayıları 0–4096,
+aday retleri 0–16777216 tamsayıdır. found≤requested, used≤found ve
+noCandidate≤requested koşulları uygulanır. Bilinmeyen alan/alt sürüm/aşama,
+kesirli/negatif/aşırı sayaç, farklı cycle/evaluation/tool veya edinilmemiş frame
+reddedilir. Whole-set kaynak graph'ı ve dal/top tool eşitliği ayrıca doğrulanır.
+
+Özet private completion digest'ine dahildir; sonradan değiştirilen tanı completion
+olarak kabul edilmez. Tanı karar vermez, NOT_EVALUATED kalır; Stop/SKIPPED içinde
+taşınamaz. ERROR fit portlarını boş tutar; DONE no-found/qualified=false kendi
+mevcut typed port semantiğini korur. Başarısızlıkta gerçek gözlem sayıları tutulur;
+örnekleme ön kontrolü tarama yapılmadığını açıklar. Diğer exception türlerinden
+metin eşlemesiyle tanı veya sayı üretilmez. UI application presenter'ını kullanır.
+
+Logs aynı sınırlı nesneyi çevrimdışı doğrular/sunar. CSV mevcut kolonlarını korur;
+çıktısı olmayan tool için de `measurementDiagnostic`, `diagnostic/1`, valid=false,
+diagnostic=true ve reason içinde JSON özetiyle ayrı satır ekler. Whole-set CSV
+sourceId/frameId bağını korur. Özgün scalar satırlar ve genel karar semantiği
+aynıdır. Bu ek açıklama replay'i algoritmanın raster olmadan yeniden çalıştırılması
+veya fiziksel kabul değildir; mevcut archive hash'i dijital imza değildir.

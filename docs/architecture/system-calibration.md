@@ -2,6 +2,17 @@
 
 15 Ekim 2026. KUI-4 ana sayfa/sihirbazların etkin seçimi artık SystemCalibration application servisi üzerinden metrik tüketicilere bağlanır. UI SDK/algoritma çağırmaz. Üç applicationType tek Editor ve Runtime yolunu kullanır. Fiziksel doğruluk, lens düzeltmesi, robot hesabı/hareketi ve CUDA/kurulum/dağıtım kabulü değildir.
 
+## CCUX-18 güncel UI ve sahiplik
+
+22 Ekim 2026: eski ortak ana sayfa ve kanıt ekranları kaldırıldı. Ürün gezinmesi
+kamera merkezli `CalibrationOverview` ve iki mevcut sihirbazdır. Eski ortak katalog
+`MeasurementWorkspace::legacyCalibrations()` içinde proje ömrüyle yaşar; Editor ve
+Runtime resolver'ları widget üretimine bağlı değildir. Proje değişimi bu oturum
+iznini düşürür. `.vfcalstudy`, eski model/proje/reçete codec ve hash'leri korunur;
+sistem politikası açılmış eski katalogda restart otomatik fallback/etkinlik sağlamaz.
+Gerekli ilişkilendirme güncel kamera sayfasının mevcut eski kayıt eşleme komutundadır.
+Aşağıdaki KUI-5 teslimindeki ana sayfa/dialog tarifleri tarihsel UI'dir.
+
 ## Politika ve birimler
 
 Ana sayfadan ilk açık etkinleştirme katalog revision'ını artırır ve proje için sistem politikasını açar. Daha önce bu işlem yapılmamış eski projeler legacy binding yolunu korur. Sistem politikası açıldıktan sonra devre dışı bırakma/restart/uyumsuzluk eski recipe binding'e geri dönmez. Restart son seçimi yalnız hatırlatır; ana sayfadan yeniden etkinleştirme gerekir. Proje değişimi etkin izni kaldırır. Yeni aday kaydetmek aktif seçimi/cache'i değiştirmez.
@@ -44,6 +55,6 @@ Yeni legacy wrapper **schema3 / legacy-validated/1**, yalnız gerçek legacy `va
 
 Execution **23**; Edge Point **3** (`pointMm`), Circle **3** (exact standalone world dependency). Root project1/recipe1–2/editor6–8/raw1/world2/vf.socket2 korunur; editor8 yalnız explicit yeni world teaching'de gerekir. Terminal schema5 yeni sistem kayıtlarına aittir; eski codec/hash/no-op yolları korunur.
 
-Kabul: `system_calibration_contract` bağımsız stripe/ring, üç applicationType ve farklı source UUID'leri, bütün metrik araçlar/px koruma, A→B/cache/TargetOnly0, immutable lease/provider değişimi, Stop/tamper/record retry, schema5/CSV/restart, complete legacy history/no fake raster/no-op/conflict ve gerçek perspektif circle rasterından non-affine H/bağımsız world oracle/hull ret sınar. `ui_system_calibration` gerçek ana sayfa komutları → Editor → Runtime → Logs ve küçük ekran, `ui_calibration_wizard` gerçek mouse drag/click + iki plaka + legacy dialog/bağımsız kontrol/iptal akışını sınar. Nihai Release/CTest sayıları [progress kaydındadır](../progress.md); KUI-6 tam paket kabulü ayrıca yapılır.
+Kabul: `system_calibration_contract` bağımsız stripe/ring, üç applicationType ve farklı source UUID'leri, bütün metrik araçlar/px koruma, A→B/cache/TargetOnly0, immutable lease/provider değişimi, Stop/tamper/record retry, schema5/CSV/restart, complete legacy history/no fake raster/no-op/conflict ve gerçek perspektif circle rasterından non-affine H/bağımsız world oracle/hull ret sınar. `ui_system_calibration` proje servisi kataloğu → Editor → Runtime → Logs, eski widget yokluğu ve proje/kamera/pencere yaşam döngüsünü sınar. `ui_calibration_wizard` güncel sihirbaz mouse drag/click + iki plaka/bağımsız kontrol/iptal akışını, legacy geçiş ise doğrudan application servisini sınar. Nihai Release/CTest sayıları [progress kaydındadır](../progress.md); KUI-6 tam paket kabulü ayrıca yapılır.
 
 Sınırlar: offscreen görsel kabul native DPI/çoklu monitör değildir. Fiziksel K4/lens/robot, industrial grab, makine genelinde çok süreçli aktif seçim koordinasyonu, CUDA/kurulum/dağıtım ve T8.4.2b.3c corpus ayrı açık işlerdir.

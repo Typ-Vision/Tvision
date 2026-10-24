@@ -1,4 +1,5 @@
 #pragma once
+#include "FitDiagnostic.hpp"
 #include "EdgeFinder.hpp"
 namespace visionflow {
 enum class RadialDirection { Outward, Inward };
@@ -17,6 +18,7 @@ struct RadialScanPoint {
     std::optional<QPointF> point,rawPoint; // ROI units and raw px respectively
     std::optional<double> strength,signedStrength;
     QString reason,refinement;
+    ScanRejections rejections;
 };
 struct RadialSearch {
     QVector<RadialScanPoint> scans;

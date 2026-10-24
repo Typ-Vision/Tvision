@@ -1,6 +1,7 @@
 #include "CalibrationWizardSession.hpp"
 #include "ChessboardService.hpp"
 #include "CircleGridService.hpp"
+#include "FramedCircleGridService.hpp"
 #include "domain/EdgePointConfig.hpp"
 #include <QCryptographicHash>
 #include <QJsonDocument>
@@ -19,15 +20,17 @@ QString CalibrationWizardSession::configurationId(const QJsonObject& config){
 }
 void CalibrationWizardSession::cancel(){if(cancel_)cancel_->store(true);ticket_.clear();cancel_.reset();}
 void CalibrationWizardSession::invalidateSelection(){first_.clear();second_.clear();model_.reset();}
-void CalibrationWizardSession::clear(){cancel();frame_.reset();points_.clear();scans_.clear();invalidateSelection();knownMm_=0;modelId_.clear();plate_.reset();plateConfirmed_=false;}
-void CalibrationWizardSession::useFrame(ImageFrame f,MeasurementSetup s,QString origin){
+void CalibrationWizardSession::clear(){cancel();frame_.reset();points_.clear();scans_.clear();invalidateSelection();knownMm_=0;modelId_.clear();plate_.reset();rawPlate_.reset();plateConfirmed_=false;}
+void CalibrationWizardSession::useFrame(ImageFrame f,MeasurementSetup s,QString origin,std::optional<ExperimentalCalibrationEvidence> experimental){
     // Failed replacement must not leave the previous draft available as current.
     clear();s.validate();const auto& m=f.metadata();
     require(f.size()==s.resolution && f.processing().isEmpty() && m.coordinateSystemId==s.source.id &&
         !m.sourceId.isEmpty() && !m.frameId.isEmpty() && !m.cycleId.isEmpty() && m.completedAtUtc.isValid(),"Raw frame/setup provenance mismatch");
     require(origin=="acquired" || origin=="setup_file" || origin=="trial_file","Invalid image origin");
     require(origin!="acquired" || !m.sourceId.startsWith("calibration-test:"),"Imported test cannot become acquired");
-    frame_=f;setup_=s;image_={origin,m.sourceId,m.frameId,QString::fromLatin1(f.contentId().toHex())};modelId_=id();
+    require(experimental.has_value()==!m.experimentalAcquisition.isEmpty(),"Experimental frame evidence cannot be removed");
+    if(experimental){experimental->verify(f);require((origin=="acquired" && experimental->origin==SourceOrigin::CameraAcquired) || (origin=="setup_file" && experimental->origin==SourceOrigin::SetupFile),"Experimental replay/live origin mismatch");origin="experimental_"+origin;}
+    frame_=f;setup_=s;image_={origin,m.sourceId,m.frameId,QString::fromLatin1(f.contentId().toHex()),experimental};modelId_=id();
 }
 void CalibrationWizardSession::importFile(QString path,MeasurementSetup s,bool declared){
     clear();auto image=ChessboardService::importImage(path);useFrame(image.frame,s,declared ? "setup_file":"trial_file");
@@ -106,23 +109,32 @@ CalibrationModelRecord CalibrationWizardSession::calculate(const CalibrationCont
     CalibrationSample sample{"selected-pair",{point(first_).pixel,setup_.source},{point(second_).pixel,setup_.source},knownMm_};
     model_=CalibrationModelRecord::create(MeasurementService{}.teach(d,sample),setup_,image_,control);return *model_;
 }
-WizardPlateJob CalibrationWizardSession::scanPlate(CalibrationGridTarget t){
-    cancel();plate_.reset();plateConfirmed_=false;model_.reset();t.validate();require(frame_.has_value(),"Choose a raw frame first");
-    ticket_=id();cancel_=std::make_shared<std::atomic_bool>(false);WizardPlateJob j;j.frame_=*frame_;j.target_=t;j.ticket_=ticket_;j.cancel_=cancel_;return j;
+WizardPlateJob CalibrationWizardSession::scanPlate(CalibrationGridTarget t,std::optional<QRect> roi){
+    cancel();plate_.reset();rawPlate_.reset();plateConfirmed_=false;model_.reset();t.validate();require(frame_.has_value(),"Choose a raw frame first");
+    ticket_=id();cancel_=std::make_shared<std::atomic_bool>(false);WizardPlateJob j;j.frame_=*frame_;j.target_=t;j.searchRoi_=roi;j.ticket_=ticket_;j.cancel_=cancel_;return j;
 }
 WizardPlateResult CalibrationWizardSession::run(const WizardPlateJob& j){
     WizardPlateResult r;r.ticket_=j.ticket_;
     try{
         require(!j.cancel_->load(),"Plate detection cancelled");
-        r.observation_=j.target_.pattern==CalibrationGridPattern::Chessboard ? ChessboardService::detect(j.frame_,j.target_):CircleGridService::detect(j.frame_,j.target_,j.cancel_);
+        if(j.target_.pattern==CalibrationGridPattern::Chessboard){
+            r.observation_=ChessboardService::detect(j.frame_,j.target_);
+            r.observation_->validateRaw();
+            r.diagnostics_.status=PlateDetectionStatus::Ready;
+        }else{
+            const auto result=j.target_.pattern==CalibrationGridPattern::FramedCircles ? FramedCircleGridService::observe(j.frame_,j.target_,j.cancel_,j.searchRoi_):CircleGridService::observe(j.frame_,j.target_,j.cancel_);
+            r.diagnostics_=result.diagnostics();
+            if(result.observation()){r.rawPlate_=result.observation();r.observation_=result.observation()->grid();}
+            else r.error_=r.diagnostics_.message;
+        }
         require(!j.cancel_->load(),"Plate detection cancelled");
-        // Count/order/convexity/fit gates before offering observations to confirm.
-        PlaneMappingService::fit(*r.observation_);
-    }catch(const std::exception& e){r.error_=QString::fromUtf8(e.what());r.observation_.reset();}return r;
+    }catch(const std::exception& e){r.error_=QString::fromUtf8(e.what());r.observation_.reset();
+        r.diagnostics_={j.cancel_->load() ? PlateDetectionStatus::Cancelled:PlateDetectionStatus::NotFound,r.error_,{}};}
+    return r;
 }
 bool CalibrationWizardSession::accept(const WizardPlateResult& r){
     if(ticket_.isEmpty() || r.ticket_!=ticket_ || !cancel_ || cancel_->load())return false;
-    cancel();plate_=r.observation_;plateConfirmed_=false;model_.reset();return true;
+    cancel();plate_=r.observation_;rawPlate_=r.rawPlate_;plateConfirmed_=false;model_.reset();return true;
 }
 void CalibrationWizardSession::confirmPlate(){require(!busy() && plate_.has_value(),"Current complete grid required");plateConfirmed_=true;}
 CalibrationModelRecord CalibrationWizardSession::calculatePlate(const CalibrationControl& control){
@@ -130,6 +142,6 @@ CalibrationModelRecord CalibrationWizardSession::calculatePlate(const Calibratio
     require(plate_->source.frameId==image_.frameId && plate_->pixelHash==image_.pixelHash,"Plate/frame raster mismatch");
     require(setup_.target.axes==AxisConvention::XRightYDown,"Plate target-local axes are columns-right/rows-down");
     CalibrationDependency d{modelId_,1,"pending",image_.sourceToolId,setup_.lensId,setup_.resolution,setup_.planeId,setup_.source,setup_.target};
-    model_=CalibrationModelRecord::create(MeasurementService{}.teachHomography(d,PlaneMappingService::fit(*plate_)),setup_,image_,control);return *model_;
+    model_=CalibrationModelRecord::create(MeasurementService{}.teachHomography(d,(rawPlate_ ? PlaneMappingService::fit(*rawPlate_):PlaneMappingService::fit(*plate_))),setup_,image_,control);return *model_;
 }
 }

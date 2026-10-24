@@ -5,6 +5,8 @@
 #include "SystemCalibration.hpp"
 namespace visionflow {
 class MultiSourceRuntimeService;
+class ExperimentalRuntime;
+class RuntimeCameraSessions;
 struct RuntimeIdentity {
     QString principal;
     ProductionRecipeService::Authorize authorize;
@@ -23,6 +25,13 @@ public:
     // Configuration-only preparation; never acquires or asserts actual frame readiness.
     void checkConfiguration(const Recipe&,const QString& projectDirectory) const;
     void prepare(const Recipe&,const QString& projectDirectory);
+    void requestCameraPreparation(const Recipe&,const QString& projectDirectory);
+    bool pollCameras();
+    void stopCameras();
+    bool camerasPending() const;
+    bool camerasDraining() const;
+    QString cameraError() const;
+    bool cameraCloseFailed() const;
     void activate(const Recipe&,const QString& projectDirectory);
     void rollback(const QString& validationId);
     ProductionCycle begin(const QJsonObject& communication={});
@@ -31,6 +40,11 @@ public:
     void observeInstallation(const Recipe&);
     std::shared_ptr<const ProductionSnapshot> active() const;
     bool busy() const;
+    void setExperimental(bool enabled,MultiProvider provider={});
+    // Configure backend dependencies only; normal Load/Run resolves required sources.
+    void setAutomaticAcquisition(MultiProvider provider={});
+    bool experimental() const {return bool(experimental_);}
+    bool requiresManualCycles(const Recipe&,const QString& directory) const;
     QString principal() const {return identity_.principal;}
     const std::optional<RecipeValidation>& validation() const {return validation_;}
     QVector<QJsonObject> records() const {return store_.recent("cycles");}
@@ -46,6 +60,7 @@ private:
     ProductionDependencies declaredCalibrationDependencies(const Recipe&) const;
     ProductionDependencies dependencies(const Recipe&) const;
     ProductionDependencies declaredDependencies(const Recipe&) const;
+    MultiSourceDependencies cameraComposition(const Recipe&,const MultiProvider&) const;
     std::optional<ProductionDependencies> systemDependencies(const Recipe&) const;
     Recipe systemRecipe(const Recipe&,const QString& directory) const;
     MeasurementExecutionContext completionCalibration(const ImageFrame&) const;
@@ -63,5 +78,10 @@ private:
     MultiProvider multiProvider_;
     std::unique_ptr<MultiSourceRuntimeService> multi_;
     bool multiMode_=false;
+    std::unique_ptr<ExperimentalRuntime> experimental_;
+    bool policyReset_=false;
+    bool automaticAcquisition_=true;
+    MultiProvider automaticProvider_;
+    std::unique_ptr<RuntimeCameraSessions> cameraSessions_;
 };
 }

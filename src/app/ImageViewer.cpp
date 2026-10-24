@@ -6,6 +6,7 @@
 #include <QMouseEvent>
 #include <QWheelEvent>
 #include <QPainter>
+#include <QScrollBar>
 #include <cmath>
 #include <algorithm>
 namespace visionflow {
@@ -20,15 +21,22 @@ ImageViewer::ImageViewer(QWidget* parent) : QGraphicsView(parent),scene_(new QGr
 }
 void ImageViewer::setPreviewPixels(const QImage& image) {
     if(!imageItem_ || imageItem_->pixmap().size()!=image.size()){setImage(image);return;}
+    if(previewCacheKey_==image.cacheKey())return;
     imageItem_->setPixmap(QPixmap::fromImage(image));
+    previewCacheKey_=image.cacheKey();
 }
 void ImageViewer::setImage(const QImage& image) {
+    AcquisitionTimingSpan timing("ui.set-image");
+    if(!paintTiming_.request.isEmpty())AcquisitionTiming::record(paintTiming_,"ui.set-image-to-first-paint",imageAssignedAt_,"superseded");
+    paintTiming_=AcquisitionTiming::current();imageAssignedAt_=AcquisitionTiming::Clock::now();
+    searchHandles_.clear();searchIdentity_.clear();searchUndo_.clear();searchEditable_=searchDragging_=middlePanning_=false;searchValue_={};
     roiItems_.clear();roi_.reset();roiDraft_.reset();roiBeforeDrag_.reset();roiStatus_="Geometri yok.";roiUndo_.clear();roiVertices_.clear();validDomain_.clear();roiDrawing_=-1;roiHandle_=-1;roiDragging_=roiEditing_=false;
-    toolOverlay_.clear();
+    resultAnnotations_.clear();toolOverlay_.clear();
     scene_->clear(); imageItem_=nullptr; selection_=nullptr;
     modelRegion_=searchRegion_=resultRegion_=draftRegion_=nullptr; drawRegion(false);
     if (image.isNull()) { clearImage(); return; }
     imageItem_=scene_->addPixmap(QPixmap::fromImage(image));
+    previewCacheKey_=image.cacheKey();
     const QRectF rect(0,0,image.width(),image.height()); scene_->setSceneRect(rect);
     QPen pen(QColor("#66e3c4")); pen.setWidth(2); pen.setCosmetic(true);
     selection_=scene_->addRect(rect,pen); selection_->setVisible(false);
@@ -37,8 +45,11 @@ void ImageViewer::setImage(const QImage& image) {
     fitImage();if(onRoiChanged)onRoiChanged();
 }
 void ImageViewer::clearImage(const QString& message) {
+    if(!paintTiming_.request.isEmpty())AcquisitionTiming::record(paintTiming_,"ui.set-image-to-first-paint",imageAssignedAt_,"cancelled");paintTiming_={};
+    previewCacheKey_=0;
+    searchHandles_.clear();searchIdentity_.clear();searchUndo_.clear();searchEditable_=searchDragging_=middlePanning_=false;searchValue_={};
     roiItems_.clear();roi_.reset();roiDraft_.reset();roiBeforeDrag_.reset();roiStatus_="Geometri yok.";roiUndo_.clear();roiVertices_.clear();validDomain_.clear();roiDrawing_=-1;roiHandle_=-1;roiDragging_=roiEditing_=false;
-    toolOverlay_.clear();
+    resultAnnotations_.clear();toolOverlay_.clear();
     scene_->clear(); scene_->setSceneRect({}); imageItem_=nullptr; selection_=nullptr;
     emptyMessage_=message; resetTransform(); viewport()->update();
     modelRegion_=searchRegion_=resultRegion_=draftRegion_=nullptr; drawRegion(false);
@@ -46,16 +57,16 @@ void ImageViewer::clearImage(const QString& message) {
 }
 void ImageViewer::fitImage() {
     if (!imageItem_) return;
-    fitMode_=true; fitInView(imageItem_->boundingRect(),Qt::KeepAspectRatio); if (onZoom) onZoom(zoomFactor());
+    fitMode_=true; fitInView(imageItem_->boundingRect(),Qt::KeepAspectRatio); updateResultAnnotations(); renderRoi(); if (onZoom) onZoom(zoomFactor());
 }
 void ImageViewer::zoomBy(double factor) {
     if (!imageItem_ || !std::isfinite(factor) || factor<=0) return;
     fitMode_=false; const double target=std::clamp(zoomFactor()*factor,0.001,32.0);
-    scale(target/zoomFactor(),target/zoomFactor()); if (onZoom) onZoom(zoomFactor());
+    scale(target/zoomFactor(),target/zoomFactor()); updateResultAnnotations(); renderRoi(); if (onZoom) onZoom(zoomFactor());
 }
 void ImageViewer::actualSize() {
     if (!imageItem_) return;
-    fitMode_=false; resetTransform(); if (onZoom) onZoom(1.0);
+    fitMode_=false; resetTransform(); updateResultAnnotations(); renderRoi(); if (onZoom) onZoom(1.0);
 }
 QPoint ImageViewer::imagePixelAt(const QPoint& position) const {
     if (!imageItem_) return {-1,-1};
@@ -69,13 +80,16 @@ void ImageViewer::drawRegion(bool enabled) {
     drawing_=enabled; regionStart_={-1,-1}; setDragMode(enabled ? NoDrag : ScrollHandDrag);
     viewport()->setCursor(enabled ? Qt::CrossCursor : Qt::OpenHandCursor);
     if (draftRegion_) draftRegion_->hide();
+    renderSearchRegion();
 }
 void ImageViewer::setRegions(const QRect& model,const QRect& search,const QRect& result,bool accepted) {
     auto set=[](QGraphicsRectItem* item,const QRect& rect){if (item) {item->setRect(QRectF(rect)); item->setVisible(!rect.isEmpty());}};
     set(modelRegion_,model); set(searchRegion_,search); set(resultRegion_,result);
     if (resultRegion_) {auto pen=resultRegion_->pen(); pen.setColor(accepted ? QColor("#66e3c4") : QColor("#ff8585")); resultRegion_->setPen(pen);}
+    renderSearchRegion();
 }
 void ImageViewer::setToolOverlay(const QVector<QRect>& regions,const QVector<QPointF>& points,const QVector<QLineF>& lines,const QString& annotation,const QByteArray& mask,const QSize& maskSize,const QPoint& maskOrigin,const QVector<QPointF>& rejected,bool densePoints) {
+    resultAnnotations_.clear();
     for(auto* item:toolOverlay_) {scene_->removeItem(item);delete item;}toolOverlay_.clear();
     if(!imageItem_)return;
     QPen pen(QColor("#66e3c4"));pen.setWidth(2);pen.setCosmetic(true);
@@ -87,7 +101,7 @@ void ImageViewer::setToolOverlay(const QVector<QRect>& regions,const QVector<QPo
             row[x]=qPremultiply(qRgba(255,40,40,border ? 210 : 100));
         }}
         auto* overlay=scene_->addPixmap(QPixmap::fromImage(colored));overlay->setPos(maskOrigin);toolOverlay_<<overlay;
-        auto* legend=scene_->addSimpleText("Kırmızı: kabul edilen\nbölge (karar değildir)");legend->setBrush(QColor("#ff6666"));legend->setPos(maskOrigin);legend->setFlag(QGraphicsItem::ItemIgnoresTransformations);toolOverlay_<<legend;
+        addResultLabel("Kırmızı: kabul edilen\nbölge (karar değildir)",maskOrigin,QColor("#ff6666"));
     }
     for(const auto& rect:regions)toolOverlay_<<scene_->addRect(QRectF(rect),pen);
     for(const auto& line:lines)toolOverlay_<<scene_->addLine(line,pen);
@@ -96,29 +110,44 @@ void ImageViewer::setToolOverlay(const QVector<QRect>& regions,const QVector<QPo
         const double radius=densePoints ? 3:5;auto* marker=scene_->addEllipse(-radius,-radius,2*radius,2*radius,pen,QBrush(QColor("#101923")));
         marker->setPos(p);marker->setFlag(QGraphicsItem::ItemIgnoresTransformations);toolOverlay_<<marker;
         if(densePoints)continue;
-        auto* label=scene_->addSimpleText(QString("P%1").arg(i+1));label->setBrush(QColor("#ffd166"));
-        label->setPos(p);label->setFlag(QGraphicsItem::ItemIgnoresTransformations);toolOverlay_<<label;
+        addResultLabel(QString("P%1").arg(i+1),p,QColor("#ffd166"));
     }
     QPen rejectedPen(QColor("#ff6666"));rejectedPen.setWidth(2);rejectedPen.setCosmetic(true);
-    for(const auto& p:rejected){auto* marker=scene_->addEllipse(-6,-6,12,12,rejectedPen);marker->setPos(p);marker->setFlag(QGraphicsItem::ItemIgnoresTransformations);toolOverlay_<<marker;auto* label=scene_->addSimpleText("outlier");label->setBrush(QColor("#ff6666"));label->setPos(p);label->setFlag(QGraphicsItem::ItemIgnoresTransformations);toolOverlay_<<label;}
+    for(const auto& p:rejected){auto* marker=scene_->addEllipse(-6,-6,12,12,rejectedPen);marker->setPos(p);marker->setFlag(QGraphicsItem::ItemIgnoresTransformations);toolOverlay_<<marker;addResultLabel("outlier",p,QColor("#ff6666"));}
     if(points.size()!=2 && !annotation.isEmpty()){
-        auto* label=scene_->addSimpleText(annotation);label->setBrush(QColor("#ffd166"));const auto at=!lines.isEmpty() ? lines.first().p1()+QPointF(densePoints ? 20:0,densePoints ? 0:12):QPointF{};
-        label->setPos(at);label->setFlag(QGraphicsItem::ItemIgnoresTransformations);label->setZValue(6);
-        auto* background=scene_->addRect(label->boundingRect().adjusted(-3,-2,3,2),Qt::NoPen,QBrush(QColor(16,25,35,235)));background->setPos(at);background->setFlag(QGraphicsItem::ItemIgnoresTransformations);background->setZValue(5);toolOverlay_<<background<<label;
+        const auto at=!lines.isEmpty() ? lines.first().p1()+QPointF(densePoints ? 20:0,densePoints ? 0:12):QPointF{};
+        addResultLabel(annotation,at,QColor("#ffd166"),true);
     }
     if(points.size()==2) {
         QPen distancePen(QColor("#ffd166"));distancePen.setWidth(3);distancePen.setCosmetic(true);
         toolOverlay_<<scene_->addLine(QLineF(points[0],points[1]),distancePen);
-        auto* label=scene_->addSimpleText(annotation.isEmpty() ? QString("%1 px").arg(QLineF(points[0],points[1]).length(),0,'f',2) : annotation);
-        label->setBrush(QColor("#ffd166"));label->setPos((points[0]+points[1])/2);label->setFlag(QGraphicsItem::ItemIgnoresTransformations);toolOverlay_<<label;
+        addResultLabel(annotation.isEmpty() ? QString("%1 px").arg(QLineF(points[0],points[1]).length(),0,'f',2) : annotation,(points[0]+points[1])/2,QColor("#ffd166"));
     }
+}
+void ImageViewer::setResultAnnotationsVisible(bool visible) {
+    annotationsManaged_=true;annotationsVisible_=visible;updateResultAnnotations();
+}
+void ImageViewer::updateResultAnnotations() {
+    if(!annotationsManaged_)return;
+    for(auto* item:resultAnnotations_){item->setVisible(annotationsVisible_);item->setScale(std::min(zoomFactor(),1.5));}
+}
+void ImageViewer::addResultLabel(const QString& text,QPointF at,const QColor& color,bool background) {
+    auto* label=scene_->addSimpleText(text);label->setBrush(color);label->setPos(at);
+    label->setFlag(QGraphicsItem::ItemIgnoresTransformations);if(background)label->setZValue(6);
+    if(annotationsManaged_){auto font=label->font();font.setPointSizeF(11);label->setFont(font);}
+    if(background){
+        auto* box=scene_->addRect(label->boundingRect().adjusted(-3,-2,3,2),Qt::NoPen,QBrush(QColor(16,25,35,235)));
+        box->setPos(at);box->setFlag(QGraphicsItem::ItemIgnoresTransformations);box->setZValue(5);
+        toolOverlay_<<box;resultAnnotations_<<box;
+    }
+    toolOverlay_<<label;resultAnnotations_<<label;updateResultAnnotations();
 }
 void ImageViewer::setCodeOverlay(const CodeResults& codes) {
     if(!imageItem_)return;
     QPen pen(QColor("#66e3c4"));pen.setWidth(2);pen.setCosmetic(true);
     for(int i=0;i<codes.items.size();++i){const auto& code=codes.items[i];
         for(int j=0;j<code.corners.size();++j)toolOverlay_<<scene_->addLine(QLineF(code.corners[j],code.corners[(j+1)%code.corners.size()]),pen);
-        if(!code.corners.isEmpty()){auto* label=scene_->addSimpleText(QString("#%1 %2").arg(i).arg(code.symbology));label->setBrush(QColor("#ffd166"));label->setPos(code.corners.first());label->setFlag(QGraphicsItem::ItemIgnoresTransformations);toolOverlay_<<label;}
+        if(!code.corners.isEmpty())addResultLabel(QString("#%1 %2").arg(i).arg(code.symbology),code.corners.first(),QColor("#ffd166"));
     }
 }
 void ImageViewer::wheelEvent(QWheelEvent* event) {
@@ -126,18 +155,27 @@ void ImageViewer::wheelEvent(QWheelEvent* event) {
     if (onPixel) onPixel(imagePixelAt(event->position().toPoint())); event->accept();
 }
 void ImageViewer::setChessboardOverlay(const QVector<QPointF>& points,int columns) {
-    if(columns<2 || points.size()<columns*2)return;
-    setToolOverlay({},points,{QLineF(points[0],points[columns-1]),QLineF(points[0],points[points.size()-columns])});
-    for(const auto& entry:QVector<QPair<QPointF,QString>>{{points[0],"O (0,0)"},{points[columns-1],"+X"},{points[points.size()-columns],"+Y"}}){
-        auto* label=scene_->addSimpleText(entry.second);label->setBrush(QColor("#56b4ff"));label->setPos(entry.first);label->setFlag(QGraphicsItem::ItemIgnoresTransformations);toolOverlay_<<label;
-    }
+    setPlateOverlay(points,columns,{},{});
+}
+void ImageViewer::setPlateOverlay(const QVector<QPointF>& points,int columns,const QVector<QPointF>& boundary,const QVector<QPointF>& rejected) {
+    QVector<QLineF> lines;
+    for(int i=0;i<boundary.size();++i)lines.append({boundary[i],boundary[(i+1)%boundary.size()]});
+    const bool complete=columns>=2 && points.size()>=columns*2;
+    if(complete){lines.append({points[0],points[columns-1]});lines.append({points[0],points[points.size()-columns]});}
+    setToolOverlay({},points,lines,{}, {}, {}, {},rejected);
+    if(complete)for(const auto& entry:QVector<QPair<QPointF,QString>>{{points[0],"P1 (0,0)"},{points[columns-1],"+X"},{points[points.size()-columns],"+Y"}})
+        addResultLabel(entry.second,entry.first+QPointF(8,12),QColor("#56b4ff"),true);
 }
 void ImageViewer::mousePressEvent(QMouseEvent* event) {
+    if(event->button()==Qt::MiddleButton && imageItem_){cancelRoi();middlePanning_=true;panStart_=event->position().toPoint();viewport()->setCursor(Qt::ClosedHandCursor);event->accept();return;}
+    if(searchPress(event))return;
     if(roiPress(event))return;
     pressed_=event->position().toPoint(); QGraphicsView::mousePressEvent(event);
     if (drawing_ && event->button()==Qt::LeftButton) {regionStart_=imagePixelAt(pressed_); event->accept();}
 }
 void ImageViewer::mouseMoveEvent(QMouseEvent* event) {
+    if(middlePanning_){const auto p=event->position().toPoint();const auto d=p-panStart_;horizontalScrollBar()->setValue(horizontalScrollBar()->value()-d.x());verticalScrollBar()->setValue(verticalScrollBar()->value()-d.y());panStart_=p;event->accept();return;}
+    if(searchMove(event))return;
     if(roiMove(event))return;
     QGraphicsView::mouseMoveEvent(event);
     if (onPixel) onPixel(imagePixelAt(event->position().toPoint()));
@@ -148,13 +186,15 @@ void ImageViewer::mouseMoveEvent(QMouseEvent* event) {
     }
 }
 void ImageViewer::mouseReleaseEvent(QMouseEvent* event) {
+    if(event->button()==Qt::MiddleButton && middlePanning_){middlePanning_=false;viewport()->setCursor(drawing_ ? Qt::CrossCursor:Qt::OpenHandCursor);event->accept();return;}
+    if(searchRelease(event))return;
     if(roiRelease(event))return;
     if (drawing_ && event->button()==Qt::LeftButton) {
         if (regionStart_.x()>=0 && imageItem_) {
             auto point=mapToScene(event->position().toPoint());
             QPoint end(std::clamp(int(std::floor(point.x())),0,imageItem_->pixmap().width()-1),std::clamp(int(std::floor(point.y())),0,imageItem_->pixmap().height()-1));
             const QRect roi=pixelRectangle(regionStart_,end); drawRegion(false);
-            if (roi.width()>=2 && roi.height()>=2 && onRegion) onRegion(roi);
+            if (roi.width()>=2 && roi.height()>=2){if(searchEditable_)finishSearchRegion(roi);else if(onRegion)onRegion(roi);}
         } else drawRegion(false);
         event->accept(); return;
     }
@@ -168,5 +208,6 @@ void ImageViewer::resizeEvent(QResizeEvent* event) { QGraphicsView::resizeEvent(
 void ImageViewer::paintEvent(QPaintEvent* event) {
     QGraphicsView::paintEvent(event);
     if (!imageItem_) { QPainter painter(viewport()); painter.setPen(QColor("#8fa0b5")); painter.drawText(viewport()->rect().adjusted(18,18,-18,-18),Qt::AlignCenter|Qt::TextWordWrap,emptyMessage_); }
+    if(imageItem_ && !paintTiming_.request.isEmpty()){AcquisitionTiming::record(paintTiming_,"ui.set-image-to-first-paint",imageAssignedAt_);AcquisitionTiming::record(paintTiming_,"ui.command-to-first-paint",paintTiming_.commandedAt);paintTiming_={};}
 }
 }

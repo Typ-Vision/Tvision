@@ -13,6 +13,7 @@
 #include <QDoubleSpinBox>
 #include <QPushButton>
 #include <QListWidget>
+#include <QLineEdit>
 #include <QLabel>
 #include <QScrollArea>
 #include <QScrollBar>
@@ -44,7 +45,13 @@ bool MainWindow::verifyPoseTracking(const QString& artifacts) {
         const auto path=QDir(directory).filePath(kind+QString::number(int(type))+".vfproject");
         service_.createProject("Pose teaching","",path,"file");const auto recipeId=service_.createRecipe("Part","",type,"file");refreshWorkspace();selectPage("editor");
         check(loadEditorImage(imagePath),"pose UI source load");wait();const auto source=selectedToolId_;
-        auto add=[&](const QString& k){QListWidgetItem* entry=nullptr;for(int i=0;i<toolbox_->count();++i)if(toolbox_->item(i)->data(Qt::UserRole)==k)entry=toolbox_->item(i);check(entry,"pose UI Toolbox entry");toolbox_->setCurrentItem(entry);findChild<QPushButton*>("addTool")->click();return selectedToolId_;};
+        auto add=[&](const QString& k){
+            // Legacy Edge is a compatibility fixture, never a new catalog entry.
+            if(k=="edge"){const auto id=service_.addTool(k);refreshWorkspace();selectTool(id);return id;}
+            auto* search=findChild<QLineEdit*>("toolboxSearch");search->setText(k);
+            QListWidgetItem* entry=nullptr;for(int i=0;i<toolbox_->count();++i)if(toolbox_->item(i)->data(Qt::UserRole)==k)entry=toolbox_->item(i);
+            check(entry && !entry->isHidden(),"pose UI searchable Toolbox entry");toolbox_->setCurrentItem(entry);findChild<QPushButton*>("addTool")->click();search->clear();return selectedToolId_;
+        };
         auto bind=[&](const QString& target){selectTool(target);auto* input=propertiesBody_->findChild<QComboBox*>("input_image");check(input && input->findData(source+"/image")>0,"pose UI image choice");input->setCurrentIndex(input->findData(source+"/image"));};
         const auto poseId=add(kind);bind(poseId);
         for(const auto& kv:QVector<QPair<QString,double>>{{"angleMin",0},{"angleMax",90},{"angleStep",90},{"pyramidLevels",1},{"minScore",.95}})propertiesBody_->findChild<QDoubleSpinBox*>("pose_"+kv.first)->setValue(kv.second);

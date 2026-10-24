@@ -1,0 +1,348 @@
+> Tarihsel arşiv — 17 Ekim 2026 taşıması. Güncel devir: [progress](../../progress.md).
+
+# VisionFlow Industrial Vision Suite
+
+17 Ekim — **ICM-00 başlangıç envanteri tamamlandı; endüstriyel acquisition uygulanmadı.** Kaynak/şema/hash/ret kapıları ve güncel CTest adları [başlangıç kaydında](../../architecture/industrial-camera-baseline.md). Sonraki görev **ICM-01a — tekrarlanabilir SDK/probe tanısı**. COE-U USB3/OECS ilk backend hedefi; 24 görev ve ayrı yazılım/fiziksel/ölçüm kabul kapıları [ana planda](../../architecture/industrial-camera-plan.md). Mevcut 0 cihaz ön kontrolü gerçek grab kabulü değildir.
+
+17 Ekim kamera incelemesi: GenTL keşif/read-only kontrolü mevcut; gerçek endüstriyel stream/grab ve kalibrasyon/Editor/Runtime bağlantısı henüz uygulanmadı. Opto kamera için mevcut sınırlar ve önerilen GenICam/vendor SDK yolu [entegrasyon değerlendirmesinde](../../architecture/industrial-camera-integration-assessment.md).
+
+17 Ekim KMC-10c2/10d uygulandı: editor9 bütün-set Runtime preparation, terminal7/restart/Logs/CSV ve vf.socket2 scalar mapping; N kaynak hazırlık tablosu, seçili gerçek frame/overlay ve immutable model gösterimi. [Kalıcı Runtime sözleşmesi](../../architecture/multi-source-runtime-terminal.md). **KMC-10e B yazılım kabulü ve fiziksel devir dokümanı tamamlandı: tam Release UI/ZXing ON 87/87; Widgets OFF/ZXing OFF 73/73**; [B kabul ve fiziksel devir](../../architecture/multi-source-release-acceptance.md). Aşağıdaki tarihli teslim kayıtları kendi kapanış durumlarını anlatır; güncel durum bu paragraftır. Fiziksel/native/lens/industrial/PLC/robot/CUDA/kurulum/dağıtım kabulü açık.
+
+17 Ekim KMC-10c1: tek tutarlı source/model snapshot seti, yalnız bellekte immutable admission, ortak Runtime worker ve N-frame trusted completion/replay uygulandı. Kullanıcının kalıcı editor9 production kapısı KMC-10c2 kabulüne kadar kapalıdır. [Programatik kapsam ve sınırlar](../../architecture/multi-source-production-contract.md). Sıradaki KMC-10c2.
+
+16 Ekim KMC-10b: explicit editor9 ile çok kaynaklı Editor/execution, kaynak başına kare/cache/model, sıralı acquisition ve toplam süre/retained bellek bütçesi uygulandı. Viewer kaynak seçici ve TargetOnly acquisition0 bağlıdır. Production editor9 kapısı KMC-10c2 kabulüne kadar kapalıdır; sıradaki KMC-10c1. [Kullanım, sözleşme ve sınırlar](../../architecture/multi-source-execution-editor.md).
+
+
+16 Ekim — **KMC-0–9 tamamlandı (KMC-7a/7b ayrı paketler).** Setup → Calibration [Sistem özetini](../../architecture/calibration-overview.md) açar. Kaydedilmiş proje yeterli, reçete gerekmez. 0/1/N kamera, metadata keşfi, kamera/kurulum yönetimi ve reçetesiz bilinen ölçü/plaka/dosya denemesi çalışır. Kamera sayısı sabit beşle sınırlı değildir; 8–10 dahil kartlar sarılır.
+
+Kaydet aday oluşturur; [aktivasyon incelemesi](../../architecture/measurement-setup-migration.md) ayrı gerçek kamera karesi denetler. Deneme ilişkilendirmesi özgün rasterı yeniden hash kontrol ederek ayrı türetim oluşturur. Eski geçmiş açık kurulum beyanıyla bütün sürümleri koruyarak aktarılır; eksik raster kanıtı üretilmez. Önceki akış/kanıt ekranları korunur.
+
+[Editor/Runtime](../../architecture/scoped-calibration-integration.md) açık kaynak→kurulum bağıyla yalnız ilgili immutable modeli kullanır; terminal6 kamera/kurulum/replay kanıtı Logs/CSV’de kalır. Bağ kaldırmak legacy fallback sağlamaz. Yeni serviste restart seçimleri hatırlar, kullanım izni vermez. Editor çok kaynaklı editor9 çalıştırır; Runtime tek-source kalır, çok-source üretim KMC-10c1/c2 teslimidir.
+
+Kalibrasyon bağımlılık paketi import/export ve kaydedilmiş projenin registry/katalog/legacy/üretim geçmişiyle Save As komutu bağlıdır. Görüntüler otomatik paketlenmez; hedef varlıklar denetlenir, eksik/çatışan hedef reddedilir. Ayrıntılar [taşıma sözleşmesindedir](../../architecture/measurement-setup-migration.md).
+
+**KMC-9 birleşik A yazılım kabulü tamamlandı:** Release UI/ZXing ON tam CTest **80/80**, Widgets OFF/ZXing OFF **68/68** geçti. N kalibrasyon yönetimi tamamlandı; Runtime tek kaynaklıdır; Editor KMC-10b ile çok-source çalıştırır. Normal/küçük ekran akışları offscreen incelendi; fiziksel/native kabul açık. [Kabul matrisi ve kanıtlar](../../architecture/independent-calibration-acceptance.md). **KMC-10a çok kaynaklı DAG/frame sözleşmesi** explicit editor9, dal/port kökeni ve bounded frame indeksi sunar; schema9 production kapısı kapalıdır. [Programatik sözleşme ve sınırlar](../../architecture/multi-source-graph-contract.md). **KMC-10b uygulandı; sıradaki KMC-10c1.** Güncel doğrulama ve fiziksel kabul sınırları [ilerleme kaydında](../../progress.md), sonraki işler [KMC planındadır](../../architecture/independent-calibration-implementation-plan.md).
+
+## İş bilgisayarında geliştirme ortamı
+
+15 Ekim 2026: `C:/Projects/Tvision` için Qt 6.12.0 / MinGW 13.1.0 ve
+kaynak koddan derlenen OpenCV 5.0.0 kurulumu için
+[Windows ortamı ve tekrar kurulum komutları](../../windows-workstation.md).
+Güncel derleme dizini `build/reference-ui`; çalıştırma: `./scripts/run-local.ps1`.
+Bu betik DLL yollarını yalnız başlattığı sürece ekler. Eski `build/visionflow.exe`
+hedefi için `./scripts/run-local.ps1 -BuildDirectory build` kullanılabilir.
+Kurulum/test kanıtı bağlantıdaki belgede tutulur; aşağıdaki tarihsel test sayıları
+bu bilgisayarda yeniden alınmış sonuçlar olarak yorumlanmamalıdır.
+OpenCV ve ZXing probe'ları geçti, güncel uygulama Release derlendi. 15 Ekim tarihsel kurulum testi ve
+başarısız testlerin erişimli tekrarı birlikte **66/70 farklı test** için başarılı
+kanıt vermişti; o dört UI testi KMC-0'da kapandı ve tek tam UI koşumu 70/70 geçti. Ayrıntılar bağlantıdaki doğrulama bölümündedir.
+
+15 Ekim — **KUI-5 tamamlandı**: tek etkin kalibrasyon Measurement/Caliper/Line/Circle/Geometry, ayrı Edge Point pointMm, Editor cache/TargetOnly ve immutable Runtime/Logs/CSV yoluna bağlandı. Calculate px kalır; eski px tolerans ve exact world ROI otomatik dönüştürülmez. Legacy kayıt aktarımı açık kurulum beyanı ister, eksik raster kanıtı üretmez. Execution23 / terminal5; [sözleşme ve kabul](../../architecture/system-calibration.md). Sıradaki **KUI-6 tam Release kabulü**. Güncel binary build/reference-ui/visionflow.exe. Alttaki teslim kayıtları tarihseldir.
+## Yeni kalibrasyon akışı — KUI-4/KUI-5
+
+1. Projeyi kaydedin ve hedef reçetenin Image File/Webcam kaynağını açın. Setup → Calibration → Bilinen ölçü veya Kalibrasyon plakası → Başlat.
+2. Kaynaktan kare alın veya dosya açın. Ortak kurulum adı, lens/kamera ve düzlem beyanını verin. Dosya için açık aynı-kurulum beyanı yoksa kayıt yalnız denemedir.
+3. Bilinen ölçüde tarama oku → gerçek kenar/kaliper çifti → gerçek mm → Hesapla. Plakada chessboard iç köşe veya daire merkez sayısı/gerçek aralık → bul/onayla/hesapla. İsteğe bağlı bağımsız kontrol ayrı kalır; varsayılan fiziksel hata/kabul uydurulmaz.
+4. Kaydet ve bitir yalnız aday kaydeder. Ana sayfada Etki incelemesi → Etkinleştir. Uyumlu mm araçlar aynı modeli kullanır; Calculate px kalır. Eski px toleransları açık düzenleme, exact world ROI/referanslar yeniden öğretim ister.
+5. Runtime için normal Save → Load Recipe → Run → Tek çevrim. Run yalnız hazırlanır; gerçek sonuç çevrimden ve kalıcı kayıttan gelir. Değişiklik için Stop ve bekleyen kayıt/ACK tamamlanmalıdır. Logs/CSV geçmiş model kanıtını korur.
+
+Eski kayıtları incele / aktar, legacy ID'nin bütün sürümlerini açık kurulum beyanıyla yeni kataloğa kopyalar; eksik raster hash/frame üretmez ve etkinleştirme yapmaz. Eski kayıt / kanıt ekranı eski akışın uyumluluk yoludur. Robot kartı yalnız şablondur. Restart/proje değişimi etkinliği geri yüklemez. [Ayrıntılar ve sınırlar](../../architecture/system-calibration.md).
+
+## Önceki teslim kayıtları
+
+
+15 Ekim — **KUI-4 arayüzü tamamlandı**: Setup → Calibration üç kart, ayrı bilinen ölçü/plaka sihirbazları, gerçek Edge/Caliper ve chessboard/circle rasterları, açık dosya/kurulum beyanı, adlandırılmış kayıt ve ana sayfadan tek seçim sunar. Robot yalnız şablondur; eski kanıt ekranı korunur. Release core ilgili 20/20, UI ilgili 23/23; [akış ve sınırlar](../../architecture/calibration-ui-acceptance.md). **Ortak metrik/Editor/Runtime bağlantısı henüz KUI-5 kapsamında açıktır**, ardından KUI-6 tam kabul. Güncel binary build/reference-ui/visionflow.exe. Alttaki teslim kayıtları tarihseldir.
+
+
+15 Ekim — **KUI-2 ve KUI-3 servisleri tamamlandı**. Release core/UI ilgili CTest **23/23**; plate **473**, wizard **55 kontrol**. Kapsam: gerçek Edge/Caliper noktalarıyla tek seçilmiş çift; ortak session içinde chessboard/simetrik circle grid, noktaları onaylama, raw H, tipli target ve strict replay. Circle yeni katalogda açık desen kimliğiyle tutulur; eski chessboard kayıt/hash yolları korunur. [Servisler ve kabul sınırları](../../architecture/calibration-wizard-services.md). UI henüz yeni session'ı kullanmaz; sıradaki **KUI-4** ana sayfa/iki sihirbaz/dosya-kurulum/robot şablonu, sonra KUI-5 ortak metrik Runtime. Güncel Release binary build/reference-ui/visionflow.exe; fiziksel doğruluk/lens/robot/CUDA/kurulum/dağıtım ve T8.4.2b.3c açık. Alttaki teslimler tarihseldir.
+
+
+15 Ekim — **KUI-2 tamamlandı**: ortak CalibrationWizardSession, gerçek Edge/Caliper noktaları ve tek seçilmiş çift hesabı; frame/hash/setup invalidation ve iptal/geç sonuç koruması. Release core/UI ilgili CTest **12/12**, yeni test **52 kontrol**. [Servis sözleşmesi](../../architecture/calibration-wizard-services.md). Yeni ekran henüz yok; sıradaki **KUI-3** plaka servisleri, UI KUI-4 ve ortak metrik Runtime KUI-5. Aşağıdaki KUI-1 teslimi korunur.
+
+
+15 Ekim — **KUI-1 application sözleşmesi tamamlandı**: ortak kurulum, model-ready/bağımsız kontrol ayrımı, atomik yeni katalog ve explicit tek etkin seçim servisi. Release OFF/core ve ON/UI ilgili CTest **11/11** geçti; yeni sözleşme 77 kontrolle sınandı. Mevcut ekran/Editor/Runtime henüz yeni servisi kullanmaz; sihirbazlar ve circle grid uygulanmadı. [Sözleşme ve migration envanteri](../../architecture/active-calibration-contract.md). [Kalibrasyon sihirbaz planında](../../architecture/calibration-wizard-plan.md) sıradaki **KUI-2** gerçek Edge/Caliper session'dır; T8.4.2b.3c açık kalır. Güncel yeniden derlenen UI binary build/reference-ui/visionflow.exe.
+
+12 Ekim güncel durum — **R1–R8 tamamlandı.** Yeni ortak Referans binding’leri immutable snapshot ve Runtime’ın süreç içi trusted completion kanıtıyla production yoluna bağlandı; tam kaynak/port/ofset/calibration kimliği terminal schema4, restart, Logs ve CSV’de korunur. Runtime Viewer aynı current resolver’ı kullanır; Stop/missing nominal fallback üretmez. Engine **execution/22**, editor8/raw1/world2/vf.socket2 korunur. Standalone Pattern/Shape ve eski poseTracking production kapısı T8.4.2b.3c corpus kabulüne kadar kapalıdır. **R8 tam Release kabulü: OFF/core 57/57, ON/UI 64/64. Sonraki T8.4.2b.3c** eksik corpus ve bütün production yollarının kapanışıdır. Güncel binary build/reference-ui/visionflow.exe. Alttaki teslim ve sıra kayıtları tarihseldir. [R7 sözleşmesi ve kabul eşlemesi](../../architecture/reference-production-acceptance.md). [R8 paket ve devir kanıtı](../../architecture/reference-release-acceptance.md).
+
+
+R6: [birleşik Editor kabulü ve test eşlemesi](../../architecture/reference-editor-acceptance.md). İlgili Release UI24/core11 testleri, localhost tekrar kabulü ve son zincir/cache regresyonu [ilerleme kaydındadır](../../progress.md); sıradaki paket R7a'dır.
+
+11 Ekim güncel kapsam — **R4, R5a/b ve R6 tamamlandı.** Dört kalibre world tüketicisi ortak Point/Pose referansı ve raw px/açı ofsetini her gerçek sampling tap üzerinde kullanır; nominal mm geometri, current mm refit/metrik/tolerans ve exact calibration alan kontrolleri korunur. Yedi ROI tüketicisinde tek **Referans** bölümü kaynak/port, X/Y ve yalnız gerçek Pose için açı sunar. Seçim pending; Bağla/yeniden kaydet/İptal/kaldır ve atomik ofset düzenlemesi ortak servis yolundadır. Viewer güncel çözülen geometriyi salt okunur gösterir; missing/Stop'ta nominal fallback yoktur. Yeni world kayıt **ReferenceBinding schema2 / world-reference-v1**, raw schema1 ve opt-in editor8 korunur; engine **execution/21**. Eski Edge/raw/world pose kayıtları no-op açma/Save ile dönüştürülmez. **R6 birleşik Editor kabulü tamamlandı; sıradaki R7a immutable production/trusted completion, ardından R7b ve R8 nihai paket**; production yeni binding'i açıkça reddeder. Güncel Release UI binary `build/reference-ui/visionflow.exe`; config/local.ui.ini korunur. Alttaki kapsam/sıra kayıtları tarihseldir. [Sözleşme](../../architecture/reference-integration.md).
+
+11 Ekim güncel kapsam: **U1–U4 — Editor kullanım kolaylığı ve birleşik kabul tamamlandı.** Edge Point/Pair/Line/Circle Properties, Basic/Detailed görünümü ve kapalı **Elle gir…** koordinatları sunar; **Çıkışlar** bütün araçlarda kapalıdır, Type/ID satırları kaldırıldı. Görüntü tıklaması araç seçimini değiştirmez. Görünüm/bölüm tercihleri araç türü bazında yerel INI'dedir; reçete/hash/cache değişmez. Yeni Image tüketicisi, uygun önceki Preprocess'e veya tek etkin edinim kaynağına ekleme ile atomik bağlanır. Yeni çizilebilir araç güncel bağlı rasterda çizime hazırlanır; eksik görüntü/Preprocess sonucu görünür uyarı ve iptal edilebilir bekleyen niyet bırakır. Escape/Stop/seçim değişimi yarım çizimi iptal eder. Model araçlarının ilk eylemi model öğretimidir. Güncel Release binary `build/tracking-ui/visionflow.exe`; [davranış ve kabul](../../architecture/editor-usability-plan.md). Flow’da araca sağ tık → **Bir sıra yukarı / Bir sıra aşağı** kalıcı liste sırasını değiştirir; seçili araç, bağlantılar ve ROI korunur. Sınırdaki yön ve Editor işi sürerken taşıma pasiftir. Yürütme sırasını DAG bağımlılıkları belirler; aktif Runtime snapshot değişmez. Sonraki iş **T8.4.2b.3c**.
+
+11 Ekim U4 kabulü: Release core **52/52 (51.74sn)**, UI açık paket **59/59 (134.45sn)** CTest geçti; UI paketinin yedisi `ui` etiketlidir. Üç applicationType kaynak/sıralama politikası, gerçek PNG/Preprocess DAG, immutable snapshot ve Basic/Detailed/Elle gir/Çıkışlar/ROI/Stop/Escape/geç görüntü regresyonları doğrulandı. Normal 1400×900 ve küçük 850×600 görseller incelendi. Loglar iki build altında `u3-u4-final-ctest.log`; [ayrıntılı ilerleme kaydı](../../progress.md). Fiziksel kabul, native DPI/çoklu monitör ve CUDA/kurulum/dağıtım açık kalır.
+
+10 Ekim güncel kapsam: **T8.4.2b.3b — Nominal world ROI authoring ve mm metric/tolerans tamamlandı.** Edge Point/Caliper/Line/Circle için **Nominal mm ROI öğret…** ekranı geometriyi, güncel pose teaching kaydını ve DAG bağlantısını atomik kaydeder; pending/iptal/geçersiz geometri reçeteyi değiştirmez. Caliper gerçek mm genişliğini, Line current mm span/açısını dahil tool toleranslarıyla değerlendirir. Circle tüm gerçek gözlemlerden (fit outlier dahil) radyal sapma, current world açı/gap/observed arc ve kaliteye bağlı tolerans üretir. Raw line/circle fit ve synthetic derivative strength unavailable; genel parça kararı NOT_EVALUATED. Engine **execution/19**, registry16/editor7/terminal3/vf.socket/2 korunur. Production pose whitelist reddi sürer. Sonraki **T8.4.2b.3c — Trusted completion/immutable production Runtime/Logs/restart/CSV ve corpus kabulü**; T8.4 açık. Güncel Release binary: `build/tracking-ui/visionflow.exe`.
+
+Doğrulama: Release core **50/50**, UI **56/56** tam CTest; world sampler/metric **2213**, world DAG **830**, pose/world authoring UI **829 kontrol** geçti. Normal/850×600 ve world ROI dialog görselleri incelendi. Kanıtlar `build/shape-core/t8-4g-final-ctest.log`, `build/tracking-ui/t8-4g-final-ctest.log` ve ilerleme kaydındadır.
+
+Alttaki teslim kayıtları tarihseldir; güncel kapsam yukarıdadır.
+
+10 Ekim güncel kapsam: **T8.4.2b.3a — Shape/Texture teaching ve ortak pose referansı editörü.** Toolbox artık16 araçtır; Pattern Pose / Shape Pose gerçek Gray8 model, explicit model-local anchor, açı/ölçek ve yöntem skor ayarlarıyla öğretilir. Edge Point/Caliper/Line/Circle/Code/Blob için ortak picker, güncel tam producer cache ve bağlı image ile ROI ilişkisini worker üzerinde öğretir; binding ve poseReference tek doğrulanmış edit olarak kaydedilir. Raw çözülen ROI salt okunur gösterilir; unavailable referansta nominal fallback yoktur. Mevcut nominal mm Circle öğretimi ve kayıtlı world envelope yeniden öğretimi aynı servistedir. Yeni Edge/Caliper/Line nominal mm ROI yazma ekranı, world metric/tolerans/current-world arc ve trusted production Runtime/Logs/CSV kabulü sonraki b.3b/b.3c kapsamındadır; **T8.4.2b.3/T8.4 açık**, production pose reddi sürer. Engine execution/18, registry16, editor7 ve terminal3 değişmedi. Güncel binary: `build/tracking-ui/visionflow.exe`. Release core **50/50**, UI **56/56** tam CTest; yeni teaching UI **687 kontrol** geçti. [Kullanım ve sınırlar](../../architecture/pose-roi.md).
+
+Alttaki teslim/sıra kayıtları tarihseldir.
+
+10 Ekim güncel durum: **T8.4.2b.2b — Kalibre tracking teaching/recipe/DAG tamamlandı (feature kapsamı).** Ayrı `poseTracking` schema2 / `world-raw-rigid-v1`: nominal mm ROI SHA256, gerçek taught raw Pose2D, producer/model/anchor, kaynak/çözünürlük, exact calibration dependency ve explicit mm sampling unit. World geometri raw local ROI/AABB içine yazılmaz; eski raw envelope/hash korunur. Engine **execution/18**, validated resolver ve immutable mapping snapshot ile Edge Point/Caliper/Line/Circle/negative Arc örneklerini yürütür. Save/reopen/no-op/yeniden öğretme, iki gerçek matcher × üç applicationType, TargetOnly/acquisition0, cache/model/calibration değişimi ve Stop: **722 DAG kontrolü**; non-affine teaching/executor ve önceki sampler korumaları: **2178 world kontrolü**. Edge actual raw point, Caliper raw endpoint/px ve mm mesafe, Line raw observations/current mm fit, Circle/Arc current mm circle refit üretir. Synthetic strength, raw line/circle fit, taşınmış nominal arc açısı, defect/tolerans/accepted/PASS bu yolda explicit invalid kalır. Kullanıcı teaching UI ve production trusted completion/Runtime/Logs/CSV kabulü **T8.4.2b.3** kapsamında açıktır; T8.4 tamamlanmadı. UI/config değişmedi; production pose whitelist reddi korunur. Release core **50/50**, UI **55/55** tam CTest geçti; güncel binary `build/tracking-ui/visionflow.exe`. [Sözleşme ve sınırlar](../../architecture/pose-roi.md).
+
+Alttaki teslim/binary/sıra kayıtları tarihseldir; güncel kapsam yukarıdadır.
+
+10 Ekim güncel durum: **T8.4.2b.2a — Programatik world sampler/refit tamamlandı; T8.4.2b.2/T8.4 açık.** PoseRoiService::worldMap validated/current exact calibration ve aynı owned image snapshot ile nominal world → taught raw → current raw → current world zincirini kurar. WorldTrackingService Edge Point/Caliper/Line/Circle/Arc için her gerçek longitudinal/transverse tap üzerinde alan kontrolü, mm nokta/mesafe ve taşınmış gözlemlerden line/circle refit sunar. Bağımsız perspektif raster, gerçek iki matcher → uniform/Y-up world edge ve hata/iptal testleri **2134 kontrol** geçti. Bu programatik servis teslimidir; kalibre tracking teaching envelope/recipe/DAG/TargetOnly bağlantısı sıradaki **T8.4.2b.2b** işidir. UI/Runtime/Logs/CSV tracking kabulü b.3 kapsamında açık; production pose whitelist reddi ve execution/17 sürer. Standalone ToolRoi schema2 world scan/rectangle taşır; recipe Edge Point/Caliper/Line config bu world geometrileri henüz reddeder. UI ve yerel config değişmedi. Release core **49/49**, UI **54/54** tam CTest geçti; güncel binary `build/tracking-ui/visionflow.exe`. [Sözleşme ve sınırlar](../../architecture/pose-roi.md).
+
+10 Ekim T8.4.2b.1 tarihsel durum: **T8.4.2b.1 — Raw Code/Blob tracking bağlantısı tamamlandı; T8.4.2b/T8.4 açık.** Code Read v2 ve Blob v3, shape/texture producer sonucuyla explicit poseTracking teaching ve poseReference DAG/cache yoluna bağlandı. Nominal searchRoi pixel-centre dikdörtgeni rigid taşınır; gerçek dönen maske kullanılır. Blob eşik sonrası maskeler; Code dış pikselleri beyazlayıp tüm decoded köşelerin ROI içinde kalmasını ister. AABB yalnız çalışma tamponudur; clipping/absolute fallback yoktur. Save/reopen/no-op, iki matcher × üç applicationType, TargetOnly/acquisition0, raw alan/delik/merkez, gerçek QR polygon/içerik ve bağımsız 45° maske kabulü eklendi. Engine execution/17; Toolbox14/registry16, editor7/terminal3/vf.socket/2 korunur. Güncel Release binary `build/tracking-ui/visionflow.exe` (yerel pinned ZXing ON); UI kaynakları değişmedi; reference picker/teaching ekranı, world sampler/refit ve production trusted completion/immutable Runtime/Logs/CSV tracking kabulü açıktır. Pose production whitelist reddi sürer. [Sözleşme ve sınırlar](../../architecture/pose-roi.md).
+
+10 Ekim T8.4.2a tarihsel binary `build/shape-ui/visionflow.exe`. O teslimde `tracking_dag_contract` **566 kontrol**; mevcut tracking servis testi398 kontrol. Release core46/47 ve UI50/52 sandbox koşumu, ardından aynı binary ile localhost tekrarları1/1 ve2/2 geçti. Normal/küçük ekran regresyon görselleri incelendi. Yeni teaching UI/production tracking kabulü değildir; ayrıntılar [ilerleme kaydında](../../progress.md).
+
+Alttaki durum/binary/sıra kayıtları tarihseldir; güncel kapsam yukarıdadır.
+
+10 Ekim T8.4.1 tarihsel durum: **T8.4.1 — Shape/texture ROI referans sözleşmesi tamamlandı; T8.4 devam ediyor.** Ortak PoseRoiService artık pattern_pose ve shape_pose kabul eder; kaynak kind için doğru method/version zorunludur. Model/ROI/anchor veya matcher türü değişirse teaching geçersizdir. Gerçek iki matcher ile altı geometri, dönmüş scan → gerçek EdgeFinder, shape kontrast tersleme, gerçek tekrarlı/not-found adaylar ve perspektif/lens korumaları: **398 tracking kontrolü**. Programatik servis kabulüdür; Code/Edge/Caliper/Line/Circle/Blob reference picker, recipe/DAG binding, world sampler ve production Runtime bağlantıları sıradaki **T8.4.2** kapsamındadır. Toolbox14/registry16, execution/15 ve Runtime whitelist reddi sürer; UI değişmedi.
+
+T8.2 doğrulama: Release core 44/45 + localhost PLC tekrar 1/1; Release UI 48/50 + localhost PLC/Communication tekrar 2/2. Böylece 45 core ve 50 UI testinin tamamı geçti; yeni tracking testi **188 kontrol**. Binary `build/pose-ui/visionflow.exe`; UI değişmedi, normal/küçük ekran regresyonu incelendi. [Koşumlar ve sınırlar](../../progress.md).
+
+10 Ekim T8.3 tarihsel durum: **T8.3 — Shape Match çekirdeği tamamlandı**. `shape_pose` v1 gradient pyramid adayları ve unsigned orientation-aware chamfer refinement ile gerçek raw Pose2D/ayrı scale üretir. Texture NCC ile skor karşılaştırılmaz; yöntem `unsigned-oriented-chamfer-pyramid` v1. Ambiguity/truncation seçimi varsayılan reddeder; genel karar NOT_EVALUATED. Programatik teaching/DAG/TargetOnly/codec teslimi; Toolbox14/registry16, engine execution/15. Özel UI, shape ROI reference ve production Runtime/completion T8.4 kapsamında, Runtime whitelist reddi sürer. Sonraki **T8.4 — Bütün araçlara bağlama**. [Sözleşme ve sınırlar](../../architecture/shape-pose.md). Güncel Release binary: `build/shape-ui/visionflow.exe`; Shape henüz Toolbox girdisi değildir.
+
+T8.1 yazılım kabulü: Release UI **49/49**, Widgets OFF **44/44 CTest**; yeni Pose testinde **79 kontrol**. Güncel Release binary `build/pose-ui/visionflow.exe`. Yeni Pattern Pose programatik teaching/DAG çekirdeğidir; özel UI/tracking/production Runtime sonraki adımlardadır. Mevcut normal/küçük ekran görsel regresyonu kontrol edildi.
+
+T7.3 tarihsel yazılım kabulü: Release UI **48/48**, Widgets OFF **43/43 CTest**; geometri **194 kontrol**, normal/küçük ekran/Runtime görsel kontrolü tamamlandı. T7.3 binary `build/geometry-ui/visionflow.exe`. Toolbox → Geometry Measurement → operation/mode → raw feature bağlantıları → nominal/alt/üst → Run Flow. Save → Load Recipe → Run → Tek çevrim; accepted yalnız tool toleransıdır.
+
+10 Ekim T8.1 tarihsel durum: **T8.1 — Gerçek Pose2D çekirdeği tamamlandı**. `pattern_pose` v1 programatik teaching/DAG: çok seviyeli açı/ölçek arama, anchor/refinement/NMS, ambiguity ve reject_ambiguous/best politikası. Pose2D gerçek raw açı/anchor taşır; scale ayrı porttur. PartDecision NOT_EVALUATED. Toolbox14 korunur (registry15); yeni özel UI/tracking/production Runtime henüz yok, Runtime açıkça reddeder. Engine execution/14, editor7/terminal3/vf.socket/2 korunur. Sonraki **T8.2 — Pose referanslı ROI**. [Sözleşme ve sınırlar](../../architecture/pattern-pose.md).
+
+T7.2 yazılım kabulü: Release UI **47/47**, Widgets OFF **43/43 CTest**; adapter testinde **168 kontrol**. Güncel yeni binary `build/geometry-adapter-ui/visionflow.exe`; Geometry kullanıcı arayüzü ve production Runtime kabulü T7.3'tedir.
+
+10 Ekim T7.2 tarihsel kayıt: **T7.2 — Kalibre geometri adapter tamamlandı**. geometry_measurement v1 sabit raw typed feature/örnek girdileri, operation-specific DAG doğrulaması ve tek world düzleminde point mapping / line-circle refit sunar. Line Fit v2 observationsPx; engine execution/12. Alan/current/source/resolution/frame/cycle/evaluation kapıları ve TargetOnly bağlıdır. Programatik Editor/DAG teslimidir; Toolbox, tolerans ve production Runtime/kayıt kabulü **T7.3** sırasındadır. [Girdiler, refit ve sınırlar](../../architecture/geometry-measurement-adapter.md).
+
+
+T7.1 yazılım kabulü: Release Widgets OFF **42/42 CTest**; yeni domain geometri testinde **810 kontrol**. UI değişmedi.
+
+10 Ekim T7.1 tarihsel kayıt: **T7.1 — Geometrik domain matematiği tamamlandı**. Mevcut framed Point2D/Line2D/Circle2D üzerinde mesafe, signed/absolute X/Y ve dik offset, segment uzaklığı, üç açı semantiği, sonsuz çizgi kesişimi/paralel aralık ve radius/diameter seçimi. Domain çekirdeğidir; yeni reçete aracı/UI/Runtime bağlantısı yok. Engine execution/11 ve mevcut UI build/circle-ui/visionflow.exe korunur. Sıradaki **T7.2 — Kalibre adapter**. [Sözleşme ve sınırlar](../../architecture/geometry-measurements.md).
+
+
+Nihai T6.4 yazılım kabulü: Release UI **45/45**, Widgets OFF core **41/41** CTest; normal/küçük ekran ve perspektif/outlier görselleri incelendi. Kalibre Circle testinde280 kontrol.
+
+
+10 Ekim T6.4 tarihsel kayıt: **T6.4 — Circle / Arc UI ve kalibre Runtime tamamlandı**. Toolbox `circle_fit` v1; raw/world halka-yay öğretme, tutamaçlar, gerçek mm düzleminde fit ve raw inverse overlay. Ayrı çap/sampled sapma dahil limitleri; kalite yoksa NOT_EVALUATED, outlier kusurdan çıkarılmaz. TargetOnly, immutable Runtime, tamper replay, typed Logs/restart/CSV ve Stop bağlıdır. Engine **execution/11**, editor7/terminal3/vf.socket/2 korunur; world ROI opt-in schema2. Güncel Release UI `build/circle-ui/visionflow.exe`. Sonraki **T7.1 — Geometrik domain matematiği**. [Kullanım, birimler ve sınırlar](../../architecture/circle-tool.md).
+
+10 Ekim T6.3 tarihsel çekirdek kaydı: **T6.3 — Circle kalite/metrikler tamamlandı**. Fit dışı bulunan noktalar dahil radial min/max, signed inward/outward ve peak-to-valley; found coverage/nominal gap kapıları, full-circle/observed-arc/unavailable kapsamı. Circularity yalnız eksiksiz gerçek basit kapalı polygon'dan 4*pi*A/P²; missing/arc/self-intersection için unavailable, sahte kapanış yok. Yalnız çekirdek; Circle UI/registry/kalibre Runtime/Logs T6.4'tedir. Mevcut UI `build/metrology-ui/visionflow.exe`, execution/10/editor7/terminal3/vf.socket/2 korunur. Release OFF/core **40/40**, yeni metrik592 kontrol. Sonraki **T6.4 — UI ve kalibre Runtime**. [Sözleşme ve kanıt](../../architecture/circle-metrics.md).
+
+10 Ekim T5.3 tarihsel kayıt: **T5.3 — UI/kalibrasyon/kabul tamamlandı**. Toolbox Edge Pair / Caliper ve Line Fit; reçeteye bağlı ok/kutu/Properties, gerçek px veya güncel kalibrasyonla mm, world noktalarından yeniden çizgi fit ve fiziksel açı, dahil tool tolerans Boolean’ı ve raw destek/outlier overlay. TargetOnly, immutable Runtime, typed Logs/restart/CSV ve Stop bağlıdır. Genel parça kararı/confidence/pose üretilmez. Engine **execution/10**, editor7/terminal3/vf.socket/2 korunur. Güncel Release binary `build/metrology-ui/visionflow.exe`; kullanıcı uygulaması/config korunur. [Kullanım, portlar, 128-scan reçete sınırı ve kanıt](../../architecture/metrology.md). Sonraki **T6.1 — radyal tarama**; fiziksel K4/P7/6D.2/lensT15/kurulum/dağıtım/CUDA kabulü açık. Aşağıdaki kayıtlar tarihseldir.
+
+9 Ekim T4.3 tarihsel kabul: **T4.3 — Editor/Runtime/Measurement tamamlandı**. Toolbox Edge Point, reçeteye bağlı A→B ok çizimi/tutamaç/sayısal koordinatlar/ters yön ve polarity/selection/subpixel/örnekleme ayarları; gerçek ham/Gaussian/signed türev grafiği ve kabul/ret/seçili adaylar. İki yeni point → mevcut Measurement ile bağımsız 400 px stripe → 10 mm, immutable Runtime ve kalıcı typed sonuç/CSV doğrulandı. Canlı profil/aday tanısı gösterimde 2048 örnek/adayla sınırlı; arşivde profil yok, seçim tam veriden hesaplanır. Bulunamadı point invalid/downstream SKIPPED; Stop eski nokta/profil/mm bırakmaz. Execution/9, editor 7, terminal 3/vf.socket/2 korunur. Güncel Release binary `build/edge-editor-ui/visionflow.exe`; açık uygulama/config korunur. [Kullanım ve sınırlar](../../architecture/edge-point.md). Sonraki **T5.1 — Edge Pair**. Fiziksel doğruluk/K4, P7/6D.2 ve lens T15 açık; aşağıdaki kayıtlar tarihseldir.
+
+T4.3 kullanım: Toolbox **Edge Point** → Image input → **Ok çiz (A → B)** veya koordinatları uygula → polarity/selection/kontrast → **Run Flow**. **Kenar profili** sekmesinde gerçek profil/adaylar; aynı karede **Run Tool**. İki Edge Point.point → Measurement.p1/p2, mevcut Calibration binding ve mm toleranslarıyla çalışır. Save → Load Recipe → Run → Tek çevrim; Runtime tool seçimiyle ok/profil veya mm sonucunu inceleyin.
+
+
+9 Ekim T3.3 tarihsel kabul: **T3.3 — Kod Oku UI ve uçtan uca kabul tamamlandı**. Toolbox Code Read; sekiz format seçimi, reçeteye bağlı raw rectangle ROI, exact/prefix/UTF-16 length/bounded regex, adet ve all/any/seçili sıra ayarları sunar. Editor/Runtime gerçek bounding polygon ve sıra/format/escaped metin/byte listesini gösterir; confidence veya genel parça kararı üretmez. Save/reopen/no-op, TargetOnly/Stop, immutable Runtime ve kalıcı Logs/CSV doğrulandı. Dokuz Toolbox girdisi; ZXing OFF kod girdisi devre dışıdır. Release ON/UI 34/34, OFF/core 31/31; güncel binary `build/preprocess-code-ui/visionflow.exe`. Sonraki **T4.1 — keyfi açılı profil sampler**. Karışık polariteli çoklu 1D tamlığı, fiziksel/hasarlı/DPM corpus açık; length mevcut sürümde UTF-16 birimidir. Editor 7, execution/8, terminal 3 ve vf.socket/2 korunur. Kullanım: Code Read ekleyin → Image girişini bağlayın → format/içerik/adet ve Search ROI → Run Flow; aynı karede Run Tool. [Sözleşme ve sınırlar](../../architecture/preprocessing-codes.md). Aşağıdaki durum/binary/sıra kayıtları tarihseldir.
+
+9 Ekim **T1.3 → T2.1 → T2.2 sırasıyla tamamlandı**: typed terminal replay/Logs CSV, salt okunur owned görüntü/provenance ve subpixel ROI çizimi/handles/sayısal edit/Escape/undo. Editor → **ROI geometrisi…** geçici geometri düzenler; reçeteye kaydetmez ve algoritma/ölçüm sonucu üretmez. Güncel binary `build/tool-roi-ui/visionflow.exe`. Release OFF/UI **31/31**, ON/core **28/28** CTest geçti; normal/850×600 görseller açılıp incelendi. [Kullanım ve sınırlar](../../architecture/roi-geometry.md), [kanıt](../../progress.md). Sonraki **T2.3 — Preprocess tool**; aşağıdaki sıra bilgileri tarihsel kayıttır.
+
+
+9 Ekim **T2.1 tamamlandı**: salt okunur vision ImageAccess, owned processed frame/provenance ve strict subpixel ToolRoi geometrileri. Henüz preprocessing tool yok; sıradaki T2.2 viewer etkileşimidir.
+
+9 Ekim **T1.3 tamamlandı**: cycle schema 3 typed replay doğrulaması, diagnostic/invalid sonuç sunumu ve Logs CSV aktarımı eklendi. Yeni Release binary `build/tool-roi-ui/visionflow.exe`; test/görsel kanıtlar [progress](../../progress.md). Sonraki T2.1, ardından T2.2. Aşağıdaki eski sıra kayıtları tarihseldir.
+
+9 Ekim **T0.3 / T1.1 / T1.2 tamamlandı**: isteğe bağlı offline ZXing capability kapısı, bounded typed değer/port codec'i, sabit unit/frame/cycle/evaluation doğrulaması ve editor schema 7 opt-in dependency kaydı uygulandı. Legacy aç/no-op Save aynı bytes/hash/revision'ı korur; backend/model/asset SHA-256 değişimi execution/snapshot/cache'i reddeder. Engine `visionflow.execution/7`; yedi built-in ve vf.socket/2 korunur, yeni çalışan code/metrologi tool'u sunulmaz. Güncel Release UI binary `build/tool-foundation-ui/visionflow.exe` (ZXing OFF); ON/core `build/tool-foundation-core`. [Uygulanan sözleşme ve sınırlar](../../architecture/tool-values.md), [build komutları](../../toolchain.md#t03--t11--t12--offline-capability-ve-tipli-altyapı). Release ON/core **26/26**, OFF/UI **28/28** CTest geçti; normal/küçük ekran görselleri incelendi. Sıradaki **T1.3**; alttaki T0.1/T0.2 ve C1–C5 durumları tarihsel kabul kayıtlarıdır.
+
+9 Ekim **T0.2 tamamlandı**: sabit commit/SHA-256/lisanslı ZXing 2.3.0 static reader-only MinGW C++20 Release derlendi. Bağımsız Zint 2.15.0 ile QR/Data Matrix/Code128/Code39/EAN-8/13/UPC-A/E üzerinde 33 kontrol geçti. İlk hazırlık `./scripts/bootstrap-zxing.ps1 -Download`, önbellekten indirmesiz tekrar `./scripts/bootstrap-zxing.ps1`; test `./scripts/probe-zxing.ps1`. Kaynak/fixture/prefix `build/deps/`, kanıtlar `build/zxing-probe/`; [komutlar ve sınırlar](../../toolchain.md#t02--zxing-reader-only-bağımlılık-kabulü). Ürün henüz ZXing'e bağlı değil; yeni kullanıcı aracı/UI yok. Sıradaki **T0.3 — bağımlılık/capability kapısı**; alttaki T0.1 sonrası sıra tarihsel kayıttır.
+
+9 Ekim tool kapsamı onaylandı. [Reçete tool planı](../../architecture/recipe-tools-plan.md), [OpenCV/özel algoritma ve bağımlılık planı](../../architecture/recipe-tools-algorithms.md), [kabul planı](../../architecture/recipe-tools-acceptance.md) küçük alt paketlere ayrıldı. **T0.1 tamamlandı:** ayrı Release core derlemesi, 23 mevcut test ve yedi OpenCV API probe'u doğrulandı; localhost PLC testi sandbox dışında tekrar geçti. Tekrarlanabilir probe komutu `./scripts/probe-opencv.ps1`, kanıtlar `build/tool-probes/`; ayrıntılar [toolchain kaydında](../../toolchain.md). Sıradaki **T0.2 — ZXing bağımlılık spike**. Henüz yeni kullanıcı tool'u yok; QR/Data Matrix/barkod T3'te, OCR/OCV, renk, kusur ve bead plan içinde, lens en son T15'te. P7/6D.2 ve K4 açık kalır; aşağıdaki tarihsel “sonraki P7” kayıtları bu sırayı değiştirmez. Güncel UI binary C1–C5 teslimidir.
+
+9 Ekim güncel durum: **C1–C5 tamamlandı**. Setup → Calibration üç yöntem ve beş bölüm sunar: Manuel ölçek (px/mm), Bilinen uzunluktan ölçek ve Kalibrasyon plakası (perspektif). Manuel girdi boş başlar; px/mm ve salt okunur tersi, üretim sonucundan ayrı deneme, en az iki bağımsız doğrulama, katalog/recipe Save/reopen, gerçek Edge → Measurement → Runtime ve CSV bağlıdır. Güncel Release binary `build/manual-calibration-ui/visionflow.exe`; Measurement tool 2, execution/6. Sonraki P7/6D.2; K4 fiziksel kabul ertelenmiştir.
+
+8 Ekim 2026 P5/P6: Blob min/max dahil alan filtresi (px²), açık/koyu nesne ve 4/8 komşuluk uygulanmıştır. Gerçek kabul edilen piksel maskesi delikleri koruyarak Editor ve Runtime’da kırmızı gösterilir; bu parça kararı değildir. Editor schema 6, Blob tool 2, execution/5; eski reçeteler temiz açılır ve ilk gerçek değişiklikte yükselir. Birleşik kabul: Release UI 23/23, Widgets OFF 21/21; normal/850×600 görseller incelendi. Sıradaki P7 (6D.2) kalıcı dedup/outbox/restart teslim kurtarma; K4 ertelenmiş, P8–P9 gelecektedir.
+
+8 Ekim 2026 P3/P4: bağımsız socket, kalıcı enabled/autoStart/endpoint/ACK ayarları, reçetede Manual/SoftwareTrigger ve Measurement UUID mapping; vf.socket/2 INVALID ve coordinator teslim/cancel korumaları uygulanmıştır. Run Tool aynı ham karede yalnız seçili executor’ı çalıştırır; doğrulanmış upstream cache kullanır, eksik/stale girdide acquisition veya full-flow fallback yapmaz. Kaynak için Görüntü al, tüm akış için Run Flow kullanılır. P5/P6 tamamlandı; güncel Blob ve kabul bilgisi yukarıdadır. K4 ertelenmiş, P7 restart recovery açıktır.
+
+P3/P4 yazılım kabulü: Release `build/k1-ui` CTest **22/22**, Widgets OFF `build/k1-core` **20/20**; normal/850×600 UI görselleri incelendi. Güncel uygulama `build/k1-ui/visionflow.exe`. Ayrıntılı kanıt ve sınırlar [ilerleme kaydında](../../progress.md).
+
+
+8 Ekim 2026 P2 tamamlandı: Recipe Manager tek tıkla yalnız satır seçer; **Load Recipe / Edit Recipe** ayrıdır. Load kaydedilmiş bağımsız kopyayı statik kontrol eder; dirty durumda Kaydet ve yükle / Kaydedilmiş sürümü yükle / İptal sunulur. Runtime **Run / Stop / Tek çevrim** kullanır; Run görüntü veya parça sonucu üretmeden coordinator ile otomatik hazırlanır. Manuel çevrim, cooperative Stop ve aynı terminal kayıt retry coordinator üzerinden geçer. Seçili, editörde açık ve Runtime yüklü reçete ayrıdır. Eski validate/activate/rollback düğmeleri kaldırıldı; rollback servis API’si korunur. Bu P2 teslimi P3/P4 ile genişletildi; güncel socket ve Run Tool davranışı yukarıdadır. Fiziksel kabul/K4 ertelenmiş kalır. [Plan](../../architecture/runtime-editor-workflow-plan.md).
+
+8 Ekim 2026 revizyonu: İki kalibrasyon akışı Camera Calibration ve Robot Calibration olarak korunur. Mevcut uniform scale temelinden sonra **6C-K geçici test görüntüsü import/plaka tespiti → tek görüntüden planar homography → Measurement/Runtime → fiziksel kabul (gerektiğinde ayrı lens düzeltmesi)**, ardından 6D PLC ve 6E Eye-to-Hand/Eye-in-Hand gelir. 6C-K1–K3 target/import/köşe tespiti, tek görüntü raw homography/mm denemesi ve tipli kayıt/Measurement/Runtime tamamlandı. K4 fiziksel kurulum hazır olana kadar kullanıcı isteğiyle ertelendi; lens ihtiyacı verilerle belirlenecek. Kullanıcı TCP/IP socket önceliğiyle 6D PLC geliştirmesini yetkilendirdi. 6D.1 gerçek localhost socket/Runtime/ACK ve simülatör yazılım kabulü tamamlandı; 6D.2 restart teslim kurtarma ve fiziksel PLC kabulü açık. [Ayrıntılı plan](../../architecture/calibration-plan.md).
+
+C++20, Qt Widgets ve OpenCV tabanlı endüstriyel machine vision projesi. 7 Ekim 2026.
+
+C1–C5 son kabul: Release UI **25/25** (28,24 sn), Widgets OFF **23/23** (12,17 sn). 1400×900 ve 850×600 ekranlar açılıp incelendi. Testler sentetik görüntü ve localhost TCP üzerindedir; fiziksel K4/kurulum/dağıtım/CUDA kabulü değildir.
+
+## Belgeler
+
+- [Ürün tanımı](../../requirements/01_machine_vision_yazilim_tanimi.md)
+- [UI gereksinimleri](../../requirements/02_machine_vision_ui_gereksinimleri.md)
+- [C++ / Qt / OpenCV gereksinimleri](../../requirements/03_cpp_qt_opencv_gereksinimleri.md)
+- [Mimari](../../architecture/architecture.md)
+- [Onaylanan geliştirme planı](../../architecture/development-plan.md)
+- [Reçete tool paketleri — Sol 6.1 medium](../../architecture/recipe-tools-plan.md)
+- [Tool algoritmaları ve OpenCV/harici bağımlılıklar](../../architecture/recipe-tools-algorithms.md)
+- [Tool test ve kabul planı](../../architecture/recipe-tools-acceptance.md)
+- [Proje/reçete kayıt sözleşmesi](../../architecture/project-format.md)
+- [Editor/tool/görüntü sözleşmesi](../../architecture/editor-definition.md)
+- [ROI/match ve oturum](../../architecture/matching-editor.md)
+- [Typed DAG ve execution](../../architecture/tool-execution.md)
+- [Görüntü edinim ve kamera kararı](../../architecture/acquisition.md)
+- [6B yerel SDK kurulumu ve doğrulama](../../architecture/camera-sdk-installation.md)
+- [A7 koordinat/tracking ROI](../../architecture/coordinates.md)
+- [A8 üretim snapshot](../../architecture/production-recipes.md)
+- [6D.1 TCP/IP socket ve PLC simülatörü](../../architecture/plc-socket.md)
+- [A9 persistence/migration planı](../../architecture/persistence-plan.md)
+- [6C Measurement servis çekirdeği](../../architecture/measurement.md)
+- [İş listesi](../../backlog.md)
+- [İlerleme ve oturum devri](../../progress.md)
+- [Matching kararı ve ölçüm](../../performance/opencv_matching.md)
+- [Araç kontrolü](../../toolchain.md)
+- [HTML prototipi](../../../prototypes/visionflow_ui_prototype.html)
+
+## Mevcut durum
+
+Adım 5, 6.1–6.2 ve 6A/A1–A9 çekirdek/sözleşme ve plan teslimleri tamamlandı. Ortak Recipe Editor, typed DAG, background execution, gerçek Blob/Edge/Calculate, ROI/model teaching, template match, oturum restore ve GenTL keşif/read-only open-close mevcut. Webcam tek kare → owned frame → DAG ve bağımsız planar scale/Measurement/tolerans servis çekirdeği eklendi. Kalibrasyon/evidence sürümlü kaydı, bağımsız current resolver ve reçete sürüm bağlantısı servis katmanında mevcut; Ortak Measurement DAG/Properties ve planar Calibration ekranı mevcut; Runtime Load/Run/Stop/manuel tek çevrim ve kalıcı Logs bağlıdır; validation/activation otomatik, rollback servis API’sidir. Kullanıcı endüstriyel kamera olmadığını bildirdi; webcam ve bağımsız 6C işleriyle devam edilir. Basler/GenTL fiziksel kabulü açık.
+
+Onaylanan sıra: 6A mimari → 6B kamera → 6C Measurement/kalibrasyon/tolerans/doğrulanmış reçete/Runtime → 6C-K plaka tabanlı kamera/düzlem kalibrasyonu → 6D PLC → 6E robot → 7 ürünleştirme. Temel servis yetkisi, hata kodları ve cycle logları 6C'ye dahildir. Üç applicationType aynı editor/engine/Runtime yolunu kullanır. Tema ve editor panel düzeni korunur; 8 Ekim kullanıcı yönlendirmesiyle Setup menüsü ve Runtime operatör görünümü eklendi. Yeni oturumda önce progress okunur; hazırlık ekranları çalışan özellik değildir.
+
+## Yerel derleme (PowerShell)
+
+```powershell
+cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=C:/Qt/6.12.0/mingw_64 -DOpenCV_DIR=C:/OpenCV/5.0.0/x64/mingw/lib
+cmake --build build -j 6
+$env:PATH = 'C:\OpenCV\5.0.0\x64\mingw\bin;C:\Qt\6.12.0\mingw_64\bin;C:\Qt\Tools\mingw1310_64\bin;' + $env:PATH
+ctest --test-dir build --output-on-failure
+.\build\match_benchmark.exe
+.\build\visionflow.exe
+```
+
+Yollar bu makineye aittir. CMake/Ninja PATH üzerinde olmalı; başka makinede Qt/OpenCV yolları ve ABI uyumu doğrulanmalı. Qt Multimedia geliştirme/runtime bileşeni gerekir; yerel Qt içinde mevcut, ek kurulum yapılmadı. Dağıtım öncesi windeployqt ve OpenCV DLL paketleme ayrıca doğrulanmalıdır. Toolchain kurulumu otomatik yapılmaz; kullanıcı onayıyla 6B kamera SDK kurulumları yapıldı. CUDA etkin değildir.
+
+## UI çalıştırma ve kullanım
+
+```powershell
+.\scripts\run-local.ps1 -BuildDirectory build
+.\scripts\run-local.ps1 -BuildDirectory build -SmokeTest
+```
+
+PS1 çift tıklamada Not Defteri ile açılıyorsa proje klasöründe PowerShell açıp betiği çalıştırın. Yeni iş bilgisayarı derlemesi için varsayılan `build/reference-ui` hedefini kullanın.
+
+Project Manager → New Project ile adı ve mevcut klasörde yeni `.vfproject` yolunu seçin; Save Project ilk kaydı yapar. Recipe Manager → New Recipe ile tür, ad ve görüntü kaynağı referansı girin; ortak editor açılır. Kaydedilmiş reçete değişince DRAFT/dirty olur; revizyon yalnız başarılı kayıtta artar. No-op Save artırmaz. Save/Ctrl+S tüm projeyi atomik kaydeder; başarısız commit/conflict dirty ve önceki dosyayı korur. Kapatma/proje değişiminde Save/Discard/Cancel vardır. Open Project ve Recipe Manager ile yeniden açılır. Copy/Delete/import/export/version history henüz yoktur.
+
+Editor → Open Image gerçek görüntüyü yükler; Image File tool ve göreli yolu reçeteye ekler. Gray8/Gray16/RGB8/RGBA8; Fit, +/−, 1:1/tekerlek zoom ve sol tuş pan desteklenir. Hover orijinal piksel/koordinatı gösterir. Reload yeniden okur; görüntü projeye gömülmez. Toolbox Add Tool/double-click ile araç ekler; Flow seçimi Properties'yi değiştirir. Name/Description/Enabled/parametre değişiklikleri DRAFT olur. Tool silme bağlı bağlantıları temizler.
+
+Typed input seçicileriyle Image File.image → Blob/Edge.image ve iki Edge.point → Calculate.p1/p2 bağlanır. Validate DAG eksik/uyumsuz giriş ve döngüyü gösterir. Run Flow dosyayı yeniden edinip DAG'yi worker'da çalıştırır. Stop cooperative; devam eden OpenCV/decode zorla kesilmez. Results gerçek cycle/frame, state, süre ve typed outputs gösterir. Blob threshold/açık-koyu nesne/4–8 komşuluk/min-max dahil px² alan filtresi ve gerçek kırmızı maske; kabul edilen en büyük alan/merkez; Edge dört yönlü profile ilk contrast geçişi; Calculate Öklid mesafesi px uygular. Search ROI veya bağlı Region kullanılabilir. Found=false downstream SKIPPED yapar; ERROR/SKIPPED parça kararı değildir. Edge profile çizgisi, Calculate P1/P2 sarı çizgi ve px overlay sunar.
+
+Blob Properties: **Min Area / Max Area** dahil piksel sayısı sınırlarıdır; **Max Area: Sınırsız** JSON `null` olarak saklanır. Açık nesne `pixel > threshold`, koyu nesne `pixel ≤ threshold`; komşuluk 4 veya 8’dir. Varsayılan 128/bright/8/min=1/sınırsız eski davranışı korur. Results `candidateCount`, kabul edilen `count`, en büyük kabul edilen `area`, bbox ve centroid sunar. Boş kabulde found=false, area=0, point/region geçersizdir; PASS/FAIL üretilmez. Kırmızı maske gerçek kabul edilmiş piksellerdir; delikler ve ROI offset korunur, raw frame değişmez. Bbox gösterimi ilk 2048 ile sınırlı, maske/sayım tamdır. Blob ROI en çok 16 Mi piksel; daha büyük ROI açık hata verir. Şekil/morfoloji/mm² ve ayrı Blob kabul kararı sonraki genişletmelerdir.
+
+Template Match → Model ROI çiz / öğret → Search ROI çiz → Image input bağlantısı → **Run Tool**. Aynı owned ham karede yalnız Match executor çalışır; Blob/Edge/Calculate/Measurement için de ortak Run Tool vardır. Eksik ya da güncel olmayan bağlı girdiler açık hata üretir; üst araçlar veya acquisition kendiliğinden çalışmaz. Parametre değişikliği hedef ve downstream sonuçlarını temizler, geçerli upstream cache’i korur. Yeni görüntü için kaynak seçip **Görüntü al** veya Open Image/Reload; tam akış için **Run Flow** kullanın. Run Tool zoom/pan ve ham buffer’ı korur; evaluation ID ile özgün acquisition/frame kimlikleri ayrıdır. Partial editor sonucu Runtime üretim kaydı veya PLC çıktısı olamaz. Match gerçek skor/konum ve eşik kabulünü gösterir; sabit açı/ölçek sınırı korunur.
+
+Edge Properties → Referans merkezi → Template Match.point seçip Search ROI çiz ile offset/boyut öğretin. Güncel reference sonucu varsa kullanılır; yoksa model teaching merkezi kullanılır. Güncel match merkeziyle X/Y ötelemesi uygulanır. Reference bulunamazsa Edge/downstream SKIPPED. Model ROI/PNG değişirse referenceGeometry uyuşmazlığı Edge ERROR üretir; Search ROI yeniden öğretimi gerekir. Metadata, Min Score ve Match search değişikliği bu kimliği değiştirmez. Editor schema 6, schema 1–5 açılışını dirty olmadan destekler; legacy geçmiş model değişimleri kanıtlanamaz. Genel açı/ölçek yoktur; mm Measurement ve planar Calibration akışı aşağıda açıklanır.
+
+Panel boyutları, son proje/reçete/ekran `config/local.ui.ini` içinde saklanır; bu autosave değildir. Eksik/bozuk son proje hata ve manuel açma sunar. View → Panel düzenini sıfırla varsayılan düzeni getirir. Minimum pencere 850×600; native DPI/çoklu monitör kabulü açık. Testler build altında izole INI/proje/sentetik görüntü kullanır; üretim INI kullanılmaz. Smoke `step5-editor.png`, `step5-blob.png`, `step5-flow.png` ve kamera görsellerini üretir.
+
+## Webcam tek kare ve 6C servis devamı
+
+Toolbox → Webcam → Add Tool; Properties Device index varsayılan 0 ve Timeout. Run Flow kamerayı worker'da açar, bir kareyi owned frame'e kopyalar, kamerayı kapatıp bağlı Match/Blob/Edge/Calculate DAG'sini çalıştırır. Model öğretimi için önce Run Flow ile kare alabilirsiniz. Reçetede yalnız tek Image File veya Webcam kaynağı vardır; kaynak değiştirmek için mevcut source tool'u kaldırıp bağlantıları yeniden kurun. Ayarlar reçeteyle save/reopen olur, parametre değişimi DRAFT ve eski görüntü/sonuç invalidation üretir.
+
+Bu host isteğidir; exposure başlatan donanım trigger değildir. Live/external trigger/exposure/gain ayarı yok; cihaz index'i kalıcı kamera kimliği değildir. Stop/cancel/deadline geç sonucu bastırır; driver open/start/stop/destruction için hard interruption garantisi yoktur. UI'nin kalıcı Camera bağlı durumu GenTL read-only içindir; tek kare webcam oturumu kapandıktan sonra bağlantısız kalması beklenir. Kamera izinleri/başka uygulama kilidi açık hata üretir.
+
+```powershell
+.\build\webcam-release\visionflow_webcam_probe.exe --index 0 --timeout 10000
+.\build\webcam-release\visionflow.exe
+```
+
+Son 6C Runtime tesliminin güncel binary'leri build/runtime-ui altındadır; ana build içindeki açık uygulama kendiliğinden güncellenmez. Yukarıdaki webcam komutları önceki webcam kabulüne aittir; güncel UI için `.\build\runtime-ui\visionflow.exe` kullanılır. Alt build'den normal başlatma yerel UI INI'sini build/config/local.ui.ini altında tutar; smoke ayarları build/runtime-ui/ui-smoke.ini. Üretim config/local.ui.ini değiştirilmedi. Gerçek yerel webcam 1280×720 kare ve Blob DAG DONE; editor worker capture smoke da geçti. Kare görseli çok karanlıktır; alınan frame üretim görüntü/ölçüm doğruluğu kabulü değildir.
+
+[MeasurementService](../../architecture/measurement.md) bilinen uzunlukla uniform mm/px, ayrı holdout kanıtı ve ham mm değerle dahil tolerans kararı sunar. Invalid calibration/upstream/frame sonuç üretmez. Calculate px kalır; ayrı Measurement aracı mm/tolerans sunar. Planar Calibration ekranı aynı servisleri kullanır; Runtime yapılandırma kabulü ve kalıcı kayıt bağlıdır. CalibrationService 4 MiB/128 kayıtla sınırlı atomik JSON geçmişi, kanıt replay ve bağımsız kurulum resolver sunar. Reçete schema 2 kesin CalibrationDependency bağlantısı taşır; yeni kalibrasyon sürümü/eski kurulum uyuşmazlığı reddedilir. Kaynak parametre değişimi bağlantıyı temizler; metadata korur. ProductionRecipeService Measurement/Webcam yapılandırma kabulünü destekler; fiziksel ölçüm doğruluğu ayrıca kabul edilmelidir.
+
+## Planar Calibration ve mm Measurement
+
+1. Recipe Editor'da Image File veya Webcam ve iki Edge → Measurement bağlantısını hazırlayın. Setup → Calibration açın, yöntemi seçin; lens/kurulum ve düzlemi **Kurulumu uygula → Kare al** ile hazırlayın.
+2. 5. bölümde Kalibrasyon ID ve yeni sürümü girin. 3. bölümde **Manuel ölçek** için px/mm girip **Ölçeği uygula** kullanın (20 px/mm → 0,05 mm/px). Türkçe ondalık virgül; 0,000001–1000000, en çok 6 ondalık, binlik ayırıcı yok. Boş/geçersiz giriş düzeltilmeden hesaplanmaz; sessiz clamp yoktur. Deneme mesafesi yalnız denemedir.
+3. **Bilinen uzunluk** için ayrı öğretim alanına iki raw px noktası ve gerçek mm girip **Ölçeği hesapla** kullanın. **Plaka** için target/iç köşe/kare mm → **Köşeleri bul → Perspektif dönüşümünü hesapla**. Teknik ayrıntılar isteğe bağlıdır; raw homography lens bozulmasını düzeltmez.
+4. 4. bölümde öğretimde kullanmadığınız en az iki farklı bağımsız segmenti gerçek bilinen mm ile girin; hata sınırı → **Doğrula**. Tüm tablo satırları doğrulamadır. RMS/maksimum hata yalnız gerçek kabulden sonra gösterilir. Nokta hedefi ve Başlangıç/Bitiş seç ile görüntüye tıklayabilir veya subpixel koordinatları yazabilirsiniz.
+5. **Kaydet ve bağla → Save Project / Recipes**. Katalog kaydı ve proje bağlantısı iki ayrı atomik dosyadır; ikinci kayıt hatası ilkini geri almaz. Reçete DRAFT kalır. Kayıtlar ve rapor bölümünde kayıtlı kanıtı açabilir ve gerçek doğrulanmış kanıtı CSV olarak dışa aktarabilirsiniz.
+6. Measurement toleranslarıyla Run Flow veya **Load Recipe → Run → Tek çevrim** gerçek edinilmiş mm/PASS/FAIL üretir; karar ham double ve dahil sınırlarla hesaplanır. Calculate px kalır. Kaynak/kurulum/çözünürlük/latest sürüm değişince eski binding reddedilir; Stop/ERROR/SKIPPED eski değer ve kararı bırakmaz.
+
+Manuel dosyadan test candidate/deneme/doğrulama bellektedir; CSV kabul edilmiş gerçek kanıttan alınabilir, reçeteye bağlanamaz ve `.vfcalstudy` kaydı sunulmaz. Homography test kanıtını kaydet/aç desteği korunur. Katalog `<proje.vfproject>.calibrations.json` proje ile taşınmalıdır. Eski uniform/homography codec/hash yolları ve root/recipe/editor şemaları korunur; manuel record/dependency schema 3'tür. Üretim doğruluğu/kalıcı fiziksel cihaz kimliği/lens/robot/K4 kabulü ayrıca gerekir; yazılım doğrulaması bunları kanıtlamaz.
+## Runtime ve kalıcı Logs
+
+Kaydedilmiş projeyi açın. Calibration binding ve Measurement toleranslarını hazırlayın; normal Save ile sürümü kaydedin. Recipe Manager’da reçeteyi tek tıkla seçip **Load Recipe** kullanın. Load başarıda Runtime’a geçer; editördeki taslağı değiştirmez. **Run** kaydedilmiş kopyayı otomatik kontrol edip immutable snapshot’ı hazırlar; görüntü edinmez. **Tek çevrim** gerçek acquisition ve yürütmeyi başlatır. Bu yapılandırma kabulüdür; fiziksel ölçüm doğruluğu kabulü değildir. Yerel Windows oturumu OS kimliğiyle Engineer olarak bu dört servis komutuna yetkilidir; Users/parola/Operator/Administrator rol yönetimi henüz yoktur.
+
+Worker değişmez aktif snapshot'ı çalıştırır; taslak tolerans değişimi çalışan sürümü etkilemez. **Stop** eski ölçüm/PASS'i temizler. Başka sürüm yüklemek için **Stop → Load Recipe → Run** kullanın; rollback API’si servis katmanında korunur. Kaynak/kurulum/latest kalibrasyon değişirse yeni çevrim reddedilir veya yeni frame çözünürlüğünde Measurement ERROR olur.
+
+Sonuç, kalıcı terminal kayıt yazıldıktan sonra gösterilir. Yazma/lock hatasında yeni çevrim engellenir; **Kaydı tekrar yaz** acquisition yapmadan aynı sonucu kaydeder. **Logs** son 128 terminal kaydı ve kimlik/birim/hata/karar detaylarını gösterir. Restart kayıtları korur fakat aktif izni geri yüklemez; yeniden Load Recipe/Run gerekir.
+
+Arşiv `<proje.vfproject>.production` altındadır: değişmez snapshots, activation/rollback/CYCLE_BEGIN events ve cycle kayıtları; proje/catalog ile birlikte taşınır. Her kayıt atomik, append-only/hash kontrollü; toplam 512 MiB/10000 kayıt, otomatik retention yoktur. Görüntüler saklanmaz; manuel çevrim NOT_REQUESTED, socket çevrimleri ayrı PLC_RESULT/ACK kanıtıyla izlenir. Çok kullanıcı/cross-process lease, fiziksel cihaz kimliği, disk full/power loss ve taşınabilir paket kabulü açık. Ayrıntılar [üretim sözleşmesinde](../../architecture/production-recipes.md).
+
+## Camera Manager ve CLI kullanımı
+
+Producer seç ile kurulu Windows x64 `.cti` seçin → Cihazları ara. Boş yolda GENICAM_GENTL64_PATH kullanılır. Liste gerçek producer cevabıdır. Seçili cihazı salt okunur aç/kapat kalıcı stream kurmaz, ayar değiştirmez. İşlemler worker'da; Stop cooperative. Producer discovery bütçesi 1000 ms; her liste güncellemesinin tarama beklemesi en çok 250 ms ve kalan toplam bütçenin yarısıdır (minimum 1 ms). Liste/metadata okuması ve sonraki interface için süre bırakılır; deadline sonrası sonuç reddedilir. DLL init/open-close hard timeout değildir.
+
+```powershell
+.\build\visionflow_camera_probe.exe
+.\build\visionflow_camera_probe.exe --producer 'C:\VendorSDK\Producer.cti' --timeout 3000 --open-check
+.\build\visionflow_camera_probe.exe --producer 'C:\VendorSDK\Producer.cti' --timeout 3000 --scan-wait 500
+```
+
+CLI JSON döndürür: NO_PRODUCER/ERROR exit 1, DONE exit 0; discoveryBudgetMs ve scanWaitCapMs ayrı raporlanır. Cihaz bulunmaması DONE olabilir; grab kabulü değildir. Önceki kurulum kaydı Basler pylon Runtime 26.09.2 ve Daheng Galaxy tam SDK 2.6.2608.9131 installer exit 0/reboot yok kanıtını içerir. Galaxy dar C ABI MinGW init/discovery/close 0/0/0, cihaz sayısı 0. 6B bütçe düzeltmesiyle gerçek Galaxy GigE producer hem 1000 hem 3000 ms toplam bütçede DONE/0 cihaz verdi. Bu oturumda önceki Basler Runtime yolu erişilebilir bulunmadı; Basler probe ERROR/eksik producer, güncel kurulum/keşif kabulü açık. Basler Developer SDK formu ve C API/header bağımlılığı da açık. Ayrıntılar ve kaynak/hash/günlükler [kurulum kaydında](../../architecture/camera-sdk-installation.md). Kurulum öncesi açık oturumlar yeni Machine environment'ını miras almaz; gerekli SDK değişkenleri process scope'a alınmalıdır. `gentl_test_producer.cti` sentetik fixture olarak kalır. Bağlı kamera yok; trigger/stream/grab/exposure/gain/kamera reçete kaydı ve fiziksel kabul açık.
+
+## Çekirdek sınırları
+
+ToolRegistry yedi built-in tool'un default/port/sürüm/validation kaynağıdır; ToolExecutors algoritmaları engine sıralamasından ayırır. Startup compiled extension desteklenir; dinamik DLL plugin yoktur. EditorSession/CameraSession job ticket/future/cancel/cache/stale sonuç sahipliğini taşır; destructor worker'ları bekler.
+
+ImageFrame owned buffer, stride, Gray8/16/BGR/BGRA/RGB/RGBA ve optional preview taşır. FrameMetadata source/frame/cycle/coordinate/time kökenini sonuçlara aktarır; unit/type/frame uyuşmazlığı engellenir. Güncel engine tek Image File veya Webcam kaynağı kullanır. CameraLifecycle owner-thread/generation, preview oldest-drop ve production FIFO Full kuyruğu sunar; mutlak monoton deadline ve shutdown gözlem bütçesi SDK interruption garantisi değildir. Controller stream SDK'ya henüz bağlı değildir.
+
+A7 Pose2D/Transform2D/TrackingRoi ve CalibrationDependency schema 1 kayıt/geometri sözleşmesidir. Uniform planar scale/homography ve dönmüş metrologi sampling mevcut; pattern_pose programatik gerçek açı/Pose portu sunar. Pose tracking ortak adapter/codec T8.2 kapsamında tamamlandı; bütün araç/UI/Runtime bağlantıları T8.4, lens ve robot kalibrasyonu/robot pose açıktır. A8 ProductionRecipeService immutable snapshot, içerik/model/engine/tool/asset/calibration dependency ve varsayılan ret policy taşır. Cycle boyunca aktif sürüm değişmez; son 128 gerçek trace bellektedir. Disk VALID üretim izni olmaz. Runtime ve kalıcı arşiv/Logs bağlıdır; Users rol/oturum yönetimi sonraki iştir.
+
+## A9 bağımsız çekirdek ve kaynak sürümleme
+
+```powershell
+cmake -S . -B build/core -G Ninja -DCMAKE_BUILD_TYPE=Release -DVISIONFLOW_BUILD_UI=OFF -DCMAKE_PREFIX_PATH=C:/Qt/6.12.0/mingw_64 -DOpenCV_DIR=C:/OpenCV/5.0.0/x64/mingw/lib
+cmake --build build/core -j 6
+ctest --test-dir build/core --output-on-failure
+.\scripts\validate-local.ps1
+```
+
+DLL PATH yukarıdaki gibi ayarlanır. Widgets OFF domain/application/engine, probe ve on dört core testi derler; Qt Core/Gui/Concurrent/Multimedia ve OpenCV sürer. BUILD_TESTING=OFF testleri çıkarır. UI ON iki ek `ui` etiketli test üretir. Script build/a9-core ve build/a9-ui altında Release configure/build/CTest yapar; QtRoot/OpenCVRoot/CompilerBin parametreleri vardır.
+
+Yerel repo `C:/OpenCode/TVision/.git`, branch main; komşu TVis ayrı C++17 projesidir. Build, log/image verileri ve config/local.* Git dışında kalır; remote yayın/CI yoktur. Manifest/hash/boyut/atomiklik/recovery/sıralı migration [planlandı](../../architecture/persistence-plan.md); root schema 1, recipe schema 1–2, editor schema 6 ve 16 MB sınırı korunur; schema 2 yalnız explicit calibration binding düzenlemesinde yazılır. Container/import/export/paket geçmişi 7'de kalır; ayrı production arşivi 6C'de uygulanmıştır.
+
+Son kabul: build/runtime-core Release core 14/14 ve build/runtime-ui UI 16/16 CTest; önceki A9 script kabulü 9/9 ve 11/11 idi. ROI sentetik regression 100/100 doğru, performans CSV build altında; gerçek üretim latency/kurulum/CUDA/fiziksel kamera kabulü değildir.
+
+7 Ekim 6C Runtime kabulü: standart Release `build/runtime-ui` CTest **16/16**, Widgets OFF `build/runtime-core` **14/14**. Runtime PASS/FAIL, kayıt bekliyor, invalidation, Logs ve 850×600 görselleri build altında incelendi. Yeni fiziksel webcam/industrial/PLC/robot doğrulaması yapılmadı.
+
+## 6C-K1 — Chessboard test görüntüsü ve köşe inceleme
+
+Güncel uygulama: `build/k1-ui/visionflow.exe` (P5/P6 binary). Calibration → **Test görüntüsü içe aktar (geçici)** → target ID, iç köşe sütun/satır ve gerçek kare kenarı mm → **Köşeleri bul**. PNG/JPEG/BMP; tam çözünürlüklü owned frame, dosya adı/decoded-pixel SHA256 ve Dosyadan test etiketi. Reçete açmadan da test importu kullanılabilir; reçetenin acquisition kaynağı/binding'i değişmez. **Kare al** mevcut reçete kaynağına döner.
+
+Numaralı alt piksel köşeler, O/+X/+Y overlay ve orijinal px hover vardır. Orijin ilk tespit edilen köşedir; simetrik plakanın fiziksel yönü otomatik belirlenmez. İç köşe 3–32, toplam en çok 512; tespit sınırı 16 MP. Girilen mm görüntüden doğrulanamaz. Yeni import/target/kurulum/reçete veya kare değişimi eski köşeleri temizler. Stop geç sonucu bastırır; OpenCV çağrısını zorla kesmez. Test oturumu uniform scale kayıt/bağlama komutlarına girmez.
+
+K1 köşe tespitidir; K2 H/mm denemesi ve K3 kayıt/Measurement/Runtime aşağıdaki akışla tamamlandı. Kaydedilmemiş test oturumu kapanınca silinir; Test kanıtını kaydet ile açıkça korunabilir. Bağımsız fiziksel kabul K4'te açıktır. OpenCV 5 yerel `objdetect`, `calib`, `geometry` bağlantıları doğrulandı; başka OpenCV sürümünün API uyumu doğrulanmadı. Release UI CTest 17/17, Widgets OFF 15/15; görseller/test ayarları build/k1-ui altındadır.
+
+## 6C-K2/K3 — Tek görüntü H, bağımsız holdout ve Runtime
+
+1. Calibration modelinde **Chessboard raw homography** seçin. Reçete kaynağında lens/çalışma düzlemini **Kurulumu uygula → Kare al** ile hazırlayın veya bağımsız **Test görüntüsü içe aktar** kullanın.
+2. İç köşe grid ve gerçek kare mm → **Köşeleri bul → H hesapla**. Target-local orijin P1, +X sütun, +Y satır. H ve fit RMS mm/inverse RMS-max px gerçek fitten gelir; lens distortion düzeltilmez. Sabit inverse fit üst sınırı 1 px. H hatası scale fallback yapmaz.
+3. Görüntüde iki noktaya tıklayın veya px alanlarına subpixel değer girin → **İki nokta mesafesini incele**. İki nokta world mm'ye ayrı dönüştürülür, mesafe sonra hesaplanır. Ölçüm iç köşe convex hull alanı içindedir; extrapolation reddedilir. Deneme validation veya PASS değildir.
+4. Calibration ID/yeni sürüm/hata sınırı girin. Homography modunda tablonun **tüm satırları bağımsız holdout**; en az iki ayrı segment için Known mm gerçek bağımsız referanstan gelir. Fit köşelerine 0.5 px içinde kalan holdout uçları ve tekrarlı geometri reddedilir. **Doğrula** gerçek Measured/Residual mm ve RMS/max mm üretir. Örnek/ayar değişimi kabulü ve raporu temizler.
+5. Edinilmiş kaynakta **Kaydet ve bağla → normal Save**. Mevcut Edge.point → Measurement mm/tolerans → ortak Runtime aynı resolver'ı kullanır. Typed model/version/content/kurulum ve yeni actual frame çözünürlüğü denetlenir; eski binding veya alan dışı nokta değer/PASS üretmez. Calculate px kalır. Runtime yapılandırma kabulü fiziksel ölçüm kabulü değildir.
+6. **Dosyadan test** fiziksel kamera reçetesine bağlanamaz. **Test kanıtını kaydet/aç** `.vfcalstudy` içinde candidate veya accepted holdout/H kanıtını tutar; kaynak görüntü yolu ve decoded pixel hash'i korunmalıdır. Eksik/değişmiş resim reddedilir. Resim gömülmez/kopyalanmaz; bu henüz taşınabilir paket değildir.
+7. **Kanıt raporunu dışa aktar (CSV)** gerçek model/H/fit/holdout/birim/köken ve her örneğin measured/residual değerlerini verir. Fiziksel referans kökenini veya üretim iznini belgelemez. [K4 fiziksel kabul prosedürü](../../architecture/calibration-acceptance.md) ve boş gözlem tablosu gerçek plaka/bağımsız referansla tamamlanmalıdır.
+
+Legacy uniform scale kayıtları/hash'leri korunur. Yeni raw homography model record ve dependency schema 2; recipe schema 2/root schema 1 değişmez. Execution engine version 5 eski validation iznini kullanmaz. Kalibrasyon/catalog/proje ayrı atomik commit; iptal zaten yazılmış kayıt etkisini geri almaz. Katalog 4 MiB/128 kayıt, çalışma dosyası 4 MiB. OpenCV 5 solver replay farklı sürüm/ABI için taşınabilirlik garantisi değildir.
+
+Son yazılım kabulü: Release UI `build/k1-ui` CTest **19/19**, Widgets OFF `build/k1-core` **17/17**. Homography study/validated/Measurement/Runtime ve 850×600 görselleri build altında. Fiziksel doğruluk/KL lens ihtiyacı açık; bu oturumda PLC/robot işine geçilmedi.
+
+## 6D.1 — TCP/IP socket ile PLC sonuç teslimi
+
+K4 fiziksel kabul ertelendi. Güncel uygulama `build/k1-ui/visionflow.exe`. Communication’da **enabled**, yerel IP/port, ACK süresi/tekrar ve **autoStart** ayarlarını **Ayarları kaydet** ile yerel INI’ye kaydedin. Ayar yokken dinleme kapalıdır; autoStart yalnız dinlemeyi açar. Reçete tetik modu **SoftwareTrigger** ve Measurement sonuç kaynağını seçin, projeyi **Save** edin, **Load Recipe → Run** kullanın. Socket reçete olmadan da dinler; Load/Run/Stop bağlantıyı bozmaz. Manual modunda Tek çevrim çalışır, TCP yeni isteği INVALID alır.
+
+```powershell
+.\build\k1-ui\visionflow_plc_simulator.exe --port 5000
+.\build\k1-ui\visionflow_plc_simulator.exe --port 5000 --duplicate --reconnect --ack-delay 3000
+```
+
+DLL PATH yerel derleme bölümündeki gibi ayarlanır. Port 0 seçilirse ekrandaki actual port kullanılır. Simülatör gerçek etkin Runtime çevrimini ister. vf.socket/2 JSON-LF TRIGGER/INVALID/BUSY/DONE/ACK; recipe/config/session/request kimlikleri doğrulanır. Seçilmiş Measurement gerçek mm/PASS/FAIL gönderir; mapping yok/ERROR/SKIPPED için null/NOT_EVALUATED. Genel recipe kararı veya robot pose yoktur.
+
+Terminal cycle ve PLC_RESULT commit olmadan DONE, PLC_ACK commit olmadan Ready/ACKED verilmez. Kayıt hatasında **Kaydı tekrar yaz**, ACK hatasında aynı ACK tekrar edilir. Duplicate/reconnect aynı oturumda mevcut sonucu döndürür; timeout yalnız DONE tekrar gönderir. Logs kalıcı kanıtları ilişkilendirir. Salt listening Load/Run/Stop’u engellemez. Runtime Stop yeni kabulü kapatır; kayıt/ACK korunur. Pending kayıt/ACK varken transport stop/close ve yeni yükleme engellidir.
+
+**Sınırlar:** tek peer/outstanding, en çok 128 accepted request/dinleme oturumu, eviction yok; ACK sonrası explicit stop/start yeni session açar. Restart kanıtı korur fakat dedup/outbox/teslim kurtarma henüz yoktur; sonraki iş **6D.2**. TLS/uzak kimlik/vendor wire/Modbus/OPC UA ve fiziksel PLC kabulü açık. Bu teslim K4 ölçüm doğruluğu veya üretim izni değildir. [Protokol ve simülatör seçenekleri](../../architecture/plc-socket.md).
+
+Release UI **20/20**, Widgets OFF **18/18** CTest. Gerçek localhost ve ayrı simülatörle duplicate/reconnect/geç ACK/tek cycle, gerçek mm PASS/FAIL, kayıt/ACK lock retry, cancel/error/schema/session sınandı. Normal/850×600 Communication ve Logs görselleri build/k1-ui altında incelendi; config/local.ui.ini değiştirilmedi.
+
+## 8 Ekim — Güncel operatör arayüzü
+
+Güncel binary: `build/manual-calibration-ui/visionflow.exe`. Run başarılıysa tam ekran Runtime ve kilitli navigasyon; Stop/durdurma tamamlanınca eski pencere ve menüler geri gelir. Setup → Communication / Calibration; bu iki sayfa artık sol menüde değildir. Communication için **TCP iletişimini etkinleştir → Ayarları kaydet → Dinlemeyi başlat**. Reçete/Run dinleme için gerekmez. Manuel px/mm ve sade üç yöntem ekranı 9 Ekim C1–C5 ile tamamlandı; güncel binary yukarıdadır.

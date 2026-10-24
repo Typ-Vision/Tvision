@@ -4,7 +4,12 @@
 #include <QCryptographicHash>
 namespace visionflow {
 namespace {QJsonObject setupProof(const MeasurementEnvironment& e,const SetupReference& r){for(auto s:e.current.setups)if(s.id==r.setup && s.revision==r.revision){s.name=s.id.value;return s.toJson();}throw std::runtime_error("Missing setup proof");}
-QString sGeometryId(const MeasurementEnvironment& e,const SetupReference& r){for(const auto& s:e.current.setups)if(s.id==r.setup && s.revision==r.revision)return s.geometryId();throw std::runtime_error("Missing setup geometry");}
+QJsonObject scope(const MeasurementEnvironment& e,const SetupReference& ref,const MeasurementCamera& c,const std::optional<AcquisitionProfile>& profile={}){
+    QJsonObject o{{"schemaVersion",1},{"target",ref.toJson()},{"device",c.device.toJson()},{"setup",setupProof(e,ref)}};
+    o["geometryId"]=MeasurementSetupDescriptor::fromJson(o["setup"].toObject()).geometryId();
+    if(c.physical){o["schemaVersion"]=2;o["physical"]=c.physical->toJson();o["profile"]=profile ? QJsonValue(profile->toJson()):QJsonValue();}return o;
+}
+bool currentProfile(const MeasurementEnvironment& e,const AcquisitionProfile& p){for(auto n:e.current.profiles)if(n.id==p.id){n.name=p.name;return n==p;}return false;}
 void require(bool b,const char* s){if(!b)throw std::runtime_error(s);}}
 ScopedActiveCalibrationService::ScopedActiveCalibrationService(MeasurementEnvironmentRepository r,ActiveCalibrationService::ChangeGate g)
     :repository_(std::move(r)),gate_(std::move(g)),thread_(QThread::currentThread()) {require(bool(gate_),"Change gate required");repository_.load();}
@@ -14,29 +19,28 @@ MeasurementSetup ScopedActiveCalibrationService::installation(const MeasurementE
     ref.validate();require(!e.archivedCameras.contains(ref.camera.value) && !e.archivedSetups.contains(ref.setup.value),"Archived installation");
     for(const auto& s:e.current.setups)if(s.id==ref.setup && s.camera==ref.camera && s.revision==ref.revision){
         for(const auto& c:e.current.cameras)if(c.id==ref.camera){
-            require(c.device.adapter=="webcam" && s.geometry.complete && !s.geometry.sensorRoi && !s.geometry.binning && c.device.confidence!=DeviceIdentityConfidence::Unavailable,"Unsupported/unknown installation geometry or identity");
-            return {s.id.value+"/"+QString::number(s.revision),c.device.adapter,CalibrationWizardSession::configurationId({{"geometryId",s.geometryId()},{"device",c.device.toJson()}}),s.opticalProfile,s.workingPlane,s.geometry.resolution,{"image",LengthUnit::Pixel,AxisConvention::XRightYDown},{s.workingPlane+"/mm",LengthUnit::Millimetre,AxisConvention::XRightYDown}};
+            return IndependentCaptureRequest::installation(c,s);
         }
     }throw std::runtime_error("Current exact installation required");
 }
 QVector<CalibrationModelRecord> ScopedActiveCalibrationService::records(const SetupReference& ref) const {
     const auto e=environment();const auto expected=installation(e,ref);QVector<CalibrationModelRecord> out;
-    ActiveCalibrationService catalog(repository_.catalogPath(),e.projectId,gate_);
+    auto catalog=repository_.catalog(gate_);
     for(const auto& r:catalog.records())if(r.setup()==expected)out.append(r);return out;
 }
 void ScopedActiveCalibrationService::save(const SetupReference& ref,const CalibrationModelRecord& r){
     const auto e=environment();require(gate_(),"Runtime/worker/pending record/ACK busy");require(r.setup()==installation(e,ref),"Exact model installation mismatch");
-    ActiveCalibrationService(repository_.catalogPath(),e.projectId,gate_).save(r);
+    repository_.catalog(gate_).save(r);
 }
 QVector<CalibrationModelRecord> ScopedActiveCalibrationService::historyRecords(const SetupId& id) const {
     const auto e=environment();id.validate();QVector<CalibrationModelRecord> out;
-    ActiveCalibrationService catalog(repository_.catalogPath(),e.projectId,gate_);
+    auto catalog=repository_.catalog(gate_);
     for(const auto& r:catalog.records())for(const auto& s:e.history)
         if(s.id==id && r.setup().id==s.id.value+"/"+QString::number(s.revision) && r.setup().resolution==s.geometry.resolution && r.setup().lensId==s.opticalProfile && r.setup().planeId==s.workingPlane){out.append(r);break;}
     return out; // Historical display only; never an activation/resolve path.
 }
 ActiveCalibrationSnapshot ScopedActiveCalibrationService::candidate(const SetupReference& ref,const QString& content) const {
-    const auto e=environment();for(const auto& r:records(ref))if(r.contentId()==content){const auto& d=r.model().dependency();for(const auto& c:e.current.cameras)if(c.id==ref.camera)return {r,{d.calibrationId,r.contentId(),d.version,1},{{"schemaVersion",1},{"target",ref.toJson()},{"device",c.device.toJson()},{"geometryId",sGeometryId(e,ref)},{"setup",setupProof(e,ref)}}};}throw std::runtime_error("Exact candidate not found");
+    const auto e=environment();for(const auto& r:records(ref))if(r.contentId()==content){const auto& d=r.model().dependency();for(const auto& c:e.current.cameras)if(c.id==ref.camera)return {r,{d.calibrationId,r.contentId(),d.version,1},scope(e,ref,c)};}throw std::runtime_error("Exact candidate not found");
 }
 int ScopedActiveCalibrationService::migrateLegacy(const SetupReference& ref,const QVector<CalibrationModelRecord>& originals,int failAfter){
     const auto target=setup(ref);require(gate_(),"Runtime/worker/pending record/ACK busy");require(!originals.isEmpty(),"Legacy history empty");QVector<CalibrationModelRecord> pending;const auto existing=records(ref);const auto id=originals.first().model().dependency().calibrationId;const auto at=QDateTime::currentDateTimeUtc();int version=0;
@@ -46,16 +50,71 @@ int ScopedActiveCalibrationService::migrateLegacy(const SetupReference& ref,cons
     int saved=0;for(const auto& r:pending){if(failAfter>=0 && saved==failAfter)throw std::runtime_error("Injected migration interruption; retry resumes immutable prefix");save(ref,r);++saved;}return saved;
 }
 void ScopedActiveCalibrationService::activate(const SetupReference& ref,const QString& content,const IndependentCalibrationSession& probe,MeasurementEnvironmentRepository::Fault fault){
+    const auto proof=probe.evidence();
+    activateImpl(ref,content,probe,proof && proof->experimental ? CalibrationCapturePolicy::ExperimentalOecs:CalibrationCapturePolicy::Trusted,fault);
+}
+void ScopedActiveCalibrationService::activateImpl(const SetupReference& ref,const QString& content,const IndependentCalibrationSession& probe,CalibrationCapturePolicy policy,MeasurementEnvironmentRepository::Fault fault,std::function<void()> beforeCommit,bool selectDefault){
     const auto e=environment();require(gate_(),"Runtime/worker/pending record/ACK busy");require(revision_<1000000000,"Activation revision exhausted");
     const auto expected=installation(e,ref);const auto proof=probe.evidence();
-    require(!probe.busy() && proof && proof->origin==SourceOrigin::CameraAcquired && proof->target==std::optional(ref) && probe.acceptedSetup()==std::optional(expected),"Accepted actual camera probe for exact installation required");
+    const bool experimental=policy==CalibrationCapturePolicy::ExperimentalOecs;
+    require(!probe.busy() && proof && proof->experimental.has_value()==experimental && proof->origin==SourceOrigin::CameraAcquired && proof->target==std::optional(ref) && probe.acceptedSetup()==std::optional(expected),"Accepted actual camera probe for exact installation required");
+    if(experimental)proof->experimental->validate();
+    const auto profile=probe.acceptedProfile();const auto device=probe.acceptedDevice();
+    for(const auto& c:e.current.cameras)if(c.id==ref.camera && c.physical){
+        require(profile && device && device->identity==*c.physical && currentProfile(e,*profile),"Actual industrial probe profile changed; acquire again");
+    }
     require(!usedProbes_.contains(proof->frameId),"Acquire a new activation probe");
-    require(e.operational.value(ref.camera.value)==ref.setup.value,"Select operational setup explicitly first");
+    const auto defaults=e.defaults(ref.camera);const bool chooseDefault=selectDefault && defaults.status==CameraDefaultsStatus::Ready && defaults.setup==std::optional(ref.setup);
+    require(e.operational.value(ref.camera.value)==ref.setup.value || chooseDefault,"Select operational setup explicitly first");
     for(const auto& r:records(ref))if(r.contentId()==content){
-        require(r.activatable() && (r.image().origin=="acquired" || r.image().origin=="setup_file" || (r.image().origin=="legacy_record" && r.encode()["schemaVersion"]==5)),"Trial/legacy/rejected control cannot activate");
-        const auto committed=repository_.saveAndRemember(e,r,ref,fault);
-        for(const auto& selection:committed.selections)if(selection.target==ref){permissions_.insert(ref.setup.value,{selection,++revision_});usedProbes_.insert(proof->frameId);return;}
+        if(experimental){
+            require(r.experimentallyActivatable(),"Experimental model/control evidence required");
+            const auto& image=*r.image().experimental;
+            require(image.camera.id==ref.camera && image.setup.id==ref.setup && image.setup.revision==ref.revision &&
+                image.camera.physical==proof->experimental->camera.physical && image.setup.geometry==proof->experimental->setup.geometry,
+                "Experimental candidate and live probe installation mismatch");
+        }else require(r.activatable() && (r.image().origin=="acquired" || r.image().origin=="setup_file" || (r.image().origin=="legacy_record" && r.encode()["schemaVersion"]==5)),"Trial/legacy/rejected control cannot activate");
+        if(beforeCommit)beforeCommit();
+        require(gate_() && probe.evidence()==proof && !probe.busy(),"Activation cancelled or gate changed before commit");
+        const auto committed=repository_.saveAndRemember(e,r,ref,fault,chooseDefault);
+        QJsonObject acquisition{{"schemaVersion",experimental ? 2:1},{"probe",proof->toJson()},{"backend",device ? QJsonValue(device->backend.toJson()):QJsonValue()}};
+        if(experimental){acquisition["policy"]="experimental-calibration/1";acquisition["productionAdmission"]=false;acquisition["triggerAssociationVerified"]=false;acquisition["physicalAcceptance"]=false;}
+        for(const auto& selection:committed.selections)if(selection.target==ref){permissions_.insert(ref.setup.value,{selection,++revision_,profile,device,acquisition,experimental});usedProbes_.insert(proof->frameId);return;}
     }throw std::runtime_error("Exact calibration content not found");
+}
+CalibrationSaveUseResult ScopedActiveCalibrationService::saveAndUse(const CalibrationSaveUseRequest& request,const CalibrationModelRecord& candidate,const IndependentCalibrationSession& probe,std::function<bool()> currentTarget,MeasurementEnvironmentRepository::Fault fault){
+    owner();CalibrationSaveUseResult result;result.contentId=candidate.contentId();result.independentControlAccepted=candidate.controlAccepted();result.experimental=request.policy==CalibrationCapturePolicy::ExperimentalOecs || (request.policy==CalibrationCapturePolicy::Automatic && probe.evidence() && probe.evidence()->experimental);
+    try{
+        require(request.policy==CalibrationCapturePolicy::Trusted || request.policy==CalibrationCapturePolicy::Automatic || result.experimental,"Unknown activation policy");
+        const auto epoch=permissionEpoch_;const auto cameraEpoch=cameraEpochs_.value(request.target.camera.value);
+        auto current=[&]{
+            require(currentTarget && currentTarget(),"Project/target changed or Stop requested");
+            require(gate_() && cameraEpochs_.value(request.target.camera.value)==cameraEpoch && (!result.experimental || permissionEpoch_==epoch),"Workspace busy, disconnected or session policy changed");
+            const auto proof=probe.evidence();require(!probe.busy() && proof && proof->generation==request.generation && proof->target==std::optional(request.target),"Capture generation/target retired");
+        };
+        current();const auto e=environment();const auto expected=installation(e,request.target);
+        const auto record=CalibrationModelRecord::decode(candidate.encode());require(record.setup()==expected,"Exact candidate installation mismatch");
+        const auto p=permissions_.constFind(request.target.setup.value);
+        const bool repeated=p!=permissions_.cend() && p->selection.contentId==record.contentId() && p->selection.target==request.target &&
+            p->experimental==result.experimental && p->acquisition["probe"].toObject()==probe.evidence()->toJson() &&
+            (p->commandBase==request.environmentRevision || p->commandCommitted==request.environmentRevision) && p->commandCommitted==e.revision;
+        require(e.revision==request.environmentRevision || repeated,"Environment revision changed; reload target");
+        for(const auto& existing:records(request.target))if(existing.contentId()==record.contentId()){require(existing.encode()==record.encode(),"Immutable candidate conflict");result.duplicate=true;break;}
+        if(!result.duplicate)save(request.target,record);
+        result.state=CalibrationSaveUseState::CandidateSaved;
+        auto beforeCommit=[&]{current();require(environment().encode()==e.encode(),"Environment changed before selection commit");};
+        beforeCommit();
+        if(!repeated){
+            activateImpl(request.target,record.contentId(),probe,result.experimental ? CalibrationCapturePolicy::ExperimentalOecs:CalibrationCapturePolicy::Trusted,fault,beforeCommit,true);
+            auto& permission=permissions_[request.target.setup.value];permission.commandBase=request.environmentRevision;permission.commandCommitted=environment().revision;
+        }
+        result.state=CalibrationSaveUseState::Activated;
+    }catch(const std::exception& ex){result.error=QString::fromUtf8(ex.what());}
+    return result;
+}
+void ScopedActiveCalibrationService::setExperimental(bool enabled){
+    owner();if(experimental_==enabled)return;require(gate_(),"Workspace busy");experimental_=enabled;++permissionEpoch_;
+    for(auto i=permissions_.begin();i!=permissions_.end();)if(i->experimental)i=permissions_.erase(i);else ++i;
 }
 void ScopedActiveCalibrationService::deactivate(const SetupId& id){
     const auto e=environment();id.validate();require(gate_(),"Runtime/worker/pending record/ACK busy");auto next=e;
@@ -66,19 +125,66 @@ void ScopedActiveCalibrationService::setOperational(const CameraId& camera,const
     const auto e=environment();require(gate_(),"Runtime/worker/pending record/ACK busy");auto next=e;next.operational[camera.value]=setup.value;
     repository_.commit(e,next);if(e.operational.value(camera.value)!=setup.value)disconnect(camera);
 }
-void ScopedActiveCalibrationService::disconnect(const CameraId& camera){owner();for(auto i=permissions_.begin();i!=permissions_.end();)if(i->selection.target.camera==camera)i=permissions_.erase(i);else ++i;}
-void ScopedActiveCalibrationService::refreshAvailability(const QVector<DeviceBinding>& devices){
-    const auto e=environment();for(const auto& c:e.current.cameras)try{c.device.resolve(devices);}catch(const std::exception&){disconnect(c.id);}
+void ScopedActiveCalibrationService::disconnect(const CameraId& camera){owner();++cameraEpochs_[camera.value];for(auto i=permissions_.begin();i!=permissions_.end();)if(i->selection.target.camera==camera)i=permissions_.erase(i);else ++i;}
+CalibrationAvailabilityStatus ScopedActiveCalibrationService::status(const SetupReference& ref) const {
+    ref.validate();const auto e=environment();CalibrationAvailabilityStatus result;
+    for(const auto& s:e.selections)if(s.target.camera==ref.camera && s.target.setup==ref.setup)result.remembered=s;
+    if(!result.remembered)return result;
+    result.state=CalibrationAvailability::RecalibrationRequired;
+    try {
+        const auto expected=installation(e,ref);
+        require(result.remembered->target==ref,"Installation changed; recalibration required");
+        for(const auto& r:records(ref))if(r.contentId()==result.remembered->contentId && (r.activatable() || r.experimentallyActivatable()) && r.setup()==expected){result.mathematicsCompatible=true;result.experimental=r.image().experimental.has_value();}
+        require(result.mathematicsCompatible,"Remembered mathematics incompatible");
+        result.state=CalibrationAvailability::Remembered;
+        try {if(result.experimental)experimentalSnapshots({ref});else snapshots({ref});result.sessionPermitted=true;result.state=CalibrationAvailability::Valid;}
+        catch(const std::exception& ex){result.reason=QString::fromUtf8(ex.what());}
+    }catch(const std::exception& ex){result.reason=QString::fromUtf8(ex.what());}
+    return result;
+}
+void ScopedActiveCalibrationService::prepareRemembered(const SetupReference& ref,const IndependentCalibrationSession& probe){
+    const auto state=status(ref);require(state.remembered && state.mathematicsCompatible,"No compatible remembered selection");
+    activate(ref,state.remembered->contentId,probe);
+}
+void ScopedActiveCalibrationService::notifyOpticalChange(const CameraId& camera,int expectedRevision){
+    const auto e=environment();camera.validate();require(gate_(),"Runtime/worker/pending record/ACK busy");
+    require(e.revision==expectedRevision,"Environment revision conflict; reload required");auto next=e;bool found=false;
+    for(const auto& c:e.current.cameras)if(c.id==camera)found=true;
+    require(found && !e.archivedCameras.contains(camera.value),"Current camera required");
+    // Unknown physical movement retires the declaration itself. Re-declaration
+    // creates another revision, so A->unknown->A never revives old permission.
+    for(auto& s:next.current.setups)if(s.camera==camera && !s.pending){auto pending=s;pending.pending=true;pending.opticalProfile.clear();pending.workingPlane.clear();pending.geometry={};pending=s.revised(pending);s=pending;next.history.append(s);}
+    repository_.commit(e,next);disconnect(camera);
+}
+void ScopedActiveCalibrationService::refreshAvailability(const QVector<DeviceBinding>& devices,const IndustrialDiscoverySnapshot& industrial){
+    const auto e=environment();for(const auto& c:e.current.cameras)try{
+        if(c.physical){
+            require(!industrial.cancelled && industrial.errors.isEmpty(),"Industrial inventory incomplete");
+            resolveRoutes(*c.physical,industrial.devices);
+            for(const auto& p:permissions_)if(p.selection.target.camera==c.id){
+                require(p.device.has_value(),"Industrial device evidence missing");
+                const auto found=CameraService::resolveIndustrial(c,industrial,p.device->route);
+                require(p.device->backend==found.backend && p.profile && currentProfile(e,*p.profile),"Industrial backend/profile changed");
+            }
+        }else c.device.resolve(devices);
+    }catch(const std::exception&){disconnect(c.id);}
 }
 QVector<ScopedCalibrationSnapshot> ScopedActiveCalibrationService::snapshots(const QVector<SetupReference>& refs,std::function<void()> beforeVerify) const {
+    return snapshotsImpl(refs,false,std::move(beforeVerify));
+}
+QVector<ExperimentalScopedCalibrationSnapshot> ScopedActiveCalibrationService::experimentalSnapshots(const QVector<SetupReference>& refs) const {
+    owner();QVector<ExperimentalScopedCalibrationSnapshot> out;
+    for(const auto& s:snapshotsImpl(refs,true,{}))out.append({s});return out;
+}
+QVector<ScopedCalibrationSnapshot> ScopedActiveCalibrationService::snapshotsImpl(const QVector<SetupReference>& refs,bool experimental,std::function<void()> beforeVerify) const {
     auto fingerprint=[&]{QFile f(repository_.catalogPath());if(!f.exists())return QByteArray("missing");require(f.open(QIODevice::ReadOnly) && f.size()<=4*1024*1024,"Catalog snapshot bounded read failed");const auto bytes=f.read(4*1024*1024+1);require(f.error()==QFileDevice::NoError && bytes.size()<=4*1024*1024,"Catalog snapshot read failed");return QCryptographicHash::hash(bytes,QCryptographicHash::Sha256);};
     const auto before=fingerprint();const auto e=environment();const auto permissions=permissions_;
-    const auto models=ActiveCalibrationService(repository_.catalogPath(),e.projectId,gate_).records();QVector<ScopedCalibrationSnapshot> out;QSet<QString> seen;
+    const auto models=repository_.catalog(gate_).records();QVector<ScopedCalibrationSnapshot> out;QSet<QString> seen;
     for(const auto& ref:refs){require(!seen.contains(ref.setup.value),"Duplicate snapshot target");seen.insert(ref.setup.value);
         const auto expected=installation(e,ref);require(e.operational.value(ref.camera.value)==ref.setup.value && permissions_.contains(ref.setup.value),"Installation requires explicit activation");
-        const auto p=permissions_.value(ref.setup.value);require(p.selection.target==ref && e.selections.contains(p.selection),"Selection changed; reactivate");bool found=false;
-        for(const auto& r:models)if(r.contentId()==p.selection.contentId && r.activatable() && r.setup()==expected){
-            for(const auto& c:e.current.cameras)if(c.id==ref.camera)out.append({ref,c.device,{r,{p.selection.id,p.selection.contentId,p.selection.version,p.revision},{{"schemaVersion",1},{"target",ref.toJson()},{"device",c.device.toJson()},{"geometryId",sGeometryId(e,ref)},{"setup",setupProof(e,ref)}}}});found=true;
+        const auto p=permissions_.value(ref.setup.value);require(p.experimental==experimental,"Calibration permission policy mismatch");if(p.profile)require(currentProfile(e,*p.profile),"Acquisition profile changed; reactivate without refitting model");require(p.selection.target==ref && e.selections.contains(p.selection),"Selection changed; reactivate");bool found=false;
+        for(const auto& r:models)if(r.contentId()==p.selection.contentId && (experimental ? r.experimentallyActivatable():r.activatable()) && r.setup()==expected){
+            for(const auto& c:e.current.cameras)if(c.id==ref.camera)out.append({ref,c.device,{r,{p.selection.id,p.selection.contentId,p.selection.version,p.revision},scope(e,ref,c,p.profile),p.acquisition}});found=true;
         }require(found,"Calibration dependency unavailable");
     }if(beforeVerify)beforeVerify();require(before==fingerprint() && e.encode()==environment().encode() && permissions==permissions_,"Calibration snapshot set changed; retry whole admission");return out;
 }

@@ -1,5 +1,8 @@
+#include "application/EditorObservation.hpp"
 #include "PlaneMappingService.hpp"
 #include <QJsonArray>
+#include <QJsonDocument>
+#include <QCryptographicHash>
 #include <QSet>
 #include <opencv2/geometry.hpp>
 #include <opencv2/imgproc.hpp>
@@ -29,9 +32,18 @@ double number(const QJsonObject& o,const char* key){require(o[key].isDouble() &&
 void keys(const QJsonObject& o,const QSet<QString>& expected){require(o.size()==expected.size(),"Missing/unknown plane fields");for(auto it=o.begin();it!=o.end();++it)require(expected.contains(it.key()),"Unknown plane field");}
 QVector<QPointF> readPoints(const QJsonValue& v){require(v.isArray(),"Invalid point array");auto a=v.toArray();require(a.size()<=512,"Plane point limit exceeded");QVector<QPointF> result;for(auto item:a){require(item.isArray(),"Invalid point");const auto p=item.toArray();require(p.size()==2 && p[0].isDouble() && p[1].isDouble(),"Invalid point components");QPointF q{p[0].toDouble(),p[1].toDouble()};require(finite(q),"Nonfinite point");result.append(q);}return result;}
 }
+PlaneMapping PlaneMappingService::fit(const RawPlateObservation& o,double limit){
+    const auto validated=RawPlateObservation::create(o.grid(),o.centres(),o.orientation(),o.algorithmVersion(),o.coordinateSpace());
+    auto result=fitGrid(validated.grid(),limit,true);result.rawPlate_=validated;return result;
+}
 PlaneMapping PlaneMappingService::fit(const ChessboardObservation& o,double limit) {
+    return fitGrid(o,limit,false);
+}
+PlaneMapping PlaneMappingService::fitGrid(const ChessboardObservation& o,double limit,bool framed) {
     const auto& t=o.target;const auto n=o.pixels.size();
     t.validate();
+    require(t.pattern!=CalibrationGridPattern::FramedCircles || framed,"Framed model requires typed orientation evidence");
+    if(t.pattern==CalibrationGridPattern::FramedCircles){o.validateRaw();require(limit<=1.0,"Framed inverse bound cannot exceed 1 px");}
     if(t.pattern==CalibrationGridPattern::SymmetricCircles){require(o.pixelHash.size()==64,"Circle observation requires decoded raster hash");for(auto c:o.pixelHash)require((c>='0' && c<='9') || (c>='a' && c<='f'),"Invalid circle raster hash");}
     require(n==t.columns*t.rows && n<=512 && o.worldMillimetres.size()==n,"Invalid calibration grid geometry/count");
     require(std::isfinite(t.squareMillimetres) && t.squareMillimetres>0 && t.squareMillimetres<=1000000,"Invalid target spacing");
@@ -80,19 +92,46 @@ QJsonObject PlaneMappingService::encode(const PlaneMapping& m) {
       {"width",o.resolution.width()},{"height",o.resolution.height()},{"pixels",pointsJson(o.pixels)},{"worldMm",pointsJson(o.worldMillimetres)},{"regionPixels",pointsJson(m.hull_)},
       {"H",h},{"fitRmsMm",m.fitRms_},{"inverseRmsPx",m.inverseRms_},{"maxInversePx",m.inverseMax_},{"fitLimitPx",m.fitLimit_}};
     if(t.pattern==CalibrationGridPattern::SymmetricCircles){result["schemaVersion"]=2;result["model"]="raw_planar_homography/2";result["target"]=t.toJson();result["pixelHash"]=o.pixelHash;}
+    if(t.pattern==CalibrationGridPattern::FramedCircles){
+        require(m.rawPlate_.has_value(),"Missing typed observation");const auto& raw=*m.rawPlate_;const auto& direction=raw.orientation();
+        QJsonArray centres;for(const auto& c:raw.centres()){QJsonObject item{{"row",c.row},{"column",c.column},{"pixel",QJsonArray{c.rawPixel.x(),c.rawPixel.y()}}};if(c.uncertaintyPixels)item["uncertaintyPx"]=*c.uncertaintyPixels;centres.append(item);}
+        result["schemaVersion"]=3;result["model"]="raw_planar_homography/3";result["target"]=t.toJson();result["pixelHash"]=o.pixelHash;
+        QJsonObject evidence{{"schemaVersion",1},{"algorithm",raw.algorithmVersion()},{"coordinateSpace",raw.coordinateSpace()},{"centres",centres},
+            {"orientation",QJsonObject{{"kind","triangle_corner"},{"quarterTurns",direction.quarterTurns},{"mirrored",direction.mirrored},{"triangle",QJsonArray{direction.triangleRaw->x(),direction.triangleRaw->y()}}}},
+            {"acquisition",s.experimentalAcquisition}};
+        result["observation"]=evidence;
+        auto identity=result;for(const auto* k:{"H","regionPixels","fitRmsMm","inverseRmsPx","maxInversePx","fitLimitPx"})identity.remove(k);
+        result["observationId"]=QString::fromLatin1(QCryptographicHash::hash(QJsonDocument(identity).toJson(QJsonDocument::Compact),QCryptographicHash::Sha256).toHex());
+    }
     return result;
 }
 PlaneMapping PlaneMappingService::decode(const QJsonObject& j) {
-    const bool circles=number(j,"schemaVersion")==2;
-    QSet<QString> fields{"schemaVersion","model","solver","coordinateSpace","target","source","width","height","pixels","worldMm","regionPixels","H","fitRmsMm","inverseRmsPx","maxInversePx","fitLimitPx"};if(circles)fields.insert("pixelHash");keys(j,fields);
-    require(number(j,"schemaVersion")== (circles ? 2:1) && j["model"].toString()==(circles ? "raw_planar_homography/2":"raw_planar_homography/1") && j["solver"].toString()=="opencv5.direct_homography/1" && j["coordinateSpace"].toString()=="raw_pixel_centres","Unsupported plane schema/solver/coordinate space");
+    editor_observation::Scope observation(editor_observation::PlaneReplay);
+    const bool framed=number(j,"schemaVersion")==3;
+    const bool circles=number(j,"schemaVersion")==2 || framed;
+    QSet<QString> fields{"schemaVersion","model","solver","coordinateSpace","target","source","width","height","pixels","worldMm","regionPixels","H","fitRmsMm","inverseRmsPx","maxInversePx","fitLimitPx"};if(circles)fields.insert("pixelHash");if(framed){fields.insert("observation");fields.insert("observationId");}keys(j,fields);
+    require(number(j,"schemaVersion")== (framed ? 3:circles ? 2:1) && j["model"].toString()==(framed ? "raw_planar_homography/3":circles ? "raw_planar_homography/2":"raw_planar_homography/1") && j["solver"].toString()=="opencv5.direct_homography/1" && j["coordinateSpace"].toString()=="raw_pixel_centres","Unsupported plane schema/solver/coordinate space");
     const auto t=j["target"].toObject(),s=j["source"].toObject();keys(s,{"sourceId","frameId","cycleId","coordinateSystemId","completedAtUtc"});
     if(!circles){keys(t,{"id","columns","rows","squareMm","origin","axes"});require(t["origin"].toString()=="corner_1" && t["axes"].toString()=="columns_rows","Unsupported target axes/origin");}
     auto integer=[](const QJsonObject& o,const char* key){double v=number(o,key);require(v>=1 && v<=16000000 && std::floor(v)==v,"Invalid plane integer");return int(v);};
     const auto target=circles ? CalibrationGridTarget::fromJson(t):CalibrationGridTarget{t["id"].toString(),integer(t,"columns"),integer(t,"rows"),number(t,"squareMm")};
-    require(!circles || target.pattern==CalibrationGridPattern::SymmetricCircles,"Circle mapping target kind mismatch");
+    require(!circles || target.pattern==(framed ? CalibrationGridPattern::FramedCircles:CalibrationGridPattern::SymmetricCircles),"Circle mapping target kind mismatch");
     ChessboardObservation o{target,{},{integer(j,"width"),integer(j,"height")},readPoints(j["pixels"]),readPoints(j["worldMm"]),circles ? j["pixelHash"].toString():QString{}};
     o.source.sourceId=s["sourceId"].toString();o.source.frameId=s["frameId"].toString();o.source.cycleId=s["cycleId"].toString();o.source.coordinateSystemId=s["coordinateSystemId"].toString();o.source.completedAtUtc=QDateTime::fromString(s["completedAtUtc"].toString(),Qt::ISODateWithMs);
-    const auto replay=fit(o,number(j,"fitLimitPx"));require(encode(replay)==j,"Plane matrix/fit/evidence replay mismatch");return replay;
+    std::optional<RawPlateObservation> raw;
+    if(framed){
+        const auto e=j["observation"].toObject();keys(e,{"schemaVersion","algorithm","coordinateSpace","centres","orientation","acquisition"});
+        require(e["schemaVersion"]==1 && e["centres"].isArray() && e["acquisition"].isObject(),"Unsupported observation schema");
+        o.source.experimentalAcquisition=e["acquisition"].toObject();
+        const auto direction=e["orientation"].toObject();keys(direction,{"kind","quarterTurns","mirrored","triangle"});
+        require(direction["kind"]=="triangle_corner" && direction["mirrored"].isBool() && direction["quarterTurns"].isDouble() && direction["quarterTurns"].toDouble()==direction["quarterTurns"].toInt(),"Invalid orientation evidence");
+        const auto triangle=readPoints(QJsonArray{direction["triangle"]});require(triangle.size()==1,"Missing triangle");
+        QVector<PlateCentre> centres;const auto entries=e["centres"].toArray();require(entries.size()==49,"Expected 49 centres");
+        for(const auto& value:entries){const auto c=value.toObject();QSet<QString> fields{"row","column","pixel"};if(c.contains("uncertaintyPx"))fields.insert("uncertaintyPx");keys(c,fields);
+            const auto point=readPoints(QJsonArray{c["pixel"]});require(c["row"].isDouble() && c["column"].isDouble() && c["row"].toDouble()==c["row"].toInt() && c["column"].toDouble()==c["column"].toInt(),"Invalid centre identity");
+            centres.append({c["row"].toInt(),c["column"].toInt(),point[0],c.contains("uncertaintyPx") ? std::optional<double>(number(c,"uncertaintyPx")):std::nullopt});}
+        raw=RawPlateObservation::create(o,centres,{PlateOrientation::TriangleCorner,direction["quarterTurns"].toInt(),direction["mirrored"].toBool(),triangle[0]},e["algorithm"].toString(),e["coordinateSpace"].toString());
+    }
+    const auto replay=raw ? fit(*raw,number(j,"fitLimitPx")):fit(o,number(j,"fitLimitPx"));require(encode(replay)==j,"Plane matrix/fit/evidence replay mismatch");return replay;
 }
 }

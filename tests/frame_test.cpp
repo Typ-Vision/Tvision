@@ -6,6 +6,10 @@
 #include <QUuid>
 #include <QTextStream>
 #include <QTimeZone>
+#include <QTemporaryDir>
+#include <QFile>
+#include <QCryptographicHash>
+#include "vision/ImageAccess.hpp"
 #include <stdexcept>
 #include <array>
 using namespace visionflow;
@@ -35,12 +39,24 @@ int main(int argc,char** argv) {
         check(alpha.pixelText(0,0)=="R:7 G:8 B:9 A:10" && alpha.preview().pixelColor(0,0).alpha()==10,"RGBA alpha order");
         auto copied=g;auto metadata=g.metadata();metadata.sourceId="other";auto rebound=g.withMetadata(metadata);
         check(copied.pixelText(1,0)=="Gray: 65535" && g.metadata().sourceId.isEmpty() && rebound.metadata().sourceId=="other","immutable shared pixels independent metadata");
+        for(const auto& sample:{f,g,color,alpha,rebound}){
+            QCryptographicHash hash(QCryptographicHash::Sha256);
+            hash.addData(QByteArray::number(sample.size().width())+":"+QByteArray::number(sample.size().height())+":"+QByteArray::number(int(sample.format())));
+            const ImageAccess access(sample);
+            for(int y=0;y<sample.size().height();++y){const auto row=access.row(y);hash.addData(QByteArrayView(reinterpret_cast<const char*>(row.data()),row.size()));}
+            check(sample.contentId()==hash.result(),"cached identity preserves legacy native pixels/format and excludes padding/metadata");
+        }
         for(int mode=0;mode<4;++mode){bool rejected=false;try{ImageFrame::fromBuffer(rgba.data(),mode==0 ? 1 : rgba.size(),mode==1 ? 0 : 1,mode==2 ? 2 : 1,mode==3 ? 0 : 4,PixelFormat::Rgba8);}catch(const std::exception&){rejected=true;}check(rejected,"bad buffer bounds rejected");}
-        auto sourceId=QUuid::createUuid().toString();ToolDefinition source{sourceId,"image_file","Source","",true,{{"path","unused"}}};
+        QTemporaryDir directory(QCoreApplication::applicationDirPath()+"/owned-frame-XXXXXX");check(directory.isValid(),"frame fixture directory");
+        const auto fixturePath=directory.filePath("owned.pgm");QFile fixture(fixturePath);
+        check(fixture.open(QIODevice::WriteOnly),"frame source fixture");
+        fixture.write("P5\n2 3\n255\n");for(int i=1;i<=6;++i)fixture.putChar(char(10*i));fixture.close();
+        auto sourceId=QUuid::createUuid().toString();ToolDefinition source{sourceId,"image_file","Source","",true,{{"path",fixturePath}}};
         ToolDefinition blob{QUuid::createUuid().toString(),"blob","Blob","",true,defaultParameters("blob")};
         auto def=withEditorConnections(withEditorTools({}, {source,blob}),{{source.id,"image",blob.id,"image"}});
         auto snapshot=f.metadata();snapshot.sourceId=source.id;snapshot.coordinateSystemId=source.id+"/image";
         auto cycle=ExecutionService{}.run(def,{},"recipe","config",{}, {},f.withMetadata(snapshot));
+        if(cycle.state!=ExecutionState::Done){QTextStream(stderr)<<cycle.error<<"\n";for(const auto& result:cycle.tools)QTextStream(stderr)<<result.message<<"\n";}
         check(cycle.state==ExecutionState::Done && cycle.frames.size()==1,"owned raw frame executes without preview");
         check(cycle.frames[0].sourceId==source.id && cycle.frames[0].exposureAtUtc==f.metadata().exposureAtUtc && cycle.frames[0].completedAtUtc==f.metadata().completedAtUtc,"metadata survives execution snapshot");
         for(const auto& tool:cycle.tools)for(const auto& v:tool.outputs)check(v.origin.frameId==cycle.frameId && v.origin.cycleId==cycle.cycleId && v.origin.sourceId==source.id,"derived output provenance");

@@ -59,7 +59,7 @@ ToolResult GeometryMeasurementService::execute(const ToolDefinition& t,const QMa
         LineFitOptions o;o.minPoints=p["fitMinPoints"].toInt();o.minCoverage=.6;o.minSpanCoverage=.5;o.minSpan=p["lineMinSpan"].toDouble();
         o.inlierDistance=p["fitInlierDistance"].toDouble();o.maxRms=p["fitMaxRms"].toDouble();o.maxResidual=p["fitMaxResidual"].toDouble();
         o.ransac=p["fitRansac"].toBool();o.minVarianceRatio=p["lineMinVarianceRatio"].toDouble();
-        const auto fit=LineFitter::fit(scans,b-a,o,cancel);inverse(fit.supportStart);inverse(fit.supportEnd);
+        const auto fit=[&]{try{return LineFitter::fit(scans,b-a,o,cancel);}catch(const FitDiagnosticError& e){auto d=e.evidence;d.stage="geometry_refit";throw FitDiagnosticError(e.what(),std::move(d));}}();inverse(fit.supportStart);inverse(fit.supportEnd);
         return Line2D{fit.supportStart,fit.supportEnd,targetFrame};
     };
     auto circle=[&](const QString& id,const QString& sample){
@@ -69,7 +69,7 @@ ToolResult GeometryMeasurementService::execute(const ToolDefinition& t,const QMa
         CircleFitOptions o;o.minPoints=p["fitMinPoints"].toInt();o.minCoverage=.6;o.minAngularSpanDegrees=p["circleMinAngularSpan"].toDouble();
         o.maxCondition=p["circleMaxCondition"].toDouble();o.inlierDistance=p["fitInlierDistance"].toDouble();o.maxRms=p["fitMaxRms"].toDouble();
         o.maxResidual=p["fitMaxResidual"].toDouble();o.ransac=p["fitRansac"].toBool();
-        const auto fit=CircleFitter::fit(scans,o,cancel);inverse(fit.centre);
+        const auto fit=[&]{try{return CircleFitter::fit(scans,o,cancel);}catch(const FitDiagnosticError& e){auto d=e.evidence;d.stage="geometry_refit";throw FitDiagnosticError(e.what(),std::move(d));}}();inverse(fit.centre);
         return Circle2D{fit.centre,fit.radius,targetFrame};
     };
     // Enforce currentness even for operations whose output is unavailable.

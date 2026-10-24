@@ -1,4 +1,6 @@
 #include "application/RadialScanService.hpp"
+#include "application/MetrologyService.hpp"
+#include "domain/ToolRegistry.hpp"
 #include <QCoreApplication>
 #include <QFile>
 #include <QTextStream>
@@ -19,10 +21,41 @@ ToolRoi ring(QPointF c={95.2,96.35},double r=40){return {{"raw"},Annulus{c,r-12,
 RadialScanOptions options(){RadialScanOptions o;o.edge.profile={.5,1,1};o.edge.minContrast=10;o.edge.polarity=EdgePolarity::Rising;return o;}
 }
 int main(int argc,char** argv){QCoreApplication app(argc,argv);try {
+    for(int count:{10,128})for(double sweep:{360.,180.,90.,-90.,-360.})for(bool inward:{false,true}) {
+        const ToolRoi roi{{"raw"},ArcRoi{{{96,96},30,50},17,sweep}};
+        auto p=defaultParameters("circle_fit");p["scanCount"]=count;p["direction"]=inward ? "inward":"outward";
+        const auto lines=MetrologyService::scanGuides("circle_fit",p,roi);check(lines.size()==count,"exact nominal guide count");
+        for(int i=0;i<count;++i){double a=(17+sweep*i/(std::abs(sweep)==360 ? count:count-1))*std::numbers::pi/180;QPointF u(std::cos(a),std::sin(a));
+            check(QLineF(lines[i].p1(),QPointF(96,96)+u*(inward ? 50:30)).length()<1e-9,"nominal start and signed angle");
+            check(QLineF(lines[i].p2(),QPointF(96,96)+u*(inward ? 30:50)).length()<1e-9,"nominal end direction");}
+        check(lines.first()!=lines.last(),"no duplicate full ring endpoint");
+    }
+    {auto p=defaultParameters("line_fit");p["scanCount"]=10;p["scanWidthPx"]=2;
+        const auto lines=MetrologyService::scanGuides("line_fit",p,ToolRoi{{"raw"},RotatedRectangle{{100,100},{80,40},90}});
+        check(lines.size()==10,"rotated line exact count");check(QLineF(lines.first().p1(),{120,61}).length()<1e-9 && QLineF(lines.last().p2(),{80,139}).length()<1e-9,"rotated line actual scan direction and strip margins");}
+    {auto p=defaultParameters("line_fit");p["scanCount"]=10;p["scanWidthPx"]=2;p["poseTracking"]=QJsonObject{{"mmPerSample",.1}};
+        const auto lines=MetrologyService::scanGuides("line_fit",p,ToolRoi{{"world",LengthUnit::Millimetre},RotatedRectangle{{10,10},{8,4},90}});
+        check(QLineF(lines.first().p1(),{12,6.1}).length()<1e-9,"world strip uses synthetic scan width in nominal mm");}
+    {
+        auto p=defaultParameters("circle_fit");auto roi=ring();p["scanRoi"]=roi.toJson();p["scanCount"]=12;
+        auto has=[](const QStringList& warnings,const char* code){for(const auto& w:warnings)if(w.startsWith(code))return true;return false;};
+        check(has(MetrologyService::configurationWarnings("circle_fit",p),"MUI_GAP"),"12 scans versus 15 degree gap explained");
+        p["scanCount"]=72;check(MetrologyService::configurationWarnings("circle_fit",p).isEmpty(),"normal ring configuration has no invented warning");
+        p["scanRoi"]=ToolRoi{{"raw"},ArcRoi{{{95,96},37,43},0,45}}.toJson();
+        const auto narrow=MetrologyService::configurationWarnings("circle_fit",p);check(has(narrow,"MUI_SUPPORT") && has(narrow,"MUI_SPAN"),"short search and narrow angular support distinct");
+        p["scanCount"]=5;check(has(MetrologyService::configurationWarnings("circle_fit",p),"MUI_COUNT"),"too few scans preflight");
+        p["referenceBinding"]=QJsonObject{{"mapping","world-reference-v1"}};const auto tracked=MetrologyService::configurationWarnings("circle_fit",p);check(!has(tracked,"MUI_SPAN") && !has(tracked,"MUI_GAP"),"nominal angles do not predict transformed world quality");
+        auto line=defaultParameters("line_fit");line["scanRoi"]=ToolRoi{{"raw"},RotatedRectangle{{95,96},{8,6},0}}.toJson();
+        const auto shortLine=MetrologyService::configurationWarnings("line_fit",line);check(has(shortLine,"MUI_SPAN") && has(shortLine,"MUI_SUPPORT"),"line support and scan length explained");
+        line["scanRoi"]=ToolRoi{{"raw"},RotatedRectangle{{95,96},{120,8},0}}.toJson();check(!has(MetrologyService::configurationWarnings("line_fit",line),"MUI_SUPPORT"),"8 px passes profile support preflight");
+    }
     QString report;QTextStream out(&report);double sum=0,maximum=0,nsum=0,nmax=0;int count=0,ncount=0;double narrowSum=0,narrowMax=0;int narrowCount=0;
     for(double radius:{24.,40.,60.})for(QPointF centre:{QPointF(95.2,96.35),QPointF(95.57,96.06)})for(bool dark:{false,true})for(bool inward:{false,true}) {
         auto o=options();o.direction=inward ? RadialDirection::Inward:RadialDirection::Outward;o.edge.polarity=(dark!=inward) ? EdgePolarity::Falling:EdgePolarity::Rising;
         auto image=frame(raster(centre,radius,dark));const auto hash=image.contentId();const auto r=RadialScanner::find(image,ring(centre,radius),o);
+        auto params=defaultParameters("circle_fit");params["scanCount"]=o.scanCount;params["direction"]=inward ? "inward":"outward";
+        const auto guides=MetrologyService::scanGuides("circle_fit",params,ring(centre,radius));
+        for(int i=0;i<guides.size();++i)check(guides[i]==QLineF(r.scans[i].rawStart,r.scans[i].rawEnd),"detector and guide endpoints identical");
         check(r.fullCircle && r.foundCount==72 && r.missingCount==0 && r.coverage==1,"all clean scans found");near(r.maxGapDegrees,5,1e-12,"complete full circle max gap is grid spacing");
         check(image.contentId()==hash && r.inputContentId==hash && r.origin.frameId=="frame" && r.origin.cycleId=="cycle" && r.processingId==image.processingId(),"raw immutable/provenance");
         for(const auto& s:r.scans){check(s.scanId>=0 && s.point && s.rawPoint==s.point && s.reason.isEmpty() && s.strength && s.signedStrength,"selected diagnostics");const double e=std::hypot(s.point->x()-centre.x(),s.point->y()-centre.y())-radius;sum+=e*e;maximum=std::max(maximum,std::abs(e));++count;near(e,0,.30,"clean independent radial position max gate");check((*s.signedStrength>0)==(o.edge.polarity==EdgePolarity::Rising),"scan-direction polarity");}
@@ -47,10 +80,11 @@ int main(int argc,char** argv){QCoreApplication app(argc,argv);try {
     near(mappedProfile.samples[10].intensity,((59/.95)+60+(61/1.05))/3,1e-10,"each transverse world tap is inverse mapped before bilinear sampling");
     auto o=options();const auto image=frame(raster({95.2,96.35},40));auto r=RadialScanner::find(image,ring(),o);
     near(r.scans.first().angleDegrees,0,0,"full starts zero");near(r.scans.last().angleDegrees,355,0,"full has no duplicate endpoint");
+    {auto wrong=options();wrong.edge.polarity=EdgePolarity::Falling;const auto missed=RadialScanner::find(image,ring(),wrong);check(missed.foundCount==0,"wrong polarity cannot create observations");for(const auto& scan:missed.scans)check(scan.rejections.polarity>0,"real polarity rejection retained");}
     ToolRoi arc{{"raw"},ArcRoi{{{95.2,96.35},28,52},170,40}};o.scanCount=9;r=RadialScanner::find(image,arc,o);check(!r.fullCircle && r.foundCount==9,"cross-wrap partial arc");near(r.scans.last().angleDegrees,210,0,"partial includes endpoint");near(r.maxGapDegrees,5,1e-12,"arc spacing");
     std::get<ArcRoi>(arc.geometry).sweepDegrees=-120;r=RadialScanner::find(image,arc,o);near(r.scans.last().angleDegrees,50,0,"negative sweep ordered");near(r.maxGapDegrees,15,1e-12,"negative gap absolute");
     std::get<ArcRoi>(arc.geometry).sweepDegrees=-360;r=RadialScanner::find(image,arc,o);check(r.fullCircle,"negative full circle");near(r.scans.last().angleDegrees,-150,1e-12,"negative full excludes end");
-    auto flat=frame(cv::Mat(192,192,CV_8UC1,cv::Scalar(20)));o=options();r=RadialScanner::find(flat,ring(),o);check(r.foundCount==0 && r.missingCount==72 && r.coverage==0,"flat keeps missing slots");near(r.maxGapDegrees,360,0,"no found full gap");for(auto s:r.scans)check(!s.point && !s.rawPoint && !s.strength && s.reason=="not_found","missing no invented geometry");
+    auto flat=frame(cv::Mat(192,192,CV_8UC1,cv::Scalar(20)));o=options();r=RadialScanner::find(flat,ring(),o);check(r.foundCount==0 && r.missingCount==72 && r.coverage==0,"flat keeps missing slots");near(r.maxGapDegrees,360,0,"no found full gap");for(auto s:r.scans)check(!s.point && !s.rawPoint && !s.strength && s.reason=="not_found","missing no invented geometry");for(const auto& scan:r.scans)check(scan.rejections.noCandidate==1,"flat scan retains no candidate evidence");
     r=RadialScanner::find(flat,arc,options());near(r.maxGapDegrees,360,0,"missing negative full circle gap");
     auto emptyArc=arc;std::get<ArcRoi>(emptyArc.geometry).sweepDegrees=-120;
     r=RadialScanner::find(flat,emptyArc,options());near(r.maxGapDegrees,120,0,"missing partial arc includes both boundary gaps");

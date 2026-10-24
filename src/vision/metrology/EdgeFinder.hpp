@@ -1,5 +1,6 @@
 #pragma once
 #include "ProfileSampler.hpp"
+#include "FitDiagnostic.hpp"
 namespace visionflow {
 enum class EdgePolarity { Rising,Falling,Any };
 enum class EdgeSelection { First,Last,Strongest };
@@ -22,6 +23,11 @@ struct EdgeSearch {
     QVector<EdgeCandidate> candidates;
     std::optional<int> selected;
 };
+inline ScanRejections scanRejections(const EdgeSearch& edge) {
+    ScanRejections r;r.noCandidate=edge.candidates.isEmpty() ? 1:0;
+    for(const auto& c:edge.candidates){if(c.reason=="polarity")++r.polarity;else if(c.reason=="min_contrast")++r.contrast;else if(c.reason=="border_support")++r.border;}
+    return r;
+}
 class EdgeFinder {
 public:
     static EdgeSearch find(const ImageFrame&,const ToolRoi&,const EdgeOptions& = {},

@@ -1,3 +1,5 @@
+#include "application/EditorObservation.hpp"
+#include "CameraManager.hpp"
 #include "MainWindow.hpp"
 #include <QAction>
 #include <QApplication>
@@ -10,6 +12,8 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QFormLayout>
+#include <QStackedWidget>
+#include <QScopedValueRollback>
 #include <QGroupBox>
 #include <QHeaderView>
 #include <QLabel>
@@ -57,8 +61,7 @@ QWidget* MainWindow::makeProjectManager() {
     layout->addWidget(projectTree_,1);
     connect(projectTree_,&QTreeWidget::itemDoubleClicked,this,[this](QTreeWidgetItem* item){
         const auto id=item->data(0,Qt::UserRole).toString(); if (id.isEmpty()) return;
-        try { service_.selectRecipe(id); refreshWorkspace(); selectPage("editor"); }
-        catch (const std::exception& e) { displayError(QString::fromUtf8(e.what())); }
+        openEditorRecipe(id);
     });
     return page;
 }
@@ -107,6 +110,7 @@ QWidget* MainWindow::makeRecipeManager() {
     return page;
 }
 void MainWindow::showProjectDialog(bool edit) {
+    if(cameraManager_ && (cameraSession_.busy() || cameraManager_->hasPreview())){cameraManager_->leave([this,edit]{showProjectDialog(edit);});return;}
     if (edit && !service_.hasProject()) return;
     QDialog dialog(this); dialog.setObjectName("projectDialog");
     dialog.setWindowTitle(edit ? "Project Settings" : "New Project"); dialog.setMinimumWidth(640);
@@ -121,12 +125,16 @@ void MainWindow::showProjectDialog(bool edit) {
         const auto path=QFileDialog::getSaveFileName(&dialog,"Yeni proje dosyası",QDir::currentPath(),"VisionFlow Project (*.vfproject)",nullptr,QFileDialog::DontConfirmOverwrite);
         if (!path.isEmpty()) location->setText(path.endsWith(".vfproject",Qt::CaseInsensitive) ? path : path+".vfproject");
     });
-    auto* camera=field(form,"Varsayılan görüntü kaynağı","projectCamera",edit ? p.cameraReference : "ImageFile");
     auto* robot=field(form,"Robot türü (opsiyonel)","projectRobot",p.robotType);
     auto* protocol=field(form,"Protokol (opsiyonel)","projectProtocol",p.communicationProtocol);
-    auto* calibration=field(form,"Kalibrasyon referansı (opsiyonel)","projectCalibration",p.calibrationReference);
     layout->addLayout(form);
-    layout->addWidget(text("Kaynak ve donanım alanları yalnız metadata'dır; bağlantı veya kalibrasyon geçerliliği henüz doğrulanmaz."));
+    auto* details=new QPushButton("Ayrıntılar — eski proje referansları"); details->setCheckable(true); details->setObjectName("projectLegacyDetails");
+    layout->addWidget(details);
+    auto* legacy=new QWidget; auto* legacyForm=new QFormLayout(legacy);
+    auto* camera=field(legacyForm,"Görüntü kaynağı (eski metadata)","projectCamera",p.cameraReference);
+    auto* calibration=field(legacyForm,"Kalibrasyon (eski metadata)","projectCalibration",p.calibrationReference);
+    legacyForm->addRow(text("Bu metinler reçetelere aktarılmaz. Kamerayı Recipe Editor kaynak düğümünde seçin."));
+    layout->addWidget(legacy); legacy->hide(); connect(details,&QPushButton::toggled,legacy,&QWidget::setVisible);
     auto* error=text(""); error->setObjectName("error"); layout->addWidget(error);
     auto* buttons=new QDialogButtonBox(QDialogButtonBox::Ok|QDialogButtonBox::Cancel);
     buttons->button(QDialogButtonBox::Ok)->setText(edit ? "Apply" : "Create Project");
@@ -141,7 +149,9 @@ void MainWindow::showProjectDialog(bool edit) {
                 ProjectService candidate;
                 candidate.createProject(name->text(),description->text(),location->text(),camera->text(),robot->text(),protocol->text(),calibration->text());
                 if (!resolveUnsavedChanges()) return;
-                service_=std::move(candidate);
+                auto replacement=std::make_shared<ProjectService>(std::move(candidate));
+                auto apply=[this,replacement]{service_=std::move(*replacement);editorCameraExitAccepted_=true;refreshWorkspace();selectPage("projects");editorCameraExitAccepted_=false;};
+                if(!drainEditorCameras(apply))apply();dialog.accept();return;
             }
             refreshWorkspace(); selectPage("projects"); dialog.accept();
         } catch (const std::exception& e) { error->setText(QString::fromUtf8(e.what())); }
@@ -149,14 +159,16 @@ void MainWindow::showProjectDialog(bool edit) {
     dialog.exec();
 }
 void MainWindow::openProjectDialog() {
+    if(cameraManager_ && (cameraSession_.busy() || cameraManager_->hasPreview())){cameraManager_->leave([this]{openProjectDialog();});return;}
     const auto path=QFileDialog::getOpenFileName(this,"Open Project",QDir::currentPath(),"VisionFlow Project (*.vfproject)");
     if (path.isEmpty()) return;
     try {
         ProjectService candidate; candidate.openProject(path);
         if (!resolveUnsavedChanges()) return;
         // If Save was chosen for the same path, load the newly saved content.
-        candidate.openProject(path); service_=std::move(candidate);
-        refreshWorkspace(); selectPage("projects");
+        candidate.openProject(path);auto replacement=std::make_shared<ProjectService>(std::move(candidate));
+        auto apply=[this,replacement]{service_=std::move(*replacement);editorCameraExitAccepted_=true;refreshWorkspace();selectPage("projects");editorCameraExitAccepted_=false;};
+        if(!drainEditorCameras(apply))apply();
     } catch (const std::exception& e) { displayError(QString::fromUtf8(e.what())); }
 }
 void MainWindow::showRecipeDialog(bool edit) {
@@ -182,11 +194,9 @@ void MainWindow::showRecipeDialog(bool edit) {
     layout->addLayout(cards); auto* form=new QFormLayout;
     auto* name=field(form,"Reçete adı","recipeName",original.name);
     auto* description=field(form,"Açıklama","recipeDescription",original.description,2048);
-    auto* camera=field(form,"Görüntü kaynağı referansı","recipeCamera",edit ? original.cameraReference : service_.project().cameraReference);
-    auto* calibration=field(form,"Kalibrasyon referansı","recipeCalibration",edit ? original.calibrationReference : service_.project().calibrationReference);
     layout->addLayout(form);
     layout->addWidget(text(edit ? "Tür değişikliği flow uyumluluğu doğrulamasıyla daha sonra eklenecek. Değişiklikler reçeteyi DRAFT yapar." :
-        "Reçete DRAFT oluşturulur. Başlangıç akışı burada açıklamadır; tool'lar sonraki adımlarda uygulanacak."));
+        "Reçete boş kaynakla DRAFT oluşturulur. Kamerayı veya dosyayı Recipe Editor kaynak düğümünde seçin; kalibrasyon kaynak üzerinden çözülür."));
     auto* error=text(""); error->setObjectName("error"); layout->addWidget(error);
     auto* buttons=new QDialogButtonBox(QDialogButtonBox::Ok|QDialogButtonBox::Cancel);
     buttons->button(QDialogButtonBox::Ok)->setText(edit ? "Apply && Open Editor" : "Create && Open Editor");
@@ -194,17 +204,26 @@ void MainWindow::showRecipeDialog(bool edit) {
     connect(buttons,&QDialogButtonBox::rejected,&dialog,&QDialog::reject);
     connect(buttons,&QDialogButtonBox::accepted,&dialog,[&]{
         try {
-            if (edit) service_.editRecipe(original.id,name->text(),description->text(),camera->text(),calibration->text());
-            else service_.createRecipe(name->text(),description->text(),static_cast<ApplicationType>(group->checkedId()),camera->text(),calibration->text());
-            refreshWorkspace(); selectPage("editor"); dialog.accept();
+            if (edit) service_.editRecipeMetadata(original.id,name->text(),description->text());
+            else {
+                // Validate while the dialog still owns its error label. A deferred
+                // camera drain must never accept an invalid recipe and close it.
+                auto candidate=service_;
+                candidate.createRecipe(name->text(),description->text(),static_cast<ApplicationType>(group->checkedId()));
+                if(service_.activeRecipe() && pages_->currentIndex()==pageIds_.indexOf("editor") && !resolveUnsavedChanges())return;
+                auto create=[this,n=name->text(),d=description->text(),type=static_cast<ApplicationType>(group->checkedId())]{
+                    try{service_.createRecipe(n,d,type);refreshWorkspace();selectPage("editor");syncEditorCameras({},true);}
+                    catch(const std::exception& e){displayError(QString::fromUtf8(e.what()));}};
+                if(!drainEditorCameras(create))create();dialog.accept();return;
+            }
+            refreshWorkspace(); selectPage("editor");syncEditorCameras({},true);dialog.accept();
         } catch (const std::exception& e) { error->setText(QString::fromUtf8(e.what())); }
     });
     dialog.exec();
 }
 void MainWindow::openSelectedRecipe() {
     const auto id=selectedRecipeId(recipeTable_); if (id.isEmpty()) return;
-    try { service_.selectRecipe(id); refreshWorkspace(); selectPage("editor"); }
-    catch (const std::exception& e) { displayError(QString::fromUtf8(e.what())); }
+    openEditorRecipe(id);
 }
 void MainWindow::loadSelectedRecipe() {
     const auto id=selectedRecipeId(recipeTable_); if(id.isEmpty())return;
@@ -228,7 +247,9 @@ void MainWindow::loadSelectedRecipe() {
         const auto options=saved.activeRecipe()->definition["runtime"].toObject();
         runtimeCoordinator_->load(*saved.activeRecipe(),QFileInfo(service_.path()).absolutePath(),options["trigger"]=="SoftwareTrigger" ? RuntimeTrigger::SoftwareTrigger : RuntimeTrigger::Manual);
         if(plc_)plc_->setMapping(options["measurementToolId"].toString());
-        runtimeResult_.reset();showRuntimeResult();refreshRecipes();refreshRuntime();selectPage("runtime");
+        runtimeResult_.reset();showRuntimeResult();refreshRecipes();refreshRuntime();
+        auto leave=[this]{QScopedValueRollback<bool> accepted(editorCameraExitAccepted_,true);selectPage("runtime");};
+        if(!drainEditorCameras(leave))leave();
     } catch(const std::exception& e) {
         const auto previous=runtimeCoordinator_ && runtimeCoordinator_->loaded() ? runtimeCoordinator_->loaded()->name+QString(" v%1").arg(runtimeCoordinator_->loaded()->recipeVersion) : QString("yok");
         const auto message="Load başarısız: "+QString::fromUtf8(e.what())+"\nKorunan yüklü reçete: "+previous;
@@ -261,14 +282,30 @@ void MainWindow::refreshRecipes() {
     const auto loaded=runtimePath_==service_.path() && runtimeCoordinator_ && runtimeCoordinator_->loaded() ? runtimeCoordinator_->loaded()->name+QString(" v%1").arg(runtimeCoordinator_->loaded()->recipeVersion) : QString("yok");
     recipeCount_->setText(recipeCount_->text()+"\nEditörde: "+(service_.activeRecipe() ? service_.activeRecipe()->name : QString("yok"))+" | Runtime yüklü: "+loaded);
 }
-void MainWindow::refreshWorkspace() {
-    workspaceError_->hide(); saveAction_->setEnabled(service_.hasProject() && service_.dirty());
+void MainWindow::refreshWorkspaceHeader() {
+    workspaceError_->hide(); saveAction_->setEnabled(service_.hasProject());
     statusBar()->showMessage("Hazır — Tool yürütmesi: Run Flow / Results.");
     const bool has=service_.hasProject(); const auto* active=service_.activeRecipe();
     const QString dirty=service_.dirty() ? " • Kaydedilmedi" : "";
     context_->setText(QString("Proje: %1%2   |   Reçete: %3   |   Sistem: yapılandırılmadı")
         .arg(has ? service_.project().name : "seçilmedi",dirty,active ? active->name+" / "+typeLabel(active->applicationType) : "seçilmedi"));
     setWindowTitle("VisionFlow"+(has ? " — "+service_.project().name : " Industrial Vision Suite")+(service_.dirty() ? " *" : ""));
+    if(auto* name=findChild<QLabel*>("editorRecipeName"))name->setText(active ? active->name:"Recipe Editor");
+    editorContext_->setText(active ? QString("%1%2 · %3 · v%4")
+        .arg(statusKey(active->status),service_.recipeDirty(active->id) ? " • Kaydedilmedi":"",typeLabel(active->applicationType),QString::number(active->recipeVersion)) : "Aktif reçete yok");
+    editorContext_->setToolTip(context_->text()+(active ? "\nKaynak: "+active->cameraReference:QString{}));
+    dashboardRecipe_->setText(active ? active->name+" / "+typeLabel(active->applicationType)+" / "+statusKey(active->status) : "Seçilmedi");
+    for (const auto& id : {"newRecipe","saveProject","saveRecipes","editProject"})
+        if (auto* button=findChild<QPushButton*>(id)) button->setEnabled(has);
+    // A clean service can still have an uncommitted Properties spin-box value.
+    if (auto* button=findChild<QPushButton*>("saveWorkspace")) button->setEnabled(has);
+    if (auto* button=findChild<QPushButton*>("editActiveRecipe")) button->setEnabled(active!=nullptr);
+}
+void MainWindow::refreshWorkspace() {
+    editor_observation::Scope observation(editor_observation::Workspace);
+    refreshWorkspaceHeader();
+    const bool has=service_.hasProject();
+    const QString dirty=service_.dirty() ? " • Kaydedilmedi" : "";
     projectTree_->clear();
     if (has) {
         const auto& p=service_.project();
@@ -285,30 +322,35 @@ void MainWindow::refreshWorkspace() {
         new QTreeWidgetItem(projectTree_,{"Variables","Henüz yok"}); new QTreeWidgetItem(projectTree_,{"Logs","Henüz yok"});
         projectTree_->expandAll();
     } else projectSummary_->setText("Proje yok. New Project veya Open Project ile başlayın.");
-    editorContext_->setText(active ? QString("%1  |  %2  |  Kaynak: %3  |  v%4  |  %5%6\nTool yürütmesi: Run Flow / Results.")
-        .arg(active->name,typeLabel(active->applicationType),active->cameraReference,QString::number(active->recipeVersion),statusKey(active->status),
-             service_.recipeDirty(active->id) ? " • Kaydedilmedi" : "") : "Yerleşim önizlemesi — aktif reçete yok.");
-    dashboardRecipe_->setText(active ? active->name+" / "+typeLabel(active->applicationType)+" / "+statusKey(active->status) : "Seçilmedi");
-    for (const auto& id : {"newRecipe","saveProject","saveRecipes","editProject"})
-        if (auto* button=findChild<QPushButton*>(id)) button->setEnabled(has);
-    if (auto* button=findChild<QPushButton*>("saveWorkspace")) button->setEnabled(has && service_.dirty());
-    if (auto* button=findChild<QPushButton*>("editActiveRecipe")) button->setEnabled(active!=nullptr);
+    // Workspace ownership follows the project even while Calibration is hidden.
+    QString workspaceDiagnostic;
+    try{measurementWorkspace();}catch(const std::exception& e){workspaceDiagnostic=QString::fromUtf8(e.what());}
     refreshRecipes();
     refreshEditor();
+    calibrationRefresh_.invalidate("workspace");
+    runtimeRefresh_.invalidate("workspace");
     refreshCalibration();
-    refreshRuntime();
+    refreshRuntime(false);
+    if(!workspaceDiagnostic.isEmpty())displayError(workspaceDiagnostic);
 }
 void MainWindow::saveProject() {
-    if (!applyToolProperties()) return;
+    const auto commit=commitToolProperties();
+    if(commit==PropertyCommit::Failed)return;
+    // Save owns the single refresh. Keep the current controls/focus alive, including
+    // on a failed atomic write; the pending values and dirty recipe remain editable.
+    const QScopedValueRollback<bool> guard(propertiesEditing_,true);
     try {
         service_.save(); refreshWorkspace(); statusBar()->showMessage("Proje ve reçeteler atomik olarak kaydedildi.",5000);
-    } catch (const std::exception& e) { displayError(QString::fromUtf8(e.what())); }
+    } catch (const std::exception& e) {
+        if(commit==PropertyCommit::Changed)refreshWorkspace();
+        displayError(QString::fromUtf8(e.what()));
+    }
 }
 void MainWindow::displayError(const QString& message) {
     workspaceError_->setText(message); workspaceError_->show(); statusBar()->showMessage(message);
 }
 bool MainWindow::resolveUnsavedChanges() {
-    if(runtimeCoordinator_ && runtimeCoordinator_->state()==RuntimeState::Running){displayError("Proje değiştirmeden/kapatmadan önce Runtime Stop seçin.");return false;}
+    if(runtimeCoordinator_ && (runtimeCoordinator_->state()==RuntimeState::Running || runtimeCoordinator_->state()==RuntimeState::Starting || runtimeCoordinator_->state()==RuntimeState::Stopping)){displayError("Proje değiştirmeden/kapatmadan önce Runtime Stop ve kamera kapanışını tamamlayın.");return false;}
     if(plc_ && plc_->blocking()){displayError("Önce PLC kayıt/ACK tamamlanmalı.");return false;}
     if (!applyToolProperties()) return false;
     if (!service_.dirty()) return true;
@@ -316,7 +358,7 @@ bool MainWindow::resolveUnsavedChanges() {
     const auto choice=QMessageBox::warning(this,"Kaydedilmemiş değişiklikler",
         "Proje veya reçete değişikliklerini kaydetmek ister misiniz?",QMessageBox::Save|QMessageBox::Discard|QMessageBox::Cancel,QMessageBox::Save);
     if (choice==QMessageBox::Cancel) return false;
-    if (choice==QMessageBox::Discard) { service_.discardChanges(); refreshWorkspace(); return true; }
+    if (choice==QMessageBox::Discard) { QScopedValueRollback<bool> accepted(editorCameraExitAccepted_,true);service_.discardChanges(); refreshWorkspace(); return true; }
     saveProject(); return !service_.dirty();
 }
 bool MainWindow::verifyWorkspace(const QString& artifacts) {
@@ -328,6 +370,7 @@ bool MainWindow::verifyWorkspace(const QString& artifacts) {
         auto* dialog=findChild<QDialog*>("projectDialog"); if (!dialog) return;
         dialog->findChild<QLineEdit*>("projectName")->setText("Test Projesi");
         dialog->findChild<QLineEdit*>("projectPath")->setText(path);
+        if(dialog->findChild<QLineEdit*>("projectCamera")->isVisible() || dialog->findChild<QLineEdit*>("projectCalibration")->isVisible()) {dialog->reject();return;}
         dialog->grab().save(QDir(artifacts).filePath("step2-new-project.png"));
         dialog->findChild<QPushButton*>("acceptProject")->click();
         dialogCompleted=service_.hasProject(); if (!dialogCompleted) dialog->reject();
@@ -340,16 +383,29 @@ bool MainWindow::verifyWorkspace(const QString& artifacts) {
         dialogCompleted=false;
         QTimer::singleShot(0,this,[&,type]{
             auto* dialog=findChild<QDialog*>("recipeDialog"); if (!dialog) return;
+            if(dialog->findChild<QLineEdit*>("recipeCamera") || dialog->findChild<QLineEdit*>("recipeCalibration")) {dialog->reject();return;}
+            if(type<2) {
+                dialog->findChild<QLineEdit*>("recipeName")->setText(type==0 ? "  " : "part_1");
+                dialog->findChild<QPushButton*>("acceptRecipe")->click();
+                if(service_.project().recipes.size()!=type || dialog->findChild<QLabel*>("error")->text().isEmpty()) {dialog->reject();return;}
+            }
             dialog->findChild<QLineEdit*>("recipeName")->setText("Part_"+QString::number(type+1));
             dialog->findChild<QRadioButton*>(typeKey(static_cast<ApplicationType>(type)))->click();
-            if (type==2) dialog->grab().save(QDir(artifacts).filePath("step2-new-recipe.png"));
+            if (type==2) {
+                resize(1400,900);dialog->resize(1000,450);QApplication::processEvents();dialog->grab().save(QDir(artifacts).filePath("ccux11-new-normal.png"));
+                resize(850,600);dialog->resize(820,450);QApplication::processEvents();dialog->grab().save(QDir(artifacts).filePath("ccux11-new-small.png"));
+                resize(1400,900);dialog->grab().save(QDir(artifacts).filePath("step2-new-recipe.png"));
+            }
             dialog->findChild<QPushButton*>("acceptRecipe")->click();
-            dialogCompleted=service_.activeRecipe() && service_.activeRecipe()->applicationType==static_cast<ApplicationType>(type);
+            dialogCompleted=service_.activeRecipe() && service_.activeRecipe()->applicationType==static_cast<ApplicationType>(type) &&
+                service_.activeRecipe()->cameraReference.isEmpty() && service_.activeRecipe()->calibrationReference.isEmpty() && service_.tools().isEmpty();
             if (!dialogCompleted) dialog->reject();
         });
         findChild<QPushButton*>("newRecipe")->click();
         if (!dialogCompleted || !editorContext_->text().contains("Kaydedilmedi")) return false;
         ids.append(service_.activeRecipe()->id);
+        saveProject(); // Keep dialog validation independent from the dirty-exit decision.
+        if(service_.dirty())return false;
     }
     findChild<QPushButton*>("saveWorkspace")->click(); if (service_.dirty()) return false;
     for (int index=1;index<=3;++index) {
@@ -366,7 +422,10 @@ bool MainWindow::verifyWorkspace(const QString& artifacts) {
     dialogCompleted=false;
     QTimer::singleShot(0,this,[&]{
         auto* dialog=findChild<QDialog*>("recipeDialog"); if (!dialog) return;
+        if(dialog->findChild<QLineEdit*>("recipeCamera") || dialog->findChild<QLineEdit*>("recipeCalibration")) {dialog->reject();return;}
         dialog->findChild<QLineEdit*>("recipeDescription")->setText("Güncellenmiş açıklama");
+        resize(1400,900);dialog->resize(1000,450);QApplication::processEvents();dialog->grab().save(QDir(artifacts).filePath("ccux11-edit-normal.png"));
+        resize(850,600);dialog->resize(820,450);QApplication::processEvents();dialog->grab().save(QDir(artifacts).filePath("ccux11-edit-small.png"));resize(1400,900);
         dialog->findChild<QPushButton*>("acceptRecipe")->click();
         dialogCompleted=service_.dirty(); if (!dialogCompleted) dialog->reject();
     });

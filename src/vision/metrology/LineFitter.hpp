@@ -1,4 +1,5 @@
 #pragma once
+#include "FitDiagnostic.hpp"
 #include "EdgeFinder.hpp"
 namespace visionflow {
 struct LineFitOptions {
@@ -13,6 +14,7 @@ struct LineScanPoint {
     std::optional<double> signedResidual;
     bool used=false;
     QString reason;
+    ScanRejections rejections;
 };
 struct FittedLine {
     QPointF origin,tangent; // Infinite line; tangent follows the taught direction.

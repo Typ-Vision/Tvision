@@ -1,13 +1,17 @@
+#include <QMouseEvent>
+#include "MetrologyEditor.hpp"
 #include "MainWindow.hpp"
 #include "PreprocessEditor.hpp"
 #include "CodeReadEditor.hpp"
 #include "EdgePointEditor.hpp"
 #include "MetrologyEditor.hpp"
+#include "application/ToolCatalog.hpp"
 #include "EdgeProfileView.hpp"
 #include "application/BackendCapabilities.hpp"
 #include "application/ProductionResultCodec.hpp"
 #include "application/ToolResultCodec.hpp"
 #include <QGraphicsScene>
+#include <QGraphicsItem>
 #include <QSplitter>
 #include <QTabWidget>
 #include "ImageViewer.hpp"
@@ -38,8 +42,11 @@
 #include <QListWidget>
 #include <QMouseEvent>
 #include <QPainter>
+#include <QGraphicsScene>
+#include <QGraphicsItem>
 #include <QPushButton>
 #include <QLabel>
+#include <QTextEdit>
 #include <QComboBox>
 #include <QElapsedTimer>
 #include <QTimer>
@@ -125,7 +132,7 @@ bool MainWindow::verifyRuntime(const QString& artifacts) {
     load("saveAndLoad");check(!service_.dirty() && runtimeCoordinator_->loaded()->recipeVersion==version+1,"dirty save and load new version");
     findChild<QPushButton*>("runtime_run")->click();findChild<QPushButton*>("runtime_cycle")->click();wait();check(runtimeResult_ && runtimeSummary_->text().contains("9.975000 mm • FAIL"),"new saved tolerance produces real FAIL");
     findChild<QPushButton*>("runtime_cycle")->click();findChild<QPushButton*>("runtime_stop")->click();wait();check(runtimeResult_ && runtimeResult_->state==ExecutionState::Skipped && !runtimeSummary_->text().contains("mm •") && !runtimeViewer_->hasImage(),"Stop cancels shared coordinator token");
-    findChild<QPushButton*>("runtime_run")->click();findChild<QPushButton*>("runtime_cycle")->click();QLockFile lock(service_.path()+".production/archive.lock");lock.setStaleLockTime(0);check(lock.tryLock(),"UI log lock fixture");wait();check(runtimePending_ && runtime_->busy() && !runtimeResult_ && !findChild<QPushButton*>("runtime_cycle")->isEnabled(),"failed record suppresses result and blocks cycle");QApplication::processEvents();grab().save(QDir(artifacts).filePath("runtime-record-pending.png"));findChild<QPushButton*>("runtime_stop")->click();load();check(runtimeCoordinator_->loaded()->id==recipeId && runtimePending_,"pending record prevents replacement");lock.unlock();findChild<QPushButton*>("runtime_retry")->click();check(!runtimePending_ && runtimeResult_ && runtimeCoordinator_->state()==RuntimeState::LoadedStopped,"retry same terminal after Stop");
+    findChild<QPushButton*>("runtime_run")->click();findChild<QPushButton*>("runtime_cycle")->click();QLockFile lock(service_.path()+".production/archive.lock");lock.setStaleLockTime(0);check(lock.tryLock(),"UI log lock fixture");wait();check(runtimePending_ && runtime_->busy() && !runtimeResult_ && !findChild<QPushButton*>("runtime_cycle")->isEnabled(),"failed record suppresses result and blocks cycle");QApplication::processEvents();grab().save(QDir(artifacts).filePath("runtime-record-pending.png"));findChild<QPushButton*>("runtime_stop")->click();load();check(runtimeCoordinator_->loaded()->id==recipeId && runtimePending_,"pending record prevents replacement");const auto pendingCycle=runtimePending_->cycleId;lock.unlock();findChild<QPushButton*>("runtime_retry")->click();check(!runtimePending_ && !runtimeResult_ && !runtimeViewer_->hasImage() && runtimeCoordinator_->state()==RuntimeState::LoadedStopped,"retry after Stop persists frozen completion without restoring visible result");bool committed=false;for(const auto& record:ProductionStore(service_.path()+".production").recent("cycles"))if(record["cycleId"]==pendingCycle)committed=true;check(committed,"stopped retry durably records the original cycle");
     // Selection, editor and loaded identity remain independent. Invalid Load preserves previous copy.
     const auto selectedOnly=service_.createRecipe("Selected only","",ApplicationType::DefectInspection,"file");
     const auto other=service_.createRecipe("Unconfigured selection","",ApplicationType::Measurement,"file");service_.save();refreshWorkspace();select(selectedOnly);check(service_.activeRecipe()->id==other && runtimeCoordinator_->loaded()->id==recipeId,"selected/editor/loaded identity separation");
@@ -190,7 +197,8 @@ bool MainWindow::verifyEditor(const QString& artifacts) {
     const QString invalid=QDir(artifacts).filePath("corrupt-image.png");
     {QFile file(invalid); if (!file.open(QIODevice::WriteOnly)) return false; file.write("not an image");}
     if (loadEditorImage(invalid) || !editorSession_.frame || service_.imageFilePath()!=fixture) return false;
-    toolbox_->setCurrentRow(1); findChild<QPushButton*>("addTool")->click();
+    for(int i=0;i<toolbox_->count();++i)if(toolbox_->item(i)->data(Qt::UserRole)=="template_match")toolbox_->setCurrentRow(i);
+    findChild<QPushButton*>("addTool")->click();
     const auto matchId=selectedToolId_; if (matchId==sourceId) return false;
     auto* score=propertiesBody_->findChild<QDoubleSpinBox*>("minScore"); if (!score) return false;
     score->setValue(84.5);
@@ -200,8 +208,8 @@ bool MainWindow::verifyEditor(const QString& artifacts) {
     saveProject(); if (!service_.dirty()) return false;
     name->setText("Match_Part"); if (!applyToolProperties()) return false;
     if (!service_.dirty() || service_.activeRecipe()->status!=RecipeStatus::Draft) return false;
-    findChild<QPushButton*>("zoomIn")->click(); const auto zoom=imageViewer_->zoomFactor();
-    findChild<QPushButton*>("zoomOut")->click(); if (imageViewer_->zoomFactor()>=zoom) return false;
+    findChild<QAction*>("zoomIn")->trigger(); const auto zoom=imageViewer_->zoomFactor();
+    findChild<QAction*>("zoomOut")->trigger(); if (imageViewer_->zoomFactor()>=zoom) return false;
     selectTool(sourceId); if (!propertiesBody_->findChild<QPushButton*>("removeTool")) return false;
     imageViewer_->actualSize(); imageViewer_->centerOn(1000,900);
     const auto viewPoint=imageViewer_->mapFromScene(QPointF(1000,900));
@@ -223,9 +231,9 @@ bool MainWindow::verifyEditor(const QString& artifacts) {
     enabled->setChecked(true); if (!imageViewer_->hasImage()) return false;
     service_.save(); refreshWorkspace(); selectTool(matchId);
     {QFile file(fixture); if (!file.open(QIODevice::WriteOnly)) return false; file.write("broken after save");}
-    findChild<QPushButton*>("reloadImage")->click(); if (editorSession_.frame || imageViewer_->hasImage() || service_.dirty()) return false;
+    findChild<QAction*>("reloadImage")->trigger(); if (editorSession_.frame || imageViewer_->hasImage() || service_.dirty()) return false;
     if (!image.save(fixture)) return false;
-    findChild<QPushButton*>("reloadImage")->click();
+    findChild<QAction*>("reloadImage")->trigger();
     if (!imageViewer_->hasImage() || !workspaceError_->isHidden() || service_.dirty()) return false;
     QApplication::processEvents(); grab().save(QDir(artifacts).filePath("step3-editor.png")); return true;
 }
@@ -243,22 +251,22 @@ bool MainWindow::verifyMeasurement(const QString& artifacts) {
     auto wait=[&]{QElapsedTimer t;t.start();while(editorSession_.busy() && t.elapsed()<15000){QApplication::processEvents();QThread::msleep(1);}check(!editorSession_.busy(),"calibration/UI worker timeout");};
     auto result=[&]{check(editorSession_.cycle.has_value(),"measurement cycle");for(const auto& t:editorSession_.cycle->tools)if(t.toolId==measurement)return t;throw std::runtime_error("measurement result missing");};
     runFlow();wait();check(result().errorCode=="CALIBRATION_INVALID" && result().outputs.isEmpty(),"UI unbound error without value");
-    selectPage("calibration");calibrationLens_->setText("fixture-lens");calibrationPlane_->setText("fixture-plane");findChild<QPushButton*>("calibrationSetup")->click();findChild<QPushButton*>("calibrationAcquire")->click();wait();
-    findChild<QComboBox*>("calibrationModel")->setCurrentIndex(0);calibrationId_->setText("fixture-scale");
-    for(int r=0;r<2;++r)findChild<QPushButton*>("calibrationAddSample")->click();
-    const QVector<QStringList> rows{{"teach","100","100","500","100","10"},{"holdout-x","200","50","800","50","15"},{"holdout-y","300","20","300","520","12.5"}};
-    for(int c=0;c<6;++c)findChild<QTableWidget*>("calibrationTeaching")->item(0,c)->setText(rows[0][c]);for(int r=1;r<rows.size();++r)for(int c=0;c<6;++c)calibrationSamples_->item(r-1,c)->setText(rows[r][c]);
-    findChild<QPushButton*>("calibration_calculate")->click();wait();check(calibrationCandidate_ && !calibrationCandidate_->validated() && !calibrationStatus_->text().contains("RMS"),"UI calculate candidate without invented validation error");
-    findChild<QPushButton*>("calibration_validate")->click();wait();check(calibrationCandidate_ && calibrationCandidate_->validated(),"UI independent holdout accepted");
-    findChild<QScrollArea*>("calibrationScroll")->ensureWidgetVisible(calibrationStatus_);QApplication::processEvents();grab().save(QDir(artifacts).filePath("calibration-validated.png"));
-    resize(850,600);QApplication::processEvents();check(width()==850 && height()==600,"calibration minimum size preserved");grab().save(QDir(artifacts).filePath("calibration-small.png"));resize(1400,900);QApplication::processEvents();
-    findChild<QPushButton*>("calibration_save")->click();wait();check(service_.activeRecipe()->calibrationBinding && service_.dirty(),"UI save/bind DRAFT");saveProject();
-    service_.openProject(service_.path());service_.selectRecipe(recipeId);refreshWorkspace();selectPage("calibration");findChild<QGroupBox*>("calibrationRecords")->setChecked(true);findChild<QPushButton*>("calibration_load")->click();wait();check(calibrationSamples_->rowCount()==2 && findChild<QTableWidget*>("calibrationTeaching")->item(0,0)->text()=="teach" && !calibrationCandidate_,"UI saved evidence reopened without automatic acceptance");
+    service_.setCalibrationSetup("fixture-lens","fixture-plane");
+    runExecution(source);wait();check(editorSession_.frame.has_value(),"Legacy fixture acquired");
+    const auto pixels=CalibrationWorkflow::installation(*service_.activeRecipe(),*editorSession_.frame).source;
+    const auto candidate=CalibrationWorkflow::teach(*service_.activeRecipe(),*editorSession_.frame,"fixture-scale",1,{"teach",{{100,100},pixels},{{500,100},pixels},10});
+    const auto frame=candidate.dependency().source;
+    const auto model=MeasurementService{}.validate(candidate,{{"holdout-x",{{200,50},frame},{{800,50},frame},15},{"holdout-y",{{300,20},frame},{{300,520},frame},12.5}},.01);
+    CalibrationService(service_.path()+".calibrations.json").save(model);
+    CalibrationWorkflow::bind(service_,*editorSession_.frame,service_.path()+".calibrations.json","fixture-scale");
+    const auto savedDependency=model.dependency();saveProject();
+    service_.openProject(service_.path());service_.selectRecipe(recipeId);refreshWorkspace();selectPage("calibration");
+    check(service_.activeRecipe()->calibrationBinding==savedDependency,"Legacy binding survives reopen without old UI");
     selectPage("editor");selectTool(measurement);runFlow();wait();check(result().decision==PartDecision::Pass && std::abs(std::get<double>(result().outputs["value"].data)-9.975)<1e-12,"UI calibrated actual Edge PASS");
     check(service_.activeRecipe()->status==RecipeStatus::Draft,"mm execution is not recipe validation");imageViewer_->fitImage();QApplication::processEvents();grab().save(QDir(artifacts).filePath("measurement-pass.png"));
     propertiesBody_->findChild<QDoubleSpinBox*>("upperMm")->setValue(9.9749);check(applyToolProperties(),"UI raw fail boundary");runFlow();wait();check(result().state==ExecutionState::Done && result().decision==PartDecision::Fail,"UI FAIL separate from DONE");QApplication::processEvents();grab().save(QDir(artifacts).filePath("measurement-fail.png"));
     runFlow();findChild<QPushButton*>("stopFlow")->click();wait();check(editorSession_.cycle->state==ExecutionState::Skipped && result().outputs.isEmpty() && result().decision==PartDecision::NotEvaluated,"UI stop clears decision");
-    selectPage("calibration");calibrationLens_->setText("changed-lens");findChild<QPushButton*>("calibrationSetup")->click();check(!service_.activeRecipe()->calibrationBinding,"UI installation invalidation");selectPage("editor");runFlow();wait();check(result().errorCode=="CALIBRATION_INVALID" && result().outputs.isEmpty() && !matchInfo_->text().contains("9.975"),"UI changed calibration suppresses previous mm output");QApplication::processEvents();grab().save(QDir(artifacts).filePath("measurement-invalid.png"));
+    selectPage("calibration");service_.setCalibrationSetup("changed-lens","fixture-plane");check(!service_.activeRecipe()->calibrationBinding,"UI installation invalidation");selectPage("editor");runFlow();wait();check(result().errorCode=="CALIBRATION_INVALID" && result().outputs.isEmpty() && !matchInfo_->text().contains("9.975"),"UI changed calibration suppresses previous mm output");QApplication::processEvents();grab().save(QDir(artifacts).filePath("measurement-invalid.png"));
     saveProject();return true;
 }
 bool MainWindow::verifyExecution(const QString& artifacts) {
@@ -304,7 +312,8 @@ bool MainWindow::verifyExecution(const QString& artifacts) {
     findChild<QPushButton*>("runTool")->click();wait();
     bool mask=false;for(const auto& r:editorSession_.cycle->tools)if(r.toolId==blob)mask=!r.mask.pixels.isEmpty();check(mask && editorSession_.frame->contentId()==rawHash,"Run Tool restores mask on same raw frame");
     QApplication::processEvents();grab().save(QDir(artifacts).filePath("p5-blob-mask.png"));resize(850,600);QApplication::processEvents();grab().save(QDir(artifacts).filePath("p5-blob-mask-small.png"));resize(1400,900);
-    toolbox_->setCurrentRow(3);findChild<QPushButton*>("addTool")->click();
+    for(int i=0;i<toolbox_->count();++i)if(toolbox_->item(i)->data(Qt::UserRole)=="edge_point")toolbox_->setCurrentRow(i);
+    findChild<QPushButton*>("addTool")->click();
     const auto temporary=selectedToolId_;findChild<QPushButton*>("removeTool")->click();
     check(selectedToolId_.isEmpty(),"delete clears selected tool");
     for(const auto& tool:service_.tools())check(tool.id!=temporary,"UI temporary tool removed");
@@ -346,7 +355,7 @@ bool MainWindow::verifyExecution(const QString& artifacts) {
     for(const auto& result:editorSession_.cycle->tools)if(result.toolId==trackingEdge)check(result.searchRegion==QRect(220,160,30,100),"UI re-taught anchor keeps requested box");
     QApplication::processEvents();grab().save(QDir(artifacts).filePath("a2-reference-restored.png"));service_.save();
     const auto definitionBeforeGeometry=service_.activeRecipe()->definition;
-    findChild<QPushButton*>("roiGeometry")->click();QApplication::processEvents();
+    findChild<QAction*>("roiGeometry")->trigger();QApplication::processEvents();
     auto* geometryDialog=findChild<QDialog*>("roiGeometryDialog");check(geometryDialog,"ROI geometry entry opens numeric editor");
     geometryDialog->findChild<QComboBox*>("roiShape")->setCurrentIndex(3);geometryDialog->findChild<QPushButton*>("roiApply")->click();
     if(!imageViewer_->roi() || !std::holds_alternative<ArcRoi>(imageViewer_->roi()->geometry))throw std::runtime_error(("numeric arc: "+geometryDialog->findChild<QLabel*>("roiStatus")->text()).toStdString());
@@ -405,86 +414,6 @@ bool MainWindow::verifyMatching(const QString& artifacts) {
 }
 
 namespace visionflow {
-bool MainWindow::verifyChessboard(const QString& artifacts) {
-    auto check=[](bool ok,const char* message){if(!ok)throw std::runtime_error(message);};
-    auto wait=[&]{QElapsedTimer timer;timer.start();while(editorSession_.busy() && timer.elapsed()<20000){QApplication::processEvents();QThread::msleep(1);}check(!editorSession_.busy(),"chessboard worker timeout");};
-    selectPage("calibration");findChild<QComboBox*>("calibrationModel")->setCurrentIndex(1);const auto definition=service_.activeRecipe()->definition;const auto binding=service_.activeRecipe()->calibrationBinding;const auto sourceFrame=editorSession_.frame;
-    const auto path=QDir(artifacts).filePath("chessboard-test.png");check(chessboardFixture(true).save(path),"board saved");
-    importCalibrationTestImage(path);wait();check(calibrationTestImage_ && !calibrationChessboard_,"UI test import isolated");
-    findChild<QLineEdit*>("chessboardTargetId")->setText("fixture-board");findChild<QDoubleSpinBox*>("chessboardSpacing")->setValue(10);
-    findChild<QPushButton*>("calibrationDetectChessboard")->click();wait();check(calibrationChessboard_ && calibrationChessboard_->pixels.size()==54,"UI true detected overlay");
-    check(service_.activeRecipe()->definition==definition && service_.activeRecipe()->calibrationBinding==binding && (!sourceFrame || editorSession_.frame->metadata().frameId==sourceFrame->metadata().frameId),"test import preserves recipe/source/binding");
-    check(!findChild<QPushButton*>("calibration_save")->isEnabled(),"test image cannot bind legacy scale");
-    findChild<QPushButton*>("calibrationFitHomography")->click();wait();check(calibrationMapping_.has_value() && calibrationMappingStatus_->text().contains("Fit RMS") && !calibrationCandidate_,"UI H candidate distinct from validation");
-    const auto a=calibrationChessboard_->pixels[10],b=calibrationChessboard_->pixels[43];findChild<QDoubleSpinBox*>("trialX1")->setValue(a.x());findChild<QDoubleSpinBox*>("trialY1")->setValue(a.y());findChild<QDoubleSpinBox*>("trialX2")->setValue(b.x());findChild<QDoubleSpinBox*>("trialY2")->setValue(b.y());findChild<QPushButton*>("calibrationTrialDistance")->click();wait();check(calibrationTrialStatus_->text().contains("mm") && !calibrationTrialStatus_->text().startsWith("Mesafe yok"),"UI actual plane distance trial");QApplication::processEvents();grab().save(QDir(artifacts).filePath("homography-trial.png"));
-    findChild<QDoubleSpinBox*>("trialX1")->setValue(0);findChild<QDoubleSpinBox*>("trialY1")->setValue(0);findChild<QPushButton*>("calibrationTrialDistance")->click();wait();check(calibrationTrialStatus_->text().startsWith("Mesafe yok"),"UI rejects extrapolation and clears previous mm");calibrationTrialPoints_.clear();
-
-    const auto points=calibrationChessboard_->pixels;calibrationViewer_->zoomBy(1.2);refreshCalibration();check(calibrationChessboard_->pixels==points,"zoom independent raw points");
-    QApplication::processEvents();grab().save(QDir(artifacts).filePath("chessboard-detected.png"));resize(850,600);QApplication::processEvents();calibrationViewer_->fitImage();QApplication::processEvents();grab().save(QDir(artifacts).filePath("chessboard-small.png"));resize(1400,900);
-    findChild<QSpinBox*>("chessboardColumns")->setValue(8);check(!calibrationChessboard_,"target edit clears old corners");findChild<QPushButton*>("calibrationDetectChessboard")->click();wait();check(!calibrationChessboard_,"wrong target suppresses old success");findChild<QSpinBox*>("chessboardColumns")->setValue(9);
-    detectCalibrationChessboard();editorSession_.stop(SessionJob::Teaching);wait();check(!calibrationChessboard_,"cancel suppresses corners");
-    detectCalibrationChessboard();findChild<QDoubleSpinBox*>("chessboardSpacing")->setValue(11);wait();check(!calibrationChessboard_,"stale target worker suppressed");
-    detectCalibrationChessboard();wait();check(calibrationChessboard_.has_value(),"detection recovered");
-    importCalibrationTestImage(QDir(artifacts).filePath("missing-board.png"));check(!calibrationChessboard_ && !calibrationTestImage_,"reimport clears result immediately");wait();check(!calibrationTestImage_ && !calibrationChessboard_,"failed import no previous result");
-    QApplication::processEvents();grab().save(QDir(artifacts).filePath("chessboard-import-error.png"));return true;
-}
-}
-
-namespace visionflow {
-bool MainWindow::verifyHomography(const QString& artifacts) {
-    auto check=[](bool ok,const char* message){if(!ok)throw std::runtime_error(message);};
-    auto wait=[&]{QElapsedTimer timer;timer.start();while((editorSession_.busy() || runtimeJobs_.busy()) && timer.elapsed()<20000){QApplication::processEvents();QThread::msleep(1);}check(!editorSession_.busy() && !runtimeJobs_.busy(),"H UI worker timeout");};
-    // Reopen an offline study through the same worker commands as the buttons.
-    const auto boardPath=QDir(artifacts).filePath("homography-board.png"),studyPath=QDir(artifacts).filePath("homography-test.vfcalstudy");check(chessboardFixture(true).save(boardPath),"board fixture");
-    findChild<QComboBox*>("calibrationModel")->setCurrentIndex(1);importCalibrationTestImage(boardPath);wait();findChild<QSpinBox*>("chessboardColumns")->setValue(9);findChild<QSpinBox*>("chessboardRows")->setValue(6);findChild<QDoubleSpinBox*>("chessboardSpacing")->setValue(10);findChild<QLineEdit*>("chessboardTargetId")->setText("H-board");detectCalibrationChessboard();wait();calculateCalibrationHomography();wait();check(calibrationMapping_.has_value(),"H study fitted");
-    calibrationStudyAction("save",studyPath);wait();invalidateChessboard(true);calibrationStudyAction("load",studyPath);wait();check(calibrationTestImage_ && calibrationMapping_ && calibrationCandidate_ && !calibrationCandidate_->validated(),"UI offline candidate evidence reopen");check(!findChild<QPushButton*>("calibration_save")->isEnabled(),"offline study cannot bind production");
-    QApplication::processEvents();grab().save(QDir(artifacts).filePath("homography-study-reopened.png"));
-    const auto recipeId=service_.createRecipe("Homography measurement","",ApplicationType::Measurement,"file");const auto source=service_.addTool("image_file"),left=service_.addTool("edge"),right=service_.addTool("edge"),measurement=service_.addTool("measurement");for(auto t:service_.tools()){if(t.id==source)t.parameters["path"]=boardPath;if(t.id==right)t.parameters["direction"]="right_to_left";if(t.id==measurement){t.parameters["lowerMm"]=0;t.parameters["upperMm"]=100;}service_.updateTool(t);}service_.setConnections({{source,"image",left,"image"},{source,"image",right,"image"},{left,"point",measurement,"p1"},{right,"point",measurement,"p2"}});refreshWorkspace();selectPage("calibration");calibrationLens_->setText("H-lens-declared");calibrationPlane_->setText("H-plane");findChild<QPushButton*>("calibrationSetup")->click();findChild<QPushButton*>("calibrationAcquire")->click();wait();check(editorSession_.frame.has_value() && !calibrationTestImage_,"real acquisition source frame");
-    findChild<QComboBox*>("calibrationModel")->setCurrentIndex(1);findChild<QLineEdit*>("chessboardTargetId")->setText("H-board");findChild<QDoubleSpinBox*>("chessboardSpacing")->setValue(10);detectCalibrationChessboard();wait();check(calibrationChessboard_.has_value(),"source-specific image coordinates detected");calculateCalibrationHomography();wait();check(calibrationMapping_.has_value(),"H raw acquisition fitted");
-    calibrationId_->setText("ui-plane-H");findChild<QSpinBox*>("calibrationVersion")->setValue(1);findChild<QDoubleSpinBox*>("calibrationMaxError")->setValue(.1);
-    std::vector<cv::Point2f> from{{50,50},{650,50},{650,470},{50,470}},to{{85,75},{590,40},{650,455},{40,480}};const auto imageTransform=cv::getPerspectiveTransform(from,to);
-    std::vector<cv::Point2f> input{{150,150},{450,150},{210,130},{210,370}},projected;cv::perspectiveTransform(input,projected,imageTransform);
-    {QSignalBlocker blocker(calibrationSamples_);calibrationSamples_->setRowCount(2);for(int r=0;r<2;++r){const QStringList values{r==0 ? "independent-x" : "independent-y",QString::number(projected[r*2].x,'g',12),QString::number(projected[r*2].y,'g',12),QString::number(projected[r*2+1].x,'g',12),QString::number(projected[r*2+1].y,'g',12),r==0 ? "50" : "40"};for(int c=0;c<6;++c)calibrationSamples_->setItem(r,c,new QTableWidgetItem(values[c]));}}
-    refreshCalibration();findChild<QPushButton*>("calibration_validate")->click();wait();check(calibrationCandidate_ && calibrationCandidate_->mapping() && calibrationCandidate_->validated(),"UI H independent known physical grid holdouts");check(calibrationSamples_->item(0,6) && calibrationSamples_->item(0,7) && calibrationReport_,"actual residual columns and export enabled");exportCalibrationReport(QDir(artifacts).filePath("homography-evidence.csv"));wait();findChild<QScrollArea*>("calibrationScroll")->ensureWidgetVisible(calibrationStatus_);QApplication::processEvents();grab().save(QDir(artifacts).filePath("homography-validated.png"));
-    findChild<QPushButton*>("calibration_save")->click();wait();check(service_.activeRecipe()->calibrationBinding && service_.activeRecipe()->calibrationBinding->modelType=="raw_planar_homography" && service_.dirty(),"UI H save/bind typed DRAFT");saveProject();service_.openProject(service_.path());service_.selectRecipe(recipeId);refreshWorkspace();selectPage("calibration");findChild<QGroupBox*>("calibrationRecords")->setChecked(true);findChild<QPushButton*>("calibration_load")->click();wait();check(calibrationMapping_ && calibrationSamples_->rowCount()==2 && !calibrationCandidate_,"UI stored acquired evidence reopened without automatic new acceptance");
-    QImage part(700,520,QImage::Format_Grayscale8);part.fill(0);{QPainter p(&part);p.fillRect(250,230,250,70,Qt::white);}check(part.save(boardPath),"part same source fixed plane");
-    selectPage("editor");selectTool(measurement);runFlow();wait();check(editorSession_.cycle && editorSession_.cycle->tools.last().state==ExecutionState::Done && editorSession_.cycle->tools.last().decision==PartDecision::Pass,"UI H actual Edge mm measurement");QApplication::processEvents();grab().save(QDir(artifacts).filePath("homography-measurement.png"));
-    selectPage("recipes");refreshRecipes();for(int row=0;row<recipeTable_->rowCount();++row)if(recipeTable_->item(row,0)->data(Qt::UserRole)==recipeId)recipeTable_->selectRow(row);findChild<QPushButton*>("loadRecipe")->click();findChild<QPushButton*>("runtime_run")->click();check(!runtimeJobs_.busy() && !runtimeResult_,"H Run without acquisition");findChild<QPushButton*>("runtime_cycle")->click();wait();check(runtimeResult_ && runtimeResult_->tools.last().decision==PartDecision::Pass,"UI H Runtime persisted PASS");runtimeTools_->setCurrentIndex(runtimeTools_->findData(measurement));runtimeViewer_->fitImage();QApplication::processEvents();grab().save(QDir(artifacts).filePath("homography-runtime.png"));resize(850,600);QApplication::processEvents();runtimeViewer_->fitImage();QApplication::processEvents();grab().save(QDir(artifacts).filePath("homography-runtime-small.png"));resize(1400,900);findChild<QPushButton*>("runtime_stop")->click();
-    selectPage("calibration");calibrationLens_->setText("changed-H-lens");findChild<QPushButton*>("calibrationSetup")->click();check(!service_.activeRecipe()->calibrationBinding && !calibrationMapping_,"H setup invalidates binding and preview");selectPage("editor");runFlow();wait();check(editorSession_.cycle->tools.last().outputs.isEmpty(),"H invalid source no previous mm/PASS");saveProject();return true;
-}
-}
-namespace visionflow {
-bool MainWindow::verifyManualCalibration(const QString& artifacts) {
-    auto check=[](bool ok,const char* message){if(!ok)throw std::runtime_error(message);};auto wait=[&]{QElapsedTimer timer;timer.start();while((editorSession_.busy() || runtimeJobs_.busy()) && timer.elapsed()<20000){QApplication::processEvents();QThread::msleep(1);}check(!editorSession_.busy() && !runtimeJobs_.busy(),"manual UI worker timeout");};
-    const auto recipeId=service_.createRecipe("Manual calibration","",ApplicationType::Measurement,"file");refreshWorkspace();selectPage("calibration");auto* mode=findChild<QComboBox*>("calibrationModel");auto* factor=findChild<QLineEdit*>("calibrationPxPerMm");auto* scroll=findChild<QScrollArea*>("calibrationScroll");
-    check(mode->currentData()=="manual_planar_scale" && factor->text().isEmpty() && !service_.activeRecipe()->calibrationBinding,"manual blank default without fake factor");
-    check(findChild<QWidget*>("calibrationBoardFields")->isHidden() && findChild<QWidget*>("calibrationTeachingFields")->isHidden(),"manual hides board and teaching");
-    saveProject();const auto cleanVersion=service_.activeRecipe()->recipeVersion;mode->setCurrentIndex(0);check(!findChild<QWidget*>("calibrationTeachingFields")->isHidden(),"uniform separate teaching visible");mode->setCurrentIndex(1);check(!findChild<QWidget*>("calibrationBoardFields")->isHidden() && !findChild<QGroupBox*>("calibrationTechnical")->isChecked(),"H fields with collapsed technical details");mode->setCurrentIndex(2);check(!service_.dirty() && service_.activeRecipe()->recipeVersion==cleanVersion,"browsing methods no recipe edit");
-    QImage image(1000,600,QImage::Format_Grayscale8);image.fill(0);{QPainter p(&image);p.fillRect(200,100,201,300,Qt::white);}const auto path=QDir(artifacts).filePath("manual-part.png");check(image.save(path),"manual actual fixture");selectPage("editor");check(loadEditorImage(path),"manual source loaded");const auto source=selectedToolId_,left=service_.addTool("edge"),right=service_.addTool("edge"),measurement=service_.addTool("measurement");for(auto t:service_.tools()){if(t.id==right)t.parameters["direction"]="right_to_left";if(t.id==measurement){t.parameters["lowerMm"]=10.;t.parameters["upperMm"]=10.;}service_.updateTool(t);}service_.setConnections({{source,"image",left,"image"},{source,"image",right,"image"},{left,"point",measurement,"p1"},{right,"point",measurement,"p2"}});refreshWorkspace();selectPage("calibration");
-    calibrationLens_->setText("manual-lens");calibrationPlane_->setText("manual-plane");findChild<QPushButton*>("calibrationSetup")->click();findChild<QPushButton*>("calibrationAcquire")->click();wait();calibrationId_->setText("ui-manual");
-    for(const auto& invalid:QStringList{"","0","-1","NaN","inf","20.5","20,1234567","0,0000001","1000000,000001"}){factor->setText(invalid);check(!findChild<QPushButton*>("calibration_calculate")->isEnabled() && !calibrationCandidate_,"manual invalid input no clamp/candidate");}
-    for(const auto& valid:QStringList{"0,000001","1000000","20,5"}){factor->setText(valid);check(findChild<QPushButton*>("calibration_calculate")->isEnabled(),"manual UI inclusive bounds/decimal comma");}
-    findChild<QPushButton*>("calibration_calculate")->click();wait();check(calibrationCandidate_ && calibrationCandidate_->pixelsPerMillimetre()==20.5 && !calibrationCandidate_->validated(),"Turkish decimal actual service input");factor->clear();resize(1400,900);scroll->verticalScrollBar()->setValue(0);QApplication::processEvents();grab().save(QDir(artifacts).filePath("manual-empty.png"));
-    factor->setText("20");findChild<QPushButton*>("calibration_calculate")->click();wait();check(calibrationCandidate_ && !calibrationReport_ && !calibrationStatus_->text().contains("RMS"),"manual candidate no invented validation");
-    findChild<QDoubleSpinBox*>("trialX1")->setValue(100);findChild<QDoubleSpinBox*>("trialY1")->setValue(100);findChild<QDoubleSpinBox*>("trialX2")->setValue(300);findChild<QDoubleSpinBox*>("trialY2")->setValue(100);findChild<QPushButton*>("calibrationTrialDistance")->click();wait();check(calibrationTrialStatus_->text().startsWith("10 mm") && !findChild<QPushButton*>("calibration_save")->isEnabled(),"manual trial only 200px / 20=10mm");
-    resize(1400,900);scroll->ensureWidgetVisible(findChild<QWidget*>("calibrationManualFields"));QApplication::processEvents();grab().save(QDir(artifacts).filePath("manual-candidate.png"));resize(850,600);QApplication::processEvents();scroll->ensureWidgetVisible(factor);QApplication::processEvents();check(scroll->horizontalScrollBar()->maximum()==0,"small calibration no horizontal panel overflow");grab().save(QDir(artifacts).filePath("manual-candidate-small.png"));resize(1400,900);
-    for(int r=0;r<2;++r)findChild<QPushButton*>("calibrationAddSample")->click();const QVector<QStringList> rows{{"independent-x","20","20","220","20","10"},{"independent-y","30","40","30","140","5"}};for(int r=0;r<2;++r)for(int c=0;c<6;++c)calibrationSamples_->item(r,c)->setText(rows[r][c]);
-    // Explicit target and endpoint are required; a click with no target must not modify evidence.
-    const auto before=calibrationSamples_->item(0,1)->text();calibrationViewer_->onPointClicked({55,55});check(calibrationSamples_->item(0,1)->text()==before,"no target no table write");calibrationSamples_->setCurrentCell(0,1);auto* target=findChild<QComboBox*>("calibrationPointTarget");target->setCurrentIndex(2);findChild<QPushButton*>("calibrationPickStart")->click();calibrationViewer_->onPointClicked({20,20});check(calibrationSamples_->item(0,1)->text()=="20","explicit holdout click raw coordinate");
-    findChild<QPushButton*>("calibration_calculate")->click();wait();findChild<QPushButton*>("calibration_validate")->click();wait();check(calibrationCandidate_ && calibrationCandidate_->validated() && calibrationReport_ && calibrationSamples_->item(0,6)->text()=="10","manual independent validation actual rows");
-    scroll->ensureWidgetVisible(calibrationStatus_);QApplication::processEvents();grab().save(QDir(artifacts).filePath("manual-validated.png"));resize(850,600);QApplication::processEvents();scroll->ensureWidgetVisible(calibrationStatus_);QApplication::processEvents();grab().save(QDir(artifacts).filePath("manual-validated-small.png"));resize(1400,900);
-    // Failed revalidation clears the previous report, values and acceptance.
-    calibrationSamples_->item(0,5)->setText("11");findChild<QPushButton*>("calibration_calculate")->click();wait();findChild<QPushButton*>("calibration_validate")->click();wait();check(!calibrationCandidate_ && !calibrationReport_ && calibrationSamples_->item(0,6)->text().isEmpty(),"failed manual validation clears old success");calibrationSamples_->item(0,5)->setText("10");findChild<QPushButton*>("calibration_calculate")->click();wait();findChild<QPushButton*>("calibration_validate")->click();wait();exportCalibrationReport(QDir(artifacts).filePath("manual-ui-evidence.csv"));wait();findChild<QPushButton*>("calibration_save")->click();wait();check(service_.activeRecipe()->calibrationBinding && service_.activeRecipe()->calibrationBinding->modelType=="manual_planar_scale" && service_.dirty(),"manual saved bind DRAFT");saveProject();service_.openProject(service_.path());service_.selectRecipe(recipeId);refreshWorkspace();selectPage("calibration");findChild<QGroupBox*>("calibrationRecords")->setChecked(true);findChild<QPushButton*>("calibration_load")->click();wait();check(mode->currentData()=="manual_planar_scale" && factor->text()=="20" && calibrationSamples_->rowCount()==2 && !calibrationCandidate_ && calibrationReport_,"stored manual evidence correct method/precision no auto new acceptance");
-    mode->setCurrentIndex(1);check(!calibrationReport_ && !calibrationCandidate_ && !calibrationTrialStatus_->text().contains("10 mm"),"method switch removes old report/trial");mode->setCurrentIndex(2);check(!service_.dirty(),"method switch preserves saved binding");selectPage("editor");selectTool(measurement);runFlow();wait();check(editorSession_.cycle && editorSession_.cycle->tools.last().decision==PartDecision::Pass && std::get<double>(editorSession_.cycle->tools.last().outputs["value"].data)==10,"manual UI real Edge mm");
-    selectPage("recipes");refreshRecipes();for(int row=0;row<recipeTable_->rowCount();++row)if(recipeTable_->item(row,0)->data(Qt::UserRole)==recipeId)recipeTable_->selectRow(row);findChild<QPushButton*>("loadRecipe")->click();findChild<QPushButton*>("runtime_run")->click();findChild<QPushButton*>("runtime_cycle")->click();wait();check(runtimeResult_ && runtimeResult_->tools.last().decision==PartDecision::Pass,"manual actual Runtime persisted result");QApplication::processEvents();grab().save(QDir(artifacts).filePath("manual-runtime.png"));findChild<QPushButton*>("runtime_stop")->click();
-    selectPage("calibration");const auto binding=service_.activeRecipe()->calibrationBinding;importCalibrationTestImage(path);wait();factor->setText("20");findChild<QPushButton*>("calibration_calculate")->click();wait();check(calibrationCandidate_ && calibrationCandidate_->manualProvenance()->origin=="file_test","manual offline candidate");findChild<QPushButton*>("calibration_validate")->click();wait();check(calibrationCandidate_ && calibrationCandidate_->validated() && !findChild<QPushButton*>("calibration_save")->isEnabled() && findChild<QPushButton*>("calibrationSaveStudy")->isHidden() && service_.activeRecipe()->calibrationBinding==binding,"manual offline validation memory only, no bind or study");
-    findChild<QPushButton*>("calibration_calculate")->click();findChild<QPushButton*>("calibrationStop")->click();wait();check(!calibrationCandidate_ && !calibrationReport_,"manual Stop stale candidate suppressed");
-    findChild<QPushButton*>("calibration_calculate")->click();mode->setCurrentIndex(0);wait();check(!calibrationCandidate_ && !calibrationReport_,"method switch while worker discards late result");mode->setCurrentIndex(2);findChild<QPushButton*>("calibrationAcquire")->click();wait();check(!calibrationTestImage_,"manual explicit source returns from file test");
-    saveProject();return true;
-}
-}
-
-namespace visionflow {
 bool MainWindow::verifyCodeReading(const QString& artifacts) {
     auto check=[](bool ok,const char* message){if(!ok)throw std::runtime_error(message);};
     QListWidgetItem* entry=nullptr;for(int i=0;i<toolbox_->count();++i)if(toolbox_->item(i)->data(Qt::UserRole)=="code_read")entry=toolbox_->item(i);
@@ -538,7 +467,14 @@ bool MainWindow::verifyEdgePoint(const QString& artifacts) {
     auto wait=[&]{QApplication::processEvents();QElapsedTimer timer;timer.start();while((editorSession_.busy() || runtimeJobs_.busy()) && timer.elapsed()<20000){QApplication::processEvents();QThread::msleep(1);}QApplication::processEvents();check(!editorSession_.busy() && !runtimeJobs_.busy(),"edge UI worker deadline");};
     const auto recipe=service_.createRecipe("Yönlü kenar mm","",ApplicationType::Measurement,"file");refreshWorkspace();selectPage("editor");
     QImage fixture(1000,600,QImage::Format_Grayscale8);fixture.fill(20);{QPainter p(&fixture);p.fillRect(200,100,400,300,QColor(220,220,220));}const auto path=QDir(artifacts).filePath("edge-stripe.png");check(fixture.save(path) && loadEditorImage(path),"edge UI independent 400px stripe");const auto source=selectedToolId_;
-    QListWidgetItem* entry=nullptr;for(int i=0;i<toolbox_->count();++i)if(toolbox_->item(i)->data(Qt::UserRole)=="edge_point")entry=toolbox_->item(i);check(entry && toolbox_->count()==16,"sixteen Toolbox entries including pose tools");toolbox_->setCurrentItem(entry);findChild<QPushButton*>("addTool")->click();const auto left=selectedToolId_;findChild<QPushButton*>("addTool")->click();const auto right=selectedToolId_,measurement=service_.addTool("measurement");refreshWorkspace();
+    QListWidgetItem* entry=nullptr;bool industrialSource=false;
+    for(int i=0;i<toolbox_->count();++i) {
+        const auto kind=toolbox_->item(i)->data(Qt::UserRole).toString();
+        if(kind=="edge_point")entry=toolbox_->item(i);
+        if(kind=="industrial_camera")industrialSource=true;
+    }
+    int catalogCount=0;for(int i=0;i<toolbox_->count();++i)if(!toolbox_->item(i)->data(Qt::UserRole).toString().isEmpty())++catalogCount;
+    check(entry && industrialSource && catalogCount==ToolCatalog::entries().size(),"all new catalog kinds present independently of group headers");toolbox_->setCurrentItem(entry);findChild<QPushButton*>("addTool")->click();const auto left=selectedToolId_;findChild<QPushButton*>("addTool")->click();const auto right=selectedToolId_,measurement=service_.addTool("measurement");refreshWorkspace();
     auto bind=[&](QString target,QString input,QString upstream,QString output){selectTool(target);auto* c=propertiesBody_->findChild<QComboBox*>("input_"+input);check(c && c->findData(upstream+"/"+output)>0,"edge UI compatible binding");c->setCurrentIndex(c->findData(upstream+"/"+output));};
     bind(left,"image",source,"image");bind(right,"image",source,"image");bind(measurement,"p1",left,"point");bind(measurement,"p2",right,"point");
     selectTool(left);imageViewer_->fitImage();findChild<QPushButton*>("edgeDraw")->click();
@@ -548,7 +484,7 @@ bool MainWindow::verifyEdgePoint(const QString& artifacts) {
     numeric(left);
     const auto beforeHandle=imageViewer_->roi();check(beforeHandle.has_value(),"bound numeric scan exists");const auto beforeScan=std::get<ScanSegment>(beforeHandle->geometry);drag(beforeScan.start,beforeScan.start+QPointF(15,5));wait();check(imageViewer_->roi()!=beforeHandle,"bound handle edits scan");imageViewer_->undoRoi();wait();check(imageViewer_->roi()==beforeHandle,"bound geometry undo persists exact scan");
     findChild<QPushButton*>("edgeDraw")->click();imageViewer_->cancelRoi();check(imageViewer_->roi()==beforeHandle,"cancel drawing preserves taught arrow");
-    findChild<QPushButton*>("roiGeometry")->click();QApplication::processEvents();auto* temporary=findChild<QDialog*>("roiGeometryDialog");check(temporary,"temporary geometry dialog");imageViewer_->setRoi(ToolRoi{{source+"/image"},ScanSegment{{100,240},{800,240},8}});refreshMatchOverlay();bool kept=false;for(const auto& t:service_.tools())if(t.id==left)kept=t.parameters["scanRoi"].toObject()==beforeHandle->toJson();check(kept,"temporary geometry never changes bound recipe scan");temporary->close();wait();check(imageViewer_->roi()==beforeHandle,"closing temporary workspace restores recipe arrow");
+    findChild<QAction*>("roiGeometry")->trigger();QApplication::processEvents();auto* temporary=findChild<QDialog*>("roiGeometryDialog");check(temporary,"temporary geometry dialog");imageViewer_->setRoi(ToolRoi{{source+"/image"},ScanSegment{{100,240},{800,240},8}});refreshMatchOverlay();bool kept=false;for(const auto& t:service_.tools())if(t.id==left)kept=t.parameters["scanRoi"].toObject()==beforeHandle->toJson();check(kept,"temporary geometry never changes bound recipe scan");temporary->close();wait();check(imageViewer_->roi()==beforeHandle,"closing temporary workspace restores recipe arrow");
     numeric(right);selectTool(left);propertiesBody_->findChild<QComboBox*>("ep_polarity")->setCurrentIndex(0);selectTool(right);propertiesBody_->findChild<QComboBox*>("ep_polarity")->setCurrentIndex(1);selectTool(measurement);propertiesBody_->findChild<QDoubleSpinBox*>("lowerMm")->setValue(9.999);propertiesBody_->findChild<QDoubleSpinBox*>("upperMm")->setValue(10.001);check(applyToolProperties(),"edge measurement limits");
     auto result=[&](const QString& id)->ToolResult{check(editorSession_.cycle.has_value(),"edge UI cycle exists");for(const auto& r:editorSession_.cycle->tools)if(r.toolId==id)return r;throw std::runtime_error((QString("edge UI result missing: ")+id+"; selected="+selectedToolId_+"; "+matchInfo_->text()).toStdString());};
     selectTool(left);runFlow();wait();check(result(left).state==ExecutionState::Done && result(left).edgeDiagnostics && result(left).edgeDiagnostics->candidates.size()==2 && edgeProfile_->hasDiagnostics(),"real profile and accepted/rejected candidates");check(result(measurement).errorCode=="CALIBRATION_INVALID","unbound mm no invented result");
@@ -556,8 +492,13 @@ bool MainWindow::verifyEdgePoint(const QString& artifacts) {
     imageViewer_->zoomBy(1.2);const auto transform=imageViewer_->transform();const auto hash=editorSession_.frame->contentId();runExecution(left);wait();check(editorSession_.cycle->partial && editorSession_.cycle->executedTools==QStringList{left} && editorSession_.cycle->acquisitions==0 && editorSession_.frame->contentId()==hash && imageViewer_->transform()==transform,"edge TargetOnly preserves raw zoom and no acquisition");
     findChild<QPushButton*>("edgeReverse")->click();wait();propertiesBody_->findChild<QComboBox*>("ep_polarity")->setCurrentIndex(1);runExecution(left);wait();check(std::abs(std::get<QPointF>(result(left).outputs["point"].data).x()-point.x())<.02,"reverse arrow plus polarity same physical edge");findChild<QPushButton*>("edgeReverse")->click();wait();propertiesBody_->findChild<QComboBox*>("ep_polarity")->setCurrentIndex(0);
     // Calibration stays in the existing UI/application workflow.
-    selectPage("calibration");findChild<QComboBox*>("calibrationModel")->setCurrentIndex(2);calibrationLens_->setText("edge-lens");calibrationPlane_->setText("edge-plane");findChild<QPushButton*>("calibrationSetup")->click();findChild<QPushButton*>("calibrationAcquire")->click();wait();calibrationId_->setText("ui-edge-scale");findChild<QLineEdit*>("calibrationPxPerMm")->setText("40");
-    for(int r=0;r<2;++r)findChild<QPushButton*>("calibrationAddSample")->click();const QVector<QStringList> rows{{"edge-holdout-x","20","20","420","20","10"},{"edge-holdout-y","30","40","30","240","5"}};for(int r=0;r<2;++r)for(int c=0;c<6;++c)calibrationSamples_->item(r,c)->setText(rows[r][c]);findChild<QPushButton*>("calibration_calculate")->click();wait();findChild<QPushButton*>("calibration_validate")->click();wait();check(calibrationCandidate_ && calibrationCandidate_->validated(),"edge independent calibration holdouts");findChild<QPushButton*>("calibration_save")->click();wait();check(service_.activeRecipe()->calibrationBinding.has_value(),"edge calibration bound");
+    service_.setCalibrationSetup("edge-lens","edge-plane");runExecution(source);wait();
+    const auto candidate=CalibrationWorkflow::manualScale(*service_.activeRecipe(),*editorSession_.frame,"ui-edge-scale",1,40);
+    const auto coordinate=candidate.dependency().source;
+    const auto accepted=MeasurementService{}.validate(candidate,{{"edge-holdout-x",{{20,20},coordinate},{{420,20},coordinate},10},{"edge-holdout-y",{{30,40},coordinate},{{30,240},coordinate},5}},.01);
+    CalibrationService(service_.path()+".calibrations.json").save(accepted);
+    CalibrationWorkflow::bind(service_,*editorSession_.frame,service_.path()+".calibrations.json","ui-edge-scale","manual_planar_scale");
+    check(service_.activeRecipe()->calibrationBinding.has_value(),"edge calibration service bound");
     selectPage("editor");selectTool(left);runFlow();wait();check(result(measurement).decision==PartDecision::Pass && std::abs(std::get<double>(result(measurement).outputs["value"].data)-10)<.001,"Edge Point to actual 10mm PASS");
     service_.save();const auto revision=service_.activeRecipe()->recipeVersion;const auto definition=service_.activeRecipe()->definition;service_.openProject(service_.path());service_.selectRecipe(recipe);service_.save();check(service_.activeRecipe()->recipeVersion==revision && service_.activeRecipe()->definition==definition,"edge Save reopen no-op");refreshWorkspace();selectTool(left);runFlow();wait();
     resize(1400,900);horizontal_->setSizes({155,680,370});vertical_->setSizes({510,270});findChild<QTabWidget*>("editorTabs")->setCurrentIndex(2);QApplication::processEvents();imageViewer_->fitImage();findChild<QScrollArea*>("propertiesScroll")->ensureWidgetVisible(propertiesBody_->findChild<QPushButton*>("edgeDraw"));QApplication::processEvents();grab().save(QDir(artifacts).filePath("edge-editor.png"));edgeProfile_->grab().save(QDir(artifacts).filePath("edge-profile.png"));resize(850,600);QApplication::processEvents();imageViewer_->fitImage();grab().save(QDir(artifacts).filePath("edge-editor-small.png"));resize(1400,900);
@@ -580,7 +521,7 @@ bool MainWindow::verifyMetrology(const QString& artifacts){
     auto setGeometry=[&](const QString& id,const QVector<QPair<QString,double>>& coordinates){selectTool(id);for(const auto& v:coordinates)propertiesBody_->findChild<QDoubleSpinBox*>("mt_roi_"+v.first)->setValue(v.second);propertiesBody_->findChild<QPushButton*>("metrologyApplyRoi")->click();wait();check(imageViewer_->roi().has_value(),"numeric geometry commits");};
     setGeometry(pair,{{"ax",60.25},{"ay",250.25},{"bx",900.25},{"by",250.25},{"width",4}});
     const auto scan=imageViewer_->roi();imageViewer_->undoRoi();wait();check(!imageViewer_->roi(),"pair undo recipe geometry");setGeometry(pair,{{"ax",60.25},{"ay",250.25},{"bx",900.25},{"by",250.25},{"width",4}});check(imageViewer_->roi()==scan,"pair exact geometry restored");
-    setGeometry(line,{{"cx",200},{"cy",250},{"width",240},{"height",80},{"angle",90}});propertiesBody_->findChild<QComboBox*>("mt_polarity")->setCurrentText("falling");
+    setGeometry(line,{{"cx",200},{"cy",250},{"width",240},{"height",80},{"angle",90}});propertiesBody_->findChild<QComboBox*>("mt_polarity")->setCurrentIndex(propertiesBody_->findChild<QComboBox*>("mt_polarity")->findData("falling"));
     auto result=[&](const QString& id)->ToolResult{check(editorSession_.cycle.has_value(),"metrology cycle");for(const auto& r:editorSession_.cycle->tools)if(r.toolId==id)return r;throw std::runtime_error("metrology result absent");};
     runFlow();wait();check(result(pair).state==ExecutionState::Done && result(line).state==ExecutionState::Done,"new UI pixel tools");check(!result(pair).outputs["widthMm"].valid && result(line).outputs["linePx"].diagnostic,"pixel mode explicitly diagnostic");
     for(auto id:{pair,line}){selectTool(id);propertiesBody_->findChild<QComboBox*>("mt_mode")->setCurrentText("calibrated");propertiesBody_->findChild<QDoubleSpinBox*>("mt_lower")->setValue(id==pair ? 9.999:5.9);propertiesBody_->findChild<QDoubleSpinBox*>("mt_upper")->setValue(id==pair ? 10.001:6.1);check(applyToolProperties(),"calibrated Properties");}
@@ -599,14 +540,60 @@ bool MainWindow::verifyMetrology(const QString& artifacts){
 
 namespace visionflow {
 bool MainWindow::verifyCircle(const QString& artifacts){
+    {
+        auto p=defaultParameters("circle_fit");p["mode"]="calibrated";p["inlierDistance"]=.123;p["maxRms"]=.047;p["maxCondition"]=123.123456789123;
+        MetrologyEditor editor("circle_fit",p,"raw",true);
+        editor.findChild<QComboBox*>("mt_mode")->setCurrentText("pixel");
+        auto changed=editor.parameters();
+        if(changed["maxCondition"]!=p["maxCondition"])throw std::runtime_error("Circle unrelated high precision setting preserved");
+        if(changed["inlierDistance"]!=.123 || changed["maxRms"]!=.047 || changed["unitsPerSample"]!=1.)throw std::runtime_error("Circle unit switch preserves custom limits");
+        if(editor.findChild<QDoubleSpinBox*>("mt_minCoverage")->value()!=90.)throw std::runtime_error("coverage displayed as percent");
+        editor.findChild<QDoubleSpinBox*>("mt_minCoverage")->setValue(85.);
+        if(editor.parameters()["minCoverage"]!=.85)throw std::runtime_error("coverage stored as original fraction");
+        editor.findChild<QPushButton*>("metrologyUnitProfile")->click();changed=editor.parameters();
+        if(changed["inlierDistance"]!=1. || changed["maxRms"]!=.35 || changed["scanWidth"]!=1.)throw std::runtime_error("Circle explicit pixel profile");
+    }
+
     auto check=[](bool b,const char* why){if(!b)throw std::runtime_error(why);};
     auto wait=[&]{QApplication::processEvents();QElapsedTimer timer;timer.start();while((editorSession_.busy() || runtimeJobs_.busy()) && timer.elapsed()<20000){QApplication::processEvents();QThread::msleep(1);}QApplication::processEvents();check(!editorSession_.busy() && !runtimeJobs_.busy(),"Circle UI deadline");};
     QImage raster(192,192,QImage::Format_Grayscale8);for(int y=0;y<192;++y)for(int x=0;x<192;++x){double d=std::hypot(x-96.25,y-95.75)-40;raster.scanLine(y)[x]=uchar(std::lround(128+100*std::erf(d/(std::sqrt(2.)*1.4))));}auto imagePath=QDir(artifacts).filePath("circle-ui-raster.png");check(raster.save(imagePath),"Circle UI independent raster");
     service_.createProject("Circle UI","",QDir(artifacts).filePath("circle-ui-"+QUuid::createUuid().toString(QUuid::WithoutBraces)+".vfproject"),"file");service_.createRecipe("Circle","",ApplicationType::Measurement,"file");const auto source=service_.setImageFile(imagePath);refreshWorkspace();selectPage("editor");selectTool(source);runExecution(source);wait();check(editorSession_.frame.has_value(),"Circle UI actual acquisition");
-    QListWidgetItem* item=nullptr;for(int i=0;i<toolbox_->count();++i)if(toolbox_->item(i)->data(Qt::UserRole)=="circle_fit")item=toolbox_->item(i);check(item,"Circle Toolbox");toolbox_->setCurrentItem(item);findChild<QPushButton*>("addTool")->click();const auto id=selectedToolId_;check(propertiesBody_->findChild<QComboBox*>("mt_mode")->currentText()=="calibrated","new Circle defaults to mm");propertiesBody_->findChild<QComboBox*>("mt_mode")->setCurrentText("pixel");auto* input=propertiesBody_->findChild<QComboBox*>("input_image");input->setCurrentIndex(input->findData(source+"/image"));
+    QListWidgetItem* item=nullptr;for(int i=0;i<toolbox_->count();++i)if(toolbox_->item(i)->data(Qt::UserRole)=="circle_fit")item=toolbox_->item(i);check(item,"Circle Toolbox");toolbox_->setCurrentItem(item);findChild<QPushButton*>("addTool")->click();const auto id=selectedToolId_;check(propertiesBody_->findChild<QComboBox*>("mt_mode")->currentText()=="pixel","new Circle defaults to pixel");propertiesBody_->findChild<QComboBox*>("mt_mode")->setCurrentText("pixel");auto* input=propertiesBody_->findChild<QComboBox*>("input_image");input->setCurrentIndex(input->findData(source+"/image"));
     auto geometry=[&](double cx,double cy,double inner,double outer,double sweep){selectTool(id);for(const auto& v:QVector<QPair<QString,double>>{{"cx",cx},{"cy",cy},{"inner",inner},{"outer",outer},{"start",17.3},{"sweep",sweep}})propertiesBody_->findChild<QDoubleSpinBox*>("mt_roi_"+v.first)->setValue(v.second);propertiesBody_->findChild<QPushButton*>("metrologyApplyRoi")->click();wait();check(imageViewer_->roi().has_value(),"Circle numeric ROI commit");};
     geometry(96.25,95.75,34,46,360);auto before=imageViewer_->roi();imageViewer_->undoRoi();wait();check(!imageViewer_->roi(),"Circle undo bound ROI");geometry(96.25,95.75,34,46,360);check(imageViewer_->roi()==before,"Circle exact subpixel numeric restore");
-    propertiesBody_->findChild<QComboBox*>("mt_polarity")->setCurrentText("rising");runFlow();wait();auto result=[&]()->ToolResult{check(editorSession_.cycle.has_value(),"Circle cycle");for(const auto& r:editorSession_.cycle->tools)if(r.toolId==id)return r;throw std::runtime_error("Circle result missing");};check(result().state==ExecutionState::Done && std::abs(std::get<double>(result().outputs["diameterPx"].data)-80)<.3,"Circle UI actual px");
+    propertiesBody_->findChild<QComboBox*>("mt_polarity")->setCurrentIndex(propertiesBody_->findChild<QComboBox*>("mt_polarity")->findData("rising"));runFlow();wait();auto result=[&]()->ToolResult{check(editorSession_.cycle.has_value(),"Circle cycle");for(const auto& r:editorSession_.cycle->tools)if(r.toolId==id)return r;throw std::runtime_error("Circle result missing");};check(result().state==ExecutionState::Done && std::abs(std::get<double>(result().outputs["diameterPx"].data)-80)<.3,"Circle UI actual px");
+    // EUI-04: preview changes nominal geometry immediately, commits only on finish.
+    {const auto original=imageViewer_->roi();const auto definition=service_.activeRecipe()->definition;
+        auto* sweep=propertiesBody_->findChild<QDoubleSpinBox*>("mt_roi_sweep");sweep->setValue(90);
+        check(service_.activeRecipe()->definition==definition && imageViewer_->roi()==original && !editorSession_.cycle,"preview preserves recipe and clears stale fit");
+        int arrows=0;for(auto* item:imageViewer_->scene()->items())if(item->data(0)=="scanGuide")++arrows;
+        check(arrows==72,"all scan guides visible before Run");
+        resize(1400,900);propertiesBody_->findChild<QComboBox*>("propertyDetailMode")->setCurrentIndex(0);QApplication::processEvents();findChild<QScrollArea*>("propertiesScroll")->ensureWidgetVisible(sweep);imageViewer_->fitImage();QApplication::processEvents();grab().save(QDir(artifacts).filePath("eui04-arc-preview-1400.png"));
+        resize(850,600);QApplication::processEvents();findChild<QScrollArea*>("propertiesScroll")->ensureWidgetVisible(sweep);imageViewer_->fitImage();grab().save(QDir(artifacts).filePath("eui04-arc-preview-850.png"));resize(1400,900);
+        QMetaObject::invokeMethod(sweep,"editingFinished",Qt::DirectConnection);wait();
+        check(std::get<ArcRoi>(imageViewer_->roi()->geometry).sweepDegrees==90,"angle finish commits ROI atomically");
+        const auto valid=service_.activeRecipe()->definition;sweep=propertiesBody_->findChild<QDoubleSpinBox*>("mt_roi_sweep");sweep->setValue(0);QMetaObject::invokeMethod(sweep,"editingFinished",Qt::DirectConnection);wait();
+        check(service_.activeRecipe()->definition==valid && std::get<ArcRoi>(imageViewer_->roi()->geometry).sweepDegrees==90,"invalid zero sweep preserves last valid geometry");
+        geometry(96.25,95.75,34,46,360);
+    }
+    // EUI-08 visual matrix uses the real Editor/application guide path before Run.
+    ToolDefinition guideTool;for(const auto& t:service_.tools())if(t.id==id)guideTool=t;
+    for(const auto direction:{QString("outward"),QString("inward")}){
+        auto configured=guideTool;configured.parameters["scanCount"]=10;configured.parameters["direction"]=direction;
+        service_.updateTool(configured);refreshWorkspace();
+        for(double angle:{360.,180.,90.}){
+            geometry(96.25,95.75,34,46,angle);
+            int arrows=0;for(auto* item:imageViewer_->scene()->items())if(item->data(0)=="scanGuide")++arrows;
+            check(arrows==10 && !editorSession_.cycle,"ten nominal arrows with no stale fit");
+            if(angle==360.)check(propertiesBody_->findChild<QLabel*>("metrologyPreflight")->text().contains("MUI_GAP"),"sparse circle gap warning before Run");
+
+            for(const auto size:{QSize(1400,900),QSize(850,600)}){
+                resize(size);QApplication::processEvents();imageViewer_->fitImage();QApplication::processEvents();
+                check(grab().save(QDir(artifacts).filePath(QString("eui08-circle-%1-%2-%3.png").arg(direction).arg(int(angle)).arg(size.width()))),"Circle direction and sweep PNG");
+            }
+        }
+    }
+    service_.updateTool(guideTool);refreshWorkspace();selectTool(id);resize(1400,900);
     service_.setCalibrationSetup("lens","plane");const auto frame=*editorSession_.frame;const auto setup=CalibrationWorkflow::installation(*service_.activeRecipe(),frame);auto sample=[&](QString name,QPointF a,QPointF b,double mm){return CalibrationSample{name,{a,setup.source},{b,setup.source},mm};};const auto accepted=MeasurementService{}.validate(CalibrationWorkflow::teach(*service_.activeRecipe(),frame,"circle-scale",1,sample("teach",{0,0},{100,0},10)),{sample("x",{10,20},{110,20},10),sample("y",{30,10},{30,110},10)},.001);const auto catalog=service_.path()+".calibrations.json";CalibrationService(catalog).save(accepted);CalibrationWorkflow::bind(service_,frame,catalog,"circle-scale");refreshWorkspace();selectTool(id);propertiesBody_->findChild<QComboBox*>("mt_mode")->setCurrentText("calibrated");wait();check(!imageViewer_->roi(),"mode changes discard raw teaching");
     geometry(9.625,-9.575,3.4,4.6,360);for(auto t:service_.tools())if(t.id==id){t.parameters["scanWidth"]=.1;t.parameters["inlierDistance"]=.1;t.parameters["maxRms"]=.035;t.parameters["maxResidual"]=.1;t.parameters["diameterLower"]=7.97;t.parameters["diameterUpper"]=8.03;t.parameters["deviationUpper"]=.04;service_.updateTool(t);}refreshWorkspace();selectTool(id);runFlow();wait();check(result().state==ExecutionState::Done && result().outputs["circleMm"].valid && std::get<bool>(result().outputs["accepted"].data),"Circle UI calibrated tolerance");
     auto hash=editorSession_.frame->contentId();runExecution(id);wait();check(editorSession_.cycle->partial && editorSession_.cycle->acquisitions==0 && editorSession_.cycle->executedTools==QStringList{id} && editorSession_.frame->contentId()==hash,"Circle UI TargetOnly");
@@ -614,7 +601,19 @@ bool MainWindow::verifyCircle(const QString& artifacts){
     for(auto t:service_.tools())if(t.id==id){t.parameters["maxGapDegrees"]=4.99;service_.updateTool(t);}refreshWorkspace();runFlow();wait();check(result().state==ExecutionState::Done && !result().outputs["accepted"].valid && result().message.contains("NOT_EVALUATED"),"Circle UI quality NOT_EVALUATED");imageViewer_->fitImage();QApplication::processEvents();grab().save(QDir(artifacts).filePath("circle-invalid-coverage.png"));
     for(auto t:service_.tools())if(t.id==id){t.parameters["maxGapDegrees"]=15;service_.updateTool(t);}refreshWorkspace();geometry(9.625,-9.575,3.4,4.6,-220);runFlow();wait();check(std::get<QString>(result().outputs["scope"].data)=="observed-arc" && !result().outputs["circularityIndex"].valid,"Circle UI signed arc");imageViewer_->fitImage();QApplication::processEvents();grab().save(QDir(artifacts).filePath("circle-arc.png"));geometry(9.625,-9.575,3.4,4.6,360);service_.save();const auto recipe=service_.activeRecipe()->id,revision=QString::number(service_.activeRecipe()->recipeVersion);service_.openProject(service_.path());service_.selectRecipe(recipe);service_.save();check(QString::number(service_.activeRecipe()->recipeVersion)==revision,"Circle UI save reopen no-op");refreshWorkspace();selectTool(id);
     selectPage("recipes");refreshRecipes();for(int row=0;row<recipeTable_->rowCount();++row)if(recipeTable_->item(row,0)->data(Qt::UserRole)==recipe)recipeTable_->selectRow(row);findChild<QPushButton*>("loadRecipe")->click();wait();findChild<QPushButton*>("runtime_run")->click();wait();check(runtime_ && runtime_->active(),"Circle Runtime prepared");for(auto t:service_.tools())if(t.id==id){t.parameters["minContrast"]=5100;service_.updateTool(t);}findChild<QPushButton*>("runtime_cycle")->click();wait();if(!runtimeResult_ || runtimeResult_->state!=ExecutionState::Done)QTextStream(stderr)<<"Circle runtime error: "<<runtimeCoordinator_->error()<<" summary="<<runtimeSummary_->text()<<"\n";check(runtimeResult_ && runtimeResult_->state==ExecutionState::Done,"Circle immutable Runtime");runtimeTools_->setCurrentIndex(runtimeTools_->findData(id));runtimeViewer_->fitImage();QApplication::processEvents();check(runtimeViewer_->roi().has_value(),"Circle readonly world ROI");grab().save(QDir(artifacts).filePath("circle-runtime.png"));findChild<QPushButton*>("runtime_stop")->click();check(!runtimeResult_ && !runtimeViewer_->hasImage(),"Circle Stop clears Runtime");check(ProductionResultCodec::csv(ProductionStore(service_.path()+".production").recent("cycles")).contains("radial-circle"),"Circle persisted typed CSV");
-    refreshWorkspace();selectPage("editor");selectTool(id);runFlow();wait();check(result().state==ExecutionState::Error && result().outputs.isEmpty(),"Circle no fit clears old result");for(auto t:service_.tools())if(t.id==id){t.parameters["minContrast"]=20;service_.updateTool(t);}refreshWorkspace();runFlow();findChild<QPushButton*>("stopFlow")->click();wait();check(result().outputs.isEmpty() && result().lines.isEmpty(),"Circle late Stop clears overlays");service_.save();
+    refreshWorkspace();selectPage("editor");selectTool(id);runFlow();wait();check(result().state==ExecutionState::Error && result().outputs.isEmpty(),"Circle no fit clears old result");
+    check(result().fitDiagnostic && result().errorCode=="CIRCLE_POINTS" && result().fitDiagnostic->rejections.contrast>0,"Circle visible failed scan summary");
+    for(const auto size:{QSize(1400,900),QSize(850,600)}){resize(size);QApplication::processEvents();vertical_->setSizes({330,240});imageViewer_->fitImage();QApplication::processEvents();check(grab().save(QDir(artifacts).filePath(QString("mui03-diagnostic-%1.png").arg(size.width()))),"failed-run guidance screenshot");}resize(1400,900);
+    for(const auto size:{QSize(1400,900),QSize(850,600)}){resize(size);QApplication::processEvents();grab().save(QDir(artifacts).filePath(QString("mui01-circle-failure-%1.png").arg(size.width())));}
+    service_.save();selectPage("recipes");refreshRecipes();for(int row=0;row<recipeTable_->rowCount();++row)if(recipeTable_->item(row,0)->data(Qt::UserRole)==recipe)recipeTable_->selectRow(row);
+    findChild<QPushButton*>("loadRecipe")->click();wait();findChild<QPushButton*>("runtime_run")->click();wait();findChild<QPushButton*>("runtime_cycle")->click();wait();check(runtimeResult_ && runtimeResult_->state==ExecutionState::Error,"Runtime failed scan is ERROR");runtimeTools_->setCurrentIndex(runtimeTools_->findData(id));check(runtimeSummary_->text().startsWith("Circle_/_Arc_1 • ERROR") && runtimeSummary_->text().contains("CIRCLE_POINTS"),"blocking diagnosis precedes metadata");
+    for(const auto size:{QSize(1400,900),QSize(850,600)}){resize(size);QApplication::processEvents();grab().save(QDir(artifacts).filePath(QString("mui03-runtime-%1.png").arg(size.width())));}
+    const auto failedRecords=ProductionStore(service_.path()+".production").recent("cycles");check(ProductionResultCodec::summary(failedRecords.first()).contains("CIRCLE_POINTS") && ProductionResultCodec::csv({failedRecords.first()}).contains("measurementDiagnostic"),"persisted failure explanation");
+    findChild<QPushButton*>("runtimeHistory")->click();QApplication::processEvents();logTable_->setCurrentCell(0,0);check(findChild<QTextEdit*>("logDetail")->toPlainText().contains("CIRCLE_POINTS"),"Logs opens persisted failed-run explanation");
+    for(const auto size:{QSize(1400,900),QSize(850,600)}){resize(size);QApplication::processEvents();grab().save(QDir(artifacts).filePath(QString("mui03-logs-%1.png").arg(size.width())));}
+    selectPage("runtime");findChild<QPushButton*>("runtime_stop")->click();refreshWorkspace();selectPage("editor");selectTool(id);
+
+for(auto t:service_.tools())if(t.id==id){t.parameters["minContrast"]=20;service_.updateTool(t);}refreshWorkspace();runFlow();findChild<QPushButton*>("stopFlow")->click();wait();check(result().outputs.isEmpty() && result().lines.isEmpty(),"Circle late Stop clears overlays");service_.save();
     resize(1400,900);horizontal_->setSizes({155,750,300});vertical_->setSizes({540,240});QApplication::processEvents();
     auto projectPoint=[](QPointF q){double w=1+.004*q.x()+.002*q.y();return QPointF((3.5*q.x()+.4*q.y()+20)/w,(.2*q.x()+4*q.y()+20)/w);};
     auto unproject=[](QPointF p){double a=3.5-.004*p.x(),b=.4-.002*p.x(),c=.2-.004*p.y(),d=4-.002*p.y(),det=a*d-b*c;return QPointF(((p.x()-20)*d-b*(p.y()-20))/det,(a*(p.y()-20)-c*(p.x()-20))/det);};
@@ -654,5 +653,33 @@ bool MainWindow::verifyGeometry(const QString& artifacts){
     service_.save();const auto recipe=service_.activeRecipe()->id;const auto revision=service_.activeRecipe()->recipeVersion;service_.openProject(service_.path());service_.selectRecipe(recipe);service_.save();check(service_.activeRecipe()->recipeVersion==revision,"Geometry UI Save reopen no-op");refreshWorkspace();selectPage("recipes");refreshRecipes();for(int row=0;row<recipeTable_->rowCount();++row)if(recipeTable_->item(row,0)->data(Qt::UserRole)==recipe)recipeTable_->selectRow(row);findChild<QPushButton*>("loadRecipe")->click();wait();findChild<QPushButton*>("runtime_run")->click();wait();check(runtime_ && runtime_->active(),"Geometry Load/Run");
     for(auto t:service_.tools())if(t.id==id){t.parameters["upper"]=100;service_.updateTool(t);}findChild<QPushButton*>("runtime_cycle")->click();wait();if(!runtimeResult_)QTextStream(stderr)<<runtimeCoordinator_->error();check(runtimeResult_ && runtimeResult_->state==ExecutionState::Done,"Geometry immutable Runtime recorded");runtimeTools_->setCurrentIndex(runtimeTools_->findData(id));runtimeViewer_->fitImage();QApplication::processEvents();grab().save(QDir(artifacts).filePath("geometry-runtime.png"));findChild<QPushButton*>("runtime_stop")->click();check(!runtimeResult_ && !runtimeViewer_->hasImage(),"Geometry Runtime Stop clears");check(ProductionResultCodec::csv(ProductionStore(service_.path()+".production").recent("cycles")).contains("geometry-refit/point_line_distance"),"Geometry Logs/restart/CSV");
     refreshWorkspace();selectPage("editor");selectTool(id);runFlow();findChild<QPushButton*>("stopFlow")->click();wait();check(result().outputs.isEmpty() && result().lines.isEmpty(),"Geometry Editor Stop clears");return true;
+}
+}
+
+namespace visionflow {
+bool MainWindow::verifyRoi(const QString& artifacts) {
+    auto check=[](bool b,const char* text){if(!b)throw std::runtime_error(text);};
+    auto wait=[&]{QElapsedTimer timer;timer.start();while(editorSession_.busy() && timer.elapsed()<20000){QApplication::processEvents();QThread::msleep(1);}check(!editorSession_.busy(),"ROI UI timeout");};
+    service_.createProject("ROI acceptance","",QDir(artifacts).filePath("roi-ui-"+QUuid::createUuid().toString(QUuid::WithoutBraces)+".vfproject"),"file");
+    const auto recipe=service_.createRecipe("ROI fixture","",ApplicationType::DefectInspection,"file");refreshWorkspace();selectPage("editor");
+    QImage fixture(500,320,QImage::Format_Grayscale8);fixture.fill(0);{QPainter p(&fixture);p.fillRect(QRect(60,60,40,40),Qt::white);p.fillRect(QRect(340,200,60,60),Qt::white);}
+    const auto path=QDir(artifacts).filePath("roi-input.png");check(fixture.save(path) && loadEditorImage(path),"ROI fixture acquisition");
+    const auto source=selectedToolId_,roi=service_.addTool("roi"),blob=service_.addTool("blob");
+    QVector<ToolConnection> links{{source,"image",roi,"image"},{source,"image",blob,"image"}};service_.setConnections(links);refreshWorkspace();selectTool(roi);
+    resize(1400,900);QApplication::processEvents();imageViewer_->fitImage();
+    auto draw=[&](QPointF a,QPointF b){
+        auto* button=propertiesBody_->findChild<QPushButton*>("searchRoi");check(button && button->isEnabled(),"ROI draw enabled");button->click();
+        auto mouse=[&](QEvent::Type type,QPointF point,Qt::MouseButton button,Qt::MouseButtons buttons){const auto pos=imageViewer_->mapFromScene(point);QMouseEvent e(type,QPointF(pos),QPointF(imageViewer_->viewport()->mapToGlobal(pos)),button,buttons,Qt::NoModifier);QApplication::sendEvent(imageViewer_->viewport(),&e);QApplication::processEvents();};
+        mouse(QEvent::MouseButtonPress,a,Qt::LeftButton,Qt::LeftButton);mouse(QEvent::MouseMove,b,Qt::NoButton,Qt::LeftButton);mouse(QEvent::MouseButtonRelease,b,Qt::LeftButton,Qt::NoButton);
+    };
+    draw({40.5,40.5},{130.5,130.5});
+    for(auto t:service_.tools())if(t.id==roi){check(!t.parameters["searchRoi"].toObject().isEmpty(),"mouse drawing persists ROI");t.name="Inspection ROI";service_.updateTool(t);}
+    selectTool(blob);auto* regionInput=propertiesBody_->findChild<QComboBox*>("input_region");check(regionInput && regionInput->findData(roi+"/region")>0,"ROI available in actual Region picker");regionInput->setCurrentIndex(regionInput->findData(roi+"/region"));QApplication::processEvents();selectTool(roi);runFlow();wait();
+    auto area=[&]{for(const auto& r:editorSession_.cycle->tools)if(r.toolId==blob)return std::get<double>(r.outputs["area"].data);return -1.;};
+    check(editorSession_.cycle && editorSession_.cycle->state==ExecutionState::Done && area()==1600,"UI ROI limits actual Blob");
+    runExecution(roi);wait();check(editorSession_.cycle->state==ExecutionState::Done && editorSession_.cycle->executedTools==QStringList{roi},"UI Run Tool ROI");runExecution(blob);wait();check(area()==1600,"UI Run Tool downstream");
+    service_.save();const auto saved=service_.activeRecipe()->definition;service_.openProject(service_.path());service_.selectRecipe(recipe);refreshWorkspace();selectPage("editor");selectTool(roi);runFlow();wait();check(service_.activeRecipe()->definition==saved && area()==1600,"UI ROI reopen");
+    for(const auto size:{QSize(1400,900),QSize(850,600)}){resize(size);QApplication::processEvents();imageViewer_->fitImage();grab().save(QDir(artifacts).filePath(QString("roi-editor-%1.png").arg(size.width())));}
+    resize(1400,900);QApplication::processEvents();imageViewer_->fitImage();draw({300.5,170.5},{430.5,290.5});runFlow();wait();check(area()==3600,"UI redraw selects second object");service_.save();return true;
 }
 }

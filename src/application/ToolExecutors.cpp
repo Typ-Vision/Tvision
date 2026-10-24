@@ -1,3 +1,4 @@
+#include "RoiService.hpp"
 #include "PoseMatchService.hpp"
 #include "ShapeMatchService.hpp"
 #include "CircleToolService.hpp"
@@ -29,9 +30,9 @@
 #include <QMutexLocker>
 namespace visionflow {
 namespace {
-struct BlobParameters {int threshold,connectivity,minArea,maxArea;bool dark;};
+struct BlobParameters {int threshold,connectivity,minArea,maxArea;bool dark,rejectBorderTouching;};
 struct EdgeParameters {bool horizontal,reverse; double contrast;};
-BlobParameters blobParameters(const ToolDefinition& t) {ToolRegistry::validate(t);return {t.parameters["threshold"].toInt(),t.parameters["connectivity"].toInt(),t.parameters["minArea"].toInt(),t.parameters["maxArea"].isNull() ? 2147483647 : t.parameters["maxArea"].toInt(),t.parameters["polarity"]=="dark"};}
+BlobParameters blobParameters(const ToolDefinition& t) {ToolRegistry::validate(t);return {t.parameters["threshold"].toInt(),t.parameters["connectivity"].toInt(),t.parameters["minArea"].toInt(),t.parameters["maxArea"].isNull() ? 2147483647 : t.parameters["maxArea"].toInt(),t.parameters["polarity"]=="dark",t.parameters["rejectBorderTouching"].toBool()};}
 EdgeParameters edgeParameters(const ToolDefinition& t) {
     ToolRegistry::validate(t);const auto d=t.parameters["direction"].toString();
     return {d=="left_to_right" || d=="right_to_left",d=="right_to_left" || d=="bottom_to_top",t.parameters["minContrast"].toDouble()};
@@ -145,13 +146,22 @@ ToolResult ToolExecutors::blob(const ToolDefinition& t,const QMap<QString,PortVa
         cv::Mat binary,labels,stats,centers;cv::threshold(crop,binary,settings.threshold,255,settings.dark ? cv::THRESH_BINARY_INV : cv::THRESH_BINARY);
         if(trackingMask)cv::bitwise_and(binary,trackingMask->pixels,binary);
         const int n=cv::connectedComponentsWithStats(binary,labels,stats,centers,settings.connectivity,CV_32S);int largest=0,count=0;
-        QVector<uchar> accepted(n,0);QPoint firstLargest;
+        QVector<uchar> accepted(n,0),borderTouching(n,0);QPoint firstLargest;
+        cv::Mat boundary;
+        if(settings.rejectBorderTouching){
+            // Erode the effective domain, not the segmented objects. Constant zero
+            // padding makes the full-image edges part of the boundary as well.
+            const cv::Mat domain=trackingMask ? trackingMask->pixels : cv::Mat(crop.size(),CV_8U,cv::Scalar(255));
+            cv::Mat interior;
+            cv::erode(domain,interior,cv::Mat::ones(3,3,CV_8U),cv::Point(-1,-1),1,cv::BORDER_CONSTANT,cv::Scalar(0));
+            cv::subtract(domain,interior,boundary);
+        }
         // First raster pixel makes equal-area selection independent of OpenCV label ordering.
         QVector<QPoint> first(n,QPoint(-1,-1));
-        for(int y=0;y<labels.rows;++y){if(stopped()){r.state=ExecutionState::Skipped;return r;}for(int x=0;x<labels.cols;++x){const int label=labels.at<int>(y,x);if(label && first[label].x()<0)first[label]={x,y};}}
+        for(int y=0;y<labels.rows;++y){if(stopped()){r.state=ExecutionState::Skipped;return r;}for(int x=0;x<labels.cols;++x){const int label=labels.at<int>(y,x);if(label){if(first[label].x()<0)first[label]={x,y};if(settings.rejectBorderTouching && boundary.at<uchar>(y,x))borderTouching[label]=1;}}}
         for(int i=1;i<n;++i) {
             if((i%4096)==0 && stopped()){r.regions.clear();r.state=ExecutionState::Skipped;return r;}
-            const auto area=stats.at<int>(i,cv::CC_STAT_AREA);if(area<settings.minArea || area>settings.maxArea)continue;
+            const auto area=stats.at<int>(i,cv::CC_STAT_AREA);if(borderTouching[i] || area<settings.minArea || area>settings.maxArea)continue;
             accepted[i]=1;++count;
             const auto p=first[i];
             if(!largest || area>stats.at<int>(largest,cv::CC_STAT_AREA) || (area==stats.at<int>(largest,cv::CC_STAT_AREA) && (p.y()<firstLargest.y() || (p.y()==firstLargest.y() && p.x()<firstLargest.x())))){largest=i;firstLargest=p;}
@@ -214,10 +224,11 @@ QMutex executorMutex; QMap<QString,ToolExecutor> extensions; }
 void ToolExecutors::registerExecutor(const QString& kind,ToolExecutor executor) {
     ToolRegistry::get(kind);
     QMutexLocker lock(&executorMutex);
-    if(!executor || extensions.contains(kind) || QStringList{"shape_pose","pattern_pose","image_file","webcam","template_match","blob","edge","calculate","measurement","preprocess","code_read","edge_point","edge_pair","line_fit","circle_fit","circle_fit","geometry_measurement"}.contains(kind))throw std::runtime_error("Geçersiz/tekrar yürütücü kaydı.");
+    if(!executor || extensions.contains(kind) || QStringList{"shape_pose","pattern_pose","image_file","webcam","template_match","blob","edge","calculate","measurement","roi","preprocess","code_read","edge_point","edge_pair","line_fit","circle_fit","circle_fit","geometry_measurement"}.contains(kind))throw std::runtime_error("Geçersiz/tekrar yürütücü kaydı.");
     extensions.insert(kind,std::move(executor));
 }
 ToolExecutor ToolExecutors::get(const QString& kind,const MeasurementExecutionContext& context,const std::optional<ToolRoi>& resolvedRoi) {
+    if(kind=="industrial_camera")throw std::runtime_error("Industrial Camera edinimi immutable girdilerle ExecutionService provider yolunu gerektirir.");
     auto select=[&]()->ToolExecutor {
     if(kind=="edge" && resolvedRoi)return [resolvedRoi](const ToolDefinition& t,const QMap<QString,PortValue>& inputs,const QString&,const QString& frame,const QString& cycle,const std::shared_ptr<std::atomic_bool>& cancel){return referenceEdge(t,inputs,*resolvedRoi,frame,cycle,cancel);};
     if(kind=="blob")return [resolvedRoi](const ToolDefinition& t,const QMap<QString,PortValue>& inputs,const QString& dir,const QString& frame,const QString& cycle,const std::shared_ptr<std::atomic_bool>& cancel){return blob(t,inputs,dir,frame,cycle,cancel,resolvedRoi);};
@@ -233,6 +244,7 @@ ToolExecutor ToolExecutors::get(const QString& kind,const MeasurementExecutionCo
         r.outputs["pointMm"]=physical;return r;
     };
     if(kind=="code_read")return [resolvedRoi](const ToolDefinition& t,const QMap<QString,PortValue>& inputs,const QString& dir,const QString& frame,const QString& cycle,const std::shared_ptr<std::atomic_bool>& cancel){return CodeReadService::execute(t,inputs,dir,frame,cycle,cancel,resolvedRoi);};
+    if(kind=="roi")return [](const ToolDefinition& t,const QMap<QString,PortValue>& inputs,const QString&,const QString& frame,const QString& cycle,const std::shared_ptr<std::atomic_bool>&){return RoiService::execute(t,inputs,frame,cycle);};
     if(kind=="preprocess")return [](const ToolDefinition& t,const QMap<QString,PortValue>& inputs,const QString&,const QString& frameId,const QString& cycleId,const std::shared_ptr<std::atomic_bool>& cancel){
         ToolRegistry::validate(t);const auto output=Preprocessing::run(std::get<ImageFrame>(inputs.value("image").data),t.parameters,cancel);
         ToolResult r;r.toolId=t.id;r.state=ExecutionState::Done;r.outputs["image"]={outputPorts(t.kind).first(),output,true,frameId,cycleId,output.metadata()};return r;

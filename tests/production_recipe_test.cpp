@@ -29,6 +29,15 @@ int main(int argc,char** argv) {
         auto authorize=[](const QString& principal,ProductionAction action){return principal=="engineer" || (principal=="operator" && action==ProductionAction::Run);};
         ProductionDependencies dependencies;dependencies.assetHashes["fixture-asset"]=QString(64,'a');
         ProductionRecipeService service(authorize,[&](const Recipe&){return dependencies;});
+        // A source-bound defect/px recipe does not need legacy project/recipe reference text.
+        auto scopedPx=draft;scopedPx.cameraReference.clear();scopedPx.applicationType=ApplicationType::DefectInspection;
+        ProductionRecipeService noGlobal(authorize);
+        const auto pxValidation=noGlobal.validate("engineer",scopedPx,directory.path());
+        noGlobal.activate("engineer",pxValidation.id,scopedPx,directory.path());
+        auto pxLease=noGlobal.beginCycle("operator");
+        auto pxResult=ExecutionService{}.run(scopedPx.definition,directory.path(),scopedPx.id,pxValidation.contentId,{});
+        check(pxResult.state==ExecutionState::Done && !pxResult.tools.last().calibration,"calibration-free defect px executes without global references");
+        noGlobal.finishCycle(pxLease.ticket,pxResult);
         ProductionRecipeService denied;
         rejects([&]{denied.validate("engineer",draft,directory.path());},ProductionError::Unauthorized,"deny by default");
         draft.status=RecipeStatus::Valid;
@@ -109,6 +118,7 @@ int main(int argc,char** argv) {
         ProductionRecipeService fresh(authorize);
         rejects([&]{fresh.activate("engineer",v1.id,draft,directory.path());},ProductionError::UnknownValidation,"validation not trusted across restart");
         dependencies.calibration=CalibrationDependency{"calibration",1,"cal-content","camera","lens",{32,24},"plane",{"image"},{"plane",LengthUnit::Millimetre,AxisConvention::XRightYUp}};
+        rejects([&]{service.validate("engineer",draft,directory.path());},ProductionError::DependencyChanged,"legacy global dependency still requires exact recipe reference");
         auto calibrated=draft;calibrated.calibrationReference="calibration";
         auto vc=service.validate("engineer",calibrated,directory.path());service.activate("engineer",vc.id,calibrated,directory.path());
         ++dependencies.calibration->version;

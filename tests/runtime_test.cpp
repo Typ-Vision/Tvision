@@ -18,9 +18,9 @@ int main(int argc,char** argv){QCoreApplication app(argc,argv);try{
     QImage image(1000,600,QImage::Format_Grayscale8);image.fill(0);for(int y=100;y<400;++y)for(int x=200;x<600;++x)image.scanLine(y)[x]=255;
     const auto imagePath=dir.path()+"/input.png";check(image.save(imagePath),"real acquisition file");
     ProjectService project;project.createProject("Runtime","",dir.path()+"/part.vfproject","file");project.createRecipe("Part","",ApplicationType::Measurement,"file");
-    const auto source=project.setImageFile(imagePath),left=project.addTool("edge"),right=project.addTool("edge"),measurement=project.addTool("measurement");
-    for(auto t:project.tools()){if(t.id==right)t.parameters["direction"]="right_to_left";if(t.id==measurement){t.parameters["lowerMm"]=9.97;t.parameters["upperMm"]=9.98;}project.updateTool(t);}
-    project.setConnections({{source,"image",left,"image"},{source,"image",right,"image"},{left,"point",measurement,"p1"},{right,"point",measurement,"p2"}});project.setCalibrationSetup("lens","plane");
+    const auto source=project.setImageFile(imagePath),left=project.addTool("edge"),right=project.addTool("edge"),borderBlob=project.addTool("blob"),measurement=project.addTool("measurement");
+    for(auto t:project.tools()){if(t.id==borderBlob){t.parameters["rejectBorderTouching"]=true;t.parameters["searchRoi"]=QJsonObject{{"x",200},{"y",100},{"width",400},{"height",300}};}if(t.id==right)t.parameters["direction"]="right_to_left";if(t.id==measurement){t.parameters["lowerMm"]=9.97;t.parameters["upperMm"]=9.98;}project.updateTool(t);}
+    project.setConnections({{source,"image",borderBlob,"image"},{source,"image",left,"image"},{source,"image",right,"image"},{left,"point",measurement,"p1"},{right,"point",measurement,"p2"}});project.setCalibrationSetup("lens","plane");
     const auto frame=RuntimeService::probe(*project.activeRecipe(),dir.path(),{});const auto installation=CalibrationWorkflow::installation(*project.activeRecipe(),frame);
     auto sample=[&](QString id,QPointF a,QPointF b,double mm){return CalibrationSample{id,{a,installation.source},{b,installation.source},mm};};
     const auto teaching=sample("teach",{0,0},{400,0},10);const QVector<CalibrationSample> holdout{sample("x",{10,30},{810,30},20),sample("y",{40,10},{40,510},12.5)};
@@ -38,6 +38,7 @@ int main(int argc,char** argv){QCoreApplication app(argc,argv);try{
     rejects([&]{runtime.validate(edited,dir.path(),frame);},ProductionError::Busy,"validation cannot replace live installation");
     rejects([&]{runtime.begin();},ProductionError::Busy,"single cycle");rejects([&]{runtime.rollback(v1.id);},ProductionError::Busy,"boundary rollback");
     auto result=RuntimeService::execute(lease,catalog,{});check(result.state==ExecutionState::Done,"actual Runtime DAG");
+    bool borderVerified=false;for(const auto& t:result.tools)if(t.toolId==borderBlob)borderVerified=std::get<double>(t.outputs["candidateCount"].data)==1 && std::get<double>(t.outputs["count"].data)==0 && !t.outputs["point"].valid && t.decision==PartDecision::NotEvaluated;check(borderVerified,"immutable Runtime applies border filter without part decision");
     auto find=[&](const CycleResult& cycle){for(const auto& t:cycle.tools)if(t.toolId==measurement)return t;throw std::runtime_error("measurement absent");};
     check(find(result).decision==PartDecision::Pass && runtime.active()->recipe().name==recipe.name,"immutable active result");
     auto wrong=result;wrong.tools.last().calibration.reset();rejects([&]{runtime.finish(lease.ticket,wrong);},ProductionError::InvalidCompletion,"forged calibration rejected");

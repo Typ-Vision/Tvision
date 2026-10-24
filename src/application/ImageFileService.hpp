@@ -3,6 +3,6 @@
 namespace visionflow {
 class ImageFileService {
 public:
-    ImageFrame load(const QString& absolutePath) const;
+    ImageFrame load(const QString& absolutePath,bool experimentalEditorReplay=false) const;
 };
 }

@@ -1,11 +1,16 @@
 #pragma once
 #include "AcquisitionService.hpp"
+#include "CameraAcquisitionSessions.hpp"
 #include "CalibrationWizardSession.hpp"
 #include "MeasurementSourceIdentity.hpp"
+#include "IndustrialCameraProvider.hpp"
+#include "ExperimentalOecsAcquisition.hpp"
 #include <QThread>
 #include <functional>
 
 namespace visionflow {
+enum class CalibrationCapturePolicy { Trusted, ExperimentalOecs, Automatic };
+struct MeasurementEnvironment;
 // No recipe or ToolDefinition. Targeted files require an explicit setup declaration;
 // trial files have no target and cannot acquire camera provenance.
 struct IndependentCaptureRequest {
@@ -14,21 +19,35 @@ struct IndependentCaptureRequest {
     std::optional<MeasurementCamera> camera;
     std::optional<MeasurementSetupDescriptor> setup;
     int timeoutMs=5000;
+    std::optional<AcquisitionProfile> profile;
+    std::optional<TransportLocator> localRoute;
+    // Automatic resolves the exact target at begin; no permission is restored.
+    CalibrationCapturePolicy policy=CalibrationCapturePolicy::Automatic;
     void validate() const;
+    static MeasurementSetup installation(const MeasurementCamera&,const MeasurementSetupDescriptor&);
+    static IndependentCaptureRequest fromDefaults(const MeasurementEnvironment&,const CameraId&,
+        CalibrationCapturePolicy=CalibrationCapturePolicy::Automatic,QString replayPath={});
 };
 // Adapter seam for deterministic contract tests, not a user-editable source claim.
 struct IndependentCaptureBackend {
     std::function<QVector<DeviceBinding>()> discover;
     std::function<std::unique_ptr<AcquisitionAdapter>(const DeviceBinding&,const GeometryDescriptor&)> create;
+    CameraProviderFactory factory;
+    std::function<IndustrialDiscoverySnapshot()> industrialDiscover;
+    ExperimentalOecsAcquisition::ApiFactory experimentalApi=makeOecsCApi;
 };
 class IndependentCaptureJob {
     friend class IndependentCalibrationSession;
     IndependentCaptureJob()=default;
     IndependentCaptureRequest request_;
+    std::shared_ptr<CameraAcquisitionSessions> sessions_;
+    std::shared_future<AcquisitionContextStatus> prepared_;
     QString sourceId_,ticket_;
     int generation_=0;
     Deadline deadline_{1};
     std::shared_ptr<std::atomic_bool> cancel_;
+    AcquisitionTimingContext timing_;
+    AcquisitionTiming::Clock::time_point commandedAt_;
 public:
     void cancel() const {cancel_->store(true);}
 };
@@ -40,6 +59,8 @@ class IndependentCaptureResult {
     std::optional<ImageFrame> frame_;
     std::optional<MeasurementSourceEvidence> evidence_;
     std::optional<MeasurementSetup> mathSetup_;
+    std::optional<AcquisitionProfile> profile_;
+    std::optional<DiscoveredDevice> device_;
 public:
     const QString& error() const {return error_;}
 };
@@ -51,22 +72,34 @@ public:
     ~IndependentCalibrationSession();
     IndependentCalibrationSession(const IndependentCalibrationSession&)=delete;
     IndependentCalibrationSession& operator=(const IndependentCalibrationSession&)=delete;
+    // Explicit live-operation entry; no capture. Poll status on the owner thread.
+    void prepareCamera(IndependentCaptureRequest,const IndependentCaptureBackend& = {});
+    void closeCamera();
+    AcquisitionContextStatus cameraStatus() const;
     IndependentCaptureJob begin(IndependentCaptureRequest);
     static IndependentCaptureResult run(const IndependentCaptureJob&,const IndependentCaptureBackend& = {});
     bool accept(const IndependentCaptureResult&);
-    void cancel();
+    void cancel(bool closeCamera=true);
     bool busy() const;
     std::optional<MeasurementSourceEvidence> evidence() const;
     std::optional<MeasurementSetup> acceptedSetup() const;
+    std::optional<AcquisitionProfile> acceptedProfile() const;
+    std::optional<DiscoveredDevice> acceptedDevice() const;
     CalibrationWizardSession& math(); // existing Edge/Caliper/plate implementation
 private:
     void owner() const;
+    std::shared_ptr<CameraAcquisitionSessions> sessions_;
+    std::shared_ptr<const AcquisitionOecsBackend> oecs_;
+    std::shared_future<AcquisitionContextStatus> prepared_;
+    QByteArray preparedKey_;
     QThread* thread_;
     QString sourceId_,ticket_;
     int generation_=0;
     std::shared_ptr<std::atomic_bool> cancel_;
     std::optional<MeasurementSourceEvidence> evidence_;
     std::optional<MeasurementSetup> acceptedSetup_;
+    std::optional<AcquisitionProfile> profile_;
+    std::optional<DiscoveredDevice> device_;
     CalibrationWizardSession math_;
 };
 }

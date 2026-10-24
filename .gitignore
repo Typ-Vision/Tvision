@@ -3,4 +3,5 @@
 /data/logs/
 /data/images/
 /config/local.*
+/.codex/config.toml
 *.user

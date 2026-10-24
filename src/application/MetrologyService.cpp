@@ -1,4 +1,6 @@
 #include "MetrologyService.hpp"
+#include "MeasurementDiagnostic.hpp"
+#include "vision/metrology/ScanLayout.hpp"
 #include "EdgePairService.hpp"
 #include "domain/ToolRegistry.hpp"
 #include "vision/metrology/LineFitter.hpp"
@@ -7,6 +9,54 @@
 #include <numbers>
 #include <stdexcept>
 namespace visionflow {
+QStringList MetrologyService::configurationWarnings(const QString& kind,const QJsonObject& p) {
+    QStringList warnings;
+    if(kind!="line_fit" && kind!="circle_fit")return warnings;
+    const int count=p["scanCount"].toInt(),minimum=std::max(p["minPoints"].toInt(),p["minFoundPoints"].toInt());
+    if(count<minimum)warnings<<QString("MUI_COUNT: %1 tarama, gerekli en az %2 nokta için yetersiz.").arg(count).arg(minimum);
+    if(p["scanRoi"].toObject().isEmpty())return warnings;
+    try {
+        const auto roi=ToolRoi::fromJson(p["scanRoi"].toObject());
+        const bool tracked=p.contains("poseTracking") || p["referenceBinding"].toObject()["mapping"]=="world-reference-v1";
+        double length=0,unit=1;
+        if(kind=="circle_fit") {
+            const auto arc=std::holds_alternative<Annulus>(roi.geometry) ? ArcRoi{std::get<Annulus>(roi.geometry),0,360}:std::get<ArcRoi>(roi.geometry);
+            length=arc.ring.outerRadius-arc.ring.innerRadius;unit=p["unitsPerSample"].toDouble();
+            const double sweep=std::abs(arc.sweepDegrees),spacing=count>1 ? sweep/(sweep==360 ? count:count-1):sweep;
+            // Current world angles can differ from nominal ROI angles. Do not
+            // claim a contradiction in the transformed metric plane.
+            if(!tracked && spacing>p["maxGapDegrees"].toDouble())warnings<<QString("MUI_GAP: Nominal tarama aralığı %1°, kontur boşluğu sınırı %2°. Tarama sayısı veya kalite sınırını inceleyin.").arg(spacing,0,'g',6).arg(p["maxGapDegrees"].toDouble());
+            const double span=sweep==360 ? sweep-spacing:sweep;
+            if(!tracked && span<p["minAngularSpan"].toDouble())warnings<<QString("MUI_SPAN: Nominal yay desteği en çok %1°, fit için %2° isteniyor. Daha geniş yay seçin.").arg(span,0,'g',6).arg(p["minAngularSpan"].toDouble());
+        } else {
+            const auto box=std::get<RotatedRectangle>(roi.geometry);length=box.size.height();
+            if(tracked){const auto binding=p.contains("referenceBinding") ? p["referenceBinding"].toObject():p["poseTracking"].toObject();unit=binding["mmPerSample"].toDouble();}
+            const double width=p["scanWidthPx"].toDouble()*unit;
+            if(width>=box.size.width())warnings<<"MUI_STRIP: Ortalama şerit kalınlığı ROI destek genişliğinden küçük olmalı.";
+            if(!tracked && box.size.width()-width<p["minSpanPx"].toDouble())warnings<<QString("MUI_SPAN: Nominal çizgi desteği %1 px; minimum %2 px. ROI genişliğini ve destek kalitesini inceleyin.").arg(box.size.width()-width,0,'g',6).arg(p["minSpanPx"].toDouble());
+        }
+        const double step=p["stepPx"].toDouble(),sigma=p["sigmaPx"].toDouble();
+        if(unit>0 && step>0 && length>0) {
+            const double samples=std::ceil(length/unit/step)+1,actual=length/unit/(samples-1),radius=sigma==0 ? 0:std::ceil(3*sigma/actual);
+            if(samples<2*radius+4)warnings<<QString("MUI_SUPPORT: Arama uzunluğu %1 %2; %3 örnek var, filtre/tepe desteği için %4 gerekli. ROI'yi kenarın iki tarafında pay bırakarak genişletin.").arg(length,0,'g',6).arg(roi.frame.unit==LengthUnit::Millimetre ? "mm":"px").arg(samples).arg(2*radius+4);
+        }
+    }catch(const std::exception&){warnings<<"MUI_ROI: Geçerli ROI öğretin.";}
+    return warnings;
+}
+QVector<QLineF> MetrologyService::scanGuides(const QString& kind,const QJsonObject& p,const ToolRoi& roi) {
+    roi.validate();QVector<ScanSegment> scans;
+    if(kind=="circle_fit") {
+        const auto arc=std::holds_alternative<Annulus>(roi.geometry) ? ArcRoi{std::get<Annulus>(roi.geometry),0,360}:std::get<ArcRoi>(roi.geometry);
+        scans=ScanLayout::radial(arc,p["scanCount"].toInt(),p["scanWidth"].toDouble(),p["direction"]=="inward");
+    } else if(kind=="line_fit") {
+        double unit=1;
+        if(roi.frame.unit==LengthUnit::Millimetre){const auto binding=p.contains("referenceBinding") ? p["referenceBinding"].toObject():p["poseTracking"].toObject();unit=binding["mmPerSample"].toDouble();
+            if(!std::isfinite(unit) || unit<=0)throw std::runtime_error("World guide sampling unit unavailable");}
+        scans=ScanLayout::line(std::get<RotatedRectangle>(roi.geometry),p["scanCount"].toInt(),p["scanWidthPx"].toDouble()*unit);
+    }
+    else if(kind=="edge_point" || kind=="edge_pair")scans.append(std::get<ScanSegment>(roi.geometry));
+    QVector<QLineF> lines;for(const auto& s:scans)lines.append(QLineF(s.start,s.end));return lines;
+}
 ToolResult MetrologyService::execute(const ToolDefinition& t,const QMap<QString,PortValue>& inputs,const QString&,const QString& frameId,const QString& cycleId,const std::shared_ptr<std::atomic_bool>& cancel,const MeasurementExecutionContext& context){
     ToolRegistry::validate(t);const auto p=t.parameters;const bool world=p["mode"]=="calibrated";
     if(p.contains("poseTracking"))throw std::runtime_error("Pose tracking requires DAG resolution");
@@ -27,7 +77,7 @@ ToolResult MetrologyService::execute(const ToolDefinition& t,const QMap<QString,
         put("found",pair.found);put("first",pair.first.value_or(QPointF{}),pair.found);put("second",pair.second.value_or(QPointF{}),pair.found);put("centre",pair.centre.value_or(QPointF{}),pair.found);put("widthPx",pair.widthPx.value_or(0),pair.found);
         put("widthMm",pair.widthMm.value_or(0),pair.widthMm.has_value(),world ? "NOT_FOUND":"PIXEL_MODE");
         if(pair.found){const double width=world ? *pair.widthMm:*pair.widthPx;put("accepted",width>=p["lower"].toDouble() && width<=p["upper"].toDouble());r.points={*pair.first,*pair.second,*pair.centre};r.lines={QLineF(*pair.first,*pair.second)};r.message=QString("Width %1 %2 • accepted=%3").arg(width,0,'f',6).arg(world ? "mm":"px").arg(std::get<bool>(r.outputs["accepted"].data) ? "true":"false");r.calibration=pair.calibration;}
-        else {put("accepted",false,false);r.message="NOT_FOUND";}
+        else {put("accepted",false,false);r.fitDiagnostic=pair.diagnostic;r.message=r.fitDiagnostic ? presentMeasurementDiagnostic(*r.fitDiagnostic):QString("NOT_FOUND");}
     }else {
         LineScanOptions o;o.scanCount=p["scanCount"].toInt();o.scanWidthPx=p["scanWidthPx"].toDouble();o.edge.profile=profile;o.edge.selection=selection;o.edge.minContrast=p["minContrast"].toDouble();o.edge.subpixel=p["subpixel"].toBool();o.edge.polarity=p["polarity"]=="rising" ? EdgePolarity::Rising:p["polarity"]=="falling" ? EdgePolarity::Falling:EdgePolarity::Any;
         o.fit.minPoints=p["minPoints"].toInt();o.fit.minCoverage=p["minCoverage"].toDouble();o.fit.minSpanCoverage=p["minSpanCoverage"].toDouble();o.fit.ransac=p["ransac"].toBool();o.fit.minSpan=p["minSpanPx"].toDouble();o.fit.inlierDistance=p["inlierDistancePx"].toDouble();o.fit.maxRms=p["maxRmsPx"].toDouble();o.fit.maxResidual=p["maxResidualPx"].toDouble();

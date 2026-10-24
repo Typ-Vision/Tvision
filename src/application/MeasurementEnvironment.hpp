@@ -11,6 +11,19 @@ struct RememberedCalibration {
     int version=1;
     bool operator==(const RememberedCalibration&) const = default;
 };
+struct CameraRegistration {
+    QString shortId;
+    SetupId setup;
+    ProfileId profile;
+    bool operator==(const CameraRegistration&) const = default;
+};
+enum class CameraDefaultsStatus { Ready, Pending, Ambiguous, Missing, Archived };
+struct CameraDefaults {
+    CameraDefaultsStatus status=CameraDefaultsStatus::Missing;
+    std::optional<SetupId> setup;
+    std::optional<ProfileId> profile;
+};
+struct CameraRegistrationResult { CameraId camera; bool existing=false; };
 // Persistent choices only. This type cannot grant acquisition/Runtime permission.
 struct MeasurementEnvironment {
     QString projectId;
@@ -20,6 +33,8 @@ struct MeasurementEnvironment {
     QSet<QString> archivedCameras, archivedSetups;
     QMap<QString,QString> operational; // CameraId -> SetupId
     QVector<RememberedCalibration> selections;
+    QMap<QString,CameraRegistration> registrations; // CameraId -> editable short ID + defaults
+    CameraDefaults defaults(const CameraId&) const;
     QJsonObject encode(int capacity=128) const;
     static MeasurementEnvironment decode(const QJsonObject&,int capacity=128);
 };
@@ -32,16 +47,22 @@ public:
     MeasurementEnvironment commit(const MeasurementEnvironment& expected,MeasurementEnvironment next,Fault=Fault::None) const;
     // Candidate first, selection second. Retry after interruption is idempotent.
     MeasurementEnvironment saveAndRemember(const MeasurementEnvironment& expected,const CalibrationModelRecord&,
-        const SetupReference&,Fault=Fault::None) const;
+        const SetupReference&,Fault=Fault::None,bool selectOperational=false) const;
     // Explicit dependency bundle for Save As/import/export; no legacy auto migration.
     QJsonObject exportBundle() const;
     void importBundle(const QJsonObject&) const; // fresh destination only
     QString path() const {return projectPath_+".measurement-environment.json";}
+    QString projectPath() const {return projectPath_;}
     QString catalogPath() const {return projectPath_+".active-calibrations.json";}
+    ActiveCalibrationService catalog(ActiveCalibrationService::ChangeGate gate=[]{return true;}) const {
+        return ActiveCalibrationService(catalogPath(),projectId_,std::move(gate),catalog_);
+    }
+    std::shared_ptr<ValidatedCalibrationCatalog> catalogCache() const {return catalog_;}
 private:
     void validateDependencies(const MeasurementEnvironment&) const;
     QString projectPath_,projectId_;
     int capacity_;
+    std::shared_ptr<ValidatedCalibrationCatalog> catalog_=std::make_shared<ValidatedCalibrationCatalog>();
 };
 // Application-owned, owner-thread state; no QWidget/recipe ownership.
 class MeasurementEnvironmentRegistry {
@@ -50,6 +71,11 @@ public:
     const MeasurementEnvironment& snapshot() const;
     void reload();
     void replace(MeasurementSetupContract);
+    // One atomic commit, including generated pending setup/profile and history.
+    CameraRegistrationResult registerCamera(MeasurementCamera,const QString& shortId,int expectedRevision,
+        MeasurementEnvironmentRepository::Fault=MeasurementEnvironmentRepository::Fault::None);
+    void renameCamera(const CameraId&,const QString& shortId,const QString& name,int expectedRevision);
+    void selectDefaults(const CameraId&,const QString& shortId,const SetupId&,const ProfileId&,int expectedRevision);
     void archiveCamera(const CameraId&);
     void archiveSetup(const SetupId&);
     void setOperational(const CameraId&,const SetupId&);

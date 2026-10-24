@@ -24,8 +24,15 @@ struct ProductionDependencies {
     std::optional<CalibrationDependency> calibration;
     QJsonObject systemCalibration;
     QJsonObject measurementSource;
+    QJsonObject industrialSource; // Frozen admission; terminal8 actual evidence stays separate
 };
-struct MultiSourceDependencies {QMap<QString,ProductionDependencies> sources;};
+struct ExperimentalScopedCalibrationSnapshot;
+struct MultiSourceDependencies {
+    QMap<QString,ProductionDependencies> sources;
+    std::shared_ptr<const IndustrialExecutionInputs> industrial;
+    // Separate experimental policy; trusted Runtime rejects this map.
+    QMap<QString,std::shared_ptr<const ExperimentalScopedCalibrationSnapshot>> experimentalCalibrations;
+};
 struct RecipeValidation {
     QString id,principal;
     QByteArray contentId,dependencyId;
@@ -38,13 +45,16 @@ public:
     const QString& projectDirectory() const { return directory_; }
     const RecipeValidation& validation() const { return validation_; }
     const QJsonObject& dependencies() const { return dependencies_; }
+    const std::shared_ptr<const IndustrialExecutionInputs>& industrial() const { return industrial_; }
 private:
     friend class ProductionRecipeService;
     friend class MultiSourceRuntimeService;
+    friend class ExperimentalRuntime;
     Recipe recipe_;
     QString directory_;
     RecipeValidation validation_;
     QJsonObject dependencies_;
+    std::shared_ptr<const IndustrialExecutionInputs> industrial_;
 };
 struct ProductionCycle {
     quint64 ticket=0;
@@ -73,6 +83,7 @@ public:
 private:
     friend class RuntimeService;
     friend class MultiSourceRuntimeService;
+    friend class ExperimentalRuntime;
     static QJsonObject validateMultiSourceCompletion(const ProductionCycle&,const CycleResult&,const QMap<QString,std::shared_ptr<const ProductionSnapshot>>&);
     static QByteArray recipeContent(const Recipe&,const QString& directory);
     static QByteArray completionDigest(const CycleResult&);
@@ -89,6 +100,7 @@ private:
     void persist(const QString&,const QString&,const QJsonObject&) const;
     void transition(const QString&,const QString&,const ProductionSnapshot&) const;
     int historyLimit_;
+    bool industrialAdmission_=false; // Private whole-set validator seam; never user production permission
     QMap<QString,std::shared_ptr<const ProductionSnapshot>> validated_;
     QVector<QString> activated_;
     std::shared_ptr<const ProductionSnapshot> active_;

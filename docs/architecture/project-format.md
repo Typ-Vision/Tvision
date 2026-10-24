@@ -1,5 +1,13 @@
 # Proje ve reçete kayıt sözleşmesi — Adım 2
 
+EUI-02 (18 Ekim 2026): Blob `rejectBorderTouching` boolean, varsayılan false.
+Eski editor1–9 kayıtlarında eksik alan yalnız okuma modelinde tamamlanır; no-op
+Save eski bayt/hash ve şemayı korur. Gerçek düzenleme alanı açıkça yazar. Eski
+okuyucular bilinmeyen parametreyi strict key kontrolüyle reddeder; sessizce yok saymaz.
+Editor şeması değişmez; Blob descriptor4 ve engine `visionflow.execution/28`
+yeni yürütme/cache/Runtime dependency kimliğidir. [Görev kartı](editor-refinement-plan.md).
+
+
 12 Ekim güncel durum — **R1–R8 tamamlandı.** Yeni ortak Referans binding’leri immutable snapshot ve Runtime’ın süreç içi trusted completion kanıtıyla production yoluna bağlandı; tam kaynak/port/ofset/calibration kimliği terminal schema4, restart, Logs ve CSV’de korunur. Runtime Viewer aynı current resolver’ı kullanır; Stop/missing nominal fallback üretmez. Engine **execution/22**, editor8/raw1/world2/vf.socket2 korunur. Standalone Pattern/Shape ve eski poseTracking production kapısı T8.4.2b.3c corpus kabulüne kadar kapalıdır. **R8 tam Release kabulü: OFF/core 57/57, ON/UI 64/64. Sonraki T8.4.2b.3c** eksik corpus ve bütün production yollarının kapanışıdır. Güncel binary build/reference-ui/visionflow.exe. Alttaki teslim ve sıra kayıtları tarihseldir. [R7 sözleşmesi ve kabul eşlemesi](reference-production-acceptance.md). [R8 paket ve devir kanıtı](reference-release-acceptance.md).
 
 
@@ -100,7 +108,13 @@ QSaveFile direct-write fallback kapalıdır: atomik commit başarısızsa dirty/
 ## Doğrulama ve sınırlar
 
 - Proje/reçete isimleri 1–64 yazdırılabilir karakter; reçete adı proje içinde case-fold karşılaştırmayla benzersiz.
-- Açıklama en fazla 2048 karakter; görüntü kaynağı referansı boş olamaz. Robot/protokol/kalibrasyon opsiyoneldir.
+- Açıklama en fazla 2048 karakter. CCUX-11 ile proje/reçete genel görüntü kaynağı ve
+  kalibrasyon referansları opsiyonel legacy metadata'dır; yeni reçete bunları
+  projeden miras almaz. Normal bağlama Editor kaynak düğümündedir. JSON alanları
+  ve root/recipe şemaları korunur; aç/no-op kayıtta toplu silme/migration yapılmaz.
+  `editRecipeMetadata` yalnız ad/açıklama değiştirir; legacy referans ve binding'leri
+  korur. Eski explicit referans edit API'si ayrı kalır. Runtime legacy kalibrasyon
+  çözümleme kontrolü korunur; boş referans doğrulanmış model veya üretim izni değildir.
 - ID, tür, status, tamsayı sürüm, UTC tarih ve nesne/dizi tipleri doğrulanır.
 - Bilinmeyen şema/tür ve root/recipe alanları reddedilir; daha yeni veriyi sessizce silerek kaydetme yapılmaz.
 - Dosya boyutu en fazla 16 MB. Yeni proje yolu mevcut olmamalı; üst klasör mevcut olmalı. İlk aşamada klasör açma veya Save As yoktur.

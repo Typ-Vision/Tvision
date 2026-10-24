@@ -73,6 +73,7 @@ QByteArray EditorSession::evaluationScope(const EditorContext& c,const QString& 
     QCryptographicHash hash(QCryptographicHash::Sha256);
     hash.addData(QJsonDocument(QJsonArray{c.projectId,c.path,c.recipeId,QString::number(multi ? 0:generation),m.sourceId,m.frameId,m.cycleId,m.coordinateSystemId}).toJson(QJsonDocument::Compact));
     hash.addData(selected->contentId());hash.addData(selected->processingId());hash.addData(QJsonDocument(c.calibrationBinding).toJson(QJsonDocument::Compact));
+    if(!m.experimentalAcquisition.isEmpty())hash.addData(QJsonDocument(m.experimentalAcquisition).toJson(QJsonDocument::Compact));
     if(!c.systemCalibration.isEmpty())hash.addData(QJsonDocument(multi ? c.systemCalibration[m.sourceId].toObject():c.systemCalibration).toJson(QJsonDocument::Compact));
     QFile catalog(c.path+".calibrations.json");if(!multi && catalog.open(QIODevice::ReadOnly))hash.addData(QCryptographicHash::hash(catalog.readAll(),QCryptographicHash::Sha256));
     return hash.result();
@@ -167,7 +168,7 @@ bool EditorSession::acceptCycle(CycleResult result,const QByteArray& captured,co
         for(const auto& t:editorTools(current.definition))if(t.id==r.toolId && t.kind=="template_match")references[t.id]={referenceSignature(current,t.id),std::get<QPointF>(point.data)};
     }return true;
 }
-ImageLoad EditorSession::load(const QString& path) {try{return {ImageFileService{}.load(path),{}};}catch(const std::exception& e){return {{},QString::fromUtf8(e.what())};}}
+ImageLoad EditorSession::load(const QString& path,bool experimentalEditorReplay) {try{return {ImageFileService{}.load(path,experimentalEditorReplay),{}};}catch(const std::exception& e){return {{},QString::fromUtf8(e.what())};}}
 ModelTeaching EditorSession::teach(const ImageFrame& frame,const QRect& roi) {try{return {MatchService{}.teach(frame,roi),{}};}catch(const std::exception& e){return {{},QString::fromUtf8(e.what())};}}
 PoseTeaching EditorSession::teachPose(const ToolDefinition& tool,const ImageFrame& image,const QRect& roi,QPointF anchor) {
     try {
@@ -235,5 +236,5 @@ QJsonObject EditorSession::taughtSearch(const EditorContext& c,const ToolDefinit
         for(const auto& source:editorTools(c.definition))if(source.id==b.sourceTool)p["referenceGeometry"]=referenceGeometry(source);
     }p["searchRoi"]=MatchService::rectangle(roi);return p;
 }
-void EditorSession::suppressCancelled(CycleResult& c) {c.frames.clear();c.state=ExecutionState::Skipped;c.error="Çevrim iptal edildi.";for(auto& r:c.tools){r.edgeDiagnostics.reset();r.outputs.clear();r.regions.clear();r.mask={};r.points.clear();r.rejectedPoints.clear();r.lines.clear();r.searchRegion={};r.decision=PartDecision::NotEvaluated;r.calibration.reset();}}
+void EditorSession::suppressCancelled(CycleResult& c) {c.industrialEvidence.clear();c.frames.clear();c.state=ExecutionState::Skipped;c.error="Çevrim iptal edildi.";for(auto& r:c.tools){r.state=ExecutionState::Skipped;r.message="İptal edildi";r.errorCode.clear();r.fitDiagnostic.reset();r.edgeDiagnostics.reset();r.outputs.clear();r.regions.clear();r.mask={};r.points.clear();r.rejectedPoints.clear();r.lines.clear();r.searchRegion={};r.decision=PartDecision::NotEvaluated;r.calibration.reset();}}
 }

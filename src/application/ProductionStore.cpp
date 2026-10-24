@@ -1,5 +1,6 @@
 #include "ProductionStore.hpp"
 #include "ProductionResultCodec.hpp"
+#include "ExperimentalRuntime.hpp"
 #include <QCryptographicHash>
 #include <QDir>
 #include <QFile>
@@ -13,23 +14,23 @@ namespace {
 constexpr qint64 maxFile=20*1024*1024,maxTotal=512LL*1024*1024;
 void require(bool ok,const char* message){if(!ok)throw std::runtime_error(message);}
 QString digest(const QJsonObject& o){return QString::fromLatin1(QCryptographicHash::hash(QJsonDocument(o).toJson(QJsonDocument::Compact),QCryptographicHash::Sha256).toHex());}
-void kindCheck(const QString& kind){require(QStringList{"snapshots","events","cycles"}.contains(kind),"Production archive kind invalid.");}
+void kindCheck(const QString& kind){require(QStringList{"snapshots","events","cycles","experimental_cycles"}.contains(kind),"Production archive kind invalid.");}
 QJsonObject read(const QString& path,const QString& kind,const QString& id){
     QFile file(path);require(!QFileInfo(path).isSymLink() && file.open(QIODevice::ReadOnly) && file.size()<=maxFile,"Production archive cannot be read / limit exceeded.");
     QJsonParseError error;const auto doc=QJsonDocument::fromJson(file.readAll(),&error);const auto o=doc.object();
     require(error.error==QJsonParseError::NoError && doc.isObject() && o.size()==6 && o["schemaVersion"]==1 && o["format"]=="visionflow.production" && o["kind"]==kind && o["id"]==id && o["payload"].isObject() && o["sha256"].isString(),"Production archive schema invalid.");
-    const auto payload=o["payload"].toObject();require(digest(payload)==o["sha256"].toString(),"Production archive content hash mismatch.");if(kind=="cycles")ProductionResultCodec::validate(payload);return payload;
+    const auto payload=o["payload"].toObject();require(digest(payload)==o["sha256"].toString(),"Production archive content hash mismatch.");if(kind=="cycles")ProductionResultCodec::validate(payload);if(kind=="experimental_cycles")ExperimentalRuntime::validateRecord(payload);return payload;
 }
 }
 ProductionStore::ProductionStore(QString directory):directory_(QDir::cleanPath(directory)) {
     require(QDir(directory_).isAbsolute(),"Production archive requires absolute directory.");
 }
 void ProductionStore::append(const QString& kind,const QString& id,const QJsonObject& payload) const {
-    kindCheck(kind);if(kind=="cycles")ProductionResultCodec::validate(payload);require(!QUuid(id).isNull() && QUuid(id).toString(QUuid::WithoutBraces)==id,"Production archive ID invalid.");
+    kindCheck(kind);if(kind=="cycles")ProductionResultCodec::validate(payload);if(kind=="experimental_cycles")ExperimentalRuntime::validateRecord(payload);require(!QUuid(id).isNull() && QUuid(id).toString(QUuid::WithoutBraces)==id,"Production archive ID invalid.");
     require(!QFileInfo(directory_).isSymLink() && QDir().mkpath(directory_),"Production archive directory unavailable.");
     QLockFile lock(directory_+"/archive.lock");lock.setStaleLockTime(0);require(lock.tryLock(0),"Production archive locked; retry recording.");
     const QDir root(directory_);qint64 bytes=0;int count=0;
-    for(const QString group:{"snapshots","events","cycles"}) {
+    for(const QString group:{"snapshots","events","cycles","experimental_cycles"}) {
         const auto dir=root.filePath(group);require(!QFileInfo(dir).isSymLink(),"Production archive symlink refused.");
         for(const auto& f:QDir(dir).entryInfoList({"*.json"},QDir::Files)) {require(!f.isSymLink(),"Production archive symlink refused.");bytes+=f.size();++count;}
     }

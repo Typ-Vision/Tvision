@@ -1,3 +1,4 @@
+#include "application/EditorObservation.hpp"
 #include "ProjectService.hpp"
 #include "BackendCapabilities.hpp"
 #include "domain/ToolRegistry.hpp"
@@ -63,6 +64,17 @@ QString ProjectService::createRecipe(QString name, QString description, Applicat
     project_=candidate; activeId_=recipe.id; changedRecipes_.insert(recipe.id); newRecipes_.insert(recipe.id); dirty_=true;
     return recipe.id;
 }
+void ProjectService::editRecipeMetadata(const QString& id, QString name, QString description) {
+    // Metadata edits must not clear legacy calibration or source-scoped bindings.
+    auto candidate=project();
+    for (auto& recipe : candidate.recipes) if (recipe.id==id) {
+        if (recipe.name==name.trimmed() && recipe.description==description) return;
+        recipe.name=name.trimmed(); recipe.description=description; recipe.status=RecipeStatus::Draft;
+        validateProject(candidate);
+        project_=candidate; changedRecipes_.insert(id); dirty_=true; return;
+    }
+    fail("Reçete bulunamadı.");
+}
 void ProjectService::editRecipe(const QString& id, QString name, QString description, QString camera, QString calibration) {
     auto candidate=project();
     for (auto& recipe : candidate.recipes) if (recipe.id==id) {
@@ -79,6 +91,7 @@ void ProjectService::selectRecipe(const QString& id) {
     fail("Reçete bulunamadı.");
 }
 void ProjectService::save() {
+    editor_observation::Scope observation(editor_observation::ProjectSave);
     project();
     if (!dirty_) return;
     QLockFile lock(path_+".lock");
@@ -120,7 +133,7 @@ void ProjectService::setTools(const QVector<ToolDefinition>& tools,const QVector
         definition=withEditorConnections(definition,connections);
         if (definition==r.definition || definition==withEditorTools(r.definition,editorTools(r.definition))) return;
         if(r.calibrationBinding) {
-            auto sourceConfig=[](const QVector<ToolDefinition>& list){QJsonArray sources;for(const auto& t:list)if(t.kind=="image_file" || t.kind=="webcam")sources.append(QJsonObject{{"id",t.id},{"kind",t.kind},{"enabled",t.enabled},{"parameters",t.parameters}});return sources;};
+            auto sourceConfig=[](const QVector<ToolDefinition>& list){QJsonArray sources;for(const auto& t:list)if(ToolRegistry::get(t.kind).acquisitionSource)sources.append(QJsonObject{{"id",t.id},{"kind",t.kind},{"enabled",t.enabled},{"parameters",t.parameters}});return sources;};
             if(sourceConfig(previous)!=sourceConfig(tools))r.calibrationBinding.reset();
         }
         r.definition=definition; r.status=RecipeStatus::Draft; validateProject(candidate);
@@ -181,6 +194,14 @@ void ProjectService::updateTool(const ToolDefinition& tool) {
     for (auto& t : list) if (t.id==tool.id) {
         if (t.kind!=tool.kind) fail("Tool türü değiştirilemez.");
         t=tool; setTools(list); return;
+    }
+    fail("Tool bulunamadı.");
+}
+void ProjectService::bindIndustrialSource(const QString& id,const MeasurementSetupContract& contract,const ProfileId& profile,int timeoutMs) {
+    const auto reference=IndustrialSourceReference::bind(contract,profile,timeoutMs);
+    for(auto tool:tools())if(tool.id==id){
+        if(tool.kind!="industrial_camera")fail("Industrial source tool required");
+        tool.parameters={{"sourceReference",reference.toJson()}};updateTool(tool);return;
     }
     fail("Tool bulunamadı.");
 }

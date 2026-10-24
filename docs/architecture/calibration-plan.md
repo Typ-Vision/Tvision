@@ -1,5 +1,14 @@
 # Kamera ve robot kalibrasyonu — revize ürün planı
 
+Güncel uygulama sırası: [CCUX kamera/kalibrasyon planı](camera-setup/README.md).
+Hand-eye/Eye-to-Hand bu paketin dışındadır; aşağıdaki tarihsel sıraları yeniden
+başlatmayın. CCUX henüz uygulanmadı; mevcut algoritma/sözleşmeler bağımlılık olarak kalır.
+
+21 Ekim 2026: kamera merkezli sade Setup ve reçete referans alanlarını kaldırma
+yönü kabul edildi; [güncel taslak](camera-calibration-ux-draft.md) robot ucunda
+plaka ile Eye-to-Hand önerisini ve ölçüm/robot yöntem ayrımını içerir. Robot
+adımları değerlendirme önerisidir; çalışan iç kalibrasyon/robot hesabı değildir.
+
 15 Ekim — **KUI-5 tamamlandı**; [ortak resolver/Editor/Runtime/Logs ve açık legacy aktarımı](system-calibration.md). KUI-4 üç kart/iki sihirbaz akışı bütün metrik tüketicilere bağlandı; pixel tanısı korunur, eski world ilişkiler yeniden öğretim ister. Sıradaki KUI-6 tam Release kabulü. Fiziksel K4/lens/robot/CUDA/kurulum/dağıtım ayrı açık işlerdir. Alttaki kayıtlar tarihseldir.
 
 

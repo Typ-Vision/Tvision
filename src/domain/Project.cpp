@@ -55,7 +55,6 @@ void validateProject(const Project& project) {
     require(project.schemaVersion==1,"Desteklenmeyen proje şema sürümü.");
     require(!QUuid(project.id).isNull(),"Proje ID geçersiz.");
     require(validName(project.name),"Proje adı 1–64 yazdırılabilir karakter olmalı.");
-    require(!project.cameraReference.trimmed().isEmpty(),"Varsayılan görüntü kaynağı gerekli.");
     require(project.description.size()<=2048,"Proje açıklaması en fazla 2048 karakter olabilir.");
     require(project.createdAt.isValid() && project.modifiedAt.isValid(),"Proje tarihleri geçersiz.");
     QSet<QString> ids, names;
@@ -70,7 +69,6 @@ void validateProject(const Project& project) {
         require(validName(recipe.name),"Reçete adı 1–64 yazdırılabilir karakter olmalı.");
         require(!names.contains(recipe.name.toCaseFolded()),"Reçete adı bu projede zaten var.");
         require(recipe.recipeVersion>=1 && recipe.recipeVersion<1000000000,"Reçete sürümü geçersiz.");
-        require(!recipe.cameraReference.trimmed().isEmpty(),"Reçete görüntü kaynağı gerekli.");
         require(recipe.description.size()<=2048,"Reçete açıklaması en fazla 2048 karakter olabilir.");
         require(recipe.createdAt.isValid() && recipe.modifiedAt.isValid(),"Reçete tarihleri geçersiz.");
         typeKey(recipe.applicationType); statusKey(recipe.status);

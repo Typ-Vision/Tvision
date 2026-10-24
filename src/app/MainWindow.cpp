@@ -1,4 +1,6 @@
+#include "CameraManager.hpp"
 #include "MainWindow.hpp"
+#include "WorkspacePanel.hpp"
 #include <QAction>
 #include <QApplication>
 #include <QCloseEvent>
@@ -16,6 +18,7 @@
 #include <QStackedWidget>
 #include <QStatusBar>
 #include <QTabWidget>
+#include <QTimer>
 #include <QVBoxLayout>
 
 namespace visionflow {
@@ -30,8 +33,10 @@ QFrame* card(const QString& title, const QString& text) {
     layout->addWidget(label(title,"heading")); layout->addWidget(label(text)); layout->addStretch(); return frame;
 }
 }
+MainWindow::~MainWindow(){delete cameraManager_;cameraManager_=nullptr;}
 MainWindow::MainWindow(const QString& settingsFile) : settingsFile_(settingsFile) {
-    smokeMode_=QCoreApplication::arguments().contains("--multi-source-smoke") || QCoreApplication::arguments().contains("--system-calibration-smoke") || QCoreApplication::arguments().contains("--usability-smoke") || QCoreApplication::arguments().contains("--smoke-test") || QCoreApplication::arguments().contains("--circle-smoke") || QCoreApplication::arguments().contains("--geometry-smoke");
+    smokeMode_=QCoreApplication::arguments().contains("--roi-smoke") || QCoreApplication::arguments().contains("--recipe-fields-smoke") || QCoreApplication::arguments().contains("--experimental-editor-smoke") || QCoreApplication::arguments().contains("--multi-source-runtime-smoke") || QCoreApplication::arguments().contains("--multi-source-smoke") || QCoreApplication::arguments().contains("--system-calibration-smoke") || QCoreApplication::arguments().contains("--usability-smoke") || QCoreApplication::arguments().contains("--smoke-test") || QCoreApplication::arguments().contains("--circle-smoke") || QCoreApplication::arguments().contains("--geometry-smoke");
+    smokeMode_=smokeMode_ || QCoreApplication::arguments().contains("--editor-camera-sessions-smoke") || QCoreApplication::arguments().contains("--runtime-camera-sessions-smoke");
     setWindowTitle("VisionFlow Industrial Vision Suite"); resize(1400,900); setMinimumSize(850,600);
     auto* file = menuBar()->addMenu("File");
     auto* create=file->addAction("New Project"); create->setShortcut(QKeySequence::New);
@@ -44,9 +49,12 @@ MainWindow::MainWindow(const QString& settingsFile) : settingsFile_(settingsFile
     exit->setShortcut(QKeySequence::Quit); connect(exit,&QAction::triggered,this,&QWidget::close);
     auto* view = menuBar()->addMenu("View");
     auto* editor = view->addAction("Recipe Editor");
-    connect(editor,&QAction::triggered,this,[this]{selectPage("editor");});
+    connect(editor,&QAction::triggered,this,[this]{if(service_.activeRecipe())openEditorRecipe(service_.activeRecipe()->id);else selectPage("editor");});
     auto* reset = view->addAction("Panel düzenini sıfırla");
-    connect(reset,&QAction::triggered,this,[this]{horizontal_->setSizes({200,700,260}); vertical_->setSizes({550,210});});
+    reset->setObjectName("resetPanels");
+    connect(reset,&QAction::triggered,this,[this]{workspacePanel_->setPinned(true);horizontal_->setSizes({170,780,280}); vertical_->setSizes({640,160});});
+    auto* pinWorkspace=view->addAction("Workspace sabit");pinWorkspace->setCheckable(true);pinWorkspace->setObjectName("pinWorkspace");
+    connect(pinWorkspace,&QAction::triggered,this,[this](bool pinned){workspacePanel_->setPinned(pinned);});
     auto* setup = menuBar()->addMenu("Setup");
     for (const auto& id : {QString("communication"), QString("calibration")}) {
         auto* action = setup->addAction(id=="communication" ? "Communication" : "Calibration");
@@ -56,10 +64,14 @@ MainWindow::MainWindow(const QString& settingsFile) : settingsFile_(settingsFile
     auto* root = new QWidget; auto* rootLayout = new QHBoxLayout(root);
     rootLayout->setContentsMargins(0,0,0,0); rootLayout->setSpacing(0);
     auto* sidebar = new QFrame; sidebar->setObjectName("sidebar"); sidebar->setFixedWidth(215);
+    sidebar->setStyleSheet("QFrame#sidebar QListWidget::item {padding: 6px; margin: 1px;} QFrame#sidebar QLabel#brand {font-size: 20px;}");
     auto* side = new QVBoxLayout(sidebar);
     side->addWidget(label("VF  VisionFlow","brand")); side->addWidget(label("INDUSTRIAL VISION SUITE"));
-    navigation_ = new QListWidget; navigation_->setAccessibleName("Ana navigasyon"); side->addWidget(navigation_,1);
-    hardwareStatus_=label("Camera: bağlı değil\nRobot / PLC: bağlı değil\nGeliştirme aşaması 6");side->addWidget(hardwareStatus_); rootLayout->addWidget(sidebar);
+    navigation_ = new QListWidget; navigation_->setAccessibleName("Ana navigasyon");navigation_->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff); side->addWidget(navigation_,1);
+    hardwareStatus_=label("Camera: bağlı değil\nRobot / PLC: bağlı değil\nGeliştirme aşaması 6");side->addWidget(hardwareStatus_);
+    workspacePanel_=new WorkspacePanel(root,sidebar,settingsFile_);rootLayout->addWidget(workspacePanel_);
+    pinWorkspace->setChecked(workspacePanel_->pinned());
+    workspacePanel_->onPinnedChanged=[pinWorkspace](bool pinned){pinWorkspace->setChecked(pinned);};
     auto* content = new QWidget; auto* contentLayout = new QVBoxLayout(content);
     contentLayout->setContentsMargins(20,16,20,16); pageTitle_ = label("Dashboard","heading");
     contentLayout->addWidget(pageTitle_);
@@ -105,6 +117,8 @@ MainWindow::MainWindow(const QString& settingsFile) : settingsFile_(settingsFile
     QSettings settings(settingsFile_,QSettings::IniFormat);
     restoreGeometry(settings.value("window/geometry").toByteArray());
     restoreLayout(); refreshWorkspace(); selectPage("dashboard");
+    auto* editorCameraTimer=new QTimer(this);editorCameraTimer->setInterval(25);
+    connect(editorCameraTimer,&QTimer::timeout,this,&MainWindow::pollEditorCameras);editorCameraTimer->start();
     if (!smokeMode_) restoreSession();
     initializeCommunication();
 }
@@ -126,6 +140,17 @@ void MainWindow::selectPage(const QString& id) {
     // Operator history is read-only and has an explicit return to Runtime.
     if(operatorMode_ && id!="runtime" && id!="logs")return;
     const int index = pageIds_.indexOf(id); if (index<0) return;
+    if(id!="editor" && pages_->currentIndex()==pageIds_.indexOf("editor") && !editorCameraExitAccepted_){
+        if(editorCameraAfterDrain_)return;
+        if(!resolveUnsavedChanges()){
+            const QSignalBlocker guard(navigation_);for(int row=0;row<navigation_->count();++row)if(navigation_->item(row)->data(Qt::UserRole).toString()=="recipes")navigation_->setCurrentRow(row);
+            return;
+        }
+        if(drainEditorCameras([this,id]{editorCameraExitAccepted_=true;selectPage(id);editorCameraExitAccepted_=false;}))return;
+    }
+    if(id!="camera" && cameraManager_ && (cameraSession_.busy() || cameraManager_->hasPreview()) && pages_->currentIndex()==pageIds_.indexOf("camera")){
+        cameraManager_->leave([this,id]{selectPage(id);});return;
+    }
     if (id!="editor" && pages_->currentIndex()==pageIds_.indexOf("editor") && !applyToolProperties()) {
         const QSignalBlocker blocker(navigation_);
         for (int i=0;i<navigation_->count();++i) if (navigation_->item(i)->data(Qt::UserRole).toString()=="recipes") navigation_->setCurrentRow(i);
@@ -139,12 +164,18 @@ void MainWindow::selectPage(const QString& id) {
     for (int i=0;i<navigation_->count();++i) {
         auto* item = navigation_->item(i);
         if (item->data(Qt::UserRole).toString()==navId) {
-            if (navigation_->currentItem()!=item) navigation_->setCurrentItem(item);
+            if (navigation_->currentItem()!=item) {const QSignalBlocker guard(navigation_);navigation_->setCurrentItem(item);}
             pageTitle_->setText(id=="editor" ? "Recipe Editor" : item->text()); break;
         }
     }
     pages_->setCurrentIndex(index);
-    if(id=="calibration")refreshCalibration();
+    pageTitle_->setVisible(id!="editor");context_->setVisible(id!="editor");
+    if(auto* contentLayout=qobject_cast<QVBoxLayout*>(pages_->parentWidget()->layout())) {
+        contentLayout->setContentsMargins(id=="editor" ? 8:20,id=="editor" ? 6:16,id=="editor" ? 8:20,id=="editor" ? 6:16);
+        contentLayout->setSpacing(id=="editor" ? 4:6);
+    }
+    if(id=="calibration"){calibrationRefresh_.invalidate("page entry / external changes");refreshCalibration();}
+    if(id=="camera" && cameraManager_)cameraManager_->refresh();
     if(id=="runtime")refreshRuntime();
     if(id=="communication")refreshCommunication();
     if(id=="logs")refreshLogs();
@@ -198,8 +229,12 @@ void MainWindow::restoreLayout() {
 }
 void MainWindow::closeEvent(QCloseEvent* event) {
     if(plc_ && plc_->blocking()){displayError("PLC çevrim kaydı ve ACK tamamlanmadan pencere kapatılamaz.");event->ignore();return;}
-    if (editorSession_.busy(SessionJob::Teaching) || editorSession_.busy(SessionJob::Execution) || editorSession_.busy(SessionJob::Image) || cameraSession_.busy() || runtimeJobs_.busy() || (runtime_ && runtime_->busy())) {displayError("Arka plan işi tamamlandıktan sonra pencereyi kapatın."); event->ignore(); return;}
-    if (!resolveUnsavedChanges()) { event->ignore(); return; }
+    if(cameraManager_ && cameraManager_->hasPreview()){
+        cameraManager_->leave([this]{close();});event->ignore();return;
+    }
+    if ((editorSession_.busy() && !editorCameras_.hasTargets()) || cameraSession_.busy() || runtimeJobs_.busy() || (runtime_ && runtime_->busy())) {displayError("Arka plan işi tamamlandıktan sonra pencereyi kapatın."); event->ignore(); return;}
+    if (!editorCameraExitAccepted_ && !resolveUnsavedChanges()) { event->ignore(); return; }
+    if(drainEditorCameras([this]{editorCameraExitAccepted_=true;close();editorCameraExitAccepted_=false;})){event->ignore();return;}
     saveLayout(); QMainWindow::closeEvent(event);
 }
 bool MainWindow::verifyShell() {

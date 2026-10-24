@@ -77,7 +77,7 @@ int main(int argc,char** argv) {
             std::vector<double> times; int correct=0;
             for (int i=0;i<100;++i) {const auto r=matcher.run(matchFrame,params); times.push_back(r.milliseconds); if (r.accepted && r.rectangle==modelRoi) ++correct;}
             std::sort(times.begin(),times.end());
-            QFile csv(QDir(QCoreApplication::applicationDirPath()).filePath("roi_match_service.csv")); check(csv.open(QIODevice::WriteOnly|QIODevice::Text),"benchmark csv");
+            QFile csv(QDir(qEnvironmentVariable("VISIONFLOW_TEST_ARTIFACTS",QCoreApplication::applicationDirPath())).filePath("roi_match_service.csv")); check(csv.open(QIODevice::WriteOnly|QIODevice::Text),"benchmark csv");
             QTextStream stream(&csv); stream<<"image_width,image_height,model_width,model_height,roi_width,roi_height,iterations,correct,median_ms,p95_ms\n2592,1944,64,48,512,512,100,"<<correct<<','<<times[49]<<','<<times[94]<<'\n';
             QTextStream(stdout)<<"ROI service benchmark: median "<<times[49]<<" ms; p95 "<<times[94]<<" ms; correct "<<correct<<"/100\n";
         }

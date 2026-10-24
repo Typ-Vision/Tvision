@@ -1,5 +1,6 @@
 #pragma once
 #include <QImage>
+#include <QJsonObject>
 #include <QDateTime>
 #include <QString>
 #include <opencv2/core.hpp>
@@ -19,6 +20,8 @@ struct FrameMetadata {
     std::optional<QDateTime> exposureAtUtc;
     std::optional<quint64> deviceTimestampTicks;
     QString deviceClockId;
+    // Experimental camera provenance; never trusted trigger/terminal evidence.
+    QJsonObject experimentalAcquisition;
 };
 class ImageFrame {
 public:
@@ -47,6 +50,8 @@ private:
     cv::Mat pixels_;
     QString path_,format_;
     PixelFormat pixelFormat_=PixelFormat::Gray8;
+    // Computed before publication; copies and worker/UI readers share immutable identity.
+    QByteArray contentId_;
     FrameMetadata metadata_;
     QVector<ProcessingStep> processing_;
 };

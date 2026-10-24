@@ -1,6 +1,8 @@
+#include "MeasurementDiagnostic.hpp"
 #include "MultiSourceRuntimeService.hpp"
 #include "domain/ToolRegistry.hpp"
 #include "ProductionResultCodec.hpp"
+#include "IndustrialRuntime.hpp"
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QCryptographicHash>
@@ -25,20 +27,30 @@ MultiSourceRuntimeService::Prepared MultiSourceRuntimeService::capture(const Rec
     require(QJsonDocument(recipe.definition).toJson(QJsonDocument::Compact).size()<=16*1024*1024,ProductionError::InvalidConfiguration,"Whole recipe definition exceeds 16 MiB snapshot budget");
     require(recipe.definition["editor"].toObject()["schemaVersion"]==9,ProductionError::InvalidConfiguration,"Explicit editor9 required");validateEditorDefinition(recipe.definition);
     const auto graph=validateSourceGraph(editorTools(recipe.definition),editorConnections(recipe.definition));require(graph.valid() && !graph.requiredSources.isEmpty(),ProductionError::InvalidConfiguration,"Invalid/empty multi-source graph");
-    const auto set=provider_(recipe);require(set.sources.size()==graph.requiredSources.size(),ProductionError::DependencyChanged,"Missing/foreign source snapshot set");Prepared out;QJsonObject sourceSet;QSet<QString> devices;
+    const auto set=provider_(recipe);require(set.experimentalCalibrations.isEmpty(),ProductionError::DependencyChanged,"Experimental models cannot enter trusted Runtime");require(set.sources.size()==graph.requiredSources.size(),ProductionError::DependencyChanged,"Missing/foreign source snapshot set");Prepared out;QJsonObject sourceSet;QSet<QString> devices;
+    const auto configured=editorTools(recipe.definition);bool hasIndustrial=false;
+    for(const auto& t:configured)if(t.enabled && t.kind=="industrial_camera")hasIndustrial=true;
+    require(hasIndustrial==bool(set.industrial),ProductionError::DependencyChanged,"Missing/foreign industrial execution composition");
+    std::optional<IndustrialRuntimeAdmission> industrial;
+    if(hasIndustrial)industrial=freezeIndustrialRuntime(*set.industrial,configured);
     for(const auto& source:graph.requiredSources){
-        require(set.sources.contains(source),ProductionError::DependencyChanged,"Required source snapshot missing");auto branch=SystemCalibration::branch(recipe,source);auto editor=branch.definition["editor"].toObject();editor["schemaVersion"]=8;branch.definition["editor"]=editor;
-        const auto dependencies=set.sources[source];
+        require(set.sources.contains(source),ProductionError::DependencyChanged,"Required source snapshot missing");auto branch=SystemCalibration::branch(recipe,source);auto editor=branch.definition["editor"].toObject();editor["schemaVersion"]=SystemCalibration::source(branch).kind=="industrial_camera" ? 9:8;branch.definition["editor"]=editor;
+        auto dependencies=set.sources[source];
+        require(dependencies.industrialSource.isEmpty(),ProductionError::DependencyChanged,"Caller cannot supply industrial admission evidence");
+        const bool industrialBranch=SystemCalibration::source(branch).kind=="industrial_camera";
+        if(industrialBranch)dependencies.industrialSource=industrial->sources.value(source);
+
         if(!dependencies.systemCalibration.isEmpty())branch=SystemCalibration::prepareRecipe(SystemCalibration::decodeEvidence(dependencies.systemCalibration),branch,directory);
         else {branch.calibrationBinding.reset();branch.calibrationReference.clear();}
         const auto tool=SystemCalibration::source(branch);if(tool.kind=="image_file"){const QFileInfo file(QDir(directory).absoluteFilePath(tool.parameters["path"].toString()));require(file.isFile() && file.isReadable(),ProductionError::InvalidConfiguration,"Required source file unavailable");}QString device;
         if(branch.definition.contains("sourceSetup"))device="physical:"+branch.definition["sourceSetup"].toObject()["target"].toObject()["cameraId"].toString();
         else if(tool.kind=="webcam")device="legacy:"+tool.parameters["backend"].toString()+":"+QString::number(tool.parameters["deviceIndex"].toInt());
-        if(!device.isEmpty()){require(!devices.contains(device),ProductionError::InvalidConfiguration,"Repeated physical source requires an explicit reuse policy");devices.insert(device);}
-        ProductionRecipeService validator([](const QString&,ProductionAction){return true;},[dependencies](const Recipe&){return dependencies;});const auto validation=validator.validate(identity_.principal,branch,directory);validator.activate(identity_.principal,validation.id,branch,directory);
+        if(!device.isEmpty()){require(!devices.contains(device) || (industrialBranch && set.industrial && set.industrial->sessions),ProductionError::InvalidConfiguration,"Repeated physical source requires an explicit reuse policy");devices.insert(device);}
+        ProductionRecipeService validator([](const QString&,ProductionAction){return true;},[dependencies](const Recipe&){return dependencies;});validator.industrialAdmission_=industrialBranch;const auto validation=validator.validate(identity_.principal,branch,directory);validator.activate(identity_.principal,validation.id,branch,directory);
         out.branches[source]=validator.active();sourceSet[source]=validator.active()->dependencies();
     }
     auto snapshot=std::make_shared<ProductionSnapshot>();snapshot->recipe_=recipe;snapshot->directory_=QDir(directory).absolutePath();snapshot->dependencies_={{"engine",ExecutionService::version()},{"sourceSet",sourceSet},{"scope",(persist_ ? "multi_source_runtime/1":"multi_source_in_memory/1")}};
+    if(industrial)snapshot->industrial_=std::make_shared<const IndustrialExecutionInputs>(industrial->inputs);
     snapshot->validation_={QUuid::createUuid().toString(QUuid::WithoutBraces),identity_.principal,QByteArray{},hash(snapshot->dependencies_),QDateTime::currentDateTimeUtc(),(persist_ ? "multi_source_runtime/1":"multi_source_in_memory/1")};
     // Canonical complete recipe identity uses the same fields as legacy admission.
     snapshot->validation_.contentId=ProductionRecipeService::recipeContent(recipe,directory);
@@ -66,11 +78,12 @@ void MultiSourceRuntimeService::finish(quint64 ticket,const CycleResult& result)
     if(pending_.isEmpty()){
         const auto& s=*cycle_.snapshot;QJsonArray frames,tools;
         for(const auto& f:result.frames)frames.append(QJsonObject{{"frameId",f.frameId},{"cycleId",f.cycleId},{"sourceId",f.sourceId},{"coordinateSystemId",f.coordinateSystemId},{"completedAtUtc",f.completedAtUtc.toString(Qt::ISODateWithMs)}});
-        for(const auto& t:result.tools){QJsonObject outputs;for(auto i=t.outputs.cbegin();i!=t.outputs.cend();++i)outputs[i.key()]=ProductionResultCodec::output(*i);QString name,kind;for(const auto& configured:editorTools(s.recipe().definition))if(configured.id==t.toolId){name=configured.name;kind=configured.kind;}
+        for(const auto& t:result.tools){QJsonObject outputs;for(auto i=t.outputs.cbegin();i!=t.outputs.cend();++i)outputs[i.key()]=ProductionResultCodec::output(*i);if(result.industrialEvidence.contains(t.toolId))for(auto i=t.outputs.begin();i!=t.outputs.end();++i)if(i->valid && std::holds_alternative<ImageFrame>(i->data)){auto o=outputs[i.key()].toObject(), image=o["imageInfo"].toObject();image["contentId"]=QString::fromLatin1(std::get<ImageFrame>(i->data).contentId().toHex());o["imageInfo"]=image;outputs[i.key()]=o;}QString name,kind;for(const auto& configured:editorTools(s.recipe().definition))if(configured.id==t.toolId){name=configured.name;kind=configured.kind;}
             tools.append(QJsonObject{{"toolId",t.toolId},{"name",name},{"kind",kind},{"state",executionStateName(t.state)},{"message",t.message},{"milliseconds",t.milliseconds},{"outputs",outputs},{"errorCode",t.errorCode},{"decision",t.decision==PartDecision::Pass ? "PASS":t.decision==PartDecision::Fail ? "FAIL":"NOT_EVALUATED"},{"calibration",t.calibration ? QJsonValue(t.calibration->toJson()):QJsonValue(QJsonValue::Null)}});
+            if(t.fitDiagnostic){auto item=tools.last().toObject();item["measurementDiagnostic"]=encodeMeasurementDiagnostic(*t.fitDiagnostic);tools.replace(tools.size()-1,item);}
         }
         const auto& recipe=s.recipe();const QJsonObject configuration{{"recipeId",recipe.id},{"recipeVersion",recipe.recipeVersion},{"schemaVersion",recipe.schemaVersion},{"name",recipe.name},{"description",recipe.description},{"type",typeKey(recipe.applicationType)},{"camera",recipe.cameraReference},{"calibration",recipe.calibrationReference},{"calibrationBinding",recipe.calibrationBinding ? QJsonValue(recipe.calibrationBinding->toJson()):QJsonValue(QJsonValue::Null)},{"definition",recipe.definition},{"projectDirectory",s.projectDirectory()}};
-        QJsonObject candidate{{"configuration",configuration},{"schemaVersion",7},{"recordId",QUuid::createUuid().toString(QUuid::WithoutBraces)},{"beginEventId",beginId_},{"ticket",QString::number(ticket)},{"principal",identity_.principal},{"recipeId",s.recipe().id},{"recipeName",s.recipe().name},{"recipeVersion",s.recipe().recipeVersion},{"applicationType",typeKey(s.recipe().applicationType)},{"validationId",s.validation().id},{"configId",QString::fromLatin1(s.validation().contentId)},{"dependencyId",QString::fromLatin1(s.validation().dependencyId)},{"dependencies",s.dependencies()},{"definition",s.recipe().definition},{"branches",branches},{"cycleId",result.cycleId},{"evaluationId",result.evaluationId},{"state",executionStateName(result.state)},{"error",result.error},{"milliseconds",result.milliseconds},{"startedAtUtc",started_.toString(Qt::ISODateWithMs)},{"completedAtUtc",QDateTime::currentDateTimeUtc().toString(Qt::ISODateWithMs)},{"frames",frames},{"tools",tools},{"communicationState",communication_.isEmpty() ? "NOT_REQUESTED":"RESULT_PENDING"},{"communication",communication_}};
+        QJsonObject candidate{{"configuration",configuration},{"schemaVersion",s.industrial() ? 9:7},{"recordId",QUuid::createUuid().toString(QUuid::WithoutBraces)},{"beginEventId",beginId_},{"ticket",QString::number(ticket)},{"principal",identity_.principal},{"recipeId",s.recipe().id},{"recipeName",s.recipe().name},{"recipeVersion",s.recipe().recipeVersion},{"applicationType",typeKey(s.recipe().applicationType)},{"validationId",s.validation().id},{"configId",QString::fromLatin1(s.validation().contentId)},{"dependencyId",QString::fromLatin1(s.validation().dependencyId)},{"dependencies",s.dependencies()},{"definition",s.recipe().definition},{"branches",branches},{"cycleId",result.cycleId},{"evaluationId",result.evaluationId},{"state",executionStateName(result.state)},{"error",result.error},{"milliseconds",result.milliseconds},{"startedAtUtc",started_.toString(Qt::ISODateWithMs)},{"completedAtUtc",QDateTime::currentDateTimeUtc().toString(Qt::ISODateWithMs)},{"frames",frames},{"tools",tools},{"communicationState",communication_.isEmpty() ? "NOT_REQUESTED":"RESULT_PENDING"},{"communication",communication_}};
         ProductionResultCodec::validate(candidate);pending_=std::move(candidate);pendingCompletion_=result;
     }
     persist("cycles",pending_["recordId"].toString(),pending_);pending_={};pendingCompletion_.reset();last_=result;failure_.clear();cycle_={};

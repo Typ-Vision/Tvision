@@ -4,6 +4,7 @@
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QTextStream>
+#include <cmath>
 #include <stdexcept>
 using namespace visionflow;
 namespace {
@@ -18,6 +19,11 @@ MeasurementSetupContract fixture(int count){
 }
 }
 int main(int argc,char** argv){QCoreApplication app(argc,argv);try{
+    // Golden bytes/hash computed outside VisionFlow from the pre-ICM-03a v1 encoding.
+    const QByteArray golden=R"({"cameras":[{"device":{"adapter":"webcam","capabilities":{"binning":true,"resolution":true,"sensorRoi":true,"softwareCapture":true},"confidence":"provider_reported","providerId":"provider-0","revision":1,"schemaVersion":1},"id":"camera-0","name":"Camera 0","schemaVersion":1}],"format":"visionflow.measurement-setup-contract","schemaVersion":1,"setups":[{"cameraId":"camera-0","deviceRevision":1,"geometry":{"binning":{"x":2,"y":2},"complete":true,"height":480,"schemaVersion":1,"sensorRoi":{"height":960,"width":1280,"x":10,"y":20},"width":640},"id":"setup-0","name":"Setup 0","opticalProfile":"lens-A","revision":1,"schemaVersion":1,"workingPlane":"plane-A"}]})";
+    check(QJsonDocument(fixture(1).toJson()).toJson(QJsonDocument::Compact)==golden,"legacy v1 contract bytes unchanged");
+    check(QJsonDocument(MeasurementSetupContract::fromJson(QJsonDocument::fromJson(golden).object()).toJson()).toJson(QJsonDocument::Compact)==golden,"legacy golden no-op roundtrip");
+    check(fixture(1).setups[0].geometryId()=="7cbe135ab59e652f345cf792535607d04163e81121a17b6606d02c8b6672a60a","legacy geometry hash unchanged");
     for(int n:{0,1,2,5,8,10}){
         const auto c=fixture(n);const auto json=c.toJson();const auto bytes=QJsonDocument(json).toJson(QJsonDocument::Compact);
         const auto decoded=MeasurementSetupContract::fromJson(QJsonDocument::fromJson(bytes).object());
@@ -30,6 +36,20 @@ int main(int argc,char** argv){QCoreApplication app(argc,argv);try{
     for(int change=0;change<5;++change){next=original.setups[0];if(change==0)next.opticalProfile="lens-B";if(change==1)next.workingPlane="plane-B";if(change==2){next.geometry.resolution={320,240};next.geometry.sensorRoi=QRect(10,20,640,480);}if(change==3)next.geometry.sensorRoi=QRect(11,20,1280,960);if(change==4)next.deviceRevision=2;
         next=original.setups[0].revised(next);check(next.revision==2 && next.geometryId()!=original.setups[0].geometryId(),"physical change increments revision/hash");}
     const auto& setup=original.setups[0];
+    // A -> B -> A is a new physical setup even when every label returns to A.
+    for(const auto& base:{setup,MeasurementSetupDescriptor::fromJson(setup.toJson())}){
+        auto b=base;b.opticalProfile="lens-B";b=base.revised(b);
+        auto restored=b.revised(base);
+        check(b.revision==2 && restored.revision==3 && restored.geometryId()!=base.geometryId(),"restored setup has a fresh revision/hash");
+        for(const auto& pair:{std::pair{base,restored},std::pair{restored,base}}){
+            const auto c=acquisitionChange({pair.first},{pair.second});
+            check(c.setup && !c.calibrationCompatible() && !c.cacheCompatible() && !c.preparationCompatible(),"setup history invalidates all compatibility in both directions");
+        }
+        check(restored.revised(restored)==restored,"no-op at revision 3 does not increment");
+        auto label=restored;label.name="Renamed restored setup";label.revision=1;
+        label=restored.revised(label);
+        check(label.revision==3 && label.geometryId()==restored.geometryId() && acquisitionChange({restored},{label}).preparationCompatible(),"rename ignores caller revision and preserves compatibility");
+    }
     check(setup.cacheId({{"exposure",100}})!=setup.cacheId({{"exposure",200}}) && setup.geometryId()==original.setups[0].geometryId(),"exposure affects cache, not geometric compatibility");
     next=setup;next.camera={"camera-1"};reject([&]{setup.revised(next);},"silent camera reassignment rejected");
     next=setup;next.geometry.complete=false;reject([&]{next.geometryId();},"unknown critical geometry cannot be compatible");
@@ -75,5 +95,103 @@ int main(int argc,char** argv){QCoreApplication app(argc,argv);try{
     auto wrongKind=source;wrongKind["sourceKind"]="camera";reject([&]{MeasurementSourceEvidence::fromJson(wrongKind);},"camera ID is not an acquisition source kind");
     for(int mutation=0;mutation<3;++mutation){auto target=source["target"].toObject();if(mutation==0)target["schemaVersion"]=2;if(mutation==1)target["revision"]=1.1;if(mutation==2)target["extra"]=true;auto bad=source;bad["target"]=target;reject([&]{MeasurementSourceEvidence::fromJson(bad);},"strict target schema/type/fields");}
     auto bad=source;bad["origin"]="acquired";reject([&]{MeasurementSourceEvidence::fromJson(bad);},"legacy origin cannot be silently relabeled");bad=source;bad["schemaVersion"]=2;reject([&]{MeasurementSourceEvidence::fromJson(bad);},"unknown source schema rejected");bad=source;bad["generation"]=1.5;reject([&]{MeasurementSourceEvidence::fromJson(bad);},"fractional generation rejected");
+    // ICM-03a identity corpus: portable physical identity, local route/backend, still no industrial capture.
+    const PhysicalDeviceIdentity coe{"OECS","COE-050-M-USB-050-IR-C","SN-0001",DeviceIdentityConfidence::SerialReported};
+    const PhysicalDeviceIdentity noSerial{"OECS","COE-050-M-USB-050-IR-C",{},DeviceIdentityConfidence::ProviderReported};
+    const BackendIdentity sdk{"oecs","3.5.2.0",QString(64,'a'),1},cti{"gentl","1.0.0.5",QString(64,'b'),1};
+    const QString producer="C:/Program Files (x86)/Common Files/OECS/Runtime/Win64_x64/MvProducerU3V.cti";
+    const DiscoveredDevice direct{coe,{"oecs","","usb-0","dev-7"},sdk},viaGentl{coe,{"gentl",producer,"if-0","dev-1"},cti};
+    for(const auto& p:{coe,noSerial,PhysicalDeviceIdentity{}})check(PhysicalDeviceIdentity::fromJson(p.toJson())==p,"physical identity exact roundtrip");
+    for(const auto& t:{direct.route,viaGentl.route})check(TransportLocator::fromJson(t.toJson())==t,"route exact roundtrip");
+    check(BackendIdentity::fromJson(sdk.toJson())==sdk && BackendIdentity::fromJson(cti.toJson())==cti,"backend exact roundtrip");
+    auto moved=viaGentl;moved.route.producer="D:/Copied/MvProducerU3V.cti";check(moved.backend.fingerprint()==viaGentl.backend.fingerprint() && moved.route!=viaGentl.route,"moved binary keeps backend fingerprint, changes route");
+    auto replacedBinary=cti;replacedBinary.runtimeSha256=QString(64,'c');check(replacedBinary.fingerprint()!=cti.fingerprint(),"replaced binary changes backend fingerprint");
+    check(resolveRoutes(coe,{direct,viaGentl})==QVector<int>{0,1},"same device via two producers is one device with two routes");
+    auto twin=direct;twin.route.deviceId="dev-8";reject([&]{resolveRoutes(coe,{direct,twin});},"duplicate serial in one enumeration rejected");
+    auto otherVendor=direct;otherVendor.identity.vendor="Other";check(resolveRoutes(coe,{otherVendor,viaGentl})==QVector<int>{1},"same serial from another vendor is another device");reject([&]{resolveRoutes(coe,{otherVendor});},"no serial-only fallback");
+    auto otherModel=direct;otherModel.identity.model="Other";reject([&]{resolveRoutes(coe,{otherModel});},"model mismatch rejected");
+    reject([&]{resolveRoutes(coe,{});},"offline device rejected without next-device fallback");
+    auto unserial=direct;unserial.identity=noSerial;reject([&]{resolveRoutes(noSerial,{unserial});},"missing serial requires explicit remap");
+    check(resolveRoutes(coe,{unserial,direct})==QVector<int>{1},"serial-less discovery never matches a serial identity");
+    reject([&]{resolveRoutes(PhysicalDeviceIdentity{},{direct});},"unavailable identity cannot resolve");
+    auto mismatch=direct;mismatch.backend=cti;reject([&]{resolveRoutes(coe,{mismatch});},"route/backend mismatch rejected");
+    for(int mutation=0;mutation<6;++mutation){auto p=coe;if(mutation==0)p.serial.clear();if(mutation==1)p.vendor.clear();if(mutation==2)p.model=" padded";if(mutation==3)p.confidence=DeviceIdentityConfidence::ProviderReported;if(mutation==4){p=PhysicalDeviceIdentity{};p.serial="1";}if(mutation==5)p.confidence=static_cast<DeviceIdentityConfidence>(9);
+        reject([&]{p.toJson();},"invalid physical identity rejected");}
+    for(int mutation=0;mutation<6;++mutation){auto t=viaGentl.route;if(mutation==0)t.producer="relative/MvProducerU3V.cti";if(mutation==1)t.producer="C:/OECS/../OECS/x.cti";if(mutation==2)t.producer.clear();if(mutation==3)t.deviceId.clear();if(mutation==4)t.backend="usb";if(mutation==5)t.backend="oecs";
+        reject([&]{t.toJson();},"invalid route rejected");}
+    for(int mutation=0;mutation<4;++mutation){auto b=sdk;if(mutation==0)b.runtimeSha256=QString(64,'A');if(mutation==1)b.runtimeSha256="abc";if(mutation==2)b.adapterVersion=0;if(mutation==3)b.adapter="webcam";reject([&]{b.toJson();},"invalid backend identity rejected");}
+    auto strict=[&](const QJsonObject& value,auto decode){for(int kind=0;kind<4;++kind){auto bad=value;if(kind==0)bad["unexpected"]=true;if(kind==1)bad.remove(bad.begin().key());if(kind==2)bad["schemaVersion"]=2;if(kind==3)bad["schemaVersion"]=1.5;reject([&]{decode(bad);},"strict identity codec");}};
+    strict(coe.toJson(),PhysicalDeviceIdentity::fromJson);strict(direct.route.toJson(),TransportLocator::fromJson);strict(sdk.toJson(),BackendIdentity::fromJson);
+    {auto bad=coe.toJson();bad["serial"]=1;reject([&]{PhysicalDeviceIdentity::fromJson(bad);},"typed serial");bad=sdk.toJson();bad["adapterVersion"]="1";reject([&]{BackendIdentity::fromJson(bad);},"typed adapter version");}
+    const MeasurementCamera industrial{{"camera-industrial"},"Line camera",{"gentl","",DeviceIdentityConfidence::Unavailable,1,{false,true,false,false}},coe};
+    const auto industrialJson=industrial.toJson();const auto industrialBytes=QJsonDocument(industrialJson).toJson(QJsonDocument::Compact);
+    check(MeasurementCamera::fromJson(industrialJson)==industrial && industrialJson["schemaVersion"]==2,"industrial camera explicit schema 2 roundtrip");
+    check(!industrialBytes.contains("producer") && !industrialBytes.contains("Program Files") && !industrialBytes.contains("dev-7") && !industrialBytes.contains(sdk.runtimeSha256.toLatin1()),"project camera carries no local route or backend fingerprint");
+    check(original.cameras[0].rebound(renamed.cameras[0])==renamed.cameras[0],"legacy rename through camera rebind");
+    auto renamedIndustrial=industrial;renamedIndustrial.name="Renamed line camera";check(industrial.rebound(renamedIndustrial)==renamedIndustrial,"rename keeps physical identity and device revision");
+    auto remapped=industrial;remapped.physical->serial="SN-0002";remapped=industrial.rebound(remapped);check(remapped.device.revision==2 && remapped.physical->serial=="SN-0002" && remapped.rebound(remapped)==remapped,"explicit rebind increments revision; no-op keeps it");
+    auto lost=industrial;lost.physical=PhysicalDeviceIdentity{};check(industrial.rebound(lost).device.revision==2,"losing identity is a revisioned remap");
+    auto converted=industrial;converted.id=original.cameras[0].id;check(original.cameras[0].rebound(converted).device.revision==2,"webcam to industrial is a revisioned remap");
+    auto otherCamera=industrial;otherCamera.id={"other"};reject([&]{industrial.rebound(otherCamera);},"rebind cannot change camera ID");
+    auto exhaustedCamera=industrial;exhaustedCamera.device.revision=1000000000;reject([&]{exhaustedCamera.rebound(remapped);},"camera revision exhaustion rejected");
+    for(int mutation=0;mutation<4;++mutation){auto c=industrial;if(mutation==0)c.device.adapter="webcam";if(mutation==1){c.device.providerId="x";c.device.confidence=DeviceIdentityConfidence::ProviderReported;}if(mutation==2)c.device.capabilities.softwareCapture=true;if(mutation==3)c.physical->serial.clear();
+        reject([&]{c.toJson();},"industrial camera cannot claim capture or provider route");}
+    for(int mutation=0;mutation<4;++mutation){auto bad=industrialJson;if(mutation==0)bad.remove("physical");if(mutation==1)bad["schemaVersion"]=1;if(mutation==2)bad["schemaVersion"]=3;if(mutation==3)bad["route"]=direct.route.toJson();
+        reject([&]{MeasurementCamera::fromJson(bad);},"strict camera schema 1/2 boundary");}
+    auto mixed=original;mixed.cameras.append(industrial);auto mixedSetup=original.setups[0];mixedSetup.id={"setup-industrial"};mixedSetup.camera=industrial.id;mixedSetup.geometry={{2448,2048},{},{},true};mixed.setups.append(mixedSetup);
+    reject([&]{mixed.toJson();},"industrial geometry without offset/binning/decimation/reverse state is unknown");
+    mixed.setups.last().geometry={{2448,2048},QRect(0,0,2448,2048),QSize(1,1),true,QSize(1,1),GeometryMirror{}};
+    const auto mixedJson=mixed.toJson();check(MeasurementSetupContract::fromJson(mixedJson).cameras==mixed.cameras && mixedJson["cameras"].toArray()[0].toObject()["schemaVersion"]==1,"mixed contract keeps legacy cameras at schema 1");
+    auto duplicate=mixed;auto second=industrial;second.id={"camera-industrial-2"};duplicate.cameras.append(second);reject([&]{duplicate.toJson();},"same physical identity cannot back two cameras");
+    second.physical->vendor="Other";duplicate.cameras.last()=second;check(MeasurementSetupContract::fromJson(duplicate.toJson()).cameras.size()==4,"same serial from another vendor is a distinct camera");
+    // ICM-03b profile/geometry corpus: the setup owns geometry, the profile owns acquisition settings.
+    const auto lineSetup=mixed.setups.last();
+    const AcquisitionSettings manual{"Mono8",{true,"FrameStart","Software"},AutoMode::Off,5000,AutoMode::Off,0,"Ring light 24V"};
+    const AcquisitionProfile profile{{"profile-A"},industrial.id,lineSetup.id,"Production 5 ms",1,manual};
+    auto withProfile=mixed;withProfile.profiles.append(profile);const auto profileJson=withProfile.toJson();
+    check(profileJson["schemaVersion"]==2 && MeasurementSetupContract::fromJson(profileJson).profiles==withProfile.profiles && MeasurementSetupContract::fromJson(profileJson).toJson()==profileJson,"profile contract explicit schema 2 exact roundtrip");
+    check(mixedJson["schemaVersion"]==1 && !mixedJson.contains("profiles") && setup.geometry.toJson()["schemaVersion"]==1,"no profile/legacy geometry keeps schema 1");
+    check(lineSetup.geometry.toJson()["schemaVersion"]==2 && GeometryDescriptor::fromJson(lineSetup.geometry.toJson())==lineSetup.geometry,"explicit industrial geometry schema 2 roundtrip");
+    const auto acquisition=profile.acquisitionId(lineSetup);
+    for(int change=0;change<4;++change){auto moved=lineSetup;auto& g=moved.geometry;
+        if(change==0)g.sensorRoi=QRect(8,0,2448,2048);if(change==1)g.reverse=GeometryMirror{true,false};if(change==2)g.reverse=GeometryMirror{false,true};if(change==3){g.resolution={1224,1024};g.decimation=QSize(2,2);}
+        auto sameRevision=moved;check(sameRevision.geometryId()!=lineSetup.geometryId() && GeometryDescriptor::fromJson(moved.geometry.toJson())==moved.geometry,"critical geometry alone changes geometry hash and roundtrips");
+        moved=lineSetup.revised(moved);const auto c=acquisitionChange({lineSetup,profile},{moved,profile});
+        check(moved.revision==2 && moved.geometryId()!=lineSetup.geometryId() && c==AcquisitionChange{true,true,false,false,false} && !c.calibrationCompatible() && profile.acquisitionId(moved)!=acquisition,"same-size offset/reverse and decimation reject old calibration");}
+    auto exposed=profile;exposed.requested.exposureTimeUs=8000;exposed=profile.revised(exposed);auto change=acquisitionChange({lineSetup,profile},{lineSetup,exposed});
+    check(exposed.revision==2 && exposed.acquisitionId(lineSetup)!=acquisition && change==AcquisitionChange{false,false,false,true,false} && change.calibrationCompatible() && !change.cacheCompatible(),"exposure changes only acquisition identity");
+    for(int row=0;row<4;++row){auto next=profile;if(row==0)next.requested.gain=6;if(row==1)next.requested.trigger={false,{},{}};if(row==2)next.requested.trigger.source="Line1";if(row==3)next.requested.illumination.clear();
+        check(acquisitionChange({lineSetup,profile},{lineSetup,next})==AcquisitionChange{false,false,false,true,false} && profile.revised(next).revision==2 && next.acquisitionId(lineSetup)!=acquisition,"gain/trigger/illumination are acquisition rows only");}
+    auto renamedProfile=profile;renamedProfile.name="Renamed profile";renamedProfile=profile.revised(renamedProfile);auto renamedLine=lineSetup;renamedLine.name="Renamed line setup";renamedLine=lineSetup.revised(renamedLine);
+    check(renamedProfile.revision==1 && renamedLine.revision==1 && renamedProfile.acquisitionId(renamedLine)==acquisition && acquisitionChange({lineSetup,profile},{renamedLine,renamedProfile})==AcquisitionChange{},"names never change revision or hash");
+    auto mono12=profile;mono12.requested.pixelFormat="Mono12";reject([&]{mono12.toJson();},"first version rejects non-Mono8");change=acquisitionChange({lineSetup,profile},{lineSetup,mono12});check(change.pixelFormat && !change.acquisition && !change.calibrationCompatible(),"pixel format is its own row and rejects the model");
+    auto lens=lineSetup;lens.opticalProfile="lens-B";change=acquisitionChange({lineSetup,profile},{lineSetup.revised(lens),profile});check(change==AcquisitionChange{true,false,false,false,false} && lineSetup.revised(lens).revision==2,"lens is a setup row");
+    change=acquisitionChange({lineSetup,profile,sdk.fingerprint()},{lineSetup,profile,cti.fingerprint()});check(change==AcquisitionChange{false,false,false,false,true} && change.cacheCompatible() && !change.preparationCompatible(),"backend change re-prepares only");
+    for(int mutation=0;mutation<3;++mutation){auto next=profile;if(mutation==0)next.setup={"setup-0"};if(mutation==1)next.camera={"camera-0"};if(mutation==2)next.id={"profile-B"};reject([&]{profile.revised(next);},"profile cannot silently move");}
+    auto exhaustedProfile=profile;exhaustedProfile.revision=1000000000;reject([&]{exhaustedProfile.revised(exposed);},"profile revision exhaustion rejected");
+    const GeometryReadback actual{{2448,2048},{},GeometryEvidence::Reported,{1,1},GeometryEvidence::NotApplicable,{1,1},GeometryEvidence::Reported,{},GeometryEvidence::Reported};
+    const AcquisitionReadback applied{actual,manual};
+    check(verifyApplied(lineSetup,profile,applied)==acquisition && AcquisitionReadback::fromJson(applied.toJson())==applied,"verified readback yields the acquisition identity");
+    auto provenOff=actual;provenOff.offsetEvidence=GeometryEvidence::NotApplicable;provenOff.reverseEvidence=GeometryEvidence::NotApplicable;check(provenOff.descriptor()==actual.descriptor(),"not-applicable node equals reported identity geometry");
+    for(int feature=0;feature<4;++feature){auto unknown=applied;auto& g=unknown.geometry;if(feature==0)g.offsetEvidence=GeometryEvidence::Unknown;if(feature==1)g.binningEvidence=GeometryEvidence::Unknown;if(feature==2)g.decimationEvidence=GeometryEvidence::Unknown;if(feature==3)g.reverseEvidence=GeometryEvidence::Unknown;
+        check(GeometryReadback::fromJson(g.toJson())==g,"unknown evidence stays explicit");reject([&]{verifyApplied(lineSetup,profile,unknown);},"unknown critical geometry rejected");}
+    auto unknownSetup=lineSetup;unknownSetup.geometry.complete=false;reject([&]{profile.acquisitionId(unknownSetup);},"incomplete setup geometry has no acquisition identity");
+    for(int mutation=0;mutation<7;++mutation){auto bad=applied;if(mutation==0)bad.geometry.offset={8,0};if(mutation==1)bad.geometry.reverse.x=true;if(mutation==2)bad.geometry.resolution={2448,2047};if(mutation==3)bad.settings.exposureTimeUs=5001;if(mutation==4)bad.settings.pixelFormat="Mono12";if(mutation==5)bad.settings.exposureAuto=AutoMode::Continuous;if(mutation==6)bad.settings.trigger.enabled=false,bad.settings.trigger.selector.clear(),bad.settings.trigger.source.clear();
+        reject([&]{verifyApplied(lineSetup,profile,bad);},"applied state different from request rejected");}
+    for(int mutation=0;mutation<4;++mutation){auto g=actual;if(mutation==0)g.binning={2,2};if(mutation==1){g.offsetEvidence=GeometryEvidence::Unknown;g.offset={4,0};}if(mutation==2)g.reverseEvidence=static_cast<GeometryEvidence>(7);if(mutation==3)g.resolution={0,2048};reject([&]{g.toJson();},"unreported geometry cannot claim a value");}
+    for(int mutation=0;mutation<9;++mutation){auto s=manual;if(mutation==0)s.exposureTimeUs=0;if(mutation==1)s.exposureTimeUs=std::nan("");if(mutation==2)s.gain=2000;if(mutation==3)s.trigger={false,"FrameStart",{}};if(mutation==4)s.trigger.selector.clear();if(mutation==5)s.pixelFormat=" Mono8";if(mutation==6)s.illumination=" padded";if(mutation==7)s.gainAuto=static_cast<AutoMode>(5);if(mutation==8)s.exposureTimeUs=1e9;
+        reject([&]{s.toJson();},"invalid acquisition settings rejected");}
+    auto automatic=profile;automatic.requested.exposureAuto=AutoMode::Continuous;reject([&]{automatic.toJson();},"industrial profile requires manual exposure");check(AcquisitionSettings::fromJson(automatic.requested.toJson())==automatic.requested,"readback settings may report auto state");
+    strict(profile.toJson(),AcquisitionProfile::fromJson);strict(manual.toJson(),AcquisitionSettings::fromJson);strict(applied.toJson(),AcquisitionReadback::fromJson);strict(actual.toJson(),GeometryReadback::fromJson);
+    for(int mutation=0;mutation<6;++mutation){auto bad=actual.toJson();auto offset=bad["offset"].toObject();if(mutation==0)offset["evidence"]="guessed";if(mutation==1)offset.remove("x");if(mutation==2)offset={{"evidence","unknown"},{"x",0},{"y",0}};if(mutation==3)offset["x"]=-1;if(mutation==4)offset["extra"]=1;if(mutation==5)offset["x"]=0.5;bad["offset"]=offset;
+        reject([&]{GeometryReadback::fromJson(bad);},"strict readback feature codec");}
+    {auto bad=manual.toJson();bad["exposureTimeUs"]="5000";reject([&]{AcquisitionSettings::fromJson(bad);},"typed exposure");bad=manual.toJson();bad["exposureAuto"]="manual";reject([&]{AcquisitionSettings::fromJson(bad);},"unknown auto mode");bad=manual.toJson();auto t=bad["trigger"].toObject();t["extra"]=1;bad["trigger"]=t;reject([&]{AcquisitionSettings::fromJson(bad);},"strict trigger fields");}
+    for(int mutation=0;mutation<6;++mutation){auto bad=lineSetup.geometry.toJson();if(mutation==0)bad.remove("reverse");if(mutation==1)bad["schemaVersion"]=1;if(mutation==2)bad["decimation"]=QJsonValue();if(mutation==3)bad["reverse"]=QJsonObject{{"x","true"},{"y",false}};if(mutation==4)bad["schemaVersion"]=3;if(mutation==5)bad["sensorRoi"]=QJsonValue();
+        reject([&]{GeometryDescriptor::fromJson(bad);},"strict geometry schema 1/2 boundary");}
+    {auto bad=setup.geometry.toJson();bad["decimation"]=QJsonObject{{"x",1},{"y",1}};reject([&]{GeometryDescriptor::fromJson(bad);},"schema 1 geometry cannot carry new fields");}
+    for(int mutation=0;mutation<4;++mutation){auto bad=profileJson;if(mutation==0)bad["schemaVersion"]=1;if(mutation==1)bad["profiles"]=QJsonArray{};if(mutation==2)bad.remove("profiles");if(mutation==3){bad=mixedJson;bad["profiles"]=QJsonArray{};}
+        reject([&]{MeasurementSetupContract::fromJson(bad);},"strict contract schema 1/2 boundary");}
+    for(int mutation=0;mutation<6;++mutation){auto c=withProfile;if(mutation==0)c.profiles[0].camera=original.cameras[0].id,c.profiles[0].setup=original.setups[0].id;if(mutation==1)c.profiles[0].setup=original.setups[0].id;if(mutation==2)c.profiles.append(profile);if(mutation==3)c.profiles[0].setup={"missing"};if(mutation==4)c.setups[0].geometry=lineSetup.geometry;if(mutation==5)c.profiles[0].requested.pixelFormat="BayerRG8";
+        reject([&]{c.toJson();},"invalid profile/geometry binding rejected");}
     QTextStream(stdout)<<checks<<" measurement setup checks passed\n";return 0;
 }catch(const std::exception& e){QTextStream(stderr)<<e.what()<<" after "<<checks<<" checks\n";return 1;}}

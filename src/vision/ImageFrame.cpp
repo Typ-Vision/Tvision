@@ -1,4 +1,5 @@
 #include "ImageFrame.hpp"
+#include "hardware/AcquisitionTiming.hpp"
 #include <opencv2/imgproc.hpp>
 #include <limits>
 #include <QCryptographicHash>
@@ -6,6 +7,8 @@
 #include <stdexcept>
 namespace visionflow {
 QByteArray ImageFrame::contentId() const {
+    if(!contentId_.isEmpty())return contentId_;
+    AcquisitionTimingSpan timing("raster.hash");
     QCryptographicHash hash(QCryptographicHash::Sha256);
     hash.addData(QByteArray::number(pixels_.cols)+":"+QByteArray::number(pixels_.rows)+":"+QByteArray::number(int(pixelFormat_)));
     for(int y=0;y<pixels_.rows;++y)hash.addData(QByteArrayView(reinterpret_cast<const char*>(pixels_.ptr(y)),pixels_.cols*pixels_.elemSize()));
@@ -24,20 +27,23 @@ ImageFrame ImageFrame::fromBuffer(const void* data,std::size_t bytes,int width,i
     const auto row=std::size_t(width)*bpp;
     if(stride<row || (format==PixelFormat::Gray16 && stride%2) || std::size_t(height-1)>(std::numeric_limits<std::size_t>::max()-row)/stride || bytes<std::size_t(height-1)*stride+row)throw std::runtime_error("Frame stride/tampon uzunluğu geçersiz.");
     ImageFrame frame;frame.pixels_=cv::Mat(height,width,type);
-    for(int y=0;y<height;++y)std::memcpy(frame.pixels_.ptr(y),static_cast<const unsigned char*>(data)+std::size_t(y)*stride,row);
+    {AcquisitionTimingSpan timing("raster.copy");for(int y=0;y<height;++y)std::memcpy(frame.pixels_.ptr(y),static_cast<const unsigned char*>(data)+std::size_t(y)*stride,row);}
     // Engine storage is native-endian Gray16 or OpenCV BGR/BGRA.
     if(format==PixelFormat::Rgb8)cv::cvtColor(frame.pixels_,frame.pixels_,cv::COLOR_RGB2BGR);
     if(format==PixelFormat::Rgba8)cv::cvtColor(frame.pixels_,frame.pixels_,cv::COLOR_RGBA2BGRA);
     frame.pixelFormat_=format==PixelFormat::Rgb8 ? PixelFormat::Bgr8 : format==PixelFormat::Rgba8 ? PixelFormat::Bgra8 : format;
     frame.format_=label;frame.metadata_=metadata;
     if(preview) {
+        AcquisitionTimingSpan timing("raster.preview");
         cv::Mat display;QImage::Format qformat=QImage::Format_Grayscale8;
         if(type==CV_8UC1)display=frame.pixels_;
         else if(type==CV_16UC1)frame.pixels_.convertTo(display,CV_8U,255.0/65535.0);
         else {cv::cvtColor(frame.pixels_,display,bpp==3 ? cv::COLOR_BGR2RGB : cv::COLOR_BGRA2RGBA);qformat=bpp==3 ? QImage::Format_RGB888 : QImage::Format_RGBA8888;}
         frame.preview_=QImage(display.data,width,height,static_cast<int>(display.step),qformat).copy();
         if(frame.preview_.isNull())throw std::runtime_error("Görüntü önizlemesi oluşturulamadı.");
-    }return frame;
+    }
+    frame.contentId_=frame.contentId();
+    return frame;
 }
 ImageFrame ImageFrame::withMetadata(const FrameMetadata& metadata) const {auto copy=*this;copy.metadata_=metadata;return copy;}
 QString ImageFrame::pixelText(int x,int y) const {

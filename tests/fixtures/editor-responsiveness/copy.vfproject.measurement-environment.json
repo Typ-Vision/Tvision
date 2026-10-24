@@ -1,0 +1,172 @@
+{
+    "archivedCameras": [
+    ],
+    "archivedSetups": [
+    ],
+    "contentId": "2315f09b7df964ba16ef9a50fa92b754fea114bc95904cd787caaeaac39e97f4",
+    "current": {
+        "cameras": [
+            {
+                "device": {
+                    "adapter": "gentl",
+                    "capabilities": {
+                        "binning": false,
+                        "resolution": false,
+                        "sensorRoi": false,
+                        "softwareCapture": false
+                    },
+                    "confidence": "unavailable",
+                    "providerId": "",
+                    "revision": 1,
+                    "schemaVersion": 1
+                },
+                "id": "a0589194-56f9-425a-8346-1ba313c6e137",
+                "name": "Fixture camera",
+                "physical": {
+                    "confidence": "serial_reported",
+                    "model": "COE-050-M-USB-050-IR-C",
+                    "schemaVersion": 1,
+                    "serial": "CCUX14-0",
+                    "vendor": "Opto Engineering Srl"
+                },
+                "schemaVersion": 2
+            }
+        ],
+        "format": "visionflow.measurement-setup-contract",
+        "profiles": [
+            {
+                "cameraId": "a0589194-56f9-425a-8346-1ba313c6e137",
+                "id": "dade2983-93f0-4225-a030-83cec2085e26",
+                "name": "Synthetic experiment",
+                "requested": {
+                    "exposureAuto": "off",
+                    "exposureTimeUs": 5000,
+                    "gain": 0,
+                    "gainAuto": "off",
+                    "illumination": "",
+                    "pixelFormat": "Mono8",
+                    "schemaVersion": 1,
+                    "trigger": {
+                        "enabled": true,
+                        "selector": "FrameBurstStart",
+                        "source": "Software"
+                    }
+                },
+                "revision": 2,
+                "schemaVersion": 1,
+                "setupId": "1fe26d8d-a2db-46eb-84a0-1da2dcdba993"
+            }
+        ],
+        "schemaVersion": 2,
+        "setups": [
+            {
+                "cameraId": "a0589194-56f9-425a-8346-1ba313c6e137",
+                "deviceRevision": 1,
+                "geometry": {
+                    "binning": {
+                        "x": 1,
+                        "y": 1
+                    },
+                    "complete": true,
+                    "decimation": {
+                        "x": 1,
+                        "y": 1
+                    },
+                    "height": 2048,
+                    "reverse": {
+                        "x": false,
+                        "y": false
+                    },
+                    "schemaVersion": 2,
+                    "sensorRoi": {
+                        "height": 2048,
+                        "width": 2448,
+                        "x": 0,
+                        "y": 0
+                    },
+                    "width": 2448
+                },
+                "id": "1fe26d8d-a2db-46eb-84a0-1da2dcdba993",
+                "name": "Synthetic setup",
+                "opticalProfile": "lens",
+                "revision": 2,
+                "schemaVersion": 1,
+                "workingPlane": "plane"
+            }
+        ]
+    },
+    "format": "visionflow.measurement-environment",
+    "history": [
+        {
+            "cameraId": "a0589194-56f9-425a-8346-1ba313c6e137",
+            "deviceRevision": 1,
+            "geometry": null,
+            "id": "1fe26d8d-a2db-46eb-84a0-1da2dcdba993",
+            "name": "Default",
+            "opticalProfile": "",
+            "revision": 1,
+            "schemaVersion": 2,
+            "workingPlane": ""
+        },
+        {
+            "cameraId": "a0589194-56f9-425a-8346-1ba313c6e137",
+            "deviceRevision": 1,
+            "geometry": {
+                "binning": {
+                    "x": 1,
+                    "y": 1
+                },
+                "complete": true,
+                "decimation": {
+                    "x": 1,
+                    "y": 1
+                },
+                "height": 2048,
+                "reverse": {
+                    "x": false,
+                    "y": false
+                },
+                "schemaVersion": 2,
+                "sensorRoi": {
+                    "height": 2048,
+                    "width": 2448,
+                    "x": 0,
+                    "y": 0
+                },
+                "width": 2448
+            },
+            "id": "1fe26d8d-a2db-46eb-84a0-1da2dcdba993",
+            "name": "Synthetic setup",
+            "opticalProfile": "lens",
+            "revision": 2,
+            "schemaVersion": 1,
+            "workingPlane": "plane"
+        }
+    ],
+    "operational": {
+        "a0589194-56f9-425a-8346-1ba313c6e137": "1fe26d8d-a2db-46eb-84a0-1da2dcdba993"
+    },
+    "projectId": "4f91a472-519e-45c8-898f-fd613eedeb37",
+    "registrations": {
+        "a0589194-56f9-425a-8346-1ba313c6e137": {
+            "profileId": "dade2983-93f0-4225-a030-83cec2085e26",
+            "setupId": "1fe26d8d-a2db-46eb-84a0-1da2dcdba993",
+            "shortId": "CAM_1"
+        }
+    },
+    "revision": 0,
+    "schemaVersion": 2,
+    "selections": [
+        {
+            "contentId": "7b3a2bbc97aff4c39424d11f44f48d997c12a7fa8715367df0ee4cb65da3ce2a",
+            "id": "ca9e5c8f-5955-4ffb-a859-75f5bcecdebc",
+            "target": {
+                "cameraId": "a0589194-56f9-425a-8346-1ba313c6e137",
+                "revision": 2,
+                "schemaVersion": 1,
+                "setupId": "1fe26d8d-a2db-46eb-84a0-1da2dcdba993"
+            },
+            "version": 1
+        }
+    ]
+}

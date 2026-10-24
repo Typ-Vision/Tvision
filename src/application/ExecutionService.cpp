@@ -1,4 +1,6 @@
+#include "MeasurementDiagnostic.hpp"
 #include "ExecutionService.hpp"
+#include "AcquisitionPolicy.hpp"
 #include "SourceFrameIndex.hpp"
 #include "ToolExecutors.hpp"
 #include "ToolResultCodec.hpp"
@@ -11,6 +13,7 @@
 #include "AcquisitionService.hpp"
 #include "WebcamAdapter.hpp"
 #include "MeasurementSourceIdentity.hpp"
+#include "IndustrialExecution.hpp"
 #include <QDir>
 #include <QImageReader>
 #include <QFile>
@@ -39,7 +42,7 @@ QByteArray ExecutionService::toolSignature(const QJsonObject& definition,const Q
             catch(const std::exception&){hash.addData("DEPENDENCY_UNAVAILABLE");}
         }
         if(definition["editor"].toObject()["schemaVersion"]==9 && ToolRegistry::get(t.kind).acquisitionSource){hash.addData(QJsonDocument(definition["sourceSetups"].toObject()[t.id].toObject()).toJson(QJsonDocument::Compact));if(definition["sourceSetup"].toObject()["sourceToolId"]==t.id)hash.addData(QJsonDocument(definition["sourceSetup"].toObject()).toJson(QJsonDocument::Compact));}
-        if(t.kind=="image_file") {QFile file(QDir(directory).absoluteFilePath(t.parameters["path"].toString()));if(!file.open(QIODevice::ReadOnly))hash.addData("MISSING_ASSET");else hash.addData(QCryptographicHash::hash(file.readAll(),QCryptographicHash::Sha256));}
+        if(t.kind=="image_file") {const auto path=QDir(directory).absoluteFilePath(t.parameters["path"].toString());QFile file(path);if(!file.open(QIODevice::ReadOnly))hash.addData("MISSING_ASSET");else hash.addData(QCryptographicHash::hash(file.readAll(),QCryptographicHash::Sha256));QFile sidecar(path+".json");if(sidecar.open(QIODevice::ReadOnly)){hash.addData("SIDECAR");hash.addData(QCryptographicHash::hash(sidecar.readAll(),QCryptographicHash::Sha256));}}
     }
     for(const auto& c:connections)if(required.contains(c.targetTool))hash.addData(QJsonDocument(QJsonArray{c.sourceTool,c.sourcePort,c.targetTool,c.targetPort}).toJson(QJsonDocument::Compact));
     return hash.result();
@@ -59,6 +62,9 @@ CycleResult ExecutionService::run(const QJsonObject& definition,const QString& d
     if(multi && !targetOnly)cycle.frameId.clear();
     QElapsedTimer total;total.start();
     try {
+        bool experimentalEditorReplay=experimentalEditorReplay_;
+        if(automaticAcquisition_ && ((frameSnapshot && !frameSnapshot->metadata().experimentalAcquisition.isEmpty()) || (targetOnly && !targetOnly->frame.metadata().experimentalAcquisition.isEmpty())))experimentalEditorReplay=true;
+        if(!experimentalEditorReplay && ((frameSnapshot && !frameSnapshot->metadata().experimentalAcquisition.isEmpty()) || (targetOnly && !targetOnly->frame.metadata().experimentalAcquisition.isEmpty())))throw std::runtime_error("Experimental frame requires explicit Editor replay policy");
         validateEditorDefinition(definition);
         if(multi && (limits.deadlineMs<=0 || limits.imageBytes==0))throw std::runtime_error("Invalid execution budget");
         auto tools=editorTools(definition);auto connections=editorConnections(definition);
@@ -72,8 +78,18 @@ CycleResult ExecutionService::run(const QJsonObject& definition,const QString& d
             tools.erase(std::remove_if(tools.begin(),tools.end(),[&](const auto& t){return !required.contains(t.id);}),tools.end());
             connections.erase(std::remove_if(connections.begin(),connections.end(),[&](const auto& c){return !required.contains(c.targetTool);}),connections.end());
         }
+        if(automaticAcquisition_ && !targetOnly)experimentalEditorReplay=AcquisitionPolicy::sources(tools,directory);
         auto graph=multi ? validateSourceGraph(tools,connections):validateGraph(tools,connections);
         if(!graph.valid())throw std::runtime_error(graph.errors.join("\n").toUtf8().constData());
+        QMap<QString,QJsonObject> industrialDevices;
+        for(const auto& t:editorTools(definition))if(t.enabled && t.kind=="industrial_camera" && t.parameters["sourceReference"].isObject()){
+            const auto ref=IndustrialSourceReference::fromJson(t.parameters["sourceReference"].toObject());
+            const auto identity=QString::fromUtf8(QJsonDocument(ref.physical.toJson()).toJson(QJsonDocument::Compact));
+            auto binding=t.parameters["sourceReference"].toObject();binding.remove("timeoutMs");
+            if(industrialDevices.contains(identity) && (!industrial_ || !industrial_->sessions || industrialDevices[identity]!=binding))
+                throw std::runtime_error("Same physical industrial camera requires a prepared context and identical acquisition profiles");
+            industrialDevices[identity]=binding;
+        }
         cycle.state=ExecutionState::Busy;QMap<QString,ToolResult> completed;bool error=false,stopped=false;MeasurementExecutionContext measurement;
         QMap<QString,QString> frameIds;QMap<QString,MeasurementExecutionContext> measurements;
         quint64 retainedBytes=0;
@@ -86,6 +102,13 @@ CycleResult ExecutionService::run(const QJsonObject& definition,const QString& d
             if(resolver)measurement=resolver(targetOnly->frame);
             for(auto it=targetOnly->cache.cbegin();it!=targetOnly->cache.cend();++it)
                 if(it->signature==toolSignature(definition,directory,it.key(),targetOnly->scope))completed[it.key()]=it->result;
+            if(multi){
+                const auto raw=completed.value(graph.requiredSources.first()).outputs.value("image");
+                const auto* image=std::get_if<ImageFrame>(&raw.data);
+                if(!raw.valid || !image || image->contentId()!=targetOnly->frame.contentId() ||
+                   image->processingId()!=targetOnly->frame.processingId() || raw.frameId!=cycle.frameId || raw.cycleId!=cycle.cycleId)
+                    throw std::runtime_error("Target raw frame differs from cached acquisition");
+            }
         }
         for(const auto& id:graph.order) {
             if(targetOnly && id!=targetTool)continue;
@@ -96,6 +119,7 @@ CycleResult ExecutionService::run(const QJsonObject& definition,const QString& d
             const QString toolFrameId=multi ? frameIds.value(source):cycle.frameId;
             if(multi && !targetOnly)measurement=measurements.value(source);
             const auto t=*std::find_if(tools.begin(),tools.end(),[&](const auto& t){return t.id==id;});ToolResult r;r.toolId=id;QElapsedTimer timer;timer.start();
+            std::shared_ptr<const IndustrialExecutionEvidence> industrialEvidence;
             if(cancel && cancel->load())stopped=true;
             if(targetOnly && ToolRegistry::get(t.kind).acquisitionSource)throw std::runtime_error("Kaynak için görüntü al / Run Flow kullanın.");
             if(!t.enabled || stopped) {r.state=ExecutionState::Skipped;r.message=stopped ? "İptal edildi" : "Disabled";}
@@ -138,6 +162,7 @@ CycleResult ExecutionService::run(const QJsonObject& definition,const QString& d
                         if(referenceNeedsTeaching(t,*source))throw std::runtime_error("Referans modeli/geometrisi değişti. Search ROI çizip referans ilişkisini yeniden öğretin.");
                     }
                     if(ToolRegistry::get(t.kind).acquisitionSource && frameSnapshot) {
+                        if(t.kind=="industrial_camera")throw std::runtime_error("Industrial execution requires provider acquisition; snapshot substitution rejected");
                         if(frameSnapshot->size().isEmpty())throw std::runtime_error("Frame snapshot boş.");
                         auto metadata=frameSnapshot->metadata();
                         if(!metadata.sourceId.isEmpty() && metadata.sourceId!=t.id)throw std::runtime_error("Frame snapshot kaynak kimliği uyumsuz.");
@@ -181,17 +206,29 @@ CycleResult ExecutionService::run(const QJsonObject& definition,const QString& d
                         if(resolved){
                             cycle.executedTools.append(t.id);
                             if(ToolRegistry::get(t.kind).acquisitionSource)++cycle.acquisitions;
-                            auto injected=multi && ToolRegistry::get(t.kind).acquisitionSource && sourceAdapterFactory_ ? sourceAdapterFactory_(t):nullptr;
-                            if(injected){
+                            auto injected=multi && t.kind!="industrial_camera" && ToolRegistry::get(t.kind).acquisitionSource && sourceAdapterFactory_ ? sourceAdapterFactory_(t):nullptr;
+                            if(t.kind=="industrial_camera"){
+                                if(!industrial_)throw std::runtime_error("Industrial execution requires immutable camera/setup/profile inputs");
+                                auto request=industrialExecutionRequest(*industrial_,t);
+                                const SetupReference target{request.camera.id,request.setup.id,request.setup.revision};
+                                if(!sourceBinding.isEmpty() && sourceBinding["target"]!=target.toJson())throw std::runtime_error("Industrial source setup snapshot mismatch");
+                                const auto size=request.setup.geometry.resolution;
+                                if(quint64(size.width())*size.height()*12>limits.imageBytes-retainedBytes)throw std::runtime_error("Multi-source image budget preflight rejected");
+                                const auto ref=IndustrialSourceReference::fromJson(t.parameters["sourceReference"].toObject());
+                                const int timeout=int(std::min<qint64>(ref.timeoutMs,std::max<qint64>(1,limits.deadlineMs-total.elapsed())));
+                                const auto actual=acquireIndustrial(*industrial_,request,cycle.cycleId,toolFrameId,timeout,cancel,experimentalEditorReplay);
+                                r.state=ExecutionState::Done;r.outputs["image"]={outputPorts(t.kind).first(),actual.image,true,toolFrameId,cycle.cycleId,actual.image.metadata()};
+                                industrialEvidence=actual.evidence;
+                            }else if(injected){
                                 if(injected->capabilities().sourceKind!=t.kind)throw std::runtime_error("Acquisition adapter kind mismatch");
                                 const int timeout=int(std::min<qint64>(t.kind=="webcam" ? t.parameters["timeoutMs"].toInt():5000,std::max<qint64>(1,limits.deadlineMs-total.elapsed())));
                                 const auto actual=AcquisitionService{}.acquire(*injected,{t.id,cycle.cycleId,toolFrameId,TriggerMode::Software,timeout,cancel});
                                 if(actual.state!=AcquisitionState::Done || !actual.frame)throw std::runtime_error(actual.error.toUtf8().constData());r.state=ExecutionState::Done;r.outputs["image"]={outputPorts(t.kind).first(),actual.frame->image,true,toolFrameId,cycle.cycleId,actual.frame->image.metadata()};
-                            }else if(multi && t.kind=="image_file"){
+                            }else if((multi || experimentalEditorReplay) && t.kind=="image_file"){
                                 const auto path=QDir(directory).absoluteFilePath(t.parameters["path"].toString());const auto size=QImageReader(path).size();
                                 // Conservative bound before decode: supported raw formats <= 8 B/px plus preview.
                                 if(size.isValid() && quint64(size.width())*size.height()*12>limits.imageBytes-retainedBytes)throw std::runtime_error("Multi-source image budget preflight rejected");
-                                const ImageFileAdapter adapter(path);const auto actual=AcquisitionService{}.acquire(adapter,{t.id,cycle.cycleId,toolFrameId,TriggerMode::Software,int(std::min<qint64>(5000,limits.deadlineMs-total.elapsed())),cancel});
+                                const ImageFileAdapter adapter(path,experimentalEditorReplay);const auto actual=AcquisitionService{}.acquire(adapter,{t.id,cycle.cycleId,toolFrameId,TriggerMode::Software,int(std::min<qint64>(5000,limits.deadlineMs-total.elapsed())),cancel});
                                 if(actual.state!=AcquisitionState::Done || !actual.frame)throw std::runtime_error(actual.error.toUtf8().constData());r.state=ExecutionState::Done;r.outputs["image"]={outputPorts(t.kind).first(),actual.frame->image,true,toolFrameId,cycle.cycleId,actual.frame->image.metadata()};
                             }else if(t.kind=="webcam" && !sourceBinding.isEmpty()){
                                 if(sourceAcquisition.isEmpty())throw std::runtime_error("Scoped webcam requires owner-thread acquisition snapshot");
@@ -206,11 +243,12 @@ CycleResult ExecutionService::run(const QJsonObject& definition,const QString& d
                                 :ToolExecutors::get(t.kind,measurement,resolvedRoi)(effective,inputs,directory,toolFrameId,cycle.cycleId,cancel);}
                         }
                     }
-                    if(ToolRegistry::get(t.kind).acquisitionSource && !sourceBinding.isEmpty() && r.state==ExecutionState::Done){
+                    if(ToolRegistry::get(t.kind).acquisitionSource && t.kind!="industrial_camera" && !sourceBinding.isEmpty() && r.state==ExecutionState::Done){
                         const auto binding=sourceBinding;if(sourceAcquisition.isEmpty() || binding["sourceToolId"]!=t.id || sourceAcquisition["target"]!=binding["target"])throw std::runtime_error("Physical source requires exact immutable acquisition snapshot");
                         const auto image=r.outputs.value("image");const auto geometry=GeometryDescriptor::fromJson(sourceAcquisition["geometry"].toObject());if(!image.valid || !std::holds_alternative<ImageFrame>(image.data) || std::get<ImageFrame>(image.data).size()!=geometry.resolution)throw std::runtime_error("Actual frame/physical source geometry mismatch");
                     }
                     const auto declaredOutputs=outputPorts(t.kind);
+                    for(const auto& value:r.outputs)if(!experimentalEditorReplay && (!value.origin.experimentalAcquisition.isEmpty() || (std::holds_alternative<ImageFrame>(value.data) && !std::get<ImageFrame>(value.data).metadata().experimentalAcquisition.isEmpty())))throw std::runtime_error("Experimental output requires explicit Editor policy");
                     const bool referenceProducer=std::any_of(declaredOutputs.begin(),declaredOutputs.end(),[&](const auto& p){return referenceSourcePort(t.kind,p.id);});
                     for(auto& value:r.outputs)if((value.valid && int(value.port.type)>int(PortType::Boolean)) || (referenceProducer && (value.port.type==PortType::Point || value.port.id=="found")) || t.kind=="pattern_pose" || t.kind=="shape_pose") {
                         if(!value.evaluationId.isEmpty() && value.evaluationId!=cycle.evaluationId)throw std::runtime_error("Output evaluation identity mismatch");
@@ -248,8 +286,15 @@ CycleResult ExecutionService::run(const QJsonObject& definition,const QString& d
                         catch(const std::exception& e){measurement={};measurement.error=QString::fromUtf8(e.what());}
                         if(multi)measurements[t.id]=measurement;
                     }
-                }catch(const std::exception& e) {r.edgeDiagnostics.reset();r.outputs.clear();r.regions.clear();r.mask={};r.searchRegion={};r.points.clear();r.rejectedPoints.clear();r.lines.clear();r.decision=PartDecision::NotEvaluated;r.calibration.reset();r.state=ExecutionState::Error;r.message=QString::fromUtf8(e.what());error=true;}
+                }catch(const std::exception& e) {r.fitDiagnostic.reset();r.edgeDiagnostics.reset();r.outputs.clear();r.regions.clear();r.mask={};r.searchRegion={};r.points.clear();r.rejectedPoints.clear();r.lines.clear();r.decision=PartDecision::NotEvaluated;r.calibration.reset();r.state=ExecutionState::Error;r.message=QString::fromUtf8(e.what());
+                    if(const auto* fit=dynamic_cast<const FitDiagnosticError*>(&e)) {
+                        r.fitDiagnostic=fit->evidence;r.errorCode=fit->evidence.code;
+                        r.message=presentMeasurementDiagnostic(*r.fitDiagnostic);
+                    }
+                    error=true;}
+                if(r.fitDiagnostic){auto& d=*r.fitDiagnostic;d.toolId=t.id;d.sourceId=inputs.value("image").origin.sourceId;d.frameId=toolFrameId;d.cycleId=cycle.cycleId;d.evaluationId=cycle.evaluationId;}
             }
+            if(r.state==ExecutionState::Done && industrialEvidence)cycle.industrialEvidence[id]=std::move(industrialEvidence);
             for(const auto& value:r.outputs)if(value.valid && std::holds_alternative<ImageFrame>(value.data) && (!multi || ToolRegistry::get(t.kind).acquisitionSource))cycle.frames.append(value.origin);
             r.milliseconds=timer.nsecsElapsed()/1e6;completed[id]=r;cycle.tools<<r;
         }
@@ -258,8 +303,8 @@ CycleResult ExecutionService::run(const QJsonObject& definition,const QString& d
         if(multi && !targetOnly && !stopped && !error && !graph.requiredSources.isEmpty()){SourceFrameIndex index(cycle.cycleId,graph.requiredSources,cycle.frames);cycle.frameId=index.legacyFrameId();}
         cycle.state=stopped ? ExecutionState::Skipped : error ? ExecutionState::Error : ExecutionState::Done;
         if(targetOnly && !stopped && cycle.tools.size()==1)cycle.state=cycle.tools.first().state;
-        if(stopped) {cycle.frames.clear();cycle.error="Çevrim iptal edildi; sonuç yayımlanmaz.";for(auto& r:cycle.tools) {r.edgeDiagnostics.reset();r.outputs.clear();r.regions.clear();r.mask={};r.points.clear();r.rejectedPoints.clear();r.lines.clear();r.searchRegion={};r.decision=PartDecision::NotEvaluated;r.calibration.reset();}}
-    } catch(const std::exception& e) {cycle.state=ExecutionState::Error;cycle.error=QString::fromUtf8(e.what());if(multi){cycle.frames.clear();for(auto& r:cycle.tools){r.state=ExecutionState::Skipped;r.outputs.clear();r.regions.clear();r.points.clear();r.lines.clear();r.mask={};r.edgeDiagnostics.reset();r.decision=PartDecision::NotEvaluated;r.calibration.reset();}}}
+        if(stopped) {cycle.industrialEvidence.clear();cycle.frames.clear();cycle.error="Çevrim iptal edildi; sonuç yayımlanmaz.";for(auto& r:cycle.tools) {r.state=ExecutionState::Skipped;r.message="İptal edildi";r.errorCode.clear();r.fitDiagnostic.reset();r.edgeDiagnostics.reset();r.outputs.clear();r.regions.clear();r.mask={};r.points.clear();r.rejectedPoints.clear();r.lines.clear();r.searchRegion={};r.decision=PartDecision::NotEvaluated;r.calibration.reset();}}
+    } catch(const std::exception& e) {cycle.state=ExecutionState::Error;cycle.error=QString::fromUtf8(e.what());if(multi){cycle.industrialEvidence.clear();cycle.frames.clear();for(auto& r:cycle.tools){r.state=ExecutionState::Skipped;r.outputs.clear();r.regions.clear();r.points.clear();r.lines.clear();r.mask={};r.fitDiagnostic.reset();r.edgeDiagnostics.reset();r.decision=PartDecision::NotEvaluated;r.calibration.reset();}}}
     cycle.milliseconds=total.nsecsElapsed()/1e6;return cycle;
 }
 }

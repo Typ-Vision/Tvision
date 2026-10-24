@@ -2,6 +2,7 @@
 #include "ToolGraph.hpp"
 #include "ToolRegistry.hpp"
 #include "MeasurementSetupContract.hpp"
+#include "IndustrialSourceReference.hpp"
 #include <QJsonArray>
 #include <QSet>
 #include <QUuid>
@@ -38,11 +39,12 @@ QVector<ToolDefinition> editorTools(const QJsonObject& definition) {
         require(o["enabled"].isBool() && o["parameters"].isObject(),"Tool enabled/parameters tipi hatalı.");
         ToolDefinition t{o["id"].toString(),o["kind"].toString(),o["name"].toString(),o["description"].toString(),o["enabled"].toBool(),o["parameters"].toObject()};
         if(version.toInt()>=7){require(o["dependencies"].isArray(),"Schema 7 dependencies array required");t.dependencies=decodeToolDependencies(o["dependencies"].toArray());}
-        require(version.toInt()>=ToolRegistry::get(t.kind).minimumEditorSchema || ToolRegistry::get(t.kind).minimumEditorSchema==6,"Tool requires editor schema 7");
+        require(version.toInt()>=ToolRegistry::get(t.kind).minimumEditorSchema || ToolRegistry::get(t.kind).minimumEditorSchema==6,"Tool requires a newer editor schema");
         const auto id=QUuid(t.id);require(!id.isNull() && !ids.contains(id.toString()),"Tool ID geçersiz veya tekrar ediyor.");
         require(!t.name.isEmpty() && t.name.size()<=64 && t.name==t.name.trimmed(),"Tool adı 1–64 karakter olmalı.");
         for(auto c:t.name)require(c.isPrint(),"Tool adı yazdırılabilir karakterlerden oluşmalı.");
         require(!names.contains(t.name.toCaseFolded()),"Tool adı reçetede zaten var.");require(t.description.size()<=2048,"Tool açıklaması çok uzun.");
+        if(t.kind=="blob" && !t.parameters.contains("rejectBorderTouching"))t.parameters["rejectBorderTouching"]=false;
         const auto defaults=defaultParameters(t.kind);QSet<QString> allowed;for(auto it=defaults.begin();it!=defaults.end();++it)allowed.insert(it.key());
         if(t.kind=="circle_fit" && version.toInt()>=8)allowed.insert("worldCalibration");
         if(version.toInt()==1 && t.kind=="template_match") {keys(t.parameters,{"minScore"});require(t.parameters.size()==1,"Tool parametreleri eksik.");}
@@ -93,7 +95,7 @@ QJsonObject withEditorTools(QJsonObject definition,const QVector<ToolDefinition>
 }
 int requiredEditorSchema(const QVector<ToolDefinition>& tools,int previousSchema) {
     require(previousSchema>=1 && previousSchema<=9,"Unsupported previous schema");int schema=std::max(6,previousSchema);
-    for(const auto& t:tools)if(!t.dependencies.isEmpty() || ToolRegistry::get(t.kind).minimumEditorSchema==7)schema=std::max(schema,7);
+    for(const auto& t:tools){schema=std::max(schema,ToolRegistry::get(t.kind).minimumEditorSchema);if(!t.dependencies.isEmpty())schema=std::max(schema,7);}
     for(const auto& t:tools)if(t.parameters.contains("referenceBinding") || t.parameters.contains("worldCalibration"))schema=std::max(schema,8);
     return schema;
 }
@@ -104,6 +106,12 @@ QJsonObject encodeEditorTool(const ToolDefinition& t,int schema) {
 }
 void validateEditorDefinition(const QJsonObject& definition) {
     const auto tools=editorTools(definition);editorConnections(definition);
+    for(const auto& t:tools)if(t.kind=="industrial_camera" && t.parameters["sourceReference"].isObject()){
+        const auto ref=IndustrialSourceReference::fromJson(t.parameters["sourceReference"].toObject());
+        auto binding=definition["sourceSetups"].toObject()[t.id].toObject();
+        if(binding.isEmpty() && definition["sourceSetup"].toObject()["sourceToolId"]==t.id)binding=definition["sourceSetup"].toObject();
+        if(!binding.isEmpty())require(binding["target"].toObject()==QJsonObject{{"schemaVersion",1},{"cameraId",ref.camera.value},{"setupId",ref.setup.value},{"revision",ref.setupRevision}},"Industrial source and calibration setup differ; explicit rebind required");
+    }
     if(definition.contains("sourceSetups")) {
         require(definition["editor"].toObject()["schemaVersion"]==9 && definition["sourceSetups"].isObject(),"Source set requires editor9 object");
         const auto bindings=definition["sourceSetups"].toObject();require(bindings.size()<=256,"Too many source bindings");

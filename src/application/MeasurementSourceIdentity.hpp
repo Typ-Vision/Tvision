@@ -1,5 +1,6 @@
 #pragma once
 #include "domain/MeasurementSetupContract.hpp"
+#include "ExperimentalCalibrationEvidence.hpp"
 namespace visionflow {
 struct SetupReference {
     CameraId camera;
@@ -19,6 +20,7 @@ struct MeasurementSourceEvidence {
     int generation=1;
     std::optional<SetupReference> target;
     SourceIdentityKind sourceKind=SourceIdentityKind::CalibrationSession;
+    std::optional<ExperimentalCalibrationEvidence> experimental;
     bool operator==(const MeasurementSourceEvidence&) const = default;
     void validate() const;
     QJsonObject toJson() const;
