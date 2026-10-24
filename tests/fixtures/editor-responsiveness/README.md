@@ -37,6 +37,16 @@ CCUX-23b-4 preserves inclusive `catalog_read` semantics and adds
 `catalog_bytes_read` for actual bounded byte-read count/time. Hash/JSON/replay
 time is excluded from the latter; missing files do not count as byte reads.
 
+CCUX-23b-5 requires exactly one context, display environment and calibration
+identity build per refresh. `display_environment` counts the UI view factory,
+not environment reads performed inside exact calibration service checks. The
+context and environment are stack-local and explicitly passed to Properties,
+overlay, flow and result rendering. No display view is captured by callbacks or
+used as execution admission. Independent refresh/generation calls build fresh
+views; a generation change emitted directly during Properties destruction must
+retire the outer view before flow. Context, environment and calibration-identity
+counter durations remain inclusive and must not be summed.
+
 `ui_editor_usability` also runs `editor_property_commits.cpp`: no-op controls
 produce no refresh and preserve exact hash/status/legacy parameters; pending final
 values reach Save/Add, conflicts retain dirty drafts, invalid values stop both

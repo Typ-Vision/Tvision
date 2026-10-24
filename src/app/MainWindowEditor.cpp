@@ -177,7 +177,12 @@ void MainWindow::showFlowMenu(const QPoint& position) {
 }
 void MainWindow::refreshEditor() {
     editor_observation::Scope observation(editor_observation::Editor);
-    syncEditorCameras();
+    const auto epoch=++editorRefreshEpoch_;
+    const auto environment=editorDisplayEnvironment();
+    syncEditorCameras({},false,environment ? &*environment:nullptr);
+    // A stack-local display view: never retained by callbacks or used as admission.
+    // Build after camera-source reconciliation, which can change the recipe.
+    const auto context=editorContext();
     const auto* recipe=service_.activeRecipe(); const QString recipeId=recipe ? service_.project().id+"/"+recipe->id : "";
     if (recipeId!=editorRecipeId_) {editorSession_.sourceFrames.clear();editorSession_.frame.reset();editorSession_.invalidateResults();matchInfo_->clear();imageInfo_->setText("Görüntü yok.");pendingDrawTool_.clear();imageViewer_->cancelRoi();selectedToolId_.clear(); editorRecipeId_=recipeId; imageBinding_.clear();}
     const auto tools=recipe ? service_.tools() : QVector<ToolDefinition>{};
@@ -197,8 +202,8 @@ void MainWindow::refreshEditor() {
     for(const auto& t:tools)if(t.kind=="webcam") {webcamSource=true;binding+="|"+t.id+"|"+QString::fromUtf8(QJsonDocument(t.parameters).toJson(QJsonDocument::Compact))+"|"+QString::number(t.enabled);}
     const bool multi=recipe && recipe->definition["editor"].toObject()["schemaVersion"]==9;
     if(auto* button=findChild<QPushButton*>("enableMultiSource")){button->setVisible(!multi);button->setEnabled(recipe && !editorSession_.busy());}
-    if(auto* picker=findChild<QComboBox*>("editorSourceSelector")){const QSignalBlocker guard(picker);picker->clear();for(const auto& t:tools)if(ToolRegistry::get(t.kind).acquisitionSource)picker->addItem(t.name,t.id);picker->setVisible(multi);picker->setEnabled(!editorSession_.busy());const auto source=editorSession_.sourceForTool(editorContext(),selectedToolId_);picker->setCurrentIndex(picker->findData(source));}
-    if(multi){editorSession_.reconcile(editorContext());if(!selectedToolId_.isEmpty())editorSession_.selectSource(editorSession_.sourceForTool(editorContext(),selectedToolId_));imageBinding_=binding;}
+    if(auto* picker=findChild<QComboBox*>("editorSourceSelector")){const QSignalBlocker guard(picker);picker->clear();for(const auto& t:tools)if(ToolRegistry::get(t.kind).acquisitionSource)picker->addItem(t.name,t.id);picker->setVisible(multi);picker->setEnabled(!editorSession_.busy());const auto source=editorSession_.sourceForTool(context,selectedToolId_);picker->setCurrentIndex(picker->findData(source));}
+    if(multi){editorSession_.reconcile(context);if(!selectedToolId_.isEmpty())editorSession_.selectSource(editorSession_.sourceForTool(context,selectedToolId_));imageBinding_=binding;}
     if (!multi && binding!=imageBinding_) {
         ++editorSession_.generation; invalidateMatch();
         imageBinding_=binding; editorSession_.frame.reset();
@@ -209,11 +214,20 @@ void MainWindow::refreshEditor() {
     }
     for (const auto name : {"openImage","addTool"}) if (auto* button=findChild<QPushButton*>(name)) button->setEnabled(recipe!=nullptr);
     findChild<QAction*>("reloadImage")->setEnabled(recipe!=nullptr);
-    if (!propertiesEditing_) showToolProperties();
+    const auto generation=editorSession_.generation;
+    const auto current=[&]{
+        const auto* active=service_.activeRecipe();
+        return epoch==editorRefreshEpoch_ && generation==editorSession_.generation &&
+            ((!active && context.recipeId.isEmpty()) || (active && active->id==context.recipeId &&
+             active->definition==context.definition && service_.path()==context.path && service_.project().id==context.projectId));
+    };
+    if (!propertiesEditing_) showToolPropertiesView(context,environment);
+    if(!current())return;
     bool sourceSelected=false; for (const auto& t : tools) if (t.id==selectedToolId_ && t.kind=="image_file") sourceSelected=true;
     imageViewer_->setSourceSelected(sourceSelected);
-    refreshMatchOverlay();
-    refreshFlow();
+    refreshMatchOverlayView(context);
+    if(!current())return;
+    refreshFlowView(context,environment);
 }
 void MainWindow::selectTool(const QString& id) {
     if (id!=selectedToolId_ && !applyToolProperties()) {
@@ -234,6 +248,10 @@ void MainWindow::selectTool(const QString& id) {
     refreshFlow();
 }
 void MainWindow::showToolProperties() {
+    const auto environment=editorDisplayEnvironment();
+    showToolPropertiesView(editorContext(),environment);
+}
+void MainWindow::showToolPropertiesView(const EditorContext& context,const std::optional<MeasurementEnvironment>& displayEnvironment) {
     const QScopedValueRollback<bool> guard(propertiesEditing_,true);
     displayedProperties_.reset();
     auto* layout=static_cast<QVBoxLayout*>(propertiesBody_->layout());
@@ -254,20 +272,20 @@ void MainWindow::showToolProperties() {
         auto* run=new QPushButton(ToolRegistry::get(tool.kind).acquisitionSource ? "Görüntü al" : "Run Tool");run->setObjectName("runSelectedTool");form->addRow(run);
         connect(run,&QPushButton::clicked,this,[this,tool]{runExecution(tool.id);});
     }
-    if(ToolRegistry::get(tool.kind).acquisitionSource && tool.kind!="industrial_camera" && measurementWorkspace_){
+    if(ToolRegistry::get(tool.kind).acquisitionSource && tool.kind!="industrial_camera" && displayEnvironment){
         auto* cameras=new QComboBox;cameras->setObjectName("sourceCameraSelector");cameras->addItem("Kamera bağı yok / dosya raw px",QString{});
-        const auto environment=measurementWorkspace_->environment();const auto definition=service_.activeRecipe()->definition;const auto bindingForCamera=definition["sourceSetups"].toObject().contains(tool.id) ? definition["sourceSetups"].toObject()[tool.id].toObject():definition["sourceSetup"].toObject();std::optional<SetupReference> selected;if(bindingForCamera["sourceToolId"]==tool.id)selected=SetupReference::fromJson(bindingForCamera["target"].toObject());
+        const auto& environment=*displayEnvironment;const auto definition=service_.activeRecipe()->definition;const auto bindingForCamera=definition["sourceSetups"].toObject().contains(tool.id) ? definition["sourceSetups"].toObject()[tool.id].toObject():definition["sourceSetup"].toObject();std::optional<SetupReference> selected;if(bindingForCamera["sourceToolId"]==tool.id)selected=SetupReference::fromJson(bindingForCamera["target"].toObject());
         for(const auto& camera:environment.current.cameras)if(!environment.archivedCameras.contains(camera.id.value) && (tool.kind!="webcam" || !camera.physical)){const auto registration=environment.registrations.value(camera.id.value);cameras->addItem((registration.shortId.isEmpty()?camera.id.value:registration.shortId)+" • "+camera.name,camera.id.value);}
         if(selected)cameras->setCurrentIndex(qMax(0,cameras->findData(selected->camera.value)));form->addRow("Kamera ID / ad",cameras);
         connect(cameras,&QComboBox::activated,this,[this,tool,cameras]{try{if(!measurementWorkspace_->changeAllowed() || editorSession_.busy())throw std::runtime_error("Önce worker/Runtime işlemini bitirin.");const auto before=service_.activeRecipe()->definition;if(cameras->currentData().toString().isEmpty())service_.clearSourceSetup(tool.id);else service_.bindCameraSource(tool.id,measurementWorkspace_->environment(),CameraId{cameras->currentData().toString()});if(before!=service_.activeRecipe()->definition){editorSession_.invalidateTool(editorContext(),tool.id);editorSession_.sourceFrames.remove(tool.id);if(editorSession_.frame && editorSession_.frame->metadata().sourceId==tool.id)editorSession_.frame.reset();editorSession_.invalidateResults();imageBinding_.clear();}QTimer::singleShot(0,this,&MainWindow::refreshWorkspace);}catch(const std::exception& ex){displayError(QString::fromUtf8(ex.what()));}});
-        form->addRow(note(calibrationSummary()));
+        form->addRow(note(calibrationSummary(&context)));
         auto* details=new QPushButton("Eski / açık kurulum bağı — ayrıntılar");details->setCheckable(true);details->setObjectName("sourceSetupDetails");form->addRow(details);auto* advanced=new QWidget;form->addRow(advanced);advanced->hide();connect(details,&QPushButton::toggled,advanced,&QWidget::setVisible);
         auto* form=new QFormLayout(advanced);
 
         auto* setups=new QComboBox;setups->setObjectName("sourceSetupSelector");setups->addItem("Kurulum bağı yok",QJsonObject{});
-        const auto e=measurementWorkspace_->environment();for(const auto& s:e.current.setups)if(!e.archivedSetups.contains(s.id.value) && !e.archivedCameras.contains(s.camera.value))setups->addItem(s.name+QString(" • r%1").arg(s.revision),SetupReference{s.camera,s.id,s.revision}.toJson());
+        const auto& e=*displayEnvironment;for(const auto& s:e.current.setups)if(!e.archivedSetups.contains(s.id.value) && !e.archivedCameras.contains(s.camera.value))setups->addItem(s.name+QString(" • r%1").arg(s.revision),SetupReference{s.camera,s.id,s.revision}.toJson());
         const auto d=service_.activeRecipe()->definition;const auto binding=d["sourceSetups"].toObject().contains(tool.id) ? d["sourceSetups"].toObject()[tool.id].toObject():d["sourceSetup"].toObject();const auto current=binding["sourceToolId"]==tool.id ? binding["target"].toObject():QJsonObject{};for(int i=0;i<setups->count();++i)if(setups->itemData(i).toJsonObject()==current)setups->setCurrentIndex(i);
-        form->addRow("Ölçüm kurulumu",setups);form->addRow(note(calibrationSummary()));
+        form->addRow("Ölçüm kurulumu",setups);form->addRow(note(calibrationSummary(&context)));
         auto* bind=new QPushButton("Kurulumu bağla");bind->setObjectName("sourceSetupApply");form->addRow(bind);
         connect(bind,&QPushButton::clicked,this,[this,setups,tool]{try{if(editorSession_.busy() || runtimeJobs_.busy() || (runtimeCoordinator_ && (runtimeCoordinator_->state()==RuntimeState::Running || runtimeCoordinator_->state()==RuntimeState::Starting || runtimeCoordinator_->state()==RuntimeState::Stopping)) || (plc_ && plc_->blocking()))throw std::runtime_error("Önce Runtime/worker/pending kayıt/ACK işlemini bitirin.");const auto before=service_.activeRecipe()->definition;const auto target=setups->currentData().toJsonObject();if(target.isEmpty())service_.clearSourceSetup(tool.id);else service_.bindSourceSetup(tool.id,target);if(before==service_.activeRecipe()->definition)return;editorSession_.invalidateTool(editorContext(),tool.id);editorSession_.sourceFrames.remove(tool.id);editorSession_.frame.reset();editorSession_.invalidateResults();imageBinding_.clear();matchInfo_->clear();refreshWorkspace();}catch(const std::exception& e){displayError(QString::fromUtf8(e.what()));}});
         auto* manage=new QPushButton("Kurulumları aç");manage->setObjectName("sourceSetupManage");form->addRow(manage);connect(manage,&QPushButton::clicked,this,[this]{selectPage("calibration");});
@@ -276,12 +294,12 @@ void MainWindow::showToolProperties() {
         const auto reference=tool.parameters["sourceReference"].toObject();
         auto* status=note("Kamera seçin. Seçim varsayılan kurulum/profili birlikte bağlar; görüntü almaz.");status->setObjectName("industrialSourceStatus");form->addRow(status);
         auto* cameras=new QComboBox;cameras->setObjectName("sourceCameraSelector");cameras->addItem("Kamera seçin",QString{});
-        if(measurementWorkspace_){const auto e=measurementWorkspace_->environment();
+        if(displayEnvironment){const auto& e=*displayEnvironment;
             for(const auto& c:e.current.cameras)if(c.physical && !e.archivedCameras.contains(c.id.value)){
                 const auto registration=e.registrations.value(c.id.value);cameras->addItem((registration.shortId.isEmpty()?c.id.value:registration.shortId)+" • "+c.name,c.id.value);
                 cameras->setItemData(cameras->count()-1,c.physical->serial+" • "+measurementWorkspace_->availability(c),Qt::ToolTipRole);
             }
-            if(!reference.isEmpty())try{IndustrialSourceReference::fromJson(reference).validateAgainst(e.current);status->setText("Kamera bağlı. "+calibrationSummary());}catch(const std::exception& ex){status->setText("Bağ geçersiz: "+QString::fromUtf8(ex.what())+"\nUygun ayar snapshot’ı Run Flow hazırlığında yenilenir; geometri değişiminde kamerayı yeniden seçin.");}
+            if(!reference.isEmpty())try{IndustrialSourceReference::fromJson(reference).validateAgainst(e.current);status->setText("Kamera bağlı. "+calibrationSummary(&context));}catch(const std::exception& ex){status->setText("Bağ geçersiz: "+QString::fromUtf8(ex.what())+"\nUygun ayar snapshot’ı Run Flow hazırlığında yenilenir; geometri değişiminde kamerayı yeniden seçin.");}
         }
         cameras->setCurrentIndex(qMax(0,cameras->findData(reference["cameraId"].toString())));form->addRow("Kamera ID / ad",cameras);
         connect(cameras,&QComboBox::activated,this,[this,tool,cameras]{try{
@@ -358,7 +376,7 @@ void MainWindow::showToolProperties() {
             }
         };
         settings->onRoi=[this,id=tool.id,kind=tool.kind](const ToolRoi& value){try{if(selectedToolId_!=id)return;auto roi=value;for(const auto& t:service_.tools())if(t.id==selectedToolId_ && (t.parameters.contains("referenceBinding") || t.parameters.contains("poseTracking")))return;if(editorSession_.busy() || !applyToolProperties())return;if(kind=="circle_fit")for(const auto& t:service_.tools())if(t.id==selectedToolId_ && t.parameters["mode"]=="calibrated"){auto ctx=calibrationResolver(*service_.activeRecipe())(*editorSession_.frame);if(!ctx.calibration || !ctx.current)throw std::runtime_error("Circle teaching requires current calibration");roi.frame=ctx.calibration->dependency().target;}if(!editorSession_.frame || (roi.frame.unit==LengthUnit::Pixel && !roi.inside(editorSession_.frame->size())))throw std::runtime_error("ROI görüntü sınırı dışında");imageViewer_->setRoi(roi);}catch(const std::exception& e){displayError(QString::fromUtf8(e.what()));}};
-        form->addRow("Kalibrasyon",note(calibrationSummary()));
+        form->addRow("Kalibrasyon",note(calibrationSummary(&context)));
         auto* calibration=new QPushButton("Calibration aç");form->addRow(calibration);connect(calibration,&QPushButton::clicked,this,[this]{selectPage("calibration");});
     } else if(tool.kind=="edge_point") {
         auto* settings=new EdgePointEditor(tool.parameters);form->addRow(settings);settings->onChanged=[this]{applyToolProperties();};
@@ -413,7 +431,7 @@ void MainWindow::showToolProperties() {
             auto* value=new QDoubleSpinBox;value->setObjectName(key);value->setDecimals(6);value->setRange(0,1000000000);value->setSuffix(" mm");value->setValue(tool.parameters[key].toDouble());form->addRow(QString(key)=="lowerMm" ? "Alt tolerans" : "Üst tolerans",value);
             connect(value,&QDoubleSpinBox::editingFinished,this,[this]{applyToolProperties();});
         }
-        form->addRow("Kalibrasyon",note(calibrationSummary()));
+        form->addRow("Kalibrasyon",note(calibrationSummary(&context)));
         auto* calibration=new QPushButton("Calibration aç");form->addRow(calibration);connect(calibration,&QPushButton::clicked,this,[this]{selectPage("calibration");});
     } else form->addRow("Operation",note("Euclidean Distance (px)"));
     if(tool.kind=="edge") {

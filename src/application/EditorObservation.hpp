@@ -5,10 +5,10 @@
 namespace visionflow::editor_observation {
 // Opt-in owner-thread observations. No cache, SDK access or execution policy.
 enum Point { Workspace, Editor, Calibration, Runtime, Context, CatalogRead,
-    CatalogDecode, ModelDecode, PlaneReplay, ProjectSave, AtomicWrite, CatalogBytesRead, Count };
+    CatalogDecode, ModelDecode, PlaneReplay, ProjectSave, AtomicWrite, CatalogBytesRead, DisplayEnvironment, CalibrationIdentity, Count };
 inline constexpr std::array<const char*,Count> names{"workspace","editor","calibration",
     "runtime","context","catalog_read","catalog_decode","model_decode","plane_replay",
-    "project_save","atomic_write","catalog_bytes_read"};
+    "project_save","atomic_write","catalog_bytes_read","display_environment","calibration_identity"};
 struct Sample {
     std::array<unsigned long long,Count> calls{};
     std::array<long long,Count> nanoseconds{};

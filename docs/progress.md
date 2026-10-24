@@ -4,7 +4,8 @@
 
 ## Devam noktası
 
-**Öncelik: [CCUX-23b-5](architecture/camera-setup/23-editor-responsiveness.md).**
+**Öncelik: [CCUX-23b-6](architecture/camera-setup/23-editor-responsiveness.md).**
+[23b-5](archive/2026-10-24-ccux-23b-5.md): context/environment/kimlik 1; 9 test/görsel geçti.
 [23b-4](archive/2026-10-24-ccux-23b-4.md): cache; replay 0.
 [23b-3](archive/2026-10-24-ccux-23b-3.md) / [23b-2](archive/2026-10-24-ccux-23b-2.md) korunur.
 [23b-1 baseline](archive/2026-10-24-ccux-23b-1.md) 1+20; hız kabulü 23b-6.

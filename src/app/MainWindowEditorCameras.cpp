@@ -6,7 +6,7 @@
 #include <QTimer>
 
 namespace visionflow {
-void MainWindow::syncEditorCameras(const QString& retry,bool activate){
+void MainWindow::syncEditorCameras(const QString& retry,bool activate,const MeasurementEnvironment* displayEnvironment){
     if(editorCameraExitAccepted_)return;
     if(!service_.activeRecipe())return;
     const auto key=service_.path()+"\n"+service_.project().id+"\n"+service_.activeRecipe()->id;
@@ -15,7 +15,7 @@ void MainWindow::syncEditorCameras(const QString& retry,bool activate){
     if(!measurementWorkspace())return;
     editorCameraRecipeKey_=key;editorCameraErrors_.clear();
     IndustrialExecutionInputs in=editorCameraComposition_.value_or(IndustrialExecutionInputs{});
-    const auto environment=measurementWorkspace_->environment();in.contract=environment.current;
+    const auto environment=displayEnvironment ? *displayEnvironment:measurementWorkspace_->environment();in.contract=environment.current;
     if(!editorSession_.busy())service_.refreshEditorCameraSources(environment);
     for(const auto& camera:in.contract.cameras)if(camera.physical)if(const auto route=CameraLocalConfiguration(settingsFile_).route(*camera.physical))in.routes[camera.id.value]=*route;
     QVector<EditorCameraTarget> targets;

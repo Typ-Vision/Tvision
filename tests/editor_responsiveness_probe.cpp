@@ -111,6 +111,19 @@ bool MainWindow::verifyEditorResponsiveness(const QString& artifacts){
         composition.discover=[&discoveries](int,const std::shared_ptr<std::atomic_bool>&){++discoveries;return IndustrialDiscoverySnapshot{};};
         editorCameraComposition_=composition;
         refreshWorkspace();selectPage("editor");selectTool(pre);requireProbe(applyToolProperties(),"normalize initial Properties");service_.save();
+        // Every independent call, including a changed generation, builds its own view.
+        Sample repeated;
+        {Binding binding(repeated);refreshEditor();++editorSession_.generation;refreshEditor();}
+        requireProbe(repeated.calls[Context]==2 && repeated.calls[DisplayEnvironment]==2 && repeated.calls[CalibrationIdentity]==2,"display view never survives an independent refresh/generation");
+        // A direct signal during Properties rebuilding changes generation. The
+        // outer operation must not continue into flow with its retired display view.
+        const QJsonObject sentinel{{"retired-display-test",true}};
+        editorCalibrationIdentity_=sentinel;
+        auto* oldName=propertiesBody_->findChild<QLineEdit*>("toolName");
+        requireProbe(oldName,"Properties reentrant generation test control");
+        connect(oldName,&QObject::destroyed,this,[this]{++editorSession_.generation;});
+        refreshEditor();requireProbe(editorCalibrationIdentity_==sentinel,"generation change retires display before flow");
+        refreshEditor();requireProbe(editorCalibrationIdentity_!=sentinel,"next refresh builds a current display view");
         const Project baseline=service_.project();const auto recipeId=service_.activeRecipe()->id;
         manifest.append(QJsonObject{{"case",name},{"project",path},{"sources",name.endsWith("multi5") ? 5:old ? 2:1},{"models",old ? 2:0},{"framedStructuralModel",name.startsWith("framed")},{"cameraAcquisition",false}});
         PaintObservation paint(pages_->widget(pageIds_.indexOf("editor")));qApp->installEventFilter(&paint);
@@ -155,7 +168,7 @@ bool MainWindow::verifyEditorResponsiveness(const QString& artifacts){
                         requireProbe(ProjectRepository{}.load(path).recipes.first().definition==service_.project().recipes.first().definition,"saved recipe roundtrip");
                     }else requireProbe(service_.dirty() && service_.activeRecipe()->definition!=definitionBefore,"edit actually changed serialized recipe");
                     requireProbe(sample.calls[Calibration]==0 && sample.calls[Runtime]==0,"hidden pages are not rebuilt");
-                    requireProbe(sample.calls[Context]>0 && sample.calls[Workspace]==1 && sample.calls[Editor]==1,"one refresh per Editor action");
+                    requireProbe(sample.calls[Context]==1 && sample.calls[DisplayEnvironment]==1 && sample.calls[CalibrationIdentity]==1 && sample.calls[Workspace]==1 && sample.calls[Editor]==1,"one context and one refresh per Editor action");
                     requireProbe((!old || sample.calls[CatalogBytesRead]>0) && sample.calls[CatalogDecode]==0 && sample.calls[ModelDecode]==0 && sample.calls[PlaneReplay]==0,"warm validated catalog is read but never replayed");
                 }catch(const std::exception& e){success=false;error+=QString::fromUtf8(e.what());}
                 raw<<name<<','<<operation<<','<<iteration<<','<<(iteration==0)<<','<<success<<','<<operationNs/1e6<<','<<paint.first/1e6<<','<<queued/1e6<<','<<before<<','<<service_.tools().size()<<','<<dirtyBefore<<','<<service_.dirty()<<','<<provider->capabilitiesCalls-capabilitiesBefore<<','<<provider->creates-createsBefore<<','<<discoveries-discoveriesBefore;

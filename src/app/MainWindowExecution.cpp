@@ -34,6 +34,7 @@
 namespace visionflow {
 std::optional<ActiveCalibrationSnapshot> MainWindow::systemCalibrationSnapshot(const Recipe* recipe) const {const auto* r=recipe ? recipe:service_.activeRecipe();if(r && (r->definition.contains("sourceSetup") || r->definition.contains("calibrationPolicy"))){if(!measurementWorkspace_ || measurementWorkspaceKey_!=service_.path()+"\n"+service_.project().id)throw std::runtime_error("Measurement workspace unavailable");return measurementWorkspace_->forRecipe(*r);}if(!measurementWorkspace_ || !measurementWorkspace_->legacyCalibrations().systemPolicy())return {};return measurementWorkspace_->legacyCalibrations().snapshot();}
 QJsonObject MainWindow::systemCalibrationIdentity() const {
+    editor_observation::Scope observation(editor_observation::CalibrationIdentity);
     if(service_.activeRecipe() && service_.activeRecipe()->definition["editor"].toObject()["schemaVersion"]!=9 && measurementWorkspace_)try{const auto ref=SystemCalibration::setupReference(*service_.activeRecipe());if(ref && measurementWorkspace_->calibrations().status(*ref).experimental){const auto typed=measurementWorkspace_->calibrations().experimentalSnapshots({*ref}).first();return {{"policy","experimental-editor-model/1"},{"contentId",typed.snapshot.calibration.selection.contentId},{"revision",typed.snapshot.calibration.selection.revision}};}}catch(const std::exception& e){return {{"experimental",true},{"unavailable",QString::fromUtf8(e.what())}};}
     if(service_.activeRecipe() && service_.activeRecipe()->definition["editor"].toObject()["schemaVersion"]==9){QJsonObject identities;for(const auto& t:service_.tools())if(ToolRegistry::get(t.kind).acquisitionSource){try{const auto branch=SystemCalibration::branch(*service_.activeRecipe(),t.id);const auto ref=SystemCalibration::setupReference(branch);if(ref && measurementWorkspace_ && measurementWorkspace_->calibrations().status(*ref).experimental){const auto typed=measurementWorkspace_->calibrations().experimentalSnapshots({*ref}).first();const auto& model=typed.snapshot.calibration;identities[t.id]=QJsonObject{{"experimental",true},{"contentId",model.selection.contentId},{"revision",model.selection.revision}};continue;}const auto snapshot=measurementWorkspace_ ? measurementWorkspace_->forRecipe(branch):std::nullopt;if(snapshot)identities[t.id]=QJsonObject{{"contentId",snapshot->selection.contentId},{"revision",snapshot->selection.revision}};else identities[t.id]=QJsonObject{{"unavailable","No bound model"}};}catch(const std::exception& e){identities[t.id]=QJsonObject{{"unavailable",QString::fromUtf8(e.what())}};}}return identities;}
 
@@ -52,7 +53,11 @@ CalibrationResolver MainWindow::calibrationResolver(const Recipe& recipe) const 
     catch(const std::exception& e){const auto error=QString::fromUtf8(e.what());return [error](const ImageFrame& f){MeasurementExecutionContext c;c.rawSize=f.size();c.error=error;return c;};}
     return [recipe,path](const ImageFrame& f){return CalibrationWorkflow::resolve(recipe,f,path);};
 }
-QString MainWindow::calibrationSummary() const {try{if(service_.activeRecipe() && service_.activeRecipe()->definition["editor"].toObject()["schemaVersion"]==9){const auto source=editorSession_.sourceForTool(editorContext(),selectedToolId_);if(source.isEmpty() || !measurementWorkspace_)return "Kaynak seçin";const auto branch=SystemCalibration::branch(*service_.activeRecipe(),source);const auto ref=SystemCalibration::setupReference(branch);if(ref){const auto status=measurementWorkspace_->calibrations().status(*ref);const auto prefix=QString{};if(status.state==CalibrationAvailability::None)return prefix+"Kalibrasyon yok — raw/px kullanılabilir";if(status.state==CalibrationAvailability::RecalibrationRequired)return prefix+"Yeniden kalibrasyon gerekli";if(!status.sessionPermitted)return prefix+"Kayıtlı / bağlantı ve oturum denetimi bekleniyor";if(status.experimental)return prefix+"Etkin model • bağımsız fiziksel kabul yok";}if(const auto s=measurementWorkspace_->forRecipe(branch))return s->record.name()+QString(" • v%1 • bu kaynak").arg(s->selection.version);return "Bu kaynakta kalibrasyon bağı yok";}if(service_.activeRecipe() && measurementWorkspace_){const auto ref=SystemCalibration::setupReference(*service_.activeRecipe());if(ref){const auto status=measurementWorkspace_->calibrations().status(*ref);const auto prefix=QString{};if(status.state==CalibrationAvailability::None)return prefix+"Kalibrasyon yok — raw/px kullanılabilir";if(status.state==CalibrationAvailability::RecalibrationRequired)return prefix+"Yeniden kalibrasyon gerekli";if(!status.sessionPermitted)return prefix+"Kayıtlı / bağlantı ve oturum denetimi bekleniyor";if(status.experimental)return prefix+"Etkin model • bağımsız fiziksel kabul yok";}}if(const auto s=systemCalibrationSnapshot())return s->record.name()+QString(" • v%1 • etkinleştirme %2").arg(s->selection.version).arg(s->selection.revision);if(service_.activeRecipe() && service_.activeRecipe()->calibrationBinding)return "Kayıtlı reçete kalibrasyonu — uyum her çalıştırmada denetlenir";return "Aktif kalibrasyon yok — Kalibrasyon sayfasında kamera seçin";}catch(const std::exception& e){return QString::fromUtf8(e.what());}}
+QString MainWindow::calibrationSummary(const EditorContext* context) const {try{if(service_.activeRecipe() && service_.activeRecipe()->definition["editor"].toObject()["schemaVersion"]==9){const auto source=editorSession_.sourceForTool(context ? *context:editorContext(),selectedToolId_);if(source.isEmpty() || !measurementWorkspace_)return "Kaynak seçin";const auto branch=SystemCalibration::branch(*service_.activeRecipe(),source);const auto ref=SystemCalibration::setupReference(branch);if(ref){const auto status=measurementWorkspace_->calibrations().status(*ref);const auto prefix=QString{};if(status.state==CalibrationAvailability::None)return prefix+"Kalibrasyon yok — raw/px kullanılabilir";if(status.state==CalibrationAvailability::RecalibrationRequired)return prefix+"Yeniden kalibrasyon gerekli";if(!status.sessionPermitted)return prefix+"Kayıtlı / bağlantı ve oturum denetimi bekleniyor";if(status.experimental)return prefix+"Etkin model • bağımsız fiziksel kabul yok";}if(const auto s=measurementWorkspace_->forRecipe(branch))return s->record.name()+QString(" • v%1 • bu kaynak").arg(s->selection.version);return "Bu kaynakta kalibrasyon bağı yok";}if(service_.activeRecipe() && measurementWorkspace_){const auto ref=SystemCalibration::setupReference(*service_.activeRecipe());if(ref){const auto status=measurementWorkspace_->calibrations().status(*ref);const auto prefix=QString{};if(status.state==CalibrationAvailability::None)return prefix+"Kalibrasyon yok — raw/px kullanılabilir";if(status.state==CalibrationAvailability::RecalibrationRequired)return prefix+"Yeniden kalibrasyon gerekli";if(!status.sessionPermitted)return prefix+"Kayıtlı / bağlantı ve oturum denetimi bekleniyor";if(status.experimental)return prefix+"Etkin model • bağımsız fiziksel kabul yok";}}if(const auto s=systemCalibrationSnapshot())return s->record.name()+QString(" • v%1 • etkinleştirme %2").arg(s->selection.version).arg(s->selection.revision);if(service_.activeRecipe() && service_.activeRecipe()->calibrationBinding)return "Kayıtlı reçete kalibrasyonu — uyum her çalıştırmada denetlenir";return "Aktif kalibrasyon yok — Kalibrasyon sayfasında kamera seçin";}catch(const std::exception& e){return QString::fromUtf8(e.what());}}
+std::optional<MeasurementEnvironment> MainWindow::editorDisplayEnvironment() const {
+    editor_observation::Scope observation(editor_observation::DisplayEnvironment);
+    return measurementWorkspace_ ? std::optional{measurementWorkspace_->environment()}:std::nullopt;
+}
 EditorContext MainWindow::editorContext() const {
     editor_observation::Scope observation(editor_observation::Context);
     if(!service_.activeRecipe())return {};
@@ -60,23 +65,27 @@ EditorContext MainWindow::editorContext() const {
 }
 QByteArray MainWindow::flowSignature() const {return editorSession_.signature(editorContext());}
 void MainWindow::refreshFlow() {
+    const auto environment=editorDisplayEnvironment();
+    refreshFlowView(editorContext(),environment);
+}
+void MainWindow::refreshFlowView(const EditorContext& context,const std::optional<MeasurementEnvironment>& environment) {
     if(auto* status=propertiesBody_->findChild<QLabel*>("industrialSourceStatus")){
         if(!status->property("bindingStatus").isValid())status->setProperty("bindingStatus",status->text());
         status->setText(status->property("bindingStatus").toString()+"\n"+editorCameraStatus(selectedToolId_));
     }
     if(editorSession_.busy()){imageViewer_->cancelRoi();imageViewer_->drawRegion(false);imageViewer_->setSearchRegionEditing({}, {},false);}
-    const auto identity=systemCalibrationIdentity();if(identity!=editorCalibrationIdentity_ && !editorSession_.busy()){if(service_.activeRecipe() && service_.activeRecipe()->definition["editor"].toObject()["schemaVersion"]==9){for(auto i=identity.begin();i!=identity.end();++i)if(editorCalibrationIdentity_[i.key()]!=i.value())editorSession_.calibrationChanged(editorContext(),i.key());}else editorSession_.calibrationChanged(editorContext());editorCalibrationIdentity_=identity;}
-    if(!editorSession_.busy() && measurementWorkspace_ && service_.activeRecipe()){
+    const auto identity=context.systemCalibration;if(identity!=editorCalibrationIdentity_ && !editorSession_.busy()){if(service_.activeRecipe() && service_.activeRecipe()->definition["editor"].toObject()["schemaVersion"]==9){for(auto i=identity.begin();i!=identity.end();++i)if(editorCalibrationIdentity_[i.key()]!=i.value())editorSession_.calibrationChanged(context,i.key());}else editorSession_.calibrationChanged(context);editorCalibrationIdentity_=identity;}
+    if(!editorSession_.busy() && environment && service_.activeRecipe()){
         const auto tools=service_.tools();
         if(std::any_of(tools.cbegin(),tools.cend(),[](const auto& tool){return tool.kind=="industrial_camera";})){
-        const auto e=measurementWorkspace_->environment();
+        const auto& e=*environment;
         for(const auto& tool:tools)if(tool.kind=="industrial_camera")try{
             const auto ref=IndustrialSourceReference::fromJson(tool.parameters["sourceReference"].toObject());ref.validateAgainst(e.current);
             if(e.archivedCameras.contains(ref.camera.value) || e.archivedSetups.contains(ref.setup.value))throw std::runtime_error("Archived industrial source");
-        }catch(const std::exception&){editorSession_.invalidateTool(editorContext(),tool.id);editorSession_.sourceFrames.remove(tool.id);if(editorSession_.frame && editorSession_.frame->metadata().sourceId==tool.id)editorSession_.frame.reset();}
+        }catch(const std::exception&){editorSession_.invalidateTool(context,tool.id);editorSession_.sourceFrames.remove(tool.id);if(editorSession_.frame && editorSession_.frame->metadata().sourceId==tool.id)editorSession_.frame.reset();}
     }
     }
-    editorSession_.reconcile(editorContext());
+    editorSession_.reconcile(context);
     QString text="Önce reçete açın.";
     if(service_.activeRecipe()) {
         const auto graph=service_.activeRecipe()->definition["editor"].toObject()["schemaVersion"]==9 ? validateSourceGraph(service_.tools(),editorConnections(service_.activeRecipe()->definition)):validateGraph(service_.tools(),editorConnections(service_.activeRecipe()->definition));
@@ -114,12 +123,13 @@ void MainWindow::refreshFlow() {
         for(const auto& t:service_.tools())if(t.id==item->data(Qt::UserRole).toString())item->setText(t.name+" • "+toolLabel(t.kind)+" / "+state);
     }
     findChild<QPushButton*>("addTool")->setEnabled(service_.activeRecipe() && !editorSession_.busy());
-    showExecutionResult();
+    showExecutionResultView(context);
     if(!pendingDrawTool_.isEmpty() && !drawPreparationQueued_){drawPreparationQueued_=true;QTimer::singleShot(0,this,[this]{drawPreparationQueued_=false;prepareNewToolDrawing();});}
 }
-void MainWindow::showExecutionResult() {
+void MainWindow::showExecutionResult() {showExecutionResultView(editorContext());}
+void MainWindow::showExecutionResultView(const EditorContext& context) {
     if(drawingImage_ && imageViewer_->drawingActive()) {
-        try {const auto current=editorSession_.toolImage(editorContext(),selectedToolId_);if(current.contentId()!=drawingImage_->contentId() || current.processingId()!=drawingImage_->processingId())throw std::runtime_error("Drawing image changed");}
+        try {const auto current=editorSession_.toolImage(context,selectedToolId_);if(current.contentId()!=drawingImage_->contentId() || current.processingId()!=drawingImage_->processingId())throw std::runtime_error("Drawing image changed");}
         catch(const std::exception&){imageViewer_->cancelRoi();imageViewer_->drawRegion(false);drawingImage_.reset();}
     }else drawingImage_.reset();
     edgeProfile_->setDiagnostics({});
@@ -128,7 +138,7 @@ void MainWindow::showExecutionResult() {
     if(editorSession_.frame){displayPreview=drawingImage_ ? drawingImage_->preview():editorSession_.frame->preview();imageInfo_->setText(QString("Ham g\u00f6r\u00fcnt\u00fc - %1 x %2 px - Frame %3").arg(editorSession_.frame->size().width()).arg(editorSession_.frame->size().height()).arg(editorSession_.frame->metadata().frameId));}
     if(drawingImage_)imageInfo_->setText(drawingImage_->processing().isEmpty() ? "Ham görüntü · bağlı kaynak":"İşlenmiş görüntü · bağlı Preprocess");
     if(!drawingImage_ && service_.activeRecipe())for(const auto& tool:service_.tools())if(tool.id==selectedToolId_ && tool.kind=="blob")try{
-        const auto image=editorSession_.toolImage(editorContext(),tool.id);displayPreview=image.preview();
+        const auto image=editorSession_.toolImage(context,tool.id);displayPreview=image.preview();
         QString source=image.metadata().sourceId;for(const auto& candidate:service_.tools())if(candidate.id==source){source=candidate.name;break;}
         imageInfo_->setText(QString("%1 · bağlı kaynak: %2 · %3 × %4 px · Frame %5").arg(image.processing().isEmpty() ? "Ham görüntü":"İşlenmiş görüntü",source).arg(image.size().width()).arg(image.size().height()).arg(image.metadata().frameId));
     }catch(const std::exception&){}
@@ -136,7 +146,7 @@ void MainWindow::showExecutionResult() {
     // Resolve the final raster before uploading: do not bounce processed -> raw -> processed.
     if(editorSession_.cycle)for(const auto& r:editorSession_.cycle->tools)
         if(r.toolId==selectedToolId_ && r.state==ExecutionState::Done &&
-           (editorSession_.sourceFrames.isEmpty() || (editorSession_.frame && editorSession_.sourceForTool(editorContext(),r.toolId)==editorSession_.frame->metadata().sourceId))){
+           (editorSession_.sourceFrames.isEmpty() || (editorSession_.frame && editorSession_.sourceForTool(context,r.toolId)==editorSession_.frame->metadata().sourceId))){
             const auto processed=r.outputs.value("image");
             if(processed.valid)if(const auto* image=std::get_if<ImageFrame>(&processed.data))
                 if(!image->processing().isEmpty())displayPreview=image->preview();
@@ -161,7 +171,7 @@ void MainWindow::showExecutionResult() {
             const auto value=ToolResultCodec::display(v,4);
             lines<<"  "+it.key()+(v.diagnostic ? " [diagnostic]: ":": ")+value+" "+v.port.unit;
         }
-        if(r.toolId==selectedToolId_ && (editorSession_.sourceFrames.isEmpty() || (editorSession_.frame && editorSession_.sourceForTool(editorContext(),r.toolId)==editorSession_.frame->metadata().sourceId))) {
+        if(r.toolId==selectedToolId_ && (editorSession_.sourceFrames.isEmpty() || (editorSession_.frame && editorSession_.sourceForTool(context,r.toolId)==editorSession_.frame->metadata().sourceId))) {
             if(r.state==ExecutionState::Done)edgeProfile_->setDiagnostics(r.edgeDiagnostics);
             const auto processed=r.outputs.value("image");if(r.state==ExecutionState::Done && processed.valid)if(const auto* image=std::get_if<ImageFrame>(&processed.data))if(!image->processing().isEmpty()){imageInfo_->setText(QString("İşlenmiş Gray8 • %1×%2 px • geometri korunur • %3").arg(image->size().width()).arg(image->size().height()).arg(QString::fromLatin1(image->processingId().toHex().left(12))));}
             QString annotation;if(r.outputs.contains("valuePx") || r.outputs.contains("widthPx") || (r.outputs.contains("linePx") || r.outputs.contains("circlePx")))annotation=r.message;annotation.replace(" • ","\n");

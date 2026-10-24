@@ -100,7 +100,7 @@ private:
     void showRecipeDialog(bool edit = false);
     void openSelectedRecipe();
     void openEditorRecipe(const QString& id);
-    void syncEditorCameras(const QString& retrySource={},bool activate=false);
+    void syncEditorCameras(const QString& retrySource={},bool activate=false,const MeasurementEnvironment* environment=nullptr);
     bool drainEditorCameras(std::function<void()> after);
     void pollEditorCameras();
     QString editorCameraStatus(const QString& source) const;
@@ -112,8 +112,10 @@ private:
     bool resolveUnsavedChanges();
     void displayError(const QString& message);
     void refreshEditor();
+    quint64 editorRefreshEpoch_=0; // Supersedes an outer reentrant display operation.
     void selectTool(const QString& id);
     void showToolProperties();
+    void showToolPropertiesView(const EditorContext&,const std::optional<MeasurementEnvironment>&);
     void addSelectedTool();
     enum class PropertyCommit { Unchanged, Changed, Failed };
     ToolDefinition readToolProperties(ToolDefinition tool) const;
@@ -133,6 +135,7 @@ private:
     void runFlow();
     void runExecution(const QString& targetTool);
     void refreshFlow();
+    void refreshFlowView(const EditorContext&,const std::optional<MeasurementEnvironment>&);
     void showFlowMenu(const QPoint& position);
     void prepareNewToolDrawing();
     bool setDrawingImage();
@@ -140,9 +143,11 @@ private:
     bool drawPreparationQueued_=false;
     std::optional<ImageFrame> drawingImage_;
     void showExecutionResult();
+    void showExecutionResultView(const EditorContext&);
     QByteArray flowSignature() const;
     void loadImageAsync(const QString& path,bool commit);
     void refreshMatchOverlay();
+    void refreshMatchOverlayView(const EditorContext&);
     void invalidateMatch();
     QByteArray matchSignature() const;
     bool propertiesEditing_ = false;
@@ -189,10 +194,11 @@ private:
     std::function<void()> editorCameraAfterDrain_;
     CameraSession cameraSession_;
     EditorContext editorContext() const;
+    std::optional<MeasurementEnvironment> editorDisplayEnvironment() const;
     std::optional<ActiveCalibrationSnapshot> systemCalibrationSnapshot(const Recipe* recipe=nullptr) const;
     CalibrationResolver calibrationResolver(const Recipe&) const;
     QJsonObject systemCalibrationIdentity() const;
-    QString calibrationSummary() const;
+    QString calibrationSummary(const EditorContext* context=nullptr) const;
     QString imageBinding_;
     QString editorRecipeId_;
     QString selectedToolId_;

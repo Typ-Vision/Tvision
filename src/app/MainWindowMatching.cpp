@@ -28,7 +28,8 @@ QByteArray MainWindow::matchSignature() const {
     return service_.project().id.toUtf8()+service_.activeRecipe()->id.toUtf8()+selectedToolId_.toUtf8()+QByteArray::number(editorSession_.generation)+QJsonDocument(service_.activeRecipe()->definition).toJson(QJsonDocument::Compact);
 }
 void MainWindow::invalidateMatch() {if(edgeProfile_)edgeProfile_->setDiagnostics({});editorSession_.invalidateResults(); if(imageViewer_)imageViewer_->setToolOverlay({},{});if (matchInfo_) matchInfo_->setText("Eşleştirme sonucu yok.");}
-void MainWindow::refreshMatchOverlay() {
+void MainWindow::refreshMatchOverlay() {refreshMatchOverlayView(editorContext());}
+void MainWindow::refreshMatchOverlayView(const EditorContext& context) {
     if (editorSession_.matchOutcome && editorSession_.resultSignature!=matchSignature()) invalidateMatch();
     imageViewer_->onRoiEdited={};
     imageViewer_->setScanGuides({});
@@ -41,7 +42,7 @@ void MainWindow::refreshMatchOverlay() {
         if(t.parameters.contains("referenceBinding")){
             imageViewer_->setRoi({},false);imageViewer_->setRoiEditable(false);
             try{
-                const auto b=toolReferenceBinding(t);const auto e=editorSession_.evaluation(editorContext());const auto image=editorSession_.toolImage(editorContext(),id);
+                const auto b=toolReferenceBinding(t);const auto e=editorSession_.evaluation(context);const auto image=editorSession_.toolImage(context,id);
                 if(!e.cache.contains(b.sourceTool))throw std::runtime_error("Current reference unavailable");
                 for(const auto& source:service_.tools())if(source.id==b.sourceTool){
                     if(b.world){const auto ctx=calibrationResolver(*service_.activeRecipe())(image);const auto r=ReferenceService::resolveWorld(b,source,e.cache[b.sourceTool].result,image,ctx);
@@ -54,7 +55,7 @@ void MainWindow::refreshMatchOverlay() {
         }
         if(t.parameters.contains("poseTracking")) {
             try {
-                const auto evaluation=editorSession_.evaluation(editorContext());const auto image=editorSession_.toolImage(editorContext(),id);const auto sourceId=trackingSourceTool(t);
+                const auto evaluation=editorSession_.evaluation(context);const auto image=editorSession_.toolImage(context,id);const auto sourceId=trackingSourceTool(t);
                 if(!evaluation.cache.contains(sourceId))throw std::runtime_error("Current pose unavailable");
                 for(const auto& source:service_.tools())if(source.id==sourceId){
                     if(isWorldPoseTracking(t)) {
@@ -88,17 +89,17 @@ void MainWindow::refreshMatchOverlay() {
         model=MatchService::rectangle(t.parameters["modelRoi"].toObject()); search=MatchService::rectangle(t.parameters["searchRoi"].toObject()); enabled=t.enabled && bool(editorSession_.frame);
         if(t.parameters.contains("poseTracking") || t.parameters.contains("referenceBinding")){search={};enabled=false;}
         if(t.kind=="edge" && !t.parameters.contains("referenceBinding") && !search.isEmpty())for(const auto& c:editorConnections(service_.activeRecipe()->definition))if(c.targetTool==t.id && c.targetPort=="reference") {
-            const auto point=referencePoint(c.sourceTool);const auto origin=t.parameters["referenceOrigin"].toObject();
+            const auto point=editorSession_.referencePoint(context,c.sourceTool);const auto origin=t.parameters["referenceOrigin"].toObject();
             for(const auto& source:service_.tools())if(source.id==c.sourceTool && referenceNeedsTeaching(t,source))search={};
             if(point && !origin.isEmpty() && !search.isEmpty())search.translate(qRound(point->x()-origin["x"].toDouble()),qRound(point->y()-origin["y"].toDouble()));
         }
-        if(!t.parameters.contains("poseTracking") && !t.parameters.contains("referenceBinding") && editorSession_.cycle && editorSession_.cycle->configId==flowSignature())for(const auto& r:editorSession_.cycle->tools)if(r.toolId==t.id && !r.searchRegion.isEmpty())search=r.searchRegion;
+        if(!t.parameters.contains("poseTracking") && !t.parameters.contains("referenceBinding") && editorSession_.cycle && editorSession_.cycle->configId==editorSession_.signature(context))for(const auto& r:editorSession_.cycle->tools)if(r.toolId==t.id && !r.searchRegion.isEmpty())search=r.searchRegion;
         if(t.kind=="blob" || t.kind=="roi"){
             bool externallyBound=t.parameters.contains("poseTracking") || t.parameters.contains("referenceBinding");
             for(const auto& c:editorConnections(service_.activeRecipe()->definition))if(c.targetTool==t.id && (c.targetPort=="region" || c.targetPort=="reference" || c.targetPort=="poseReference"))externallyBound=true;
             if(externallyBound)enabled=false;
             try{
-                const auto image=editorSession_.toolImage(editorContext(),t.id);
+                const auto image=editorSession_.toolImage(context,t.id);
                 searchIdentity=service_.project().id+"/"+service_.activeRecipe()->id+"/"+t.id+"/"+image.contentId().toHex()+"/"+image.processingId().toHex()+"/"+image.metadata().sourceId+"/"+image.metadata().frameId+"/"+image.metadata().coordinateSystemId;
                 searchEditable=enabled && !externallyBound && !editorSession_.busy() && !geometryWorkspace;
                 if(searchEditable){

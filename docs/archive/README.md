@@ -6,6 +6,7 @@ görev” ifadeleri yazıldıkları tarihe aittir.
 
 | Dönem / görev | Kayıt |
 | --- | --- |
+| 24 Ekim 2026 — CCUX-23b-5 | [İşlem başına Editor context/environment paylaşımı ve generation sınırı](2026-10-24-ccux-23b-5.md) |
 | 24 Ekim 2026 — CCUX-23b-4 | [Paylaşılan doğrulanmış katalog, içerik digest’i ve izin/cache ayrımı](2026-10-24-ccux-23b-4.md) |
 | 24 Ekim 2026 — CCUX-23b-3 | [Görünür sayfaya göre yenileme, gizli rebuild sayaçları ve proje/geçiş regresyonları](2026-10-24-ccux-23b-3.md) |
 | 24 Ekim 2026 — CCUX-23b-2 | [Properties commit/no-op, Save/Add tek yenileme ve pending/odak regresyonları](2026-10-24-ccux-23b-2.md) |

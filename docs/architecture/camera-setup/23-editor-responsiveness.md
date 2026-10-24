@@ -1,6 +1,6 @@
 # CCUX-23 — Editor düzenleme gecikmesini giderme planı
 
-24 Ekim 2026 — CCUX-PLAN-06. Durum: 23b-1–4 tamamlandı; devam 23b-5.
+24 Ekim 2026 — CCUX-PLAN-06. Durum: 23b-1–5 tamamlandı; devam 23b-6.
 Uygulayıcı: Codex. Uygulama alt görevleri için kullanıcı tercihi: Sol 6.1.
 
 ## Başlangıç ve sınır
