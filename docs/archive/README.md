@@ -6,6 +6,7 @@ görev” ifadeleri yazıldıkları tarihe aittir.
 
 | Dönem / görev | Kayıt |
 | --- | --- |
+| 24 Ekim 2026 — CCUX-23b-2 | [Properties commit/no-op, Save/Add tek yenileme ve pending/odak regresyonları](2026-10-24-ccux-23b-2.md) |
 | 24 Ekim 2026 — CCUX-23b-1 | [Tekrarlanabilir Editor baseline, paint/event-loop ve refresh/decode/replay sayaçları](2026-10-24-ccux-23b-1.md) |
 | 24 Ekim 2026 — CCUX-PLAN-06 | [CCUX-23a bulgularından altı sıralı Sol 6.1 uygulama kartı](2026-10-24-ccux-plan-06.md) |
 | 24 Ekim 2026 — MCP-01 | [Codebase Memory proje ayarı, güncel indeks ve MCP doğrulaması](2026-10-24-mcp-01.md) |

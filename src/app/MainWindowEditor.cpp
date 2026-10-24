@@ -71,7 +71,9 @@ QWidget* MainWindow::makeEditor() {
     auto* details=new QWidget;details->setObjectName("editorDetails");auto* detailLayout=new QHBoxLayout(details);detailLayout->setContentsMargins(0,0,0,0);
     auto* edit=new QPushButton("Reçete bilgileri"); edit->setObjectName("editActiveRecipe"); detailLayout->addWidget(edit);
     connect(edit,&QPushButton::clicked,this,[this]{showRecipeDialog(true);});
-    auto* save=new QPushButton("Save"); save->setObjectName("saveWorkspace"); commands->addWidget(save); connect(save,&QPushButton::clicked,this,&MainWindow::saveProject);
+    // Mouse commands retain the editing control: Save/Add commit it themselves,
+    // avoiding an editingFinished refresh followed by the command refresh.
+    auto* save=new QPushButton("Save"); save->setObjectName("saveWorkspace"); save->setFocusPolicy(Qt::TabFocus); commands->addWidget(save); connect(save,&QPushButton::clicked,this,&MainWindow::saveProject);
     auto* multi=new QPushButton("Çok kaynaklı Editor");multi->setObjectName("enableMultiSource");multi->setToolTip("Reçeteyi açıkça editor9 şemasına geçirir; mevcut bağlantılar korunur.");detailLayout->addWidget(multi);detailLayout->addStretch();
     connect(multi,&QPushButton::clicked,this,[this]{if(editorSession_.busy() || !applyToolProperties())return;try{service_.enableMultiSource();editorSession_.sourceFrames.clear();editorSession_.frame.reset();editorSession_.invalidateResults();refreshWorkspace();}catch(const std::exception& e){displayError(QString::fromUtf8(e.what()));}});
     auto* runFlowButton=new QPushButton("Run Flow"); runFlowButton->setObjectName("runFlow"); commands->addWidget(runFlowButton); connect(runFlowButton,&QPushButton::clicked,this,&MainWindow::runFlow);
@@ -96,7 +98,7 @@ QWidget* MainWindow::makeEditor() {
     toolbox_->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);toolbox_->setTextElideMode(Qt::ElideRight);
     for(int i=0;i<toolbox_->count();++i)if(!toolbox_->item(i)->data(Toolbox::HeaderRole).toBool())toolbox_->item(i)->setToolTip(toolbox_->item(i)->text()+"\n"+toolbox_->item(i)->toolTip());
     search->setObjectName("toolboxSearch");
-    auto* add=new QPushButton("Add Tool");add->setObjectName("addTool");toolsLayout->addWidget(add);
+    auto* add=new QPushButton("Add Tool");add->setObjectName("addTool");add->setFocusPolicy(Qt::TabFocus);toolsLayout->addWidget(add);
     auto updateAdd=[this,add]{const auto* item=toolbox_->currentItem();add->setEnabled(item && !item->isHidden() && (item->flags() & Qt::ItemIsEnabled) && ToolCatalog::canAdd(item->data(Qt::UserRole).toString()));};
     catalog->onAvailabilityChanged=updateAdd;catalog->onAddRequested=[this]{addSelectedTool();};
     connect(toolbox_,&QListWidget::currentItemChanged,this,[updateAdd]{updateAdd();});
@@ -233,6 +235,7 @@ void MainWindow::selectTool(const QString& id) {
 }
 void MainWindow::showToolProperties() {
     const QScopedValueRollback<bool> guard(propertiesEditing_,true);
+    displayedProperties_.reset();
     auto* layout=static_cast<QVBoxLayout*>(propertiesBody_->layout());
     while (auto* item=layout->takeAt(0)) {delete item->widget(); delete item;}
     layout->addWidget(note("PROPERTIES"));
@@ -570,68 +573,104 @@ void MainWindow::showToolProperties() {
     auto* remove=new QPushButton("Remove Tool"); remove->setObjectName("removeTool"); layout->addWidget(remove);
     connect(remove,&QPushButton::clicked,this,[this]{try {service_.removeTool(selectedToolId_); selectedToolId_.clear(); refreshWorkspace();} catch (const std::exception& e) {displayError(QString::fromUtf8(e.what()));}});
     layout->addStretch();
+    displayedProperties_=readToolProperties(tool);
+}
+ToolDefinition MainWindow::readToolProperties(ToolDefinition tool) const {
+    tool.name=propertiesBody_->findChild<QLineEdit*>("toolName")->text().trimmed(); tool.description=propertiesBody_->findChild<QLineEdit*>("toolDescription")->text();
+    tool.enabled=propertiesBody_->findChild<QCheckBox*>("toolEnabled")->isChecked();
+    if (auto* score=propertiesBody_->findChild<QDoubleSpinBox*>("minScore")) tool.parameters["minScore"]=score->value()/100;
+    if(tool.kind=="pattern_pose" || tool.kind=="shape_pose")if(auto* settings=dynamic_cast<PoseMatchEditor*>(propertiesBody_->findChild<QWidget*>("poseMatchSettings")))tool.parameters=settings->parameters();
+    if (auto* threshold=propertiesBody_->findChild<QSpinBox*>("threshold")) tool.parameters["threshold"]=threshold->value();
+    if(tool.kind=="edge_pair" || tool.kind=="line_fit" || tool.kind=="circle_fit")if(auto* settings=dynamic_cast<MetrologyEditor*>(propertiesBody_->findChild<QWidget*>("metrologySettings")))tool.parameters=settings->parameters();
+    if(tool.kind=="edge_point")if(auto* settings=dynamic_cast<EdgePointEditor*>(propertiesBody_->findChild<QWidget*>("edgePointSettings")))tool.parameters=settings->parameters();
+    if(tool.kind=="code_read")if(auto* settings=dynamic_cast<CodeReadEditor*>(propertiesBody_->findChild<QWidget*>("codeReadSettings")))tool.parameters=settings->parameters();
+    if(tool.kind=="preprocess")if(auto* settings=dynamic_cast<PreprocessEditor*>(propertiesBody_->findChild<QWidget*>("preprocessSettings")))tool.parameters=settings->parameters();
+    if(tool.kind=="blob") {
+        tool.parameters["rejectBorderTouching"]=propertiesBody_->findChild<QCheckBox*>("rejectBorderTouching")->isChecked();
+        tool.parameters["polarity"]=propertiesBody_->findChild<QComboBox*>("blobPolarity")->currentData().toString();
+        tool.parameters["connectivity"]=propertiesBody_->findChild<QComboBox*>("blobConnectivity")->currentData().toInt();
+        tool.parameters["minArea"]=propertiesBody_->findChild<QSpinBox*>("minArea")->value();
+        tool.parameters["maxArea"]=propertiesBody_->findChild<QCheckBox*>("blobUnlimited")->isChecked() ? QJsonValue(QJsonValue::Null) : QJsonValue(propertiesBody_->findChild<QSpinBox*>("maxArea")->value());
+    }
+    if (auto* direction=propertiesBody_->findChild<QComboBox*>("edgeDirection")) tool.parameters["direction"]=direction->currentData().toString();
+    if(auto* contrast=propertiesBody_->findChild<QDoubleSpinBox*>("minContrast"))tool.parameters["minContrast"]=contrast->value();
+    if(auto* index=propertiesBody_->findChild<QSpinBox*>("webcamIndex"))tool.parameters["deviceIndex"]=index->value();
+    if(auto* timeout=propertiesBody_->findChild<QSpinBox*>("webcamTimeout"))tool.parameters["timeoutMs"]=timeout->value();
+    for(const auto key:{"lowerMm","upperMm"})if(auto* value=propertiesBody_->findChild<QDoubleSpinBox*>(key))tool.parameters[key]=value->value();
+    if(tool.kind=="geometry_measurement"){
+        auto p=tool.parameters;const auto defaults=geometryMeasurementDefaults();
+        for(auto i=defaults.begin();i!=defaults.end();++i){const auto id="gm_"+i.key();
+            if(auto* c=propertiesBody_->findChild<QComboBox*>(id))p[i.key()]=c->currentText();
+            else if(auto* c=propertiesBody_->findChild<QCheckBox*>(id))p[i.key()]=c->isChecked();
+            else if(auto* n=propertiesBody_->findChild<QDoubleSpinBox*>(id))p[i.key()]=n->value();
+        }
+        if(p["operation"]=="line_intersection")p["toleranceEnabled"]=false;
+        if(!tool.parameters.contains("toleranceEnabled") && p["toleranceEnabled"]==defaults["toleranceEnabled"] && p["nominal"]==defaults["nominal"] && p["lower"]==defaults["lower"] && p["upper"]==defaults["upper"])
+            for(auto key:{"toleranceEnabled","nominal","lower","upper"})p.remove(key);
+        tool.parameters=p;
+    }
+    return tool;
+}
+MainWindow::PropertyCommit MainWindow::commitToolProperties() {
+    if (propertiesEditing_ || !service_.activeRecipe() || !displayedProperties_ || displayedProperties_->id!=selectedToolId_) return PropertyCommit::Unchanged;
+    try {
+        for (const auto& original : service_.tools()) if (original.id==selectedToolId_) {
+            const auto displayed=readToolProperties(original);
+            auto tool=original;
+            // Compare the current controls to their initial normalized display. Unedited
+            // defaults, list ordering and rounded numbers retain their serialized form.
+            if(displayed.name!=displayedProperties_->name)tool.name=displayed.name;
+            if(displayed.description!=displayedProperties_->description)tool.description=displayed.description;
+            if(displayed.enabled!=displayedProperties_->enabled)tool.enabled=displayed.enabled;
+            for(auto i=displayed.parameters.begin();i!=displayed.parameters.end();++i)
+                if(i.value()!=displayedProperties_->parameters.value(i.key()))tool.parameters[i.key()]=i.value();
+            for(auto i=displayedProperties_->parameters.begin();i!=displayedProperties_->parameters.end();++i)
+                if(!displayed.parameters.contains(i.key()))tool.parameters.remove(i.key());
+            if(tool.name==original.name && tool.description==original.description && tool.enabled==original.enabled && tool.parameters==original.parameters) {
+                displayedProperties_=displayed;
+                return PropertyCommit::Unchanged;
+            }
+            const bool geometryChange=tool.kind=="geometry_measurement" &&
+                (tool.parameters["operation"]!=original.parameters["operation"] || tool.parameters["mode"]!=original.parameters["mode"]);
+            if(tool.kind=="geometry_measurement")validateGeometryMeasurement(tool.parameters);
+            if(geometryChange) {
+                auto links=editorConnections(service_.activeRecipe()->definition);
+                links.erase(std::remove_if(links.begin(),links.end(),[&](const auto& c){return c.targetTool==tool.id && c.targetPort!="image";}),links.end());
+                auto candidate=service_;
+                candidate.updateTool(tool);
+                candidate.setConnections(links);
+                service_=std::move(candidate);
+                pendingDrawTool_.clear();
+            } else service_.updateTool(tool);
+            displayedProperties_=displayed;
+            return PropertyCommit::Changed;
+        }
+    } catch (const std::exception& e) {
+        if(auto* mode=propertiesBody_->findChild<QComboBox*>("propertyDetailMode"))mode->setCurrentIndex(1);
+        displayError(QString::fromUtf8(e.what()));
+        return PropertyCommit::Failed;
+    }
+    return PropertyCommit::Unchanged;
 }
 bool MainWindow::applyToolProperties() {
-    if (propertiesEditing_ || !service_.activeRecipe()) return true;
-    auto* name=propertiesBody_->findChild<QLineEdit*>("toolName"); if (!name) return true;
-    try {
-        for (auto tool : service_.tools()) if (tool.id==selectedToolId_) {
-            tool.name=name->text().trimmed(); tool.description=propertiesBody_->findChild<QLineEdit*>("toolDescription")->text();
-            tool.enabled=propertiesBody_->findChild<QCheckBox*>("toolEnabled")->isChecked();
-            if (auto* score=propertiesBody_->findChild<QDoubleSpinBox*>("minScore")) tool.parameters["minScore"]=score->value()/100;
-            if(tool.kind=="pattern_pose" || tool.kind=="shape_pose")if(auto* settings=dynamic_cast<PoseMatchEditor*>(propertiesBody_->findChild<QWidget*>("poseMatchSettings")))tool.parameters=settings->parameters();
-            if (auto* threshold=propertiesBody_->findChild<QSpinBox*>("threshold")) tool.parameters["threshold"]=threshold->value();
-            if(tool.kind=="edge_pair" || tool.kind=="line_fit" || tool.kind=="circle_fit")if(auto* settings=dynamic_cast<MetrologyEditor*>(propertiesBody_->findChild<QWidget*>("metrologySettings")))tool.parameters=settings->parameters();
-            if(tool.kind=="edge_point")if(auto* settings=dynamic_cast<EdgePointEditor*>(propertiesBody_->findChild<QWidget*>("edgePointSettings")))tool.parameters=settings->parameters();
-            if(tool.kind=="code_read")if(auto* settings=dynamic_cast<CodeReadEditor*>(propertiesBody_->findChild<QWidget*>("codeReadSettings")))tool.parameters=settings->parameters();
-            if(tool.kind=="preprocess")if(auto* settings=dynamic_cast<PreprocessEditor*>(propertiesBody_->findChild<QWidget*>("preprocessSettings")))tool.parameters=settings->parameters();
-            if(tool.kind=="blob") {
-                tool.parameters["rejectBorderTouching"]=propertiesBody_->findChild<QCheckBox*>("rejectBorderTouching")->isChecked();
-                tool.parameters["polarity"]=propertiesBody_->findChild<QComboBox*>("blobPolarity")->currentData().toString();
-                tool.parameters["connectivity"]=propertiesBody_->findChild<QComboBox*>("blobConnectivity")->currentData().toInt();
-                tool.parameters["minArea"]=propertiesBody_->findChild<QSpinBox*>("minArea")->value();
-                tool.parameters["maxArea"]=propertiesBody_->findChild<QCheckBox*>("blobUnlimited")->isChecked() ? QJsonValue(QJsonValue::Null) : QJsonValue(propertiesBody_->findChild<QSpinBox*>("maxArea")->value());
-            }
-            if (auto* direction=propertiesBody_->findChild<QComboBox*>("edgeDirection")) tool.parameters["direction"]=direction->currentData().toString();
-            if(auto* contrast=propertiesBody_->findChild<QDoubleSpinBox*>("minContrast"))tool.parameters["minContrast"]=contrast->value();
-            if(auto* index=propertiesBody_->findChild<QSpinBox*>("webcamIndex"))tool.parameters["deviceIndex"]=index->value();
-            if(auto* timeout=propertiesBody_->findChild<QSpinBox*>("webcamTimeout"))tool.parameters["timeoutMs"]=timeout->value();
-            for(const auto key:{"lowerMm","upperMm"})if(auto* value=propertiesBody_->findChild<QDoubleSpinBox*>(key))tool.parameters[key]=value->value();
-            if(tool.kind=="geometry_measurement"){
-                auto p=tool.parameters;const auto defaults=geometryMeasurementDefaults();
-                for(auto i=defaults.begin();i!=defaults.end();++i){const auto id="gm_"+i.key();
-                    if(auto* c=propertiesBody_->findChild<QComboBox*>(id))p[i.key()]=c->currentText();
-                    else if(auto* c=propertiesBody_->findChild<QCheckBox*>(id))p[i.key()]=c->isChecked();
-                    else if(auto* n=propertiesBody_->findChild<QDoubleSpinBox*>(id))p[i.key()]=n->value();
-                }
-                if(p["operation"]=="line_intersection")p["toleranceEnabled"]=false;
-                if(!tool.parameters.contains("toleranceEnabled") && p["toleranceEnabled"]==defaults["toleranceEnabled"] && p["nominal"]==defaults["nominal"] && p["lower"]==defaults["lower"] && p["upper"]==defaults["upper"])
-                    for(auto key:{"toleranceEnabled","nominal","lower","upper"})p.remove(key);
-                validateGeometryMeasurement(p);
-                const bool changed=p["operation"]!=tool.parameters["operation"] || p["mode"]!=tool.parameters["mode"];
-                tool.parameters=p;
-                if(changed){
-                    pendingDrawTool_.clear();
-                    auto list=editorConnections(service_.activeRecipe()->definition);
-                    list.erase(std::remove_if(list.begin(),list.end(),[&](const auto& c){return c.targetTool==tool.id && c.targetPort!="image";}),list.end());
-                    service_.updateTool(tool);service_.setConnections(list);
-                }
-            }
-            service_.updateTool(tool); propertiesEditing_=true; refreshWorkspace(); propertiesEditing_=false; return true;
-        }
-    } catch (const std::exception& e) {propertiesEditing_=false;if(auto* mode=propertiesBody_->findChild<QComboBox*>("propertyDetailMode"))mode->setCurrentIndex(1); displayError(QString::fromUtf8(e.what())); return false;}
-    return true;
+    const auto result=commitToolProperties();
+    if(result==PropertyCommit::Changed) {
+        const QScopedValueRollback<bool> guard(propertiesEditing_,true);
+        refreshWorkspace();
+    }
+    return result!=PropertyCommit::Failed;
 }
 void MainWindow::addSelectedTool() {
     if (!toolbox_->currentItem() || toolbox_->currentItem()->isHidden() || !(toolbox_->currentItem()->flags() & Qt::ItemIsEnabled) || !ToolCatalog::canAdd(toolbox_->currentItem()->data(Qt::UserRole).toString())) return;
-    if (!applyToolProperties()) return;
     if(editorSession_.busy())return;
+    const auto commit=commitToolProperties();
+    if(commit==PropertyCommit::Failed)return;
     try {const auto previous=service_.tools();selectedToolId_=service_.addTool(toolbox_->currentItem()->data(Qt::UserRole).toString());
         if(std::none_of(previous.begin(),previous.end(),[this](const auto& t){return t.id==selectedToolId_;}))for(auto tool:service_.tools())if(tool.id==selectedToolId_ && QStringList{"edge_pair","line_fit","geometry_measurement"}.contains(tool.kind)){tool.parameters["mode"]="calibrated";if(tool.kind=="circle_fit"){tool.parameters["unitsPerSample"]=.1;tool.parameters["scanWidth"]=.1;tool.parameters["inlierDistance"]=.1;tool.parameters["maxRms"]=.035;tool.parameters["maxResidual"]=.1;}service_.updateTool(tool);break;}
         imageViewer_->cancelRoi();pendingDrawTool_.clear();
         if(std::none_of(previous.begin(),previous.end(),[this](const auto& t){return t.id==selectedToolId_;})){pendingDrawTool_=selectedToolId_;pendingDrawRecipe_=service_.project().id+"/"+service_.activeRecipe()->id;}
         refreshWorkspace();}
-    catch (const std::exception& e) {displayError(QString::fromUtf8(e.what()));}
+    catch (const std::exception& e) {if(commit==PropertyCommit::Changed){const QScopedValueRollback<bool> guard(propertiesEditing_,true);refreshWorkspace();}displayError(QString::fromUtf8(e.what()));}
 }
 void MainWindow::openImageDialog() {
     if (!service_.activeRecipe()) return;

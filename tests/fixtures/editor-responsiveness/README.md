@@ -27,7 +27,15 @@ case. `--probe-contract` uses one warmup plus two samples, registered as
 serialized mutations, equivalent tool counts, dirty/no-op Save disk-write
 semantics, save/reopen equivalence, positive model replay counters where
 applicable, zero model replay for uncalibrated cases, and zero discovery/provider
-calls through an injected counting factory. It has no absolute timing threshold.
+calls through an injected counting factory. It has no absolute timing threshold. CCUX-23b-2 additionally requires exactly one
+Workspace/Editor refresh per measured Save/Add/parameter/ROI action. The original
+23b-1 CSV remains the unchanged baseline (Save/Add had two refreshes).
+
+`ui_editor_usability` also runs `editor_property_commits.cpp`: no-op controls
+produce no refresh and preserve exact hash/status/legacy parameters; pending final
+values reach Save/Add, conflicts retain dirty drafts, invalid values stop both
+actions, and geometry operation changes retain only the image connection. It
+records `property-commits.json` and normal/small screenshots.
 
 Cases are distinct: the copied 23a multi-source fixture; the same fixture with a
 structural 49-centre framed 7x7 model (not raster detection or physical evidence);

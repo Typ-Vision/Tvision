@@ -100,6 +100,7 @@ bool MainWindow::verifyExperimentalEditor(const QString& artifacts) {
     return true;
 }
 bool MainWindow::verifyEditorUsability(const QString& artifacts) {
+    if(!verifyEditorPropertyCommits(artifacts))return false;
     auto check=[](bool ok,const char* message){if(!ok)throw std::runtime_error(message);};
     auto wait=[&]{QElapsedTimer timer;timer.start();do{QApplication::processEvents();QThread::msleep(1);}while(editorSession_.busy() && timer.elapsed()<20000);QApplication::processEvents();check(!editorSession_.busy(),"usability worker deadline");};
     {QSettings preferences(settingsFile_,QSettings::IniFormat);preferences.remove("properties");}

@@ -4,11 +4,11 @@
 
 ## Devam noktası
 
-**Öncelik: [CCUX-23b-2](architecture/camera-setup/23-editor-responsiveness.md).**
-[23b-1](archive/2026-10-24-ccux-23b-1.md) tamamlandı:
-dört vaka, dirty/no-op Save, parametre/Add/ROI; 1+20 örnek, 0 hata, exit 0.
-Kanıt `build/ccux/ccux-23b-1/`; Release ve ilgili altı test geçti.
-[PLAN-06](archive/2026-10-24-ccux-plan-06.md): altı sıralı kart.
+**Öncelik: [CCUX-23b-3](architecture/camera-setup/23-editor-responsiveness.md).**
+[23b-2](archive/2026-10-24-ccux-23b-2.md) tamam: no-op 0, Save/Add 1 refresh.
+Release/7 test geçti; `build/ccux/ccux-23b-2/`, 1+2 probe, 0 hata.
+[23b-1 baseline](archive/2026-10-24-ccux-23b-1.md) 1+20; hız kabulü 23b-6.
+[PLAN-06](archive/2026-10-24-ccux-plan-06.md): altı kart.
 [23a analizi](archive/2026-10-23-ccux-23a.md) korunur.
 Kullanıcı plaka kalibrasyonunu başardı; bağımsız mm kabulü ayrıdır.
 

@@ -41,6 +41,7 @@ public:
     bool verifyMultiSourceRuntime(const QString& artifacts);
     bool verifyShell();
     bool verifyEditorResponsiveness(const QString& artifacts);
+    bool verifyEditorPropertyCommits(const QString& artifacts);
     bool verifyWorkspace(const QString& artifactDirectory);
     bool verifyEditor(const QString& artifactDirectory);
     bool verifySession();
@@ -113,7 +114,11 @@ private:
     void selectTool(const QString& id);
     void showToolProperties();
     void addSelectedTool();
+    enum class PropertyCommit { Unchanged, Changed, Failed };
+    ToolDefinition readToolProperties(ToolDefinition tool) const;
+    PropertyCommit commitToolProperties();
     bool applyToolProperties();
+    std::optional<ToolDefinition> displayedProperties_;
     void openImageDialog();
     bool loadEditorImage(const QString& path);
     void beginRoi(bool model);

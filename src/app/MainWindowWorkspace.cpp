@@ -206,6 +206,10 @@ void MainWindow::showRecipeDialog(bool edit) {
         try {
             if (edit) service_.editRecipeMetadata(original.id,name->text(),description->text());
             else {
+                // Validate while the dialog still owns its error label. A deferred
+                // camera drain must never accept an invalid recipe and close it.
+                auto candidate=service_;
+                candidate.createRecipe(name->text(),description->text(),static_cast<ApplicationType>(group->checkedId()));
                 if(service_.activeRecipe() && pages_->currentIndex()==pageIds_.indexOf("editor") && !resolveUnsavedChanges())return;
                 auto create=[this,n=name->text(),d=description->text(),type=static_cast<ApplicationType>(group->checkedId())]{
                     try{service_.createRecipe(n,d,type);refreshWorkspace();selectPage("editor");syncEditorCameras({},true);}
@@ -280,7 +284,7 @@ void MainWindow::refreshRecipes() {
 }
 void MainWindow::refreshWorkspace() {
     editor_observation::Scope observation(editor_observation::Workspace);
-    workspaceError_->hide(); saveAction_->setEnabled(service_.hasProject() && service_.dirty());
+    workspaceError_->hide(); saveAction_->setEnabled(service_.hasProject());
     statusBar()->showMessage("Hazır — Tool yürütmesi: Run Flow / Results.");
     const bool has=service_.hasProject(); const auto* active=service_.activeRecipe();
     const QString dirty=service_.dirty() ? " • Kaydedilmedi" : "";
@@ -310,7 +314,8 @@ void MainWindow::refreshWorkspace() {
     dashboardRecipe_->setText(active ? active->name+" / "+typeLabel(active->applicationType)+" / "+statusKey(active->status) : "Seçilmedi");
     for (const auto& id : {"newRecipe","saveProject","saveRecipes","editProject"})
         if (auto* button=findChild<QPushButton*>(id)) button->setEnabled(has);
-    if (auto* button=findChild<QPushButton*>("saveWorkspace")) button->setEnabled(has && service_.dirty());
+    // A clean service can still have an uncommitted Properties spin-box value.
+    if (auto* button=findChild<QPushButton*>("saveWorkspace")) button->setEnabled(has);
     if (auto* button=findChild<QPushButton*>("editActiveRecipe")) button->setEnabled(active!=nullptr);
     refreshRecipes();
     refreshEditor();
@@ -318,10 +323,17 @@ void MainWindow::refreshWorkspace() {
     refreshRuntime();
 }
 void MainWindow::saveProject() {
-    if (!applyToolProperties()) return;
+    const auto commit=commitToolProperties();
+    if(commit==PropertyCommit::Failed)return;
+    // Save owns the single refresh. Keep the current controls/focus alive, including
+    // on a failed atomic write; the pending values and dirty recipe remain editable.
+    const QScopedValueRollback<bool> guard(propertiesEditing_,true);
     try {
         service_.save(); refreshWorkspace(); statusBar()->showMessage("Proje ve reçeteler atomik olarak kaydedildi.",5000);
-    } catch (const std::exception& e) { displayError(QString::fromUtf8(e.what())); }
+    } catch (const std::exception& e) {
+        if(commit==PropertyCommit::Changed)refreshWorkspace();
+        displayError(QString::fromUtf8(e.what()));
+    }
 }
 void MainWindow::displayError(const QString& message) {
     workspaceError_->setText(message); workspaceError_->show(); statusBar()->showMessage(message);
@@ -381,6 +393,8 @@ bool MainWindow::verifyWorkspace(const QString& artifacts) {
         findChild<QPushButton*>("newRecipe")->click();
         if (!dialogCompleted || !editorContext_->text().contains("Kaydedilmedi")) return false;
         ids.append(service_.activeRecipe()->id);
+        saveProject(); // Keep dialog validation independent from the dirty-exit decision.
+        if(service_.dirty())return false;
     }
     findChild<QPushButton*>("saveWorkspace")->click(); if (service_.dirty()) return false;
     for (int index=1;index<=3;++index) {

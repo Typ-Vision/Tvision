@@ -40,7 +40,11 @@ bool MainWindow::verifyEditorCameraSessions(const QString& artifacts){
         openEditorRecipe(id);settle();for(const auto& probe:f.probes)check(probe->opens==1 && probe->configs==1 && probe->grabs==0,"Explicit Editor open prepares without acquisition");
         for(int i=0;i<20;++i)for(const auto& source:sources)capture(source);
         for(const auto& probe:f.probes)check(probe->opens==1 && probe->configs==1 && probe->grabs==20 && probe->closes==0,"Editor twenty captures reuse prepared connection");
-        service_.save();refreshWorkspace();check(f.first()->closes==0,"Save preserves connection");
+        selectTool(sources.first());
+        propertiesBody_->findChild<QLineEdit*>("toolDescription")->setText("Pending camera description");
+        saveProject();settle();
+        check(!service_.dirty(),"Save commits pending camera Properties");
+        for(const auto& probe:f.probes)check(probe->opens==1 && probe->configs==1 && probe->closes==0,"Properties/Save reuse prepared cameras");
         selectTool(sources.first());auto* toolName=propertiesBody_->findChild<QLineEdit*>("toolName");check(toolName,"tool properties");toolName->setText("Changed name");check(applyToolProperties(),"Rename edit");
         choose(QMessageBox::Cancel,[&]{for(int row=0;row<navigation_->count();++row)if(navigation_->item(row)->data(Qt::UserRole).toString()=="camera"){navigation_->setCurrentRow(row);break;}});
         check(pages_->currentIndex()==pageIds_.indexOf("editor") && navigation_->currentItem()->data(Qt::UserRole).toString()=="recipes" && editorCameras_.active() && f.first()->closes==0,"Cancelled exit preserves connection and selected page");
