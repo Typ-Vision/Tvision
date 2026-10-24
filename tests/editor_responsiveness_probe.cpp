@@ -56,7 +56,9 @@ bool MainWindow::verifyEditorResponsiveness(const QString& artifacts){
     smokeMode_=true;
     const bool contract=QCoreApplication::arguments().contains("--probe-contract");
     const int repetitions=contract ? 2:20;
-    const QStringList cases{"framed_7x7_multi","legacy_23a_multi","uncalibrated_single","uncalibrated_multi5"};
+    QStringList cases{"framed_7x7_multi","legacy_23a_multi","uncalibrated_single","uncalibrated_multi5"};
+    const bool allTypes=QCoreApplication::arguments().contains("--probe-all-types");
+    if(allTypes)cases<<"framed_measurement_multi"<<"framed_inspection_multi";
     requireProbe(QDir().mkpath(artifacts),"create probe evidence directory");
     QFile csv(QDir(artifacts).filePath("raw.csv")),failures(QDir(artifacts).filePath("failures.csv"));
     requireProbe(csv.open(QIODevice::WriteOnly|QIODevice::Truncate) && failures.open(QIODevice::WriteOnly|QIODevice::Truncate),"open CSV");
@@ -64,7 +66,7 @@ bool MainWindow::verifyEditorResponsiveness(const QString& artifacts){
     raw<<"case,operation,iteration,warmup,success,operation_ms,first_editor_paint_ms,queued_event_ms,tools_before,tools_after,dirty_before,dirty_after,provider_capabilities,provider_creates,discoveries";
     for(int i=0;i<Count;++i)raw<<','<<names[i]<<"_calls,"<<names[i]<<"_inclusive_ms";
     raw<<'\n';failed<<"case,operation,iteration,error\n";
-    QJsonArray summaries,manifest;
+    QJsonArray summaries,manifest,coldPreparations;
     // Deterministic observer contract: nested bindings restore the previous sink.
     Sample outer,inner;
     {Binding binding(outer);{Scope scope(Context);}{Binding nested(inner);Scope scope(Context);}{Scope scope(Context);}}
@@ -95,6 +97,11 @@ bool MainWindow::verifyEditorResponsiveness(const QString& artifacts){
                 for(int i=0;i<selections.size();++i){auto selection=selections[i].toObject();if(selection["contentId"]==seed.contentId()){selection["contentId"]=record.contentId();selections[i]=selection;}}
                 environment["selections"]=selections;writeObject(path+".measurement-environment.json",environment);
             }
+            if(name=="framed_measurement_multi" || name=="framed_inspection_multi"){
+                auto project=readObject(path);auto recipes=project["recipes"].toArray();auto recipe=recipes[0].toObject();
+                recipe["applicationType"]=name.contains("measurement") ? "measurement":"defect_inspection";
+                recipes[0]=recipe;project["recipes"]=recipes;writeObject(path,project);
+            }
             service_.openProject(path);service_.selectRecipe(service_.project().recipes.first().id);
         }else{
             // A fresh filename on rerun is written atomically through the repository below.
@@ -105,7 +112,14 @@ bool MainWindow::verifyEditorResponsiveness(const QString& artifacts){
             service_.openProject(path);service_.selectRecipe(service_.project().recipes.first().id);
         }
         const auto pre=service_.addTool("preprocess"),roi=service_.addTool("code_read");
-        selectedToolId_=pre;measurementWorkspace();
+        selectedToolId_=pre;
+        // One first-use setup observation per unique project path. This includes
+        // registry/catalog preparation, not an edit or an OS disk-cache benchmark.
+        Sample cold;QElapsedTimer coldTimer;coldTimer.start();
+        {Binding binding(cold);measurementWorkspace();}
+        QJsonObject coldCounters;
+        for(int i=0;i<Count;++i)coldCounters.insert(names[i],QJsonObject{{"calls",static_cast<double>(cold.calls[i])},{"inclusiveMs",cold.nanoseconds[i]/1e6}});
+        coldPreparations.append(QJsonObject{{"case",name},{"elapsedMs",coldTimer.nsecsElapsed()/1e6},{"counters",coldCounters}});
         auto provider=std::make_shared<CountingProvider>();int discoveries=0;
         IndustrialExecutionInputs composition;composition.contract=measurementWorkspace_->environment().current;composition.factory=CameraProviderFactory::forTests(provider);
         composition.discover=[&discoveries](int,const std::shared_ptr<std::atomic_bool>&){++discoveries;return IndustrialDiscoverySnapshot{};};
@@ -125,7 +139,7 @@ bool MainWindow::verifyEditorResponsiveness(const QString& artifacts){
         refreshEditor();requireProbe(editorCalibrationIdentity_==sentinel,"generation change retires display before flow");
         refreshEditor();requireProbe(editorCalibrationIdentity_!=sentinel,"next refresh builds a current display view");
         const Project baseline=service_.project();const auto recipeId=service_.activeRecipe()->id;
-        manifest.append(QJsonObject{{"case",name},{"project",path},{"sources",name.endsWith("multi5") ? 5:old ? 2:1},{"models",old ? 2:0},{"framedStructuralModel",name.startsWith("framed")},{"cameraAcquisition",false}});
+        manifest.append(QJsonObject{{"case",name},{"project",path},{"applicationType",readObject(path)["recipes"].toArray()[0].toObject()["applicationType"]},{"sources",name.endsWith("multi5") ? 5:old ? 2:1},{"models",old ? 2:0},{"framedStructuralModel",name.startsWith("framed")},{"cameraAcquisition",false}});
         PaintObservation paint(pages_->widget(pageIds_.indexOf("editor")));qApp->installEventFilter(&paint);
         const QStringList operations{"save_dirty","save_noop","parameter","add","roi"};
         for(const auto& operation:operations){
@@ -183,9 +197,17 @@ bool MainWindow::verifyEditorResponsiveness(const QString& artifacts){
         }
         qApp->removeEventFilter(&paint);
         for(const auto size:{QSize(1400,900),QSize(850,600)}){resize(size);QApplication::processEvents();requireProbe(grab().save(QDir(directory).filePath(QString("editor-%1.png").arg(size.width()))),"probe screenshot");}
+        if(allTypes && name=="framed_7x7_multi"){
+            saveProject();requireProbe(!service_.dirty(),"save visual-check draft before page exit");
+            for(const auto& page:QStringList{"calibration","runtime"}){
+                selectPage(page);QApplication::processEvents();requireProbe(pages_->currentIndex()==pageIds_.indexOf(page),"acceptance page entry");
+                for(const auto size:{QSize(1400,900),QSize(850,600)}){resize(size);QApplication::processEvents();requireProbe(grab().save(QDir(directory).filePath(QString("%1-%2.png").arg(page).arg(size.width()))),"acceptance page screenshot");}
+            }
+        }
         service_.discardChanges();editorCameraComposition_.reset();
     }
     writeObject(QDir(artifacts).filePath("summary.json"),{{"contractOnly",contract},{"warmupsPerCaseOperation",1},{"repetitions",repetitions},{"p95Method","nearest rank ceil(0.95*n)"},{"paintMeaning","first Paint event in visible Editor subtree; offscreen is not physical presentation"},{"queuedMeaning","zero-delay callback posted before synchronous action; elapsed time includes action and queue dispatch"},{"scopeMeaning","owner UI thread, inclusive durations overlap; catalog_read counts calls including missing-file checks; atomic_write covers QSaveFile open/write/commit"},{"failures",failureCount},{"cases",manifest},{"results",summaries}});
+    writeObject(QDir(artifacts).filePath("cold-preparation.json"),{{"meaning","first workspace creation per unique project path; one sample, setup only, not OS-cold or timed edit"},{"cases",coldPreparations}});
     service_.discardChanges();return failureCount==0;
 }
 }

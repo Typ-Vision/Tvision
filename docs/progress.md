@@ -4,13 +4,12 @@
 
 ## Devam noktası
 
-**Öncelik: [CCUX-23b-6](architecture/camera-setup/23-editor-responsiveness.md).**
-[23b-5](archive/2026-10-24-ccux-23b-5.md): context/environment/kimlik 1; 9 test/görsel geçti.
-[23b-4](archive/2026-10-24-ccux-23b-4.md): cache; replay 0.
-[23b-3](archive/2026-10-24-ccux-23b-3.md) / [23b-2](archive/2026-10-24-ccux-23b-2.md) korunur.
-[23b-1 baseline](archive/2026-10-24-ccux-23b-1.md) 1+20; hız kabulü 23b-6.
-[PLAN-06](archive/2026-10-24-ccux-plan-06.md): altı kart.
-[23a analizi](archive/2026-10-23-ccux-23a.md).
+**[CCUX-23b-1–6 yazılım kabulü tamamlandı](archive/2026-10-24-ccux-23b-6.md).**
+600 ölçüm, üç tür; 30/30 grupta medyan <50 ms/p95 <100 ms.
+Framed Save 2391,64→45,09 ms; parametre 1286,51→29,16 ms.
+Decode/replay/gizli sayfa 0, context/refresh 1. Canlı proje/2448×2048
+kamera karesiyle kabul açık; fixture fiziksel kabul değildir.
+Yeni kart seçimi beklenir; açık 15j/22f aşağıdadır.
 Kullanıcı plaka kalibrasyonunu başardı; bağımsız mm kabulü ayrıdır.
 
 **[CCUX-15j fiziksel kabul açık](archive/2026-10-23-ccux-15j.md):**

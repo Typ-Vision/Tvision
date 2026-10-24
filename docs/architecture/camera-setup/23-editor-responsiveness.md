@@ -1,6 +1,7 @@
 # CCUX-23 — Editor düzenleme gecikmesini giderme planı
 
-24 Ekim 2026 — CCUX-PLAN-06. Durum: 23b-1–5 tamamlandı; devam 23b-6.
+24 Ekim 2026 — CCUX-PLAN-06. Durum: 23b-1–6 yazılım kabulü tamamlandı;
+canlı proje/kamera kabulü açık. [Birleşik kabul](../../archive/2026-10-24-ccux-23b-6.md).
 Uygulayıcı: Codex. Uygulama alt görevleri için kullanıcı tercihi: Sol 6.1.
 
 ## Başlangıç ve sınır

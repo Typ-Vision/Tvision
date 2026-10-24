@@ -83,3 +83,33 @@ open/write/commit after serialization, not storage-device durability latency.
 The frame is only needed for ROI; the probe is a CPU/UI baseline, not the live
 2448x2048 camera or independent physical-mm acceptance. Later cards should use
 the same executable, build type, machine, fixtures and metric definitions.
+
+For CCUX-23b-6, use a fresh evidence directory and add `--probe-all-types`.
+The original four cases stay equivalent to the baseline. Two additional framed,
+two-source cases change only applicationType to measurement/defect_inspection;
+the original framed case is robot_guidance. The full run has 630 rows (600
+measured), not 420. The added cases have no historical timing comparator.
+Normal/small Calibration and unloaded Runtime screenshots are also recorded.
+The visual-check draft is saved outside timing before leaving Editor.
+
+All timed actions use a prepared workspace/catalog; the discarded per-action
+warmup is not a cold measurement. `cold-preparation.json` records one first-use
+workspace creation per unique fixture path, with counters and elapsed time.
+This includes registry/catalog setup, has no 20-sample distribution, and does
+not measure OS-cold disk, camera preparation or cold edit latency. Cold content
+invalidation/replay correctness remains covered by `active_calibration_contract`.
+
+After the full Release run, execute:
+
+```powershell
+python scripts/compare-editor-responsiveness.py
+```
+
+Defaults compare `build/ccux/ccux-23b-1/baseline` against
+`build/ccux/ccux-23b-6/final`. Optional `--baseline`, `--final`, `--output`
+select other evidence paths. The script validates sample counts, semantic and
+hardware counters, unchanged tracked input hashes, and summary statistics. It
+writes `comparison.csv` and `evidence-validation.json`, reporting operation,
+paint, queue, Save/disk and context/catalog durations separately, plus failures
+to meet the proposed 50 ms median / 100 ms p95 target. Timing targets are reports,
+not flaky CTest assertions. Inclusive durations must not be summed.
