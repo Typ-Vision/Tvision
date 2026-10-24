@@ -40,6 +40,7 @@ public:
     bool verifyMultiSource(const QString& artifacts);
     bool verifyMultiSourceRuntime(const QString& artifacts);
     bool verifyShell();
+    bool verifyEditorResponsiveness(const QString& artifacts);
     bool verifyWorkspace(const QString& artifactDirectory);
     bool verifyEditor(const QString& artifactDirectory);
     bool verifySession();

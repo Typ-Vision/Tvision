@@ -1,0 +1,596 @@
+{
+    "calibrationReference": "",
+    "cameraReference": "file",
+    "communicationProtocol": "",
+    "createdAt": "2026-10-22T05:57:44.139Z",
+    "description": "",
+    "format": "visionflow.project",
+    "id": "4f91a472-519e-45c8-898f-fd613eedeb37",
+    "modifiedAt": "2026-10-23T19:22:27.566Z",
+    "name": "CCUX unified fixture",
+    "recipes": [
+        {
+            "applicationType": "robot_guidance",
+            "calibrationReference": "",
+            "cameraReference": "",
+            "createdAt": "2026-10-22T05:57:45.405Z",
+            "definition": {
+                "calibrationPolicy": "scoped-source/1",
+                "editor": {
+                    "connections": [
+                        {
+                            "sourcePort": "image",
+                            "sourceTool": "0d781031-0bf7-44e6-b8ac-d4b385f5127f",
+                            "targetPort": "image",
+                            "targetTool": "78f9cff3-62f2-4251-8f0e-ff930f34a585"
+                        },
+                        {
+                            "sourcePort": "image",
+                            "sourceTool": "0d781031-0bf7-44e6-b8ac-d4b385f5127f",
+                            "targetPort": "image",
+                            "targetTool": "368a32d0-fc38-45a8-81aa-effa517ed407"
+                        },
+                        {
+                            "sourcePort": "point",
+                            "sourceTool": "78f9cff3-62f2-4251-8f0e-ff930f34a585",
+                            "targetPort": "p1",
+                            "targetTool": "ba3204da-0c85-426a-b067-1eac3f2ad1b1"
+                        },
+                        {
+                            "sourcePort": "point",
+                            "sourceTool": "368a32d0-fc38-45a8-81aa-effa517ed407",
+                            "targetPort": "p2",
+                            "targetTool": "ba3204da-0c85-426a-b067-1eac3f2ad1b1"
+                        },
+                        {
+                            "sourcePort": "image",
+                            "sourceTool": "b0d4bf2f-9525-4ebb-a355-c933a1d548ae",
+                            "targetPort": "image",
+                            "targetTool": "e8f301e1-7737-47a9-9609-fdfa95e15cbc"
+                        }
+                    ],
+                    "schemaVersion": 9,
+                    "tools": [
+                        {
+                            "dependencies": [
+                            ],
+                            "description": "",
+                            "enabled": true,
+                            "id": "0d781031-0bf7-44e6-b8ac-d4b385f5127f",
+                            "kind": "image_file",
+                            "name": "Image_File_1",
+                            "parameters": {
+                                "path": "camera-0.pgm"
+                            }
+                        },
+                        {
+                            "dependencies": [
+                            ],
+                            "description": "",
+                            "enabled": true,
+                            "id": "78f9cff3-62f2-4251-8f0e-ff930f34a585",
+                            "kind": "edge_point",
+                            "name": "Edge_Point_1",
+                            "parameters": {
+                                "minContrast": 20,
+                                "polarity": "rising",
+                                "scanRoi": {
+                                    "frameId": "0d781031-0bf7-44e6-b8ac-d4b385f5127f/image",
+                                    "geometry": {
+                                        "end": [
+                                            620,
+                                            100
+                                        ],
+                                        "kind": "scan",
+                                        "start": [
+                                            20,
+                                            100
+                                        ],
+                                        "width": 4
+                                    },
+                                    "schemaVersion": 1
+                                },
+                                "selection": "strongest",
+                                "sigmaPx": 1,
+                                "stepPx": 0.5,
+                                "subpixel": true,
+                                "widthStepPx": 1
+                            }
+                        },
+                        {
+                            "dependencies": [
+                            ],
+                            "description": "",
+                            "enabled": true,
+                            "id": "368a32d0-fc38-45a8-81aa-effa517ed407",
+                            "kind": "edge_point",
+                            "name": "Edge_Point_2",
+                            "parameters": {
+                                "minContrast": 20,
+                                "polarity": "falling",
+                                "scanRoi": {
+                                    "frameId": "0d781031-0bf7-44e6-b8ac-d4b385f5127f/image",
+                                    "geometry": {
+                                        "end": [
+                                            620,
+                                            100
+                                        ],
+                                        "kind": "scan",
+                                        "start": [
+                                            20,
+                                            100
+                                        ],
+                                        "width": 4
+                                    },
+                                    "schemaVersion": 1
+                                },
+                                "selection": "strongest",
+                                "sigmaPx": 1,
+                                "stepPx": 0.5,
+                                "subpixel": true,
+                                "widthStepPx": 1
+                            }
+                        },
+                        {
+                            "dependencies": [
+                            ],
+                            "description": "",
+                            "enabled": true,
+                            "id": "ba3204da-0c85-426a-b067-1eac3f2ad1b1",
+                            "kind": "measurement",
+                            "name": "Measurement_1",
+                            "parameters": {
+                                "lowerMm": 0,
+                                "upperMm": 100
+                            }
+                        },
+                        {
+                            "dependencies": [
+                            ],
+                            "description": "",
+                            "enabled": true,
+                            "id": "b0d4bf2f-9525-4ebb-a355-c933a1d548ae",
+                            "kind": "image_file",
+                            "name": "Image_File_2",
+                            "parameters": {
+                                "path": "camera-0.pgm"
+                            }
+                        },
+                        {
+                            "dependencies": [
+                            ],
+                            "description": "",
+                            "enabled": true,
+                            "id": "e8f301e1-7737-47a9-9609-fdfa95e15cbc",
+                            "kind": "blob",
+                            "name": "Blob_1",
+                            "parameters": {
+                                "connectivity": 8,
+                                "maxArea": null,
+                                "minArea": 1,
+                                "polarity": "bright",
+                                "rejectBorderTouching": false,
+                                "searchRoi": {
+                                },
+                                "threshold": 128
+                            }
+                        },
+                        {
+                            "dependencies": [
+                            ],
+                            "description": "",
+                            "enabled": true,
+                            "id": "c40f282e-26a2-4857-93c4-9f315f6f4126",
+                            "kind": "preprocess",
+                            "name": "Preprocess_1",
+                            "parameters": {
+                                "channel": "gray",
+                                "steps": [
+                                ]
+                            }
+                        }
+                    ]
+                },
+                "sourceSetups": {
+                    "0d781031-0bf7-44e6-b8ac-d4b385f5127f": {
+                        "schemaVersion": 1,
+                        "sourceToolId": "0d781031-0bf7-44e6-b8ac-d4b385f5127f",
+                        "target": {
+                            "cameraId": "a0589194-56f9-425a-8346-1ba313c6e137",
+                            "revision": 2,
+                            "schemaVersion": 1,
+                            "setupId": "1fe26d8d-a2db-46eb-84a0-1da2dcdba993"
+                        }
+                    }
+                }
+            },
+            "description": "",
+            "id": "3438696e-7649-44ba-b938-e35e0ef118b6",
+            "modifiedAt": "2026-10-23T19:22:27.566Z",
+            "name": "Shared editor 0",
+            "recipeVersion": 2,
+            "schemaVersion": 1,
+            "status": "DRAFT"
+        },
+        {
+            "applicationType": "defect_inspection",
+            "calibrationReference": "",
+            "cameraReference": "",
+            "createdAt": "2026-10-22T05:57:48.464Z",
+            "definition": {
+                "calibrationPolicy": "scoped-source/1",
+                "editor": {
+                    "connections": [
+                        {
+                            "sourcePort": "image",
+                            "sourceTool": "9a18807d-68aa-4091-afe0-3c54c91e6b16",
+                            "targetPort": "image",
+                            "targetTool": "36183531-a587-4943-87ee-342b17984b44"
+                        },
+                        {
+                            "sourcePort": "image",
+                            "sourceTool": "9a18807d-68aa-4091-afe0-3c54c91e6b16",
+                            "targetPort": "image",
+                            "targetTool": "69ee1703-b1e7-46d9-b5f5-b509f389cf49"
+                        },
+                        {
+                            "sourcePort": "point",
+                            "sourceTool": "36183531-a587-4943-87ee-342b17984b44",
+                            "targetPort": "p1",
+                            "targetTool": "66c8f485-e37e-428f-aa94-f6b7b497a872"
+                        },
+                        {
+                            "sourcePort": "point",
+                            "sourceTool": "69ee1703-b1e7-46d9-b5f5-b509f389cf49",
+                            "targetPort": "p2",
+                            "targetTool": "66c8f485-e37e-428f-aa94-f6b7b497a872"
+                        },
+                        {
+                            "sourcePort": "image",
+                            "sourceTool": "1fba7164-8781-4d12-b67a-23dee8960b03",
+                            "targetPort": "image",
+                            "targetTool": "6a2c60d7-f5d9-43c7-be30-cbb33e9f8ffa"
+                        }
+                    ],
+                    "schemaVersion": 9,
+                    "tools": [
+                        {
+                            "dependencies": [
+                            ],
+                            "description": "",
+                            "enabled": true,
+                            "id": "9a18807d-68aa-4091-afe0-3c54c91e6b16",
+                            "kind": "image_file",
+                            "name": "Image_File_1",
+                            "parameters": {
+                                "path": "camera-0.pgm"
+                            }
+                        },
+                        {
+                            "dependencies": [
+                            ],
+                            "description": "",
+                            "enabled": true,
+                            "id": "36183531-a587-4943-87ee-342b17984b44",
+                            "kind": "edge_point",
+                            "name": "Edge_Point_1",
+                            "parameters": {
+                                "minContrast": 20,
+                                "polarity": "rising",
+                                "scanRoi": {
+                                    "frameId": "9a18807d-68aa-4091-afe0-3c54c91e6b16/image",
+                                    "geometry": {
+                                        "end": [
+                                            620,
+                                            100
+                                        ],
+                                        "kind": "scan",
+                                        "start": [
+                                            20,
+                                            100
+                                        ],
+                                        "width": 4
+                                    },
+                                    "schemaVersion": 1
+                                },
+                                "selection": "strongest",
+                                "sigmaPx": 1,
+                                "stepPx": 0.5,
+                                "subpixel": true,
+                                "widthStepPx": 1
+                            }
+                        },
+                        {
+                            "dependencies": [
+                            ],
+                            "description": "",
+                            "enabled": true,
+                            "id": "69ee1703-b1e7-46d9-b5f5-b509f389cf49",
+                            "kind": "edge_point",
+                            "name": "Edge_Point_2",
+                            "parameters": {
+                                "minContrast": 20,
+                                "polarity": "falling",
+                                "scanRoi": {
+                                    "frameId": "9a18807d-68aa-4091-afe0-3c54c91e6b16/image",
+                                    "geometry": {
+                                        "end": [
+                                            620,
+                                            100
+                                        ],
+                                        "kind": "scan",
+                                        "start": [
+                                            20,
+                                            100
+                                        ],
+                                        "width": 4
+                                    },
+                                    "schemaVersion": 1
+                                },
+                                "selection": "strongest",
+                                "sigmaPx": 1,
+                                "stepPx": 0.5,
+                                "subpixel": true,
+                                "widthStepPx": 1
+                            }
+                        },
+                        {
+                            "dependencies": [
+                            ],
+                            "description": "",
+                            "enabled": true,
+                            "id": "66c8f485-e37e-428f-aa94-f6b7b497a872",
+                            "kind": "measurement",
+                            "name": "Measurement_1",
+                            "parameters": {
+                                "lowerMm": 0,
+                                "upperMm": 100
+                            }
+                        },
+                        {
+                            "dependencies": [
+                            ],
+                            "description": "",
+                            "enabled": true,
+                            "id": "1fba7164-8781-4d12-b67a-23dee8960b03",
+                            "kind": "image_file",
+                            "name": "Image_File_2",
+                            "parameters": {
+                                "path": "camera-0.pgm"
+                            }
+                        },
+                        {
+                            "dependencies": [
+                            ],
+                            "description": "",
+                            "enabled": true,
+                            "id": "6a2c60d7-f5d9-43c7-be30-cbb33e9f8ffa",
+                            "kind": "blob",
+                            "name": "Blob_1",
+                            "parameters": {
+                                "connectivity": 8,
+                                "maxArea": null,
+                                "minArea": 1,
+                                "polarity": "bright",
+                                "rejectBorderTouching": false,
+                                "searchRoi": {
+                                },
+                                "threshold": 128
+                            }
+                        }
+                    ]
+                },
+                "sourceSetups": {
+                    "9a18807d-68aa-4091-afe0-3c54c91e6b16": {
+                        "schemaVersion": 1,
+                        "sourceToolId": "9a18807d-68aa-4091-afe0-3c54c91e6b16",
+                        "target": {
+                            "cameraId": "a0589194-56f9-425a-8346-1ba313c6e137",
+                            "revision": 2,
+                            "schemaVersion": 1,
+                            "setupId": "1fe26d8d-a2db-46eb-84a0-1da2dcdba993"
+                        }
+                    }
+                }
+            },
+            "description": "",
+            "id": "ae16d275-83c4-4ce6-be36-8ed9f331a439",
+            "modifiedAt": "2026-10-22T05:57:48.510Z",
+            "name": "Shared editor 1",
+            "recipeVersion": 1,
+            "schemaVersion": 1,
+            "status": "DRAFT"
+        },
+        {
+            "applicationType": "measurement",
+            "calibrationReference": "",
+            "cameraReference": "",
+            "createdAt": "2026-10-22T05:57:52.336Z",
+            "definition": {
+                "calibrationPolicy": "scoped-source/1",
+                "editor": {
+                    "connections": [
+                        {
+                            "sourcePort": "image",
+                            "sourceTool": "9852538e-8ec4-4fa2-a065-ceaaf6cb6ef6",
+                            "targetPort": "image",
+                            "targetTool": "0e740686-2eec-4c0d-96c1-acd7474be66a"
+                        },
+                        {
+                            "sourcePort": "image",
+                            "sourceTool": "9852538e-8ec4-4fa2-a065-ceaaf6cb6ef6",
+                            "targetPort": "image",
+                            "targetTool": "b8edcb5c-9f09-421c-8657-f4beb8dc26a5"
+                        },
+                        {
+                            "sourcePort": "point",
+                            "sourceTool": "0e740686-2eec-4c0d-96c1-acd7474be66a",
+                            "targetPort": "p1",
+                            "targetTool": "dc93f30d-2705-4307-9d6b-37aff92d4efa"
+                        },
+                        {
+                            "sourcePort": "point",
+                            "sourceTool": "b8edcb5c-9f09-421c-8657-f4beb8dc26a5",
+                            "targetPort": "p2",
+                            "targetTool": "dc93f30d-2705-4307-9d6b-37aff92d4efa"
+                        },
+                        {
+                            "sourcePort": "image",
+                            "sourceTool": "07e21b9d-3b61-4230-8a00-e21ddf10f227",
+                            "targetPort": "image",
+                            "targetTool": "88ecab75-7f1c-4628-876a-ab0c8fa8c395"
+                        }
+                    ],
+                    "schemaVersion": 9,
+                    "tools": [
+                        {
+                            "dependencies": [
+                            ],
+                            "description": "",
+                            "enabled": true,
+                            "id": "9852538e-8ec4-4fa2-a065-ceaaf6cb6ef6",
+                            "kind": "image_file",
+                            "name": "Image_File_1",
+                            "parameters": {
+                                "path": "camera-0.pgm"
+                            }
+                        },
+                        {
+                            "dependencies": [
+                            ],
+                            "description": "",
+                            "enabled": true,
+                            "id": "0e740686-2eec-4c0d-96c1-acd7474be66a",
+                            "kind": "edge_point",
+                            "name": "Edge_Point_1",
+                            "parameters": {
+                                "minContrast": 20,
+                                "polarity": "rising",
+                                "scanRoi": {
+                                    "frameId": "9852538e-8ec4-4fa2-a065-ceaaf6cb6ef6/image",
+                                    "geometry": {
+                                        "end": [
+                                            620,
+                                            100
+                                        ],
+                                        "kind": "scan",
+                                        "start": [
+                                            20,
+                                            100
+                                        ],
+                                        "width": 4
+                                    },
+                                    "schemaVersion": 1
+                                },
+                                "selection": "strongest",
+                                "sigmaPx": 1,
+                                "stepPx": 0.5,
+                                "subpixel": true,
+                                "widthStepPx": 1
+                            }
+                        },
+                        {
+                            "dependencies": [
+                            ],
+                            "description": "",
+                            "enabled": true,
+                            "id": "b8edcb5c-9f09-421c-8657-f4beb8dc26a5",
+                            "kind": "edge_point",
+                            "name": "Edge_Point_2",
+                            "parameters": {
+                                "minContrast": 20,
+                                "polarity": "falling",
+                                "scanRoi": {
+                                    "frameId": "9852538e-8ec4-4fa2-a065-ceaaf6cb6ef6/image",
+                                    "geometry": {
+                                        "end": [
+                                            620,
+                                            100
+                                        ],
+                                        "kind": "scan",
+                                        "start": [
+                                            20,
+                                            100
+                                        ],
+                                        "width": 4
+                                    },
+                                    "schemaVersion": 1
+                                },
+                                "selection": "strongest",
+                                "sigmaPx": 1,
+                                "stepPx": 0.5,
+                                "subpixel": true,
+                                "widthStepPx": 1
+                            }
+                        },
+                        {
+                            "dependencies": [
+                            ],
+                            "description": "",
+                            "enabled": true,
+                            "id": "dc93f30d-2705-4307-9d6b-37aff92d4efa",
+                            "kind": "measurement",
+                            "name": "Measurement_1",
+                            "parameters": {
+                                "lowerMm": 0,
+                                "upperMm": 100
+                            }
+                        },
+                        {
+                            "dependencies": [
+                            ],
+                            "description": "",
+                            "enabled": true,
+                            "id": "07e21b9d-3b61-4230-8a00-e21ddf10f227",
+                            "kind": "image_file",
+                            "name": "Image_File_2",
+                            "parameters": {
+                                "path": "camera-0.pgm"
+                            }
+                        },
+                        {
+                            "dependencies": [
+                            ],
+                            "description": "",
+                            "enabled": true,
+                            "id": "88ecab75-7f1c-4628-876a-ab0c8fa8c395",
+                            "kind": "blob",
+                            "name": "Blob_1",
+                            "parameters": {
+                                "connectivity": 8,
+                                "maxArea": null,
+                                "minArea": 1,
+                                "polarity": "bright",
+                                "rejectBorderTouching": false,
+                                "searchRoi": {
+                                },
+                                "threshold": 128
+                            }
+                        }
+                    ]
+                },
+                "sourceSetups": {
+                    "9852538e-8ec4-4fa2-a065-ceaaf6cb6ef6": {
+                        "schemaVersion": 1,
+                        "sourceToolId": "9852538e-8ec4-4fa2-a065-ceaaf6cb6ef6",
+                        "target": {
+                            "cameraId": "a0589194-56f9-425a-8346-1ba313c6e137",
+                            "revision": 2,
+                            "schemaVersion": 1,
+                            "setupId": "1fe26d8d-a2db-46eb-84a0-1da2dcdba993"
+                        }
+                    }
+                }
+            },
+            "description": "",
+            "id": "21b5d1d7-1c8f-4b12-8d76-a6a98fa280ca",
+            "modifiedAt": "2026-10-22T05:57:52.385Z",
+            "name": "Shared editor 2",
+            "recipeVersion": 1,
+            "schemaVersion": 1,
+            "status": "DRAFT"
+        }
+    ],
+    "robotType": "",
+    "schemaVersion": 1
+}

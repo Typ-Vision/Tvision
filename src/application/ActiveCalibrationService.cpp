@@ -1,3 +1,4 @@
+#include "application/EditorObservation.hpp"
 #include "ActiveCalibrationService.hpp"
 #include "IndependentCalibrationCapture.hpp"
 #include <QCryptographicHash>
@@ -29,7 +30,8 @@ CalibrationSample sample(const QJsonObject& o,const CoordinateFrame& f){keys(o,{
 QJsonObject selectionJson(const ActiveCalibrationSelection& s){return {{"id",s.id},{"version",s.version},{"contentId",s.contentId},{"revision",s.revision}};}
 ActiveCalibrationSelection selection(const QJsonValue& v){require(v.isObject(),"Invalid active selection");const auto o=v.toObject();keys(o,{"id","version","contentId","revision"});ActiveCalibrationSelection s{text(o,"id"),text(o,"contentId"),integer(o,"version"),integer(o,"revision")};require(hash(s.contentId),"Invalid active content identity");return s;}
 CalibrationModelRecord find(const QVector<CalibrationModelRecord>& records,const QString& id,int version){for(const auto& r:records)if(r.model().dependency().calibrationId==id && r.model().dependency().version==version)return r;throw std::runtime_error("Calibration model not found");}
-QVector<CalibrationModelRecord> decodeRecords(const QJsonObject& o){QVector<CalibrationModelRecord> result;QMap<QString,int> versions;const auto a=o["records"].toArray();require(a.size()<=128,"Calibration history full");for(const auto& v:a){require(v.isObject(),"Invalid model record");auto r=CalibrationModelRecord::decode(v.toObject());const auto& d=r.model().dependency();require(d.version==versions.value(d.calibrationId)+1,"Nonconsecutive calibration history");versions[d.calibrationId]=d.version;result.append(r);}return result;}
+QVector<CalibrationModelRecord> decodeRecords(const QJsonObject& o){
+    editor_observation::Scope observation(editor_observation::CatalogDecode);QVector<CalibrationModelRecord> result;QMap<QString,int> versions;const auto a=o["records"].toArray();require(a.size()<=128,"Calibration history full");for(const auto& v:a){require(v.isObject(),"Invalid model record");auto r=CalibrationModelRecord::decode(v.toObject());const auto& d=r.model().dependency();require(d.version==versions.value(d.calibrationId)+1,"Nonconsecutive calibration history");versions[d.calibrationId]=d.version;result.append(r);}return result;}
 }
 void MeasurementSetup::validate() const {
     for(const auto& s:{id,adapter,lensId,planeId})require(!s.trimmed().isEmpty() && s.size()<=512,"Missing measurement setup identity");
@@ -114,6 +116,7 @@ CalibrationModelRecord CalibrationModelRecord::mapLegacy(const CalibrationModelR
     r.derived_=r.encode();r.original_=original.encode();r.migration_=true;auto envelope=r.encode();envelope.remove("contentId");r.contentId_=digest(envelope);return r;
 }
 CalibrationModelRecord CalibrationModelRecord::decode(const QJsonObject& o){
+    editor_observation::Scope observation(editor_observation::ModelDecode);
     const int schema=integer(o,"schemaVersion");
     if(schema==5){keys(o,{"schemaVersion","policy","original","derived","contentId"});require(o["original"].isObject() && o["derived"].isObject() && o["original"].toObject()["schemaVersion"].toInt()<=3 && o["derived"].toObject()["schemaVersion"].toInt()<=3,"Invalid migration wrapper");const auto original=decode(o["original"].toObject()),derived=decode(o["derived"].toObject());auto r=mapLegacy(original,derived.setup(),derived.name(),derived.recordedAt());require(r.encode()==o,"Migration replay/content mismatch");return r;}
     if(schema==4){keys(o,{"schemaVersion","policy","modelReady","model","setup","image","control","contentId","name","recordedAtUtc","original"});require(o["original"].isObject() && o["original"].toObject()["schemaVersion"].toInt()<=3,"Invalid association origin");auto r=associate(decode(o["original"].toObject()),MeasurementSetup::fromJson(o["setup"].toObject()),text(o,"name"),QDateTime::fromString(text(o,"recordedAtUtc"),Qt::ISODateWithMs));require(r.encode()==o,"Association replay/content mismatch");return r;}
@@ -131,6 +134,7 @@ CalibrationModelRecord CalibrationModelRecord::decode(const QJsonObject& o){
 
 ActiveCalibrationService::ActiveCalibrationService(QString path,QString projectId,ChangeGate gate):path_(std::move(path)),projectId_(std::move(projectId)),gate_(std::move(gate)){require(QFileInfo(path_).isAbsolute() && !projectId_.trimmed().isEmpty() && projectId_.size()<=512 && bool(gate_),"Active calibration requires project/path/change gate");read();}
 QJsonObject ActiveCalibrationService::read() const {
+    editor_observation::Scope observation(editor_observation::CatalogRead);
     if(!QFileInfo::exists(path_))return {{"format","visionflow.active-calibration"},{"schemaVersion",1},{"projectId",projectId_},{"records",QJsonArray{}},{"selection",QJsonValue()},{"revision",0}};
     QFile f(path_);require(f.open(QIODevice::ReadOnly) && f.size()<=4*1024*1024,"Cannot read bounded active calibration catalog");auto bytes=f.read(4*1024*1024+1);require(f.error()==QFileDevice::NoError && bytes.size()<=4*1024*1024,"Active calibration catalog read failed");QJsonParseError error;const auto doc=QJsonDocument::fromJson(bytes,&error);require(error.error==QJsonParseError::NoError && doc.isObject(),"Invalid active calibration JSON");const auto o=doc.object();keys(o,{"format","schemaVersion","projectId","records","selection","revision"});require(text(o,"format")=="visionflow.active-calibration" && integer(o,"schemaVersion")==1 && text(o,"projectId")==projectId_ && o["records"].isArray(),"Active calibration project/schema mismatch");
     require(o["revision"].isDouble() && o["revision"].toDouble()==o["revision"].toInt() && o["revision"].toInt()>=0 && o["revision"].toInt()<=1000000000,"Invalid activation revision");const auto records=decodeRecords(o);

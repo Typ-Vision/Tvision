@@ -1,3 +1,4 @@
+#include "application/EditorObservation.hpp"
 #include "application/MeasurementDiagnostic.hpp"
 #include "application/CircleToolService.hpp"
 #include "application/CalibrationWorkflow.hpp"
@@ -118,6 +119,7 @@ void MainWindow::updateOperatorMode(bool active) {
     }
 }
 void MainWindow::refreshRuntime() {
+    editor_observation::Scope observation(editor_observation::Runtime);
     if(!runtimeStatus_)return;
     if(runtime_ && runtimePath_==service_.path() && service_.activeRecipe())runtime_->observeInstallation(*service_.activeRecipe());
     if(runtime_ && runtimePath_!=service_.path() && !runtimeJobs_.busy() && !runtime_->busy() && !(plc_ && plc_->blocking())) {

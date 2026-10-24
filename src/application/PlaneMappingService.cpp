@@ -1,3 +1,4 @@
+#include "application/EditorObservation.hpp"
 #include "PlaneMappingService.hpp"
 #include <QJsonArray>
 #include <QJsonDocument>
@@ -105,6 +106,7 @@ QJsonObject PlaneMappingService::encode(const PlaneMapping& m) {
     return result;
 }
 PlaneMapping PlaneMappingService::decode(const QJsonObject& j) {
+    editor_observation::Scope observation(editor_observation::PlaneReplay);
     const bool framed=number(j,"schemaVersion")==3;
     const bool circles=number(j,"schemaVersion")==2 || framed;
     QSet<QString> fields{"schemaVersion","model","solver","coordinateSpace","target","source","width","height","pixels","worldMm","regionPixels","H","fitRmsMm","inverseRmsPx","maxInversePx","fitLimitPx"};if(circles)fields.insert("pixelHash");if(framed){fields.insert("observation");fields.insert("observationId");}keys(j,fields);

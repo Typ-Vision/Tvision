@@ -1,3 +1,4 @@
+#include "application/EditorObservation.hpp"
 #include "ProjectService.hpp"
 #include "BackendCapabilities.hpp"
 #include "domain/ToolRegistry.hpp"
@@ -90,6 +91,7 @@ void ProjectService::selectRecipe(const QString& id) {
     fail("Reçete bulunamadı.");
 }
 void ProjectService::save() {
+    editor_observation::Scope observation(editor_observation::ProjectSave);
     project();
     if (!dirty_) return;
     QLockFile lock(path_+".lock");

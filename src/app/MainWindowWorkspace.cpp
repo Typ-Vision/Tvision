@@ -1,3 +1,4 @@
+#include "application/EditorObservation.hpp"
 #include "CameraManager.hpp"
 #include "MainWindow.hpp"
 #include <QAction>
@@ -278,6 +279,7 @@ void MainWindow::refreshRecipes() {
     recipeCount_->setText(recipeCount_->text()+"\nEditörde: "+(service_.activeRecipe() ? service_.activeRecipe()->name : QString("yok"))+" | Runtime yüklü: "+loaded);
 }
 void MainWindow::refreshWorkspace() {
+    editor_observation::Scope observation(editor_observation::Workspace);
     workspaceError_->hide(); saveAction_->setEnabled(service_.hasProject() && service_.dirty());
     statusBar()->showMessage("Hazır — Tool yürütmesi: Run Flow / Results.");
     const bool has=service_.hasProject(); const auto* active=service_.activeRecipe();

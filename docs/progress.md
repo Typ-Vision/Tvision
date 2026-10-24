@@ -4,11 +4,12 @@
 
 ## Devam noktası
 
-**Öncelik: [CCUX-23b-1 ölçüm altyapısı](architecture/camera-setup/23-editor-responsiveness.md).**
-[CCUX-PLAN-06](archive/2026-10-24-ccux-plan-06.md): Sol 6.1 için altı sıralı kart;
-uygulama başlamadı. [23a analizi](archive/2026-10-23-ccux-23a.md) tamamlandı:
-kamerasız Save 961 ms, parametre 509 ms; tekrarlı replay/refresh.
-Bunlar önceki ölçümler; kanıt `build/ccux/ccux-23a/`.
+**Öncelik: [CCUX-23b-2](architecture/camera-setup/23-editor-responsiveness.md).**
+[23b-1](archive/2026-10-24-ccux-23b-1.md) tamamlandı:
+dört vaka, dirty/no-op Save, parametre/Add/ROI; 1+20 örnek, 0 hata, exit 0.
+Kanıt `build/ccux/ccux-23b-1/`; Release ve ilgili altı test geçti.
+[PLAN-06](archive/2026-10-24-ccux-plan-06.md): altı sıralı kart.
+[23a analizi](archive/2026-10-23-ccux-23a.md) korunur.
 Kullanıcı plaka kalibrasyonunu başardı; bağımsız mm kabulü ayrıdır.
 
 **[CCUX-15j fiziksel kabul açık](archive/2026-10-23-ccux-15j.md):**

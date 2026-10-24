@@ -1,3 +1,4 @@
+#include "application/EditorObservation.hpp"
 #include "MainWindow.hpp"
 #include "CalibrationOverview.hpp"
 namespace visionflow {
@@ -19,6 +20,7 @@ MeasurementWorkspace* MainWindow::measurementWorkspace(){
         }return measurementWorkspace_.get();
 }
 void MainWindow::refreshCalibration() {
+    editor_observation::Scope observation(editor_observation::Calibration);
     if(calibrationOverview_)calibrationOverview_->refresh();
 }
 }

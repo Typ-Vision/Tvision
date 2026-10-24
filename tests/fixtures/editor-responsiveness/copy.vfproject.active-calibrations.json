@@ -1,0 +1,1085 @@
+{
+    "format": "visionflow.active-calibration",
+    "projectId": "4f91a472-519e-45c8-898f-fd613eedeb37",
+    "records": [
+        {
+            "contentId": "af3265b91b2ba8ae9c148fdde6464eea9d8532a9abaef89b74485f43b80fe52d",
+            "control": {
+                "accepted": null,
+                "limitMm": null,
+                "residualsMm": [
+                ],
+                "samples": [
+                ]
+            },
+            "experimental": {
+                "acquisition": {
+                    "acquisitionId": "4fdc2d4058b3fbb353e1c9d0f5fd79abb2787317d0bd527c2a75b603e7707315",
+                    "autoModeReadbackPhase": "Off verified before TriggerMode On; auto controls may become unavailable in triggered mode",
+                    "backend": "oecs-c-api",
+                    "burstCount": 1,
+                    "completedAtUtc": "2026-10-22T05:57:44.502Z",
+                    "contentId": "cfffe4f2103b4a487feff5949accbe30c2810e5c5f43087d590e248821b91d28",
+                    "deviceTicks": "123",
+                    "embeddedMetadataEnabled": false,
+                    "frameId": "ac40ff73-c137-497a-8684-6ac84cd2ce93",
+                    "hardwareFrameId": "7",
+                    "height": 2048,
+                    "model": "COE-050-M-USB-050-IR-C",
+                    "notice": "Deneysel kamera — tetik eşleşmesi doğrulanmadı",
+                    "originX": 0,
+                    "originY": 0,
+                    "pixelFormat": "Mono8",
+                    "policy": "UnverifiedNextArrival",
+                    "productionAdmission": false,
+                    "profileId": "dade2983-93f0-4225-a030-83cec2085e26",
+                    "profileRevision": 2,
+                    "profileSnapshot": {
+                        "cameraId": "a0589194-56f9-425a-8346-1ba313c6e137",
+                        "id": "dade2983-93f0-4225-a030-83cec2085e26",
+                        "name": "Synthetic experiment",
+                        "requested": {
+                            "exposureAuto": "off",
+                            "exposureTimeUs": 5000,
+                            "gain": 0,
+                            "gainAuto": "off",
+                            "illumination": "",
+                            "pixelFormat": "Mono8",
+                            "schemaVersion": 1,
+                            "trigger": {
+                                "enabled": true,
+                                "selector": "FrameBurstStart",
+                                "source": "Software"
+                            }
+                        },
+                        "revision": 2,
+                        "schemaVersion": 1,
+                        "setupId": "1fe26d8d-a2db-46eb-84a0-1da2dcdba993"
+                    },
+                    "readback": {
+                        "geometry": {
+                            "binning": {
+                                "evidence": "reported",
+                                "x": 1,
+                                "y": 1
+                            },
+                            "decimation": {
+                                "evidence": "reported",
+                                "x": 1,
+                                "y": 1
+                            },
+                            "height": 2048,
+                            "offset": {
+                                "evidence": "reported",
+                                "x": 0,
+                                "y": 0
+                            },
+                            "reverse": {
+                                "evidence": "reported",
+                                "x": false,
+                                "y": false
+                            },
+                            "schemaVersion": 1,
+                            "width": 2448
+                        },
+                        "schemaVersion": 1,
+                        "settings": {
+                            "exposureAuto": "off",
+                            "exposureTimeUs": 5000,
+                            "gain": 0,
+                            "gainAuto": "off",
+                            "illumination": "",
+                            "pixelFormat": "Mono8",
+                            "schemaVersion": 1,
+                            "trigger": {
+                                "enabled": true,
+                                "selector": "FrameBurstStart",
+                                "source": "Software"
+                            }
+                        }
+                    },
+                    "receivedBytes": "5013504",
+                    "runtimeSha256": "a5d161851573a3c2ced7b88603168c740e7bc0c2e4164621226ed1254dfec81d",
+                    "schema": "visionflow.oecs-experimental1",
+                    "sdkVersion": "1",
+                    "serial": "CCUX14-0",
+                    "settings": {
+                        "exposureAuto": "off",
+                        "exposureTimeUs": 5000,
+                        "gain": 0,
+                        "gainAuto": "off",
+                        "illumination": "",
+                        "pixelFormat": "Mono8",
+                        "schemaVersion": 1,
+                        "trigger": {
+                            "enabled": true,
+                            "selector": "FrameBurstStart",
+                            "source": "Software"
+                        }
+                    },
+                    "sourceId": "calibration-session:8cf03e6a-b25b-413a-af3b-f14e11447722",
+                    "stride": "2448",
+                    "triggerAssociationVerified": false,
+                    "triggerCache": false,
+                    "triggerDelay": 0,
+                    "triggerDelayUnit": "unreported",
+                    "vendor": "Opto Engineering Srl",
+                    "width": 2448
+                },
+                "camera": {
+                    "device": {
+                        "adapter": "gentl",
+                        "capabilities": {
+                            "binning": false,
+                            "resolution": false,
+                            "sensorRoi": false,
+                            "softwareCapture": false
+                        },
+                        "confidence": "unavailable",
+                        "providerId": "",
+                        "revision": 1,
+                        "schemaVersion": 1
+                    },
+                    "id": "a0589194-56f9-425a-8346-1ba313c6e137",
+                    "name": "Fixture camera",
+                    "physical": {
+                        "confidence": "serial_reported",
+                        "model": "COE-050-M-USB-050-IR-C",
+                        "schemaVersion": 1,
+                        "serial": "CCUX14-0",
+                        "vendor": "Opto Engineering Srl"
+                    },
+                    "schemaVersion": 2
+                },
+                "origin": "camera_acquired",
+                "physicalAcceptance": false,
+                "profile": {
+                    "cameraId": "a0589194-56f9-425a-8346-1ba313c6e137",
+                    "id": "dade2983-93f0-4225-a030-83cec2085e26",
+                    "name": "Synthetic experiment",
+                    "requested": {
+                        "exposureAuto": "off",
+                        "exposureTimeUs": 5000,
+                        "gain": 0,
+                        "gainAuto": "off",
+                        "illumination": "",
+                        "pixelFormat": "Mono8",
+                        "schemaVersion": 1,
+                        "trigger": {
+                            "enabled": true,
+                            "selector": "FrameBurstStart",
+                            "source": "Software"
+                        }
+                    },
+                    "revision": 2,
+                    "schemaVersion": 1,
+                    "setupId": "1fe26d8d-a2db-46eb-84a0-1da2dcdba993"
+                },
+                "schemaVersion": 1,
+                "setup": {
+                    "cameraId": "a0589194-56f9-425a-8346-1ba313c6e137",
+                    "deviceRevision": 1,
+                    "geometry": {
+                        "binning": {
+                            "x": 1,
+                            "y": 1
+                        },
+                        "complete": true,
+                        "decimation": {
+                            "x": 1,
+                            "y": 1
+                        },
+                        "height": 2048,
+                        "reverse": {
+                            "x": false,
+                            "y": false
+                        },
+                        "schemaVersion": 2,
+                        "sensorRoi": {
+                            "height": 2048,
+                            "width": 2448,
+                            "x": 0,
+                            "y": 0
+                        },
+                        "width": 2448
+                    },
+                    "id": "1fe26d8d-a2db-46eb-84a0-1da2dcdba993",
+                    "name": "Synthetic setup",
+                    "opticalProfile": "lens",
+                    "revision": 2,
+                    "schemaVersion": 1,
+                    "workingPlane": "plane"
+                }
+            },
+            "image": {
+                "frameId": "ac40ff73-c137-497a-8684-6ac84cd2ce93",
+                "origin": "experimental_acquired",
+                "pixelHash": "cfffe4f2103b4a487feff5949accbe30c2810e5c5f43087d590e248821b91d28",
+                "sourceToolId": "calibration-session:8cf03e6a-b25b-413a-af3b-f14e11447722"
+            },
+            "model": {
+                "dependency": {
+                    "calibrationId": "35a3c4c0-f996-471c-860a-f51f85de2814",
+                    "cameraId": "calibration-session:8cf03e6a-b25b-413a-af3b-f14e11447722",
+                    "contentId": "f3d0e91c9e220e8c84603bf5e37932fde7add56170162c5e464779c5ba84fd42",
+                    "height": 2048,
+                    "lensId": "lens",
+                    "modelType": "raw_planar_homography",
+                    "modelVersion": 1,
+                    "schemaVersion": 2,
+                    "source": {
+                        "axes": "x-right-y-down",
+                        "id": "image",
+                        "unit": "px"
+                    },
+                    "target": {
+                        "axes": "x-right-y-down",
+                        "id": "plane/mm",
+                        "unit": "mm"
+                    },
+                    "version": 1,
+                    "width": 2448,
+                    "workingPlaneId": "plane"
+                },
+                "evidenceOrigin": "acquisition",
+                "holdout": [
+                ],
+                "lensPolicy": "raw_assumed_negligible",
+                "mapping": {
+                    "H": [
+                        -0.16671661953679193,
+                        3.1972075913501476e-05,
+                        98.28170582928792,
+                        1.9131364915415743e-05,
+                        -0.16676247392747384,
+                        68.28286885862713,
+                        8.310381147629822e-07,
+                        8.201803147757638e-07,
+                        1
+                    ],
+                    "coordinateSpace": "raw_pixel_centres",
+                    "fitLimitPx": 1,
+                    "fitRmsMm": 0.006518732859319189,
+                    "height": 2048,
+                    "inverseRmsPx": 0.03910757102064326,
+                    "maxInversePx": 0.0829934135803597,
+                    "model": "raw_planar_homography/1",
+                    "pixels": [
+                        [
+                            589.5767822265625,
+                            409.5338134765625
+                        ],
+                        [
+                            529.5680541992188,
+                            409.51361083984375
+                        ],
+                        [
+                            469.523193359375,
+                            409.5356750488281
+                        ],
+                        [
+                            409.4967956542969,
+                            409.5290832519531
+                        ],
+                        [
+                            349.4683532714844,
+                            409.5455322265625
+                        ],
+                        [
+                            289.4872131347656,
+                            409.5164489746094
+                        ],
+                        [
+                            229.55442810058594,
+                            409.526611328125
+                        ],
+                        [
+                            169.57806396484375,
+                            409.5382995605469
+                        ],
+                        [
+                            109.5537109375,
+                            409.5323181152344
+                        ],
+                        [
+                            589.5729370117188,
+                            349.48529052734375
+                        ],
+                        [
+                            529.5532836914062,
+                            349.5054931640625
+                        ],
+                        [
+                            469.5401306152344,
+                            349.4858093261719
+                        ],
+                        [
+                            409.50103759765625,
+                            349.5134582519531
+                        ],
+                        [
+                            349.4709167480469,
+                            349.5032653808594
+                        ],
+                        [
+                            289.50115966796875,
+                            349.50250244140625
+                        ],
+                        [
+                            229.5506591796875,
+                            349.50848388671875
+                        ],
+                        [
+                            169.5756378173828,
+                            349.50946044921875
+                        ],
+                        [
+                            109.53900909423828,
+                            349.4975280761719
+                        ],
+                        [
+                            589.5734252929688,
+                            289.4852294921875
+                        ],
+                        [
+                            529.565185546875,
+                            289.4654541015625
+                        ],
+                        [
+                            469.53076171875,
+                            289.48321533203125
+                        ],
+                        [
+                            409.5081787109375,
+                            289.4659423828125
+                        ],
+                        [
+                            349.47320556640625,
+                            289.48577880859375
+                        ],
+                        [
+                            289.4982604980469,
+                            289.46563720703125
+                        ],
+                        [
+                            229.5498809814453,
+                            289.47393798828125
+                        ],
+                        [
+                            169.5652618408203,
+                            289.47149658203125
+                        ],
+                        [
+                            109.540283203125,
+                            289.4764404296875
+                        ],
+                        [
+                            589.574951171875,
+                            229.49072265625
+                        ],
+                        [
+                            529.5617065429688,
+                            229.5022735595703
+                        ],
+                        [
+                            469.5300598144531,
+                            229.4736785888672
+                        ],
+                        [
+                            409.49053955078125,
+                            229.50082397460938
+                        ],
+                        [
+                            349.4647521972656,
+                            229.4991455078125
+                        ],
+                        [
+                            289.4995422363281,
+                            229.49607849121094
+                        ],
+                        [
+                            229.53158569335938,
+                            229.499267578125
+                        ],
+                        [
+                            169.59523010253906,
+                            229.50698852539062
+                        ],
+                        [
+                            109.55782318115234,
+                            229.4989471435547
+                        ],
+                        [
+                            589.576416015625,
+                            169.53578186035156
+                        ],
+                        [
+                            529.5589599609375,
+                            169.53207397460938
+                        ],
+                        [
+                            469.5289611816406,
+                            169.5463409423828
+                        ],
+                        [
+                            409.5091552734375,
+                            169.53257751464844
+                        ],
+                        [
+                            349.4699401855469,
+                            169.55384826660156
+                        ],
+                        [
+                            289.4954833984375,
+                            169.53541564941406
+                        ],
+                        [
+                            229.55284118652344,
+                            169.54933166503906
+                        ],
+                        [
+                            169.57913208007812,
+                            169.5465545654297
+                        ],
+                        [
+                            109.54818725585938,
+                            169.54347229003906
+                        ],
+                        [
+                            589.570068359375,
+                            109.59296417236328
+                        ],
+                        [
+                            529.5567626953125,
+                            109.58734893798828
+                        ],
+                        [
+                            469.5343933105469,
+                            109.58387756347656
+                        ],
+                        [
+                            409.49530029296875,
+                            109.58265686035156
+                        ],
+                        [
+                            349.4760437011719,
+                            109.56060791015625
+                        ],
+                        [
+                            289.5010070800781,
+                            109.6010971069336
+                        ],
+                        [
+                            229.54507446289062,
+                            109.5853042602539
+                        ],
+                        [
+                            169.58346557617188,
+                            109.568115234375
+                        ],
+                        [
+                            109.55459594726562,
+                            109.58707427978516
+                        ]
+                    ],
+                    "regionPixels": [
+                        [
+                            589.5767822265625,
+                            409.5338134765625
+                        ],
+                        [
+                            349.4683532714844,
+                            409.5455322265625
+                        ],
+                        [
+                            169.57806396484375,
+                            409.5382995605469
+                        ],
+                        [
+                            109.5537109375,
+                            409.5323181152344
+                        ],
+                        [
+                            109.53900909423828,
+                            349.4975280761719
+                        ],
+                        [
+                            109.540283203125,
+                            289.4764404296875
+                        ],
+                        [
+                            109.54818725585938,
+                            169.54347229003906
+                        ],
+                        [
+                            109.55459594726562,
+                            109.58707427978516
+                        ],
+                        [
+                            169.58346557617188,
+                            109.568115234375
+                        ],
+                        [
+                            349.4760437011719,
+                            109.56060791015625
+                        ],
+                        [
+                            589.570068359375,
+                            109.59296417236328
+                        ],
+                        [
+                            589.576416015625,
+                            169.53578186035156
+                        ]
+                    ],
+                    "schemaVersion": 1,
+                    "solver": "opencv5.direct_homography/1",
+                    "source": {
+                        "completedAtUtc": "2026-10-22T05:57:44.502Z",
+                        "coordinateSystemId": "image",
+                        "cycleId": "experimental-preview",
+                        "frameId": "ac40ff73-c137-497a-8684-6ac84cd2ce93",
+                        "sourceId": "calibration-session:8cf03e6a-b25b-413a-af3b-f14e11447722"
+                    },
+                    "target": {
+                        "axes": "columns_rows",
+                        "columns": 9,
+                        "id": "fixture board",
+                        "origin": "corner_1",
+                        "rows": 6,
+                        "squareMm": 10
+                    },
+                    "width": 2448,
+                    "worldMm": [
+                        [
+                            0,
+                            0
+                        ],
+                        [
+                            10,
+                            0
+                        ],
+                        [
+                            20,
+                            0
+                        ],
+                        [
+                            30,
+                            0
+                        ],
+                        [
+                            40,
+                            0
+                        ],
+                        [
+                            50,
+                            0
+                        ],
+                        [
+                            60,
+                            0
+                        ],
+                        [
+                            70,
+                            0
+                        ],
+                        [
+                            80,
+                            0
+                        ],
+                        [
+                            0,
+                            10
+                        ],
+                        [
+                            10,
+                            10
+                        ],
+                        [
+                            20,
+                            10
+                        ],
+                        [
+                            30,
+                            10
+                        ],
+                        [
+                            40,
+                            10
+                        ],
+                        [
+                            50,
+                            10
+                        ],
+                        [
+                            60,
+                            10
+                        ],
+                        [
+                            70,
+                            10
+                        ],
+                        [
+                            80,
+                            10
+                        ],
+                        [
+                            0,
+                            20
+                        ],
+                        [
+                            10,
+                            20
+                        ],
+                        [
+                            20,
+                            20
+                        ],
+                        [
+                            30,
+                            20
+                        ],
+                        [
+                            40,
+                            20
+                        ],
+                        [
+                            50,
+                            20
+                        ],
+                        [
+                            60,
+                            20
+                        ],
+                        [
+                            70,
+                            20
+                        ],
+                        [
+                            80,
+                            20
+                        ],
+                        [
+                            0,
+                            30
+                        ],
+                        [
+                            10,
+                            30
+                        ],
+                        [
+                            20,
+                            30
+                        ],
+                        [
+                            30,
+                            30
+                        ],
+                        [
+                            40,
+                            30
+                        ],
+                        [
+                            50,
+                            30
+                        ],
+                        [
+                            60,
+                            30
+                        ],
+                        [
+                            70,
+                            30
+                        ],
+                        [
+                            80,
+                            30
+                        ],
+                        [
+                            0,
+                            40
+                        ],
+                        [
+                            10,
+                            40
+                        ],
+                        [
+                            20,
+                            40
+                        ],
+                        [
+                            30,
+                            40
+                        ],
+                        [
+                            40,
+                            40
+                        ],
+                        [
+                            50,
+                            40
+                        ],
+                        [
+                            60,
+                            40
+                        ],
+                        [
+                            70,
+                            40
+                        ],
+                        [
+                            80,
+                            40
+                        ],
+                        [
+                            0,
+                            50
+                        ],
+                        [
+                            10,
+                            50
+                        ],
+                        [
+                            20,
+                            50
+                        ],
+                        [
+                            30,
+                            50
+                        ],
+                        [
+                            40,
+                            50
+                        ],
+                        [
+                            50,
+                            50
+                        ],
+                        [
+                            60,
+                            50
+                        ],
+                        [
+                            70,
+                            50
+                        ],
+                        [
+                            80,
+                            50
+                        ]
+                    ]
+                },
+                "maxErrorMm": 0,
+                "maxResidualMm": 0,
+                "model": "raw_planar_homography/1",
+                "rmsMm": 0,
+                "schemaVersion": 2,
+                "validated": false
+            },
+            "modelReady": true,
+            "policy": "experimental-model-ready/1",
+            "schemaVersion": 6,
+            "setup": {
+                "adapter": "gentl",
+                "configId": "b56feff8475f5c4e4fd4d05e5d836e4492176c920a57b9a36466901bc2481609",
+                "height": 2048,
+                "id": "1fe26d8d-a2db-46eb-84a0-1da2dcdba993/2",
+                "lensId": "lens",
+                "planeId": "plane",
+                "schemaVersion": 1,
+                "source": {
+                    "axes": "down",
+                    "id": "image",
+                    "unit": "px"
+                },
+                "target": {
+                    "axes": "down",
+                    "id": "plane/mm",
+                    "unit": "mm"
+                },
+                "width": 2448
+            }
+        },
+        {
+            "contentId": "7b3a2bbc97aff4c39424d11f44f48d997c12a7fa8715367df0ee4cb65da3ce2a",
+            "control": {
+                "accepted": null,
+                "limitMm": null,
+                "residualsMm": [
+                ],
+                "samples": [
+                ]
+            },
+            "experimental": {
+                "acquisition": {
+                    "acquisitionId": "4fdc2d4058b3fbb353e1c9d0f5fd79abb2787317d0bd527c2a75b603e7707315",
+                    "autoModeReadbackPhase": "Off verified before TriggerMode On; auto controls may become unavailable in triggered mode",
+                    "backend": "oecs-c-api",
+                    "burstCount": 1,
+                    "completedAtUtc": "2026-10-22T05:57:44.981Z",
+                    "contentId": "a41b08260efca79c3bf12b8902325c786c65285b48f8829b5546824747e7dfcb",
+                    "deviceTicks": "123",
+                    "embeddedMetadataEnabled": false,
+                    "frameId": "457fb1aa-8918-45bd-aa20-4e98a040860e",
+                    "hardwareFrameId": "7",
+                    "height": 2048,
+                    "model": "COE-050-M-USB-050-IR-C",
+                    "notice": "Deneysel kamera — tetik eşleşmesi doğrulanmadı",
+                    "originX": 0,
+                    "originY": 0,
+                    "pixelFormat": "Mono8",
+                    "policy": "UnverifiedNextArrival",
+                    "productionAdmission": false,
+                    "profileId": "dade2983-93f0-4225-a030-83cec2085e26",
+                    "profileRevision": 2,
+                    "profileSnapshot": {
+                        "cameraId": "a0589194-56f9-425a-8346-1ba313c6e137",
+                        "id": "dade2983-93f0-4225-a030-83cec2085e26",
+                        "name": "Synthetic experiment",
+                        "requested": {
+                            "exposureAuto": "off",
+                            "exposureTimeUs": 5000,
+                            "gain": 0,
+                            "gainAuto": "off",
+                            "illumination": "",
+                            "pixelFormat": "Mono8",
+                            "schemaVersion": 1,
+                            "trigger": {
+                                "enabled": true,
+                                "selector": "FrameBurstStart",
+                                "source": "Software"
+                            }
+                        },
+                        "revision": 2,
+                        "schemaVersion": 1,
+                        "setupId": "1fe26d8d-a2db-46eb-84a0-1da2dcdba993"
+                    },
+                    "readback": {
+                        "geometry": {
+                            "binning": {
+                                "evidence": "reported",
+                                "x": 1,
+                                "y": 1
+                            },
+                            "decimation": {
+                                "evidence": "reported",
+                                "x": 1,
+                                "y": 1
+                            },
+                            "height": 2048,
+                            "offset": {
+                                "evidence": "reported",
+                                "x": 0,
+                                "y": 0
+                            },
+                            "reverse": {
+                                "evidence": "reported",
+                                "x": false,
+                                "y": false
+                            },
+                            "schemaVersion": 1,
+                            "width": 2448
+                        },
+                        "schemaVersion": 1,
+                        "settings": {
+                            "exposureAuto": "off",
+                            "exposureTimeUs": 5000,
+                            "gain": 0,
+                            "gainAuto": "off",
+                            "illumination": "",
+                            "pixelFormat": "Mono8",
+                            "schemaVersion": 1,
+                            "trigger": {
+                                "enabled": true,
+                                "selector": "FrameBurstStart",
+                                "source": "Software"
+                            }
+                        }
+                    },
+                    "receivedBytes": "5013504",
+                    "runtimeSha256": "a5d161851573a3c2ced7b88603168c740e7bc0c2e4164621226ed1254dfec81d",
+                    "schema": "visionflow.oecs-experimental1",
+                    "sdkVersion": "1",
+                    "serial": "CCUX14-0",
+                    "settings": {
+                        "exposureAuto": "off",
+                        "exposureTimeUs": 5000,
+                        "gain": 0,
+                        "gainAuto": "off",
+                        "illumination": "",
+                        "pixelFormat": "Mono8",
+                        "schemaVersion": 1,
+                        "trigger": {
+                            "enabled": true,
+                            "selector": "FrameBurstStart",
+                            "source": "Software"
+                        }
+                    },
+                    "sourceId": "calibration-session:8cf03e6a-b25b-413a-af3b-f14e11447722",
+                    "stride": "2448",
+                    "triggerAssociationVerified": false,
+                    "triggerCache": false,
+                    "triggerDelay": 0,
+                    "triggerDelayUnit": "unreported",
+                    "vendor": "Opto Engineering Srl",
+                    "width": 2448
+                },
+                "camera": {
+                    "device": {
+                        "adapter": "gentl",
+                        "capabilities": {
+                            "binning": false,
+                            "resolution": false,
+                            "sensorRoi": false,
+                            "softwareCapture": false
+                        },
+                        "confidence": "unavailable",
+                        "providerId": "",
+                        "revision": 1,
+                        "schemaVersion": 1
+                    },
+                    "id": "a0589194-56f9-425a-8346-1ba313c6e137",
+                    "name": "Fixture camera",
+                    "physical": {
+                        "confidence": "serial_reported",
+                        "model": "COE-050-M-USB-050-IR-C",
+                        "schemaVersion": 1,
+                        "serial": "CCUX14-0",
+                        "vendor": "Opto Engineering Srl"
+                    },
+                    "schemaVersion": 2
+                },
+                "origin": "camera_acquired",
+                "physicalAcceptance": false,
+                "profile": {
+                    "cameraId": "a0589194-56f9-425a-8346-1ba313c6e137",
+                    "id": "dade2983-93f0-4225-a030-83cec2085e26",
+                    "name": "Synthetic experiment",
+                    "requested": {
+                        "exposureAuto": "off",
+                        "exposureTimeUs": 5000,
+                        "gain": 0,
+                        "gainAuto": "off",
+                        "illumination": "",
+                        "pixelFormat": "Mono8",
+                        "schemaVersion": 1,
+                        "trigger": {
+                            "enabled": true,
+                            "selector": "FrameBurstStart",
+                            "source": "Software"
+                        }
+                    },
+                    "revision": 2,
+                    "schemaVersion": 1,
+                    "setupId": "1fe26d8d-a2db-46eb-84a0-1da2dcdba993"
+                },
+                "schemaVersion": 1,
+                "setup": {
+                    "cameraId": "a0589194-56f9-425a-8346-1ba313c6e137",
+                    "deviceRevision": 1,
+                    "geometry": {
+                        "binning": {
+                            "x": 1,
+                            "y": 1
+                        },
+                        "complete": true,
+                        "decimation": {
+                            "x": 1,
+                            "y": 1
+                        },
+                        "height": 2048,
+                        "reverse": {
+                            "x": false,
+                            "y": false
+                        },
+                        "schemaVersion": 2,
+                        "sensorRoi": {
+                            "height": 2048,
+                            "width": 2448,
+                            "x": 0,
+                            "y": 0
+                        },
+                        "width": 2448
+                    },
+                    "id": "1fe26d8d-a2db-46eb-84a0-1da2dcdba993",
+                    "name": "Synthetic setup",
+                    "opticalProfile": "lens",
+                    "revision": 2,
+                    "schemaVersion": 1,
+                    "workingPlane": "plane"
+                }
+            },
+            "image": {
+                "frameId": "457fb1aa-8918-45bd-aa20-4e98a040860e",
+                "origin": "experimental_acquired",
+                "pixelHash": "a41b08260efca79c3bf12b8902325c786c65285b48f8829b5546824747e7dfcb",
+                "sourceToolId": "calibration-session:8cf03e6a-b25b-413a-af3b-f14e11447722"
+            },
+            "model": {
+                "dependency": {
+                    "calibrationId": "ca9e5c8f-5955-4ffb-a859-75f5bcecdebc",
+                    "cameraId": "calibration-session:8cf03e6a-b25b-413a-af3b-f14e11447722",
+                    "contentId": "b574c36ad7dac47b67cfa2da2be05c97c71d75e909955bf23fae355b997d4c6e",
+                    "height": 2048,
+                    "lensId": "lens",
+                    "schemaVersion": 1,
+                    "source": {
+                        "axes": "x-right-y-down",
+                        "id": "image",
+                        "unit": "px"
+                    },
+                    "target": {
+                        "axes": "x-right-y-down",
+                        "id": "plane/mm",
+                        "unit": "mm"
+                    },
+                    "version": 1,
+                    "width": 2448,
+                    "workingPlaneId": "plane"
+                },
+                "holdout": [
+                ],
+                "maxErrorMm": 0,
+                "mmPerPx": 0.025,
+                "model": "uniform_planar_scale/1",
+                "rmsMm": 0,
+                "schemaVersion": 1,
+                "teaching": {
+                    "id": "selected-pair",
+                    "knownMm": 10,
+                    "x1": 119.5,
+                    "x2": 519.5,
+                    "y1": 100,
+                    "y2": 100
+                },
+                "validated": false
+            },
+            "modelReady": true,
+            "policy": "experimental-model-ready/1",
+            "schemaVersion": 6,
+            "setup": {
+                "adapter": "gentl",
+                "configId": "b56feff8475f5c4e4fd4d05e5d836e4492176c920a57b9a36466901bc2481609",
+                "height": 2048,
+                "id": "1fe26d8d-a2db-46eb-84a0-1da2dcdba993/2",
+                "lensId": "lens",
+                "planeId": "plane",
+                "schemaVersion": 1,
+                "source": {
+                    "axes": "down",
+                    "id": "image",
+                    "unit": "px"
+                },
+                "target": {
+                    "axes": "down",
+                    "id": "plane/mm",
+                    "unit": "mm"
+                },
+                "width": 2448
+            }
+        }
+    ],
+    "revision": 0,
+    "schemaVersion": 1,
+    "selection": null
+}

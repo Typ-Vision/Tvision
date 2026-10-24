@@ -1,3 +1,4 @@
+#include "application/EditorObservation.hpp"
 #include "ProjectRepository.hpp"
 #include <QFile>
 #include <QJsonArray>
@@ -96,6 +97,7 @@ Project ProjectRepository::load(const QString& path) const {
 void ProjectRepository::save(const QString& path, const Project& project) const {
     const auto bytes=encode(project);
     require(bytes.size()<=16*1024*1024,"Proje dosyası 16 MB sınırını aşıyor.");
+    editor_observation::Scope observation(editor_observation::AtomicWrite);
     QSaveFile file(path);
     file.setDirectWriteFallback(false);
     if (!file.open(QIODevice::WriteOnly)) require(false,"Proje kaydedilemiyor: " + file.errorString());

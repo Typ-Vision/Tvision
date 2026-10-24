@@ -1,3 +1,4 @@
+#include "application/EditorObservation.hpp"
 #include "application/CalibrationWorkflow.hpp"
 #include "application/ExperimentalOecsAcquisition.hpp"
 #include "application/CircleToolService.hpp"
@@ -173,6 +174,7 @@ void MainWindow::showFlowMenu(const QPoint& position) {
     menu->popup(flowTools_->viewport()->mapToGlobal(position));
 }
 void MainWindow::refreshEditor() {
+    editor_observation::Scope observation(editor_observation::Editor);
     syncEditorCameras();
     const auto* recipe=service_.activeRecipe(); const QString recipeId=recipe ? service_.project().id+"/"+recipe->id : "";
     if (recipeId!=editorRecipeId_) {editorSession_.sourceFrames.clear();editorSession_.frame.reset();editorSession_.invalidateResults();matchInfo_->clear();imageInfo_->setText("Görüntü yok.");pendingDrawTool_.clear();imageViewer_->cancelRoi();selectedToolId_.clear(); editorRecipeId_=recipeId; imageBinding_.clear();}
