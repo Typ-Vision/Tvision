@@ -1,6 +1,6 @@
 # VisionFlow — güncel devir
 
-23 Ekim 2026. [Arşiv](archive/README.md).
+24 Ekim 2026. [Arşiv](archive/README.md). [MCP](archive/2026-10-24-mcp-01.md).
 
 ## Devam noktası
 
@@ -84,7 +84,7 @@ CCUX-14 fixture bunu kapatmaz. [CCUX planı](architecture/camera-setup/README.md
 - KMC-0–9/10a–e ve ICM ortak yazılım/G2 tamam: reçetesiz N kamera, bağımsız
   kalibrasyon, kaynak başına immutable model, çok kaynaklı Editor/Runtime.
   [G2 raporu](architecture/industrial-camera-release-acceptance.md).
-  Tamamlanmış altyapıyı yeniden başlatmayın. Geçmiş teslim/kanıt ayrıntıları
+  Geçmiş teslim/kanıt ayrıntıları
   [önceki devir kaydında](archive/2026-10-21-ccux-plan-02-oncesi.md).
 
 ## Korunacak engeller ve kararlar

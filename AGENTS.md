@@ -1,3 +1,10 @@
+<!-- codebase-memory-mcp:start -->
+Yapısal kod incelemesinde `codebase-memory` becerisini kullan. Önce `list_projects` ve
+`index_status` ile kökü `C:/Projects/Tvision` olan projeyi seç; sorgularda mutlak
+proje yolunu kullan. İlgili yolları `check_index_coverage` ile doğrula; eksik/kısmi
+kapsamı kaynak okuyarak tamamla. MCP bağlantı hatasını boş arama sonucu sayma.
+<!-- codebase-memory-mcp:end -->
+
 # VisionFlow çalışma sürekliliği
 
 Her yeni oturumda `docs/progress.md` ve `README.md` dosyalarını oku; bu AGENTS ile birlikte kısa başlangıç paketidir. Kullanıcının güncel yönlendirmesi önceliklidir. Tamamlanmış adımları yeniden başlatma; güncel devam noktası progress'tedir.
