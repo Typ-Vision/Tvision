@@ -6,6 +6,7 @@ görev” ifadeleri yazıldıkları tarihe aittir.
 
 | Dönem / görev | Kayıt |
 | --- | --- |
+| 26 Ekim 2026 — CCUX-PLAN-07 | [24B–I ayrıntılı UX kartları; Kalibre Et akışını koruyan kullanıcı düzeltmesi](2026-10-26-ccux-plan-07.md) |
 | 26 Ekim 2026 — CCUX-24A | [On UX talebinin kaynak analizi ve uygulama plan girdileri](2026-10-26-ccux-24a.md) |
 | 25 Ekim 2026 — INT-09 | [Belge/başlatıcı eşlemesi, hash/smoke ve yerel CameraIntegration kapanışı](2026-10-25-int-09.md) |
 | 25 Ekim 2026 — INT-08 | [Birleşik tam corpus, görsel/performance kabulü ve final aktarım eşlemesi](2026-10-25-int-08.md) |

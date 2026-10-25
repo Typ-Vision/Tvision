@@ -4,8 +4,12 @@
 
 ## Devam noktası
 
-**[CCUX-24A analiz](archive/2026-10-26-ccux-24a.md):** [On talep ve kartlar](architecture/camera-setup/24-usability-analysis.md).
-Kod değişmedi. Circle hatası geri çekildi; yeni varsayılan calibrated. Sıradaki: 24B.
+**[CCUX-PLAN-07 hazır](archive/2026-10-26-ccux-plan-07.md):**
+[24B–I ayrıntılı kartlar](architecture/camera-setup/24-usability-plan.md).
+Kod değişmedi; sıradaki [24B](architecture/camera-setup/24b-editor-layout.md).
+Kalibrasyon'da yalnız Ayrıntılar düğmeleri sadeleşecek; Kalibre Et'in Bilinen ölçü,
+plaka ve devamındaki tüm özellikleri korunacak. Robot ana seçimde pasif kalacak.
+[24A](archive/2026-10-26-ccux-24a.md): Circle hatası yok; yeni Circle calibrated olacak.
 
 **[INT-09 tamam](archive/2026-10-25-int-09.md):** Yerel CameraIntegration ve
 başlatıcı eşleşti; push/main değişmedi. [Kullanım/restart devri](architecture/camera-integration-handoff.md).
@@ -76,16 +80,11 @@ CCUX-14 fixture bunu kapatmaz. [CCUX planı](architecture/camera-setup/README.md
 
 ## Hazır olanlar
 
-- **EXP-01–03 hazır:** [görüntü/Stop/PGM](archive/2026-10-21-icm-oecs-exp-01d.md),
-  [Editor/replay](archive/2026-10-21-icm-oecs-exp-02.md),
-  [Runtime/Logs/CSV, 500 seri](archive/2026-10-21-icm-oecs-exp-03.md),
-  [kopma/manuel açma](archive/2026-10-21-icm-oecs-exp-03b.md).
-  Uzun probe zorunlu sonlandırma sınırı; PLC/robot kapalı, restart onayı kapatır.
-  Fiziksel/optik/mm kabulü kısmi/açık. MUI-01–03/EUI-01–08 tamam;
+- **EXP-01–03 hazır:** [son devir ve önceki kanıtlar](archive/2026-10-21-icm-oecs-exp-03b.md).
+  Uzun probe zorunlu sonlandırma sınırı; PLC/robot kapalı, restart izni kapatır.
+  Fiziksel/optik/mm kabulü açık. MUI-01–03/EUI-01–08 tamam;
   **MUI-04 özgün raster/reçete/ROI problemi açık**. Eski testler yeni kabul değildir.
-- KMC-0–9/10a–e ve ICM/G2 yazılımı tamam:
-  [G2](architecture/industrial-camera-release-acceptance.md),
-  [önceki devir](archive/2026-10-21-ccux-plan-02-oncesi.md).
+- KMC/ICM/G2 yazılımı tamam: [önceki devir](archive/2026-10-21-ccux-plan-02-oncesi.md).
 
 ## Korunacak engeller ve kararlar
 

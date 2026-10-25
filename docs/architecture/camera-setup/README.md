@@ -1,5 +1,12 @@
 # CCUX — sade kamera ve kalibrasyon uygulama planı
 
+26 Ekim 2026 — **[CCUX-PLAN-07: ayrıntılı kullanılabilirlik planı](24-usability-plan.md)**.
+[24A analizi](24-usability-analysis.md) 24B–I sıralı uygulama kartlarına ayrıldı;
+uygulama başlamadı, ilk kart [24B](24b-editor-layout.md). Kullanıcının düzeltmesi:
+yalnız Kalibrasyon Ayrıntılar düğmeleri sadeleşir; Kalibre Et'in Bilinen ölçü,
+plaka ve devamındaki mevcut özellikleri korunur. Robot ana seçimde pasif kalır.
+[Plan kapanışı](../../archive/2026-10-26-ccux-plan-07.md).
+
 24 Ekim 2026 — **[CCUX-PLAN-06: Editor gecikmesi](23-editor-responsiveness.md)**.
 CCUX-23a analiz olarak tamamlandı. Uygulama CCUX-23b-1–6 sıralı alt kartlarına
 ayrıldı; ilk kart tekrarlanabilir baseline'dır. Sol 6.1 alt görevleri paralel

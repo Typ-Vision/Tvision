@@ -4,6 +4,12 @@
 Durum: kaynak incelemesi tamam; uygulama yapılmadı. Başlangıç commit'i 4cfb93d,
 dal CameraIntegration; başlangıç çalışma ağacı temizdi.
 
+**26 Ekim kullanıcı düzeltmesi ve detaylı plan:** [CCUX-PLAN-07](24-usability-plan.md).
+Kaldırma isteği yalnız Ayrıntılar checkbox'u altındaki gereksiz düğmeler içindir.
+Kalibre Et → Bilinen ölçü / Kalibrasyon plakası ve devam eden bütün mevcut
+özellikler korunur. Ana yöntem seçiminde robot pasif kalır; ileride devreye alınır.
+Bu düzeltme bölüm 7'nin önceki yöntem daraltma önerisinin yerine geçer.
+
 ## Kanıt kapsamı ve sınırlar
 
 AGENTS, progress, README, CCUX indeksi/contract, ilgili UI gereksinimleri,
@@ -160,7 +166,7 @@ yalnız Robot kalibrasyonu açıkça devre dışıdır. Hepsini “eski/boş” 
 | Bilinen ölçü / Kalibrasyon plakası | Kalibre Et ile aynı wizard; tekrarlanan düğmeleri kaldır |
 | Dosyadan deneme başlat | Kaynak seçimi mevcut wizard'da sunulur; ayrı giriş kalkar |
 | Etkinleştir | Eski aday + gerçek probe akışı; ana komut yerine yalnız geçmişte seçili kaydı tekrar kullanma ihtiyacına indir |
-| Robot kalibrasyonu | Uygulanmamış; kaldır |
+| Robot kalibrasyonu | Ayrıntılar'daki mükerrer düğmeyi kaldır; Kalibre Et'teki pasif robot seçeneğini koru |
 | Eski kayıtları kurulumla eşle | Gerçek migration; normal sayfadan kaldır, ihtiyaç halinde eski proje açılışında koşullu uyumluluk akışı |
 | Denemeyi bu kurulumla ilişkilendir | Deneme/model ilişkilendirme; normal sayfadan kaldır, gerekirse dosya sihirbazındaki açık ilişkilendirmeye taşı |
 | Kayıt/sürüm/seçim/kontrol tablosu | Salt okunur geçmiş ve izlenebilirlik; koru |
@@ -168,18 +174,13 @@ yalnız Robot kalibrasyonu açıkça devre dışıdır. Hepsini “eski/boş” 
 | Optik / kamera konumu değişti | Gerçek invalidation; Camera Manager görünür kurulum alanına taşı, işlevi koru |
 | Dışa aktar / boş projeye al / bağımlılıklarıyla farklı kaydet | Gerçek proje transferi; proje yönetimine taşı |
 
-Yeni ana akış: kamera → Kalibre Et → çerçeveli 7×7 plaka → hesapla → isteğe bağlı
-bağımsız kontrol → Kaydet ve kullan. Bilinen ölçü, bağımsız kontrol adımının
-kullandığı edge/mesafe altyapısından ayrılmalıdır; eski yöntemi UI'dan kaldırmak
-bu kontrol servislerini silme gerekçesi değildir.
-
-Önerilen ürün kararı: yeni kalibrasyon oluşturmada çerçeveli 7×7 tek varsayılan
-akış olsun; eski manuel ölçek, generic circle grid/chessboard ve bilinen ölçü
-oluşturma girişleri normal üründen çıkarılsın. Dosya seçimi aynı sihirbaz içinde
-korunsun. Eski kayıtları okuma/hesaplama, no-op encode ve migration gerekleri
-korunsun. Sonraki uygulama kartında eski UI/solver ayrımı, CMake ve test çağrıları
-tam taranarak yalnız gerçekten kullanılmayan UI kodu silinsin. Bu analiz bütün
-eski solver'ların kullanılmadığına dair tam dead-code denetimi değildir.
+Güncel ana akış korunur: kamera → Kalibre Et → Bilinen ölçü veya Kalibrasyon
+plakası → mevcut sihirbaz → hesapla → bağımsız kontrol → Kaydet ve kullan.
+Mevcut plaka yöntemleri ve dosya/kamera seçimi kaldırılmaz; 7×7 tek yöntem
+yapılmaz. Ana seçimde “Robot Kalibrasyonu (Sonradan devreye alınacak)” görünür
+ve pasif kalır. Ayrıntılar'daki kopya düğmelerin kaldırılması bu özelliklerin
+veya solver'ların silinmesi değildir. [24G](24g-calibration-details.md) işlevlerin
+korunmasını, yönetim hedeflerini ve kabul matrisini tanımlar.
 Mevcut kaynakta Kalibrasyon ana sayfası tek CalibrationOverview'dur
 (MainWindowCalibration.cpp:6); tarihsel belge başlıkları ek canlı ekran sayılmaz.
 
@@ -270,7 +271,7 @@ tamamlanmış CCUX/INT görevleri yeniden açılmaz.
 | CCUX-24D | 6: üç basamak ve untouched hassasiyet | ui_geometry_smoke, ui_roi_tool, ui_pose_tracking_smoke, ui_circle_smoke; yeni no-op precision senaryoları |
 | CCUX-24E | 9: ortak zoom düzeltmesi | roi_viewer_interaction, image_refresh_contract; yeni imleç sabitleme senaryoları |
 | CCUX-24F | 8: görünür kurulum ve büyük preview | ui_camera_manager, camera_settings, camera_acquisition_sessions_contract |
-| CCUX-24G | 7: kalibrasyon sadeleşmesi ve yönetim komutlarını taşıma | ui_calibration_overview, ui_calibration_wizard, ui_scoped_calibration_activation, measurement_setup_migration, framed_calibration_plate_contract, calibration_camera_sessions_contract |
+| CCUX-24G | 7: yalnız Ayrıntılar düğmeleri; ana sihirbazlar ve pasif robot korunur | ui_calibration_overview, ui_calibration_wizard, ui_scoped_calibration_activation, measurement_setup_migration, framed_calibration_plate_contract, calibration_camera_sessions_contract |
 | CCUX-24H | 10: çoklu Runtime overlay | ui_multi_source_runtime, ui_runtime_visibility, ui_runtime_failures, reference_world_contract, world_tracking_contract |
 | CCUX-24I | Birleşik kabul | Değişen alanların birleşik regresyonları; Release ON/OFF uygun kapsam |
 
@@ -289,8 +290,7 @@ uygulama sırasında güncellenir; eski tarihli teslim kayıtları değiştirilm
   Yeni calibrated varsayılanı kesin kullanıcı kararıdır.
 - Zoom nedeni kuvvetli kaynak bulgusu; gerçek etkileşim yeniden üretimi 24E'nin
   ilk işi. Ekranlar arası ortak widget kullanımı doğrulandı; native DPI kabulü yok.
-- Eski yöntemler için yukarıdaki öneri UI oluşturma akışını sadeleştirir,
-  kayıt uyumluluğunu korur. Tüm eski matematik servislerini fiziksel silmek ayrı
-  bağımlılık/uyumluluk denetimi ister; bu analiz böyle bir silmeyi onaylamaz.
+- Güncel kullanıcı düzeltmesi çalışan Kalibre Et yöntemlerinin tümünü korur.
+  Yalnız Ayrıntılar'daki kopyalar sadeleşir; yöntem/solver silme kapsam dışıdır.
 - Saha kabul bayrağını değiştiren yeni bir ürün süreci bu UX paketinin konusu
   değildir. Kullanıcının yaptığı bağımsız kontrolün doğru görünmesi bu pakettedir.
