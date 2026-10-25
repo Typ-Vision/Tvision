@@ -18,7 +18,7 @@ int main(int argc,char** argv) {
             if(actualKinds.contains(entry.kind))throw std::runtime_error("duplicate registry kind");
             actualKinds.insert(entry.kind);
         }
-        auto expectedKinds=legacyKinds;expectedKinds.insert("industrial_camera");
+        auto expectedKinds=legacyKinds;expectedKinds.insert("industrial_camera");expectedKinds.insert("roi");
         if(actualKinds!=expectedKinds)throw std::runtime_error("legacy and industrial registry mismatch");
         const auto industrial=ToolRegistry::get("industrial_camera");
         if(!industrial.acquisitionSource || industrial.minimumEditorSchema!=9 || !industrial.requiredBackend.isEmpty())

@@ -76,7 +76,7 @@ public:
     // Never persisted and never issues production completion authority.
     ExecutionService withExperimentalEditorReplay(bool enabled=true) const {auto service=*this;service.experimentalEditorReplay_=enabled;service.automaticAcquisition_=false;return service;}
     // Bump when execution semantics change; validation records bind this identity.
-    static QString version() { return QStringLiteral("visionflow.execution/29"); }
+    static QString version() { return QStringLiteral("visionflow.execution/30"); }
     static QByteArray toolSignature(const QJsonObject&,const QString& directory,const QString& tool,const QByteArray& scope);
     CycleResult runTool(const QJsonObject& definition,const QString& directory,const QString& recipeId,const QByteArray& configId,
         const std::shared_ptr<std::atomic_bool>& cancel,const QString& target,const TargetEvaluation& evaluation,const CalibrationResolver& resolver={}) const;

@@ -1,18 +1,19 @@
 # INT — A0–E2 çalışmalarını CameraIntegration üzerine taşıma
 
-25 Ekim 2026. Uygulayıcı: Codex. Durum: **INT-07 tamamlandı; çıktı tercihleri ve Editor/Runtime sunumu bağlı**.
+25 Ekim 2026. Uygulayıcı: Codex. Durum: **INT-08 tamamlandı; birleşik yazılım/görsel kabul hazır**.
 Snapshot `230cc72`; taban `CameraIntegration@3793198`; çalışma dalı
 `codex/camera-a0-e2-integration`. [INT-01 kapanışı](../archive/2026-10-25-int-01.md).
-Sonraki kart INT-08; bu görevde başlatılmadı.
+Sonraki kart INT-09; bu görevde başlatılmadı.
+[INT-08 kapanışı](../archive/2026-10-25-int-08.md),
+[kabul/final eşleme](camera-integration-int08-acceptance.md).
 [INT-07 kapanışı](../archive/2026-10-25-int-07.md).
 [INT-06 kapanışı](../archive/2026-10-25-int-06.md).
 [INT-05 tamamlanışı](../archive/2026-10-25-int-05-completion.md).
 [INT-04 kapanışı](../archive/2026-10-25-int-04.md), [INT-03 kapanışı](../archive/2026-10-25-int-03.md).
 [INT-02 matrisi](camera-integration-int02-matrix.md), [envanter](camera-integration-int02-inventory.md),
 [baseline/kapanış](../archive/2026-10-25-int-02.md): ayrı Release ve görseller hazır;
-Missing result + pre-cancel sürüyor; Camera Manager INT-04 koşumunda geçti,
-tarihsel assertion giderildi sayılmaz. İki HELLO testi
-erişimli tekrarda geçti; baseline birleşik kabul değildir.
+INT-02 baseline hataları tarihsel kayıttır. INT-08 son corpus ON 135/135 ve
+OFF 107/107 geçti; önceki başarısız koşumlar final kabul yerine kullanılmaz.
 Kullanıcı uygulamayı sol6.1 ile ayrı, sıralı görevlerde yaptıracak.
 
 ## Amaç ve doğrulanmış başlangıç
@@ -249,6 +250,8 @@ responsiveness sayaç/baseline karşılaştırması. Güvenlik kapısı gevşeti
 **Commit:** `INT-07: integrate output preferences without editor regressions`.
 
 ## INT-08 — Birleşik yazılım ve görsel kabul
+
+**Durum: tamamlandı.** [Tam corpus, yeni performans ve sınırlar](../archive/2026-10-25-int-08.md).
 
 **Önkoşul:** INT-03–07 başarılı; INT-02 baseline sorunları kayıtlı.
 

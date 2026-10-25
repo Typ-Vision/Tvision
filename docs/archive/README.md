@@ -6,6 +6,7 @@ görev” ifadeleri yazıldıkları tarihe aittir.
 
 | Dönem / görev | Kayıt |
 | --- | --- |
+| 25 Ekim 2026 — INT-08 | [Birleşik tam corpus, görsel/performance kabulü ve final aktarım eşlemesi](2026-10-25-int-08.md) |
 | 25 Ekim 2026 — INT-07 | [Yerel çıktı tercihleri, Editor/Runtime filtreleri ve 600 örnek responsiveness](2026-10-25-int-07.md) |
 | 25 Ekim 2026 — INT-06 | [Runtime kaynak doğrulama UI, altı süreç restart regresyonu ve Stop/drain](2026-10-25-int-06.md) |
 | 25 Ekim 2026 — INT-05 tamamlanışı | [Kaynak doğrulama entegrasyonu, inceleme düzeltmeleri ve yeni regresyonlar](2026-10-25-int-05-completion.md) |

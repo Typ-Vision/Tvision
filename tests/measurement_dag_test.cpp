@@ -17,6 +17,7 @@ int main(int argc,char** argv){QCoreApplication app(argc,argv);try {
     cv::Mat pixels(600,1000,CV_8UC1,cv::Scalar(0));pixels(cv::Rect(200,100,400,300)).setTo(255);
     const auto snapshot=ImageFrame::fromBuffer(pixels.data,pixels.total(),1000,600,pixels.step,PixelFormat::Gray8,{},false);
     auto acquisition=ExecutionService{}.run(project.activeRecipe()->definition,dir.path(),project.activeRecipe()->id,"cfg",{},source,snapshot);
+    check(acquisition.state==ExecutionState::Done && acquisition.tools.size()==1 && acquisition.tools.first().outputs.value("image").valid,"owned snapshot executes without an original file asset");
     const auto frame=std::get<ImageFrame>(acquisition.tools.first().outputs["image"].data);const auto installation=CalibrationWorkflow::installation(*project.activeRecipe(),frame);
     auto sample=[&](QString id,QPointF a,QPointF b,double mm){return CalibrationSample{id,{a,installation.source},{b,installation.source},mm};};
     const auto teaching=sample("teach",{0,0},{400,0},10);const QVector<CalibrationSample> holdout{sample("x",{10,30},{810,30},20),sample("y",{40,10},{40,510},12.5)};

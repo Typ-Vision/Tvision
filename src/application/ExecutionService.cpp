@@ -78,7 +78,13 @@ CycleResult ExecutionService::run(const QJsonObject& definition,const QString& d
             tools.erase(std::remove_if(tools.begin(),tools.end(),[&](const auto& t){return !required.contains(t.id);}),tools.end());
             connections.erase(std::remove_if(connections.begin(),connections.end(),[&](const auto& c){return !required.contains(c.targetTool);}),connections.end());
         }
-        if(automaticAcquisition_ && !targetOnly)experimentalEditorReplay=AcquisitionPolicy::sources(tools,directory);
+        if(automaticAcquisition_ && !targetOnly && !(cancel && cancel->load())) {
+            auto policyTools=tools;
+            // An owned snapshot replaces file acquisition. Its provenance was
+            // checked above; the original file need not still be available.
+            if(frameSnapshot)policyTools.erase(std::remove_if(policyTools.begin(),policyTools.end(),[](const auto& t){return t.kind=="image_file";}),policyTools.end());
+            experimentalEditorReplay=AcquisitionPolicy::sources(policyTools,directory) || experimentalEditorReplay;
+        }
         auto graph=multi ? validateSourceGraph(tools,connections):validateGraph(tools,connections);
         if(!graph.valid())throw std::runtime_error(graph.errors.join("\n").toUtf8().constData());
         QMap<QString,QJsonObject> industrialDevices;
