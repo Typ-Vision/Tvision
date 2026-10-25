@@ -23,32 +23,38 @@ bool MultiSourceRuntimeService::busy() const {owner();return cycle_.ticket!=0;}
 std::shared_ptr<const ProductionSnapshot> MultiSourceRuntimeService::active() const {owner();return prepared_.snapshot;}
 QString MultiSourceRuntimeService::failure() const {owner();return failure_;}
 const std::optional<CycleResult>& MultiSourceRuntimeService::lastCompletion() const {owner();return last_;}
-MultiSourceRuntimeService::Prepared MultiSourceRuntimeService::capture(const Recipe& recipe,const QString& directory) const {
+MultiSourceRuntimeService::Prepared MultiSourceRuntimeService::capture(const Recipe& recipe,const QString& directory,bool configurationOnly) const {
     require(QJsonDocument(recipe.definition).toJson(QJsonDocument::Compact).size()<=16*1024*1024,ProductionError::InvalidConfiguration,"Whole recipe definition exceeds 16 MiB snapshot budget");
     require(recipe.definition["editor"].toObject()["schemaVersion"]==9,ProductionError::InvalidConfiguration,"Explicit editor9 required");validateEditorDefinition(recipe.definition);
     const auto graph=validateSourceGraph(editorTools(recipe.definition),editorConnections(recipe.definition));require(graph.valid() && !graph.requiredSources.isEmpty(),ProductionError::InvalidConfiguration,"Invalid/empty multi-source graph");
-    const auto set=provider_(recipe);require(set.experimentalCalibrations.isEmpty(),ProductionError::DependencyChanged,"Experimental models cannot enter trusted Runtime");require(set.sources.size()==graph.requiredSources.size(),ProductionError::DependencyChanged,"Missing/foreign source snapshot set");Prepared out;QJsonObject sourceSet;QSet<QString> devices;
+    const auto set=provider_(recipe);require(configurationOnly || !set.configurationOnly,ProductionError::DependencyChanged,"Configuration source set cannot grant Runtime admission");require(set.experimentalCalibrations.isEmpty(),ProductionError::DependencyChanged,"Experimental models cannot enter trusted Runtime");require(set.sources.size()==graph.requiredSources.size(),ProductionError::DependencyChanged,"Missing/foreign source snapshot set");Prepared out;QJsonObject sourceSet;QSet<QString> devices;QMap<QString,QJsonObject> cameraConfigurations;
     const auto configured=editorTools(recipe.definition);bool hasIndustrial=false;
     for(const auto& t:configured)if(t.enabled && t.kind=="industrial_camera")hasIndustrial=true;
     require(hasIndustrial==bool(set.industrial),ProductionError::DependencyChanged,"Missing/foreign industrial execution composition");
     std::optional<IndustrialRuntimeAdmission> industrial;
-    if(hasIndustrial)industrial=freezeIndustrialRuntime(*set.industrial,configured);
+    if(hasIndustrial && !configurationOnly)industrial=freezeIndustrialRuntime(*set.industrial,configured);
     for(const auto& source:graph.requiredSources){
         require(set.sources.contains(source),ProductionError::DependencyChanged,"Required source snapshot missing");auto branch=SystemCalibration::branch(recipe,source);auto editor=branch.definition["editor"].toObject();editor["schemaVersion"]=SystemCalibration::source(branch).kind=="industrial_camera" ? 9:8;branch.definition["editor"]=editor;
         auto dependencies=set.sources[source];
         require(dependencies.industrialSource.isEmpty(),ProductionError::DependencyChanged,"Caller cannot supply industrial admission evidence");
         const bool industrialBranch=SystemCalibration::source(branch).kind=="industrial_camera";
-        if(industrialBranch)dependencies.industrialSource=industrial->sources.value(source);
+        if(industrialBranch){if(configurationOnly){
+            const auto request=industrialExecutionRequest(*set.industrial,SystemCalibration::source(branch));
+            const QJsonObject configuration{{"setup",request.setup.toJson()},{"profile",request.profile.toJson()}};
+            require(!cameraConfigurations.contains(request.camera.id.value) || cameraConfigurations[request.camera.id.value]==configuration,ProductionError::InvalidConfiguration,"Conflicting profiles for shared camera");cameraConfigurations[request.camera.id.value]=configuration;
+        }else dependencies.industrialSource=industrial->sources.value(source);}
 
         if(!dependencies.systemCalibration.isEmpty())branch=SystemCalibration::prepareRecipe(SystemCalibration::decodeEvidence(dependencies.systemCalibration),branch,directory);
         else {branch.calibrationBinding.reset();branch.calibrationReference.clear();}
         const auto tool=SystemCalibration::source(branch);if(tool.kind=="image_file"){const QFileInfo file(QDir(directory).absoluteFilePath(tool.parameters["path"].toString()));require(file.isFile() && file.isReadable(),ProductionError::InvalidConfiguration,"Required source file unavailable");}QString device;
         if(branch.definition.contains("sourceSetup"))device="physical:"+branch.definition["sourceSetup"].toObject()["target"].toObject()["cameraId"].toString();
         else if(tool.kind=="webcam")device="legacy:"+tool.parameters["backend"].toString()+":"+QString::number(tool.parameters["deviceIndex"].toInt());
-        if(!device.isEmpty()){require(!devices.contains(device) || (industrialBranch && set.industrial && set.industrial->sessions),ProductionError::InvalidConfiguration,"Repeated physical source requires an explicit reuse policy");devices.insert(device);}
-        ProductionRecipeService validator([](const QString&,ProductionAction){return true;},[dependencies](const Recipe&){return dependencies;});validator.industrialAdmission_=industrialBranch;const auto validation=validator.validate(identity_.principal,branch,directory);validator.activate(identity_.principal,validation.id,branch,directory);
+        if(!device.isEmpty()){require(!devices.contains(device) || (industrialBranch && set.industrial && (configurationOnly || set.industrial->sessions)),ProductionError::InvalidConfiguration,"Repeated physical source requires an explicit reuse policy");devices.insert(device);}
+        if(configurationOnly && industrialBranch)continue;
+        ProductionRecipeService validator([](const QString&,ProductionAction){return true;},[dependencies](const Recipe&){return dependencies;});validator.industrialAdmission_=industrialBranch;const auto validation=validator.validate(identity_.principal,branch,directory);if(configurationOnly)continue;validator.activate(identity_.principal,validation.id,branch,directory);
         out.branches[source]=validator.active();sourceSet[source]=validator.active()->dependencies();
     }
+    if(configurationOnly)return {}; // No executable snapshot escapes static inspection.
     auto snapshot=std::make_shared<ProductionSnapshot>();snapshot->recipe_=recipe;snapshot->directory_=QDir(directory).absolutePath();snapshot->dependencies_={{"engine",ExecutionService::version()},{"sourceSet",sourceSet},{"scope",(persist_ ? "multi_source_runtime/1":"multi_source_in_memory/1")}};
     if(industrial)snapshot->industrial_=std::make_shared<const IndustrialExecutionInputs>(industrial->inputs);
     snapshot->validation_={QUuid::createUuid().toString(QUuid::WithoutBraces),identity_.principal,QByteArray{},hash(snapshot->dependencies_),QDateTime::currentDateTimeUtc(),(persist_ ? "multi_source_runtime/1":"multi_source_in_memory/1")};
@@ -56,6 +62,7 @@ MultiSourceRuntimeService::Prepared MultiSourceRuntimeService::capture(const Rec
     snapshot->validation_.contentId=ProductionRecipeService::recipeContent(recipe,directory);
     out.snapshot=std::move(snapshot);return out;
 }
+void MultiSourceRuntimeService::checkConfiguration(const Recipe& r,const QString& d) const {permission(ProductionAction::Validate);require(!busy(),ProductionError::Busy,"Cycle pending");(void)capture(r,d,true);}
 void MultiSourceRuntimeService::prepare(const Recipe& recipe,const QString& directory){permission(ProductionAction::Validate);permission(ProductionAction::Activate);require(!busy(),ProductionError::Busy,"Cycle pending");auto candidate=capture(recipe,directory);prepared_=std::move(candidate);last_.reset();failure_.clear();}
 void MultiSourceRuntimeService::current() const {require(bool(prepared_.snapshot),ProductionError::UnknownValidation,"No admitted source set");const auto next=capture(prepared_.snapshot->recipe(),prepared_.snapshot->projectDirectory());require(next.snapshot->validation().contentId==prepared_.snapshot->validation().contentId && next.snapshot->validation().dependencyId==prepared_.snapshot->validation().dependencyId,ProductionError::DependencyChanged,"Source/model set changed; prepare again");}
 void MultiSourceRuntimeService::requireReady() const {permission(ProductionAction::Run);require(!busy(),ProductionError::Busy,"Cycle pending");current();}

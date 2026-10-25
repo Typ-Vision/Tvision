@@ -38,6 +38,15 @@ int main(int argc,char** argv){QCoreApplication app(argc,argv);try{
         check(resolver(raw).calibration!=nullptr,"industrial branch model resolves actual frame");
         bool measured=false;for(const auto& tool:cycle.tools)if(tool.toolId==metric){const auto value=tool.outputs.value("value");measured=value.valid && std::holds_alternative<double>(value.data) && std::abs(std::get<double>(value.data)-10)<.01;}
         check(measured,"industrial ROI and scoped model produce actual 10 mm result");
+        {
+            MeasurementWorkspace cold(ws.projectPath(),"p",[]{return true;});
+            RuntimeService offline(dir.filePath("offline-runtime"),{},RuntimeIdentity::localEngineer(),{}, {}, {},[&](const Recipe& recipe){return cold.productionSources(recipe,inputs);});
+            offline.setConfigurationProviders({},[&](const Recipe& recipe){return cold.configurationSources(recipe,inputs);});
+            const auto persisted=cold.exportDependencies();offline.checkConfiguration(*project.activeRecipe(),dir.path());
+            check(!offline.active() && cold.exportDependencies()==persisted && !cold.calibrations().status(ref).sessionPermitted,"industrial offline exact model Load grants no permission and writes nothing");
+            reject([&]{offline.prepare(*project.activeRecipe(),dir.path());});
+            auto missing=*project.activeRecipe();auto def=missing.definition;auto tools=editorTools(def);for(auto& t:tools)if(t.id==source){auto reference=t.parameters["sourceReference"].toObject();reference["profileRevision"]=999;t.parameters["sourceReference"]=reference;}missing.definition=withEditorTools(def,tools);reject([&]{offline.checkConfiguration(missing,dir.path());});
+        }
         MultiSourceRuntimeService runtime({"engineer",[](const QString&,ProductionAction){return true;}},[&](const Recipe& recipe){return ws.productionSources(recipe,inputs);});
         runtime.prepare(*project.activeRecipe(),dir.path());const auto lease=runtime.begin();
         service.disconnect(r.camera.id); // An admitted worker owns the original model; next begin must reprepare.

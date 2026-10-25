@@ -7,6 +7,7 @@ class MultiSourceRuntimeService {
 public:
     using Provider=std::function<MultiSourceDependencies(const Recipe&)>;
     MultiSourceRuntimeService(RuntimeIdentity identity,Provider provider,ProductionRecipeService::Persist persist={});
+    void checkConfiguration(const Recipe&,const QString& directory) const;
     void prepare(const Recipe&,const QString& directory);
     ProductionCycle begin(const QJsonObject& communication={});
     void finish(quint64 ticket,const CycleResult&);
@@ -21,7 +22,7 @@ private:
     void permission(ProductionAction) const;
     void current() const;
     struct Prepared {std::shared_ptr<const ProductionSnapshot> snapshot;QMap<QString,std::shared_ptr<const ProductionSnapshot>> branches;};
-    Prepared capture(const Recipe&,const QString&) const;
+    Prepared capture(const Recipe&,const QString&,bool configurationOnly=false) const;
     RuntimeIdentity identity_;
     Provider provider_;
     ProductionRecipeService::Persist persist_;

@@ -30,6 +30,13 @@ int main(int argc,char** argv){QCoreApplication app(argc,argv);try{
         IndependentCalibrationSession probe;const auto captured=IndependentCalibrationSession::run(probe.begin(request),backend);if(!captured.error().isEmpty())throw std::runtime_error(captured.error().toStdString());check(probe.accept(captured),"independent experimental fixture capture");
         auto& math=probe.math();check(math.accept(CalibrationWizardSession::run(math.scanPair("pair",{{"image"},ScanSegment{{20,100},{620,100},4}}))),"fixture caliper");math.setKnownMillimetres(sources.isEmpty()?10:20);const auto record=test::framedModel(math.calculate(),*math.frame(),sources.isEmpty()?10:20).named(sources.isEmpty()?"Framed fixture A":"Framed fixture B");
         const auto saved=active.saveAndUse({ref,active.environment().revision,probe.evidence()->generation,CalibrationCapturePolicy::ExperimentalOecs},record,probe,[]{return true;});check(saved.state==CalibrationSaveUseState::Activated,"fixture experimental activation");
+        {
+            ScopedActiveCalibrationService cold(MeasurementEnvironmentRepository(project.path(),project.project().id),[]{return true;});
+            const auto persisted=workspace.exportDependencies();const auto remembered=cold.environment().selections.last();
+            check(cold.configuration(ref,true).record.encode()==record.encode(),"experimental remembered framed model is statically readable");rejects([&]{cold.configuration(ref);});rejects([&]{cold.snapshots({ref});});
+            IndependentCalibrationSession fresh;check(fresh.accept(IndependentCalibrationSession::run(fresh.begin(request),backend)),"fresh experimental reauthorization probe");
+            cold.reauthorizeRemembered(remembered,fresh);check(cold.experimentalSnapshots({ref}).size()==1 && workspace.exportDependencies()==persisted,"experimental reauthorization preserves persisted model/selection");rejects([&]{cold.snapshots({ref});});rejects([&]{cold.reauthorizeRemembered(remembered,fresh);});
+        }
         const auto image=*probe.math().frame();const auto metadata=image.metadata();const auto path=dir.filePath(r.camera.id.value+".pgm");ExperimentalOecsAcquisition::save({image,metadata.sourceId,metadata.cycleId,metadata.frameId,metadata.completedAtUtc},path);
         const auto source=project.addTool("image_file");project.setImageFile(path,source);project.enableMultiSource();project.bindCameraSource(source,active.environment(),ref.camera);sources<<source;replayPaths[source]=path;
         const auto a=project.addTool("edge_point"),b=project.addTool("edge_point"),m=project.addTool("measurement");metrics<<m;
@@ -38,6 +45,17 @@ int main(int argc,char** argv){QCoreApplication app(argc,argv);try{
     }
     QImage raw(2448,2048,QImage::Format_Grayscale8);raw.fill(20);const auto rawPath=dir.filePath("raw.png");check(raw.save(rawPath),"raw raster");const auto rawSource=project.addTool("image_file");project.setImageFile(rawPath,rawSource);project.bindCameraSource(rawSource,active.environment(),first.camera.id);const auto rawBlob=project.addTool("blob");for(auto t:project.tools())if(t.id==rawBlob){t.parameters["threshold"]=128;project.updateTool(t);}auto mixedLinks=editorConnections(project.activeRecipe()->definition);mixedLinks<<ToolConnection{rawSource,"image",rawBlob,"image"};project.setConnections(mixedLinks);project.save();
     const auto recipe=*project.activeRecipe();const auto graph=validateSourceGraph(editorTools(recipe.definition),editorConnections(recipe.definition));if(!graph.valid())throw std::runtime_error(graph.errors.join("; ").toStdString());int tamper=0;auto provider=[&](const Recipe& current){auto d=workspace.productionSources(current,{},true);if(tamper==1)d.experimentalCalibrations.remove(sources[0]);if(tamper==2)d.experimentalCalibrations[sources[0]]=d.experimentalCalibrations[sources[1]];if(tamper==3){auto typed=std::make_shared<ExperimentalScopedCalibrationSnapshot>(*d.experimentalCalibrations[sources[0]]);typed->snapshot.calibration.selection.version++;d.experimentalCalibrations[sources[0]]=typed;}return d;};
+    {
+        MeasurementWorkspace cold(project.path(),project.project().id,[]{return true;});
+        RuntimeService offline(dir.filePath("offline"),{},RuntimeIdentity::localEngineer());offline.setAutomaticAcquisition([&](const Recipe& r){return cold.productionSources(r,{},true);});
+        offline.setConfigurationProviders({}, {},[&](const Recipe& r){return cold.configurationSources(r,{},true);});
+        const auto persisted=cold.exportDependencies();offline.checkConfiguration(recipe,dir.path());
+        check(!offline.active() && cold.exportDependencies()==persisted,"experimental replay Load resolves framed models without new math/permission/writes");
+        rejects([&]{offline.prepare(recipe,dir.path());});rejects([&]{offline.begin();});
+        rejects([&]{cold.configurationSources(recipe);});
+        offline.setAutomaticAcquisition([&](const Recipe& r){return cold.configurationSources(r,{},true);});rejects([&]{offline.prepare(recipe,dir.path());});
+        const auto path=replayPaths[sources[0]];check(QFile::rename(path,path+".held"),"hide replay configuration raster");rejects([&]{offline.checkConfiguration(recipe,dir.path());});check(QFile::rename(path+".held",path),"restore replay configuration raster");
+    }
     MultiSourceRuntimeService trusted(RuntimeIdentity::localEngineer(),provider);rejects([&]{trusted.prepare(recipe,dir.path());});
     const auto archive=dir.filePath("archive");RuntimeService runtime(archive,{},RuntimeIdentity::localEngineer());runtime.setAutomaticAcquisition(provider);
     for(tamper=1;tamper<=3;++tamper)rejects([&]{runtime.prepare(recipe,dir.path());});tamper=0;runtime.prepare(recipe,dir.path());tamper=3;rejects([&]{runtime.begin();});tamper=0;

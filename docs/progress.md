@@ -4,14 +4,14 @@
 
 ## Devam noktası
 
-**[INT-03 tamam](archive/2026-10-25-int-03.md):** A1 tanı/C1 frozen retry;
-asenkron Starting ve gerçek Stop/drain korunur. Release ilgili 25 test geçti;
-INT-02'nin Missing result, schema9 pre-cancel ve Camera Manager assertion'ları
-aynı nedenle açık. [INT-02](archive/2026-10-25-int-02.md),
+**[INT-04 tamam](archive/2026-10-25-int-04.md):** kayıtlı model/izin ayrıldı;
+yeniden izin kaydı korur. 27 Release testi geçti.
+Missing result/pre-cancel sürüyor; Camera Manager geçti, tarihsel hata kapanmadı.
+[INT-03 tanı/retry](archive/2026-10-25-int-03.md), [INT-02](archive/2026-10-25-int-02.md),
 [API/envanter](architecture/camera-integration-int02-matrix.md),
 [INT-01 bundle](archive/2026-10-25-int-01.md) korunur.
 Dal `codex/camera-a0-e2-integration`; taban `CameraIntegration@3793198`.
-Sonraki yalnız INT-04; başlamadı. Push/birleşik kabul yok.
+INT-05 başlamadı. Push/birleşik kabul yok.
 
 **[CCUX-23b-1–6 yazılım kabulü tamamlandı](archive/2026-10-24-ccux-23b-6.md).**
 600 örnek performans kanıtı kapanışta.

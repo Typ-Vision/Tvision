@@ -80,6 +80,7 @@ struct ActiveCalibrationSnapshot {
     ActiveCalibrationSelection selection;
     QJsonObject scope; // schema1 exact physical setup; empty for legacy compatibility
     QJsonObject acquisition; // CCUX-06 fresh session evidence; never rewrites model/scope2
+    bool configurationOnly=false; // Static inspection cannot grant Runtime admission.
 };
 // A validated mathematical view, never a session permission. One current,
 // bounded generation per project/path; callers may retain immutable snapshots.

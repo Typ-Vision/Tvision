@@ -7,6 +7,7 @@ namespace visionflow {
 class ExperimentalRuntime {
 public:
     ExperimentalRuntime(RuntimeIdentity,RuntimeService::MultiProvider,ProductionRecipeService::Persist);
+    void checkConfiguration(const Recipe&,const QString&) const;
     void prepare(const Recipe&,const QString&);
     void requireReady() const;
     ProductionCycle begin(const QJsonObject&);
@@ -23,7 +24,7 @@ public:
     static MeasurementExecutionContext calibration(const ProductionSnapshot&,const ImageFrame&);
     static QByteArray csv(const QVector<QJsonObject>&);
 private:
-    std::shared_ptr<const ProductionSnapshot> capture(const Recipe&,const QString&) const;
+    std::shared_ptr<const ProductionSnapshot> capture(const Recipe&,const QString&,bool configurationOnly=false) const;
     void permission() const;
     static QByteArray digest(const CycleResult&);
     static void completion(const ProductionCycle&,const CycleResult&);

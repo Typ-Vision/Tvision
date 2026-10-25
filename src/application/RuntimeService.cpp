@@ -48,7 +48,8 @@ void RuntimeService::requestCameraPreparation(const Recipe& recipe,const QString
     const bool experimental=requiresManualCycles(recipe,directory);const auto& provider=experimental?automaticProvider_:multiProvider_;
     if(!provider)throw ProductionException(ProductionError::InvalidConfiguration,"Runtime source-set provider required");
     if(!cameraSessions_)cameraSessions_=std::make_unique<RuntimeCameraSessions>();
-    cameraSessions_->start(recipe,provider(recipe),experimental);
+    auto set=provider(recipe);if(set.configurationOnly)throw ProductionException(ProductionError::DependencyChanged,"Configuration source set cannot prepare cameras");
+    cameraSessions_->start(recipe,std::move(set),experimental);
 }
 bool RuntimeService::pollCameras(){return cameraSessions_ && cameraSessions_->poll();}
 void RuntimeService::stopCameras(){if(cameraSessions_)cameraSessions_->stop();}
@@ -57,6 +58,10 @@ bool RuntimeService::camerasDraining() const{return cameraSessions_ && cameraSes
 QString RuntimeService::cameraError() const{return cameraSessions_?cameraSessions_->error():QString{};}
 bool RuntimeService::cameraCloseFailed() const{return cameraSessions_ && cameraSessions_->closeFailed();}
 bool RuntimeService::busy() const {return production_.busy() || (multi_ && multi_->busy()) || (experimental_ && experimental_->busy());}
+void RuntimeService::setConfigurationProviders(ScopedProvider scoped,MultiProvider multi,MultiProvider experimental){
+    if(busy())throw ProductionException(ProductionError::Busy,"Runtime cycle/recording pending");
+    configurationScoped_=std::move(scoped);configurationMulti_=std::move(multi);configurationExperimental_=std::move(experimental);
+}
 void RuntimeService::setAutomaticAcquisition(MultiProvider provider){
     if(busy())throw ProductionException(ProductionError::Busy,"Runtime cycle/recording pending");
     stopCameras();automaticAcquisition_=true;automaticProvider_=std::move(provider);
@@ -72,7 +77,7 @@ void RuntimeService::setExperimental(bool enabled,MultiProvider provider){
 std::shared_ptr<const ProductionSnapshot> RuntimeService::active() const {return policyReset_ ? nullptr:experimental_ ? experimental_->active():multiMode_ ? multi_->active():production_.active();}
 void RuntimeService::requireReady() const {if(policyReset_)throw ProductionException(ProductionError::UnknownValidation,"Run required after Runtime policy change");if(experimental_)experimental_->requireReady();else if(multiMode_)multi_->requireReady();else production_.requireReady(identity_.principal);}
 std::optional<ActiveCalibrationSnapshot> RuntimeService::systemSnapshot(const Recipe& r) const {
-    if(r.definition.contains("sourceSetup") || r.definition.contains("calibrationPolicy")){if(!scoped_)throw std::runtime_error("Scoped Runtime provider required");auto s=scoped_(r);if(!s || s->scope.isEmpty())throw std::runtime_error("Required setup is not active");return s;}
+    if(r.definition.contains("sourceSetup") || r.definition.contains("calibrationPolicy")){if(!scoped_)throw std::runtime_error("Scoped Runtime provider required");auto s=scoped_(r);if(!s || s->scope.isEmpty())throw std::runtime_error("Required setup is not active");if(s->configurationOnly)throw std::runtime_error("Configuration model cannot grant Runtime admission");return s;}
     return system_ ? system_():std::optional<ActiveCalibrationSnapshot>{};
 }
 QJsonObject RuntimeService::sourceDependencies(const Recipe& r) const {
@@ -142,23 +147,30 @@ bool RuntimeService::requiresManualCycles(const Recipe& r,const QString& directo
     catch(const std::exception& e){throw ProductionException(ProductionError::InvalidConfiguration,e.what());}
 }
 void RuntimeService::checkConfiguration(const Recipe& r,const QString& directory) const {
-    if(automaticAcquisition_ && requiresManualCycles(r,directory)){ExperimentalRuntime checker(identity_,automaticProvider_,{});checker.prepare(r,directory);return;}
-    if(experimental_ && !automaticAcquisition_){validateEditorDefinition(r.definition);return;}
-    if(r.definition["editor"].toObject()["schemaVersion"]==9){
-        if(!multiProvider_)throw ProductionException(ProductionError::InvalidConfiguration,"Whole source-set provider required");
-        const auto tools=editorTools(r.definition);bool industrial=false;for(const auto& t:tools)if(t.enabled && t.kind=="industrial_camera")industrial=true;
-        if(industrial){
-            // Load is a read-only declaration. Run/prepare and begin retain full
-            // immutable admission; offline presentation grants no backend authority.
-            validateEditorDefinition(r.definition);const auto graph=validateSourceGraph(tools,editorConnections(r.definition));
-            if(!graph.valid() || graph.requiredSources.isEmpty())throw ProductionException(ProductionError::InvalidConfiguration,"Invalid required source graph");
-            for(const auto& t:tools)if(t.enabled && t.kind=="industrial_camera")IndustrialSourceReference::fromJson(t.parameters["sourceReference"].toObject());
-            return;
-        }
-        MultiSourceRuntimeService checker(identity_,multiProvider_);checker.prepare(r,directory);return;
+    if((automaticAcquisition_ && requiresManualCycles(r,directory)) || (experimental_ && !automaticAcquisition_)){
+        ExperimentalRuntime checker(identity_,configurationExperimental_ ? configurationExperimental_:automaticProvider_,{});checker.checkConfiguration(r,directory);return;
     }
-    ProductionRecipeService checker(identity_.authorize,[this](const Recipe& recipe){return declaredDependencies(recipe);});
-    checker.validate(identity_.principal,systemRecipe(r,directory),directory);
+    if(r.definition["editor"].toObject()["schemaVersion"]==9){
+        const auto provider=configurationMulti_ ? configurationMulti_:multiProvider_;
+        if(!provider)throw ProductionException(ProductionError::InvalidConfiguration,"Whole source-set configuration provider required");
+        MultiSourceRuntimeService checker(identity_,provider);checker.checkConfiguration(r,directory);return;
+    }
+    const bool scoped=r.definition.contains("sourceSetup") || r.definition.contains("calibrationPolicy");
+    auto effective=r;
+    auto declared=[&](const Recipe& recipe){
+        if(!scoped || !configurationScoped_)return declaredDependencies(recipe);
+        ProductionDependencies d;d.measurementSource=sourceDependencies(recipe);
+        if(SystemCalibration::requestsCalibration(recipe,false)){
+            const auto model=configurationScoped_(recipe);if(!model)throw std::runtime_error("Remembered exact model required");
+            const auto source=SystemCalibration::source(recipe);d.calibration=SystemCalibration::binding(*model,source.id,source.id+"/image");d.systemCalibration=SystemCalibration::evidence(*model,source.id,source.id+"/image");
+        }return d;
+    };
+    if(scoped && configurationScoped_){
+        effective.calibrationBinding.reset();effective.calibrationReference.clear();
+        if(SystemCalibration::requestsCalibration(r,false)){const auto model=configurationScoped_(r);if(!model)throw std::runtime_error("Remembered exact model required");effective=SystemCalibration::prepareRecipe(*model,r,directory);}
+    }else effective=systemRecipe(r,directory);
+    ProductionRecipeService checker(identity_.authorize,declared);
+    checker.validate(identity_.principal,effective,directory);
     for(const auto& tool:editorTools(r.definition))if(tool.enabled && tool.kind=="image_file") {
         const QFileInfo file(QDir(directory).absoluteFilePath(tool.parameters["path"].toString()));
         if(!file.isFile() || !file.isReadable())throw ProductionException(ProductionError::InvalidConfiguration,tool.name+": Kaynak görüntü dosyası bulunamadı veya okunamıyor.");

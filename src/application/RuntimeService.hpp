@@ -46,6 +46,8 @@ public:
     void setExperimental(bool enabled,MultiProvider provider={});
     // Configure backend dependencies only; normal Load/Run resolves required sources.
     void setAutomaticAcquisition(MultiProvider provider={});
+    // Used only by offline Load; execution always consults operational providers.
+    void setConfigurationProviders(ScopedProvider scoped,MultiProvider multi,MultiProvider experimental={});
     bool experimental() const {return bool(experimental_);}
     bool requiresManualCycles(const Recipe&,const QString& directory) const;
     QString principal() const {return identity_.principal;}
@@ -79,6 +81,8 @@ private:
     QMap<QString,QJsonObject> declaredInstallations_;
     ProductionRecipeService production_;
     std::optional<RecipeValidation> validation_;
+    ScopedProvider configurationScoped_;
+    MultiProvider configurationMulti_,configurationExperimental_;
     MultiProvider multiProvider_;
     std::unique_ptr<MultiSourceRuntimeService> multi_;
     bool multiMode_=false;

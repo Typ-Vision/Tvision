@@ -1,13 +1,14 @@
 # INT — A0–E2 çalışmalarını CameraIntegration üzerine taşıma
 
-25 Ekim 2026. Uygulayıcı: Codex. Durum: **INT-03 tamamlandı; tanı/kurtarma aktarıldı**.
+25 Ekim 2026. Uygulayıcı: Codex. Durum: **INT-04 tamamlandı; kayıtlı model/izin ayrıldı**.
 Snapshot `230cc72`; taban `CameraIntegration@3793198`; çalışma dalı
 `codex/camera-a0-e2-integration`. [INT-01 kapanışı](../archive/2026-10-25-int-01.md).
-Sonraki kart INT-04; ayrıca yetkilendirilmeden başlatılmaz.
-[INT-03 kapanışı](../archive/2026-10-25-int-03.md).
+Sonraki kart INT-05; ayrıca yetkilendirilmeden başlatılmaz.
+[INT-04 kapanışı](../archive/2026-10-25-int-04.md), [INT-03 kapanışı](../archive/2026-10-25-int-03.md).
 [INT-02 matrisi](camera-integration-int02-matrix.md), [envanter](camera-integration-int02-inventory.md),
 [baseline/kapanış](../archive/2026-10-25-int-02.md): ayrı Release ve görseller hazır;
-Missing result + pre-cancel + Camera Manager assertion'ları açık. İki HELLO testi
+Missing result + pre-cancel sürüyor; Camera Manager INT-04 koşumunda geçti,
+tarihsel assertion giderildi sayılmaz. İki HELLO testi
 erişimli tekrarda geçti; baseline birleşik kabul değildir.
 Kullanıcı uygulamayı sol6.1 ile ayrı, sıralı görevlerde yaptıracak.
 
@@ -157,6 +158,11 @@ görsel kontrol. Retry çekim sayısını artırmaz, Stop gerçek drain'i bekler
 **Commit:** `INT-03: integrate runtime diagnostics and recovery`.
 
 ## INT-04 — Statik model çözümü ve exact yeniden izin
+
+**Durum: tamamlandı — 25 Ekim 2026.** Salt okunur configuration sağlayıcıları,
+exact yeniden izin ve trusted/experimental ayrımı mevcut epoch/cache/session
+yollarına uyarlandı. İlgili 27 Release testi ve görsel kontrol
+[kapanıştadır](../archive/2026-10-25-int-04.md). INT-05 başlatılmadı.
 
 **Önkoşul:** INT-03 ve INT-02 politika matrisi.
 **Sahiplik:** ScopedActiveCalibration, MeasurementWorkspace configuration yolu,

@@ -99,6 +99,10 @@ void MainWindow::ensureRuntime() {
         const auto inputs=runtimeCameraInputs();
         return measurementWorkspace_->productionSources(r,inputs,true);
     });
+    runtime_->setConfigurationProviders(
+        [this](const Recipe& r){return measurementWorkspace_->configurationForRecipe(r);},
+        [this](const Recipe& r){return measurementWorkspace_->configurationSources(r,runtimeCameraInputs());},
+        [this](const Recipe& r){return measurementWorkspace_->configurationSources(r,runtimeCameraInputs(),true);});
     runtimeCoordinator_=std::make_unique<RuntimeCoordinator>(*runtime_);
     if(plc_)plc_->bind(runtime_.get(),runtimeCoordinator_.get(),runtimePath_+".production",runtimePath_+".calibrations.json");
     runtimeCycle_={};runtimePending_.reset();runtimeResult_.reset();showRuntimeResult();

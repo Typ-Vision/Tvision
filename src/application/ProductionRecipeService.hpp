@@ -28,6 +28,7 @@ struct ProductionDependencies {
 };
 struct ExperimentalScopedCalibrationSnapshot;
 struct MultiSourceDependencies {
+    bool configurationOnly=false; // In-memory inspection provenance; never serialized.
     QMap<QString,ProductionDependencies> sources;
     std::shared_ptr<const IndustrialExecutionInputs> industrial;
     // Separate experimental policy; trusted Runtime rejects this map.

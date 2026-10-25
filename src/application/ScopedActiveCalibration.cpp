@@ -55,7 +55,8 @@ void ScopedActiveCalibrationService::activate(const SetupReference& ref,const QS
     activateImpl(ref,content,probe,proof && proof->experimental ? CalibrationCapturePolicy::ExperimentalOecs:CalibrationCapturePolicy::Trusted,fault);
 }
 void ScopedActiveCalibrationService::activateImpl(const SetupReference& ref,const QString& content,const IndependentCalibrationSession& probe,CalibrationCapturePolicy policy,MeasurementEnvironmentRepository::Fault fault,std::function<void()> beforeCommit,bool selectDefault){
-    const auto e=environment();require(gate_(),"Runtime/worker/pending record/ACK busy");require(revision_<1000000000,"Activation revision exhausted");
+    const auto e=environment();const auto epoch=permissionEpoch_;const auto cameraEpoch=cameraEpochs_.value(ref.camera.value);
+    require(gate_(),"Runtime/worker/pending record/ACK busy");require(revision_<1000000000,"Activation revision exhausted");
     const auto expected=installation(e,ref);const auto proof=probe.evidence();
     const bool experimental=policy==CalibrationCapturePolicy::ExperimentalOecs;
     require(!probe.busy() && proof && proof->experimental.has_value()==experimental && proof->origin==SourceOrigin::CameraAcquired && proof->target==std::optional(ref) && probe.acceptedSetup()==std::optional(expected),"Accepted actual camera probe for exact installation required");
@@ -76,7 +77,7 @@ void ScopedActiveCalibrationService::activateImpl(const SetupReference& ref,cons
                 "Experimental candidate and live probe installation mismatch");
         }else require(r.activatable() && (r.image().origin=="acquired" || r.image().origin=="setup_file" || (r.image().origin=="legacy_record" && r.encode()["schemaVersion"]==5)),"Trial/legacy/rejected control cannot activate");
         if(beforeCommit)beforeCommit();
-        require(gate_() && probe.evidence()==proof && !probe.busy(),"Activation cancelled or gate changed before commit");
+        require(gate_() && permissionEpoch_==epoch && cameraEpochs_.value(ref.camera.value)==cameraEpoch && probe.evidence()==proof && !probe.busy() && environment().encode()==e.encode(),"Activation cancelled or gate changed before commit");
         const auto committed=repository_.saveAndRemember(e,r,ref,fault,chooseDefault);
         QJsonObject acquisition{{"schemaVersion",experimental ? 2:1},{"probe",proof->toJson()},{"backend",device ? QJsonValue(device->backend.toJson()):QJsonValue()}};
         if(experimental){acquisition["policy"]="experimental-calibration/1";acquisition["productionAdmission"]=false;acquisition["triggerAssociationVerified"]=false;acquisition["physicalAcceptance"]=false;}
@@ -151,7 +152,29 @@ CalibrationAvailabilityStatus ScopedActiveCalibrationService::status(const Setup
 }
 void ScopedActiveCalibrationService::prepareRemembered(const SetupReference& ref,const IndependentCalibrationSession& probe){
     const auto state=status(ref);require(state.remembered && state.mathematicsCompatible,"No compatible remembered selection");
-    activate(ref,state.remembered->contentId,probe);
+    reauthorizeRemembered(*state.remembered,probe);
+}
+void ScopedActiveCalibrationService::reauthorizeRemembered(const RememberedCalibration& expected,const IndependentCalibrationSession& probe){
+    const auto before=environment();
+    require(before.selections.contains(expected),"Exact remembered selection changed or missing");
+    const auto proof=probe.evidence();const bool experimental=proof && proof->experimental.has_value();
+    const auto model=configuration(expected.target,experimental);
+    require(model.selection.id==expected.id && model.selection.contentId==expected.contentId && model.selection.version==expected.version,"Exact remembered model changed");
+    activateImpl(expected.target,expected.contentId,probe,experimental ? CalibrationCapturePolicy::ExperimentalOecs:CalibrationCapturePolicy::Trusted,MeasurementEnvironmentRepository::Fault::None,[&]{
+        require(environment().encode()==before.encode() && environment().selections.contains(expected),"Remembered selection changed before commit");
+    });
+}
+ActiveCalibrationSnapshot ScopedActiveCalibrationService::configuration(const SetupReference& ref,bool experimental) const {
+    const auto e=environment();installation(e,ref);
+    require(e.operational.value(ref.camera.value)==ref.setup.value,"Remembered setup is not operational");
+    for(const auto& selected:e.selections)if(selected.target==ref){
+        auto model=candidate(ref,selected.contentId);const auto& d=model.record.model().dependency();
+        require(model.record.image().experimental.has_value()==experimental && (experimental ? model.record.experimentallyActivatable():model.record.activatable()),"Remembered model permission class or control rejected");
+        require(d.calibrationId==selected.id && d.version==selected.version,"Remembered exact model changed");
+        model.selection={selected.id,selected.contentId,selected.version,1};model.configurationOnly=true;
+        require(environment().encode()==e.encode(),"Workspace changed during configuration inspection");return model;
+    }
+    throw std::runtime_error("Remembered exact calibration missing");
 }
 void ScopedActiveCalibrationService::notifyOpticalChange(const CameraId& camera,int expectedRevision){
     const auto e=environment();camera.validate();require(gate_(),"Runtime/worker/pending record/ACK busy");

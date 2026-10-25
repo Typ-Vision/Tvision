@@ -57,6 +57,9 @@ public:
     void disconnect(const CameraId&,QJsonObject context={});
     CalibrationAvailabilityStatus status(const SetupReference&) const;
     // Explicit recheck of the remembered choice, not a new fit or production start.
+    void reauthorizeRemembered(const RememberedCalibration&,const IndependentCalibrationSession&);
+    // Static exact selection inspection; never grants session permission.
+    ActiveCalibrationSnapshot configuration(const SetupReference&,bool experimental=false) const;
     void prepareRemembered(const SetupReference&,const IndependentCalibrationSession&);
     void notifyOpticalChange(const CameraId&,int expectedRevision);
     void refreshAvailability(const QVector<DeviceBinding>&,const IndustrialDiscoverySnapshot& = {});
