@@ -8,7 +8,8 @@ INT-02 ürün kodunu değiştirmez. Kaynak snapshot `230cc72`, karşılaştırı
 
 ## Dört kaynak politikası × altı komut
 
-Tablo birleşik sürümün hedefidir. Verify henüz hedef dala aktarılmamıştır.
+Tablo birleşik sürümün hedefidir. Verify application katmanı INT-05'te aktarıldı
+([sözleşme](source-verification.md)); kullanıcı akışı INT-06'dadır.
 Load SDK açmaz; dosya/model okuması edinim veya production izni değildir.
 Raw/px dalı kullanılmayan kalibrasyona bağlanmaz. Her satır üç applicationType
 için aynı application servisleriyle uygulanır.

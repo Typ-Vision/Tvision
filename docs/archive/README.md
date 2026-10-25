@@ -6,6 +6,8 @@ görev” ifadeleri yazıldıkları tarihe aittir.
 
 | Dönem / görev | Kayıt |
 | --- | --- |
+| 25 Ekim 2026 — INT-05 tamamlanışı | [Kaynak doğrulama entegrasyonu, inceleme düzeltmeleri ve yeni regresyonlar](2026-10-25-int-05-completion.md) |
+| 25 Ekim 2026 — INT-05 ilk uygulama | [Claude worktree uygulaması ve tarihsel test kanıtları](2026-10-25-int-05.md) |
 | 25 Ekim 2026 — INT-04-05-REVIEW | [INT-04/05 incelemesi: iki P1 ve bir P2, yeniden üretim kanıtları](2026-10-25-int-04-05-review.md) |
 | 25 Ekim 2026 — INT-04 | [Kayıtlı exact model / çalışma izni ayrımı, yeniden izin ve Release regresyonları](2026-10-25-int-04.md) |
 | 25 Ekim 2026 — INT-03 | [Runtime tanı/ilk neden, frozen kayıt retry, Starting/Stop/drain ve typed recovery](2026-10-25-int-03.md) |

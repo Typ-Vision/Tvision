@@ -1,9 +1,10 @@
 # INT — A0–E2 çalışmalarını CameraIntegration üzerine taşıma
 
-25 Ekim 2026. Uygulayıcı: Codex. Durum: **INT-04 tamamlandı; kayıtlı model/izin ayrıldı**.
+25 Ekim 2026. Uygulayıcı: Codex. Durum: **INT-05 tamamlandı; kaynak doğrulama ve sahiplik bütünleştirildi**.
 Snapshot `230cc72`; taban `CameraIntegration@3793198`; çalışma dalı
 `codex/camera-a0-e2-integration`. [INT-01 kapanışı](../archive/2026-10-25-int-01.md).
-Sonraki kart INT-05; ayrıca yetkilendirilmeden başlatılmaz.
+Sonraki kart INT-06; bu görevde başlatılmadı.
+[INT-05 tamamlanışı](../archive/2026-10-25-int-05-completion.md).
 [INT-04 kapanışı](../archive/2026-10-25-int-04.md), [INT-03 kapanışı](../archive/2026-10-25-int-03.md).
 [INT-02 matrisi](camera-integration-int02-matrix.md), [envanter](camera-integration-int02-inventory.md),
 [baseline/kapanış](../archive/2026-10-25-int-02.md): ayrı Release ve görseller hazır;
@@ -182,6 +183,11 @@ reddedilir; kalıcı kayıtlar değişmez; ilgili Release testleri geçer.
 **Commit:** `INT-04: reconcile remembered calibration and runtime configuration`.
 
 ## INT-05 — Kaynak doğrulama ve kamera sahipliği
+
+**Durum: tamamlandı — 25 Ekim 2026.** Claude'un `2b580eb` uygulaması mevcut
+entegrasyon dalına alınarak incelemedeki iki P1 ve bir P2 düzeltildi. Epoch,
+immutable reçete kimliği, replay hash/geometri ve gerçek Stop/drain regresyonları
+[kapanıştadır](../archive/2026-10-25-int-05-completion.md). Kullanıcı akışı INT-06'dadır.
 
 **Önkoşul:** INT-04.
 **Sahiplik:** SourceVerificationService, MeasurementWorkspace, independent capture

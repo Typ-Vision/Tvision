@@ -23,7 +23,7 @@ void RuntimeCoordinator::owner() const {
 }
 void RuntimeCoordinator::replaceable() const {
     owner();
-    if(runtime_.busy() || runtime_.camerasPending() || deliveryPending_ || state_==RuntimeState::Starting || state_==RuntimeState::Running || state_==RuntimeState::Stopping)
+    if(runtime_.busy() || runtime_.camerasPending() || runtime_.sourceVerificationBusy() || deliveryPending_ || state_==RuntimeState::Starting || state_==RuntimeState::Running || state_==RuntimeState::Stopping)
         throw ProductionException(ProductionError::Busy,"Önce Stop ve bekleyen kayıt/teslimin tamamlanması gerekir.");
 }
 void RuntimeCoordinator::load(const Recipe& recipe,const QString& directory,RuntimeTrigger mode) {
@@ -70,13 +70,13 @@ bool RuntimeCoordinator::completeStart(quint64 generation,const QString& prepara
 void RuntimeCoordinator::start(){const auto ticket=requestStart();completeStart(ticket);}
 bool RuntimeCoordinator::poll(){
     return diagnose("poll",[&]() -> bool{
-    owner();const bool changed=runtime_.pollCameras();
+    owner();const bool verificationChanged=runtime_.pollSourceVerification();const bool changed=runtime_.pollCameras() || verificationChanged;
     if(state_==RuntimeState::Stopping && runtime_.cameraCloseFailed() && !faultAfterDrain_){remember(RuntimeFailure::Dependency,runtime_.cameraError());runtime_.diagnostics()->append({{"action","cameraFailure"},{"reason",runtime_.cameraError()},{"generation",QString::number(generation_)},{"draining",runtime_.camerasDraining()}},true);faultAfterDrain_=true;}
     if(state_==RuntimeState::Starting){
         if(!runtime_.cameraError().isEmpty()){remember(RuntimeFailure::Dependency,runtime_.cameraError());runtime_.diagnostics()->append({{"action","cameraFailure"},{"reason",runtime_.cameraError()},{"generation",QString::number(generation_)},{"draining",runtime_.camerasDraining()}},true);faultAfterDrain_=true;runtime_.stopCameras();state_=RuntimeState::Stopping;}
         else if(!runtime_.camerasPending()){try{completeStart(generation_);}catch(const std::exception&){}return true;}
     }
-    if(state_==RuntimeState::Stopping && !runtime_.camerasPending() && !runtime_.busy()){state_=faultAfterDrain_?RuntimeState::Fault:loaded_?RuntimeState::LoadedStopped:RuntimeState::Unloaded;return true;}
+    if(state_==RuntimeState::Stopping && !runtime_.camerasPending() && !runtime_.sourceVerificationBusy() && !runtime_.busy()){state_=faultAfterDrain_?RuntimeState::Fault:loaded_?RuntimeState::LoadedStopped:RuntimeState::Unloaded;return true;}
     return changed;
 
     });
@@ -84,10 +84,10 @@ bool RuntimeCoordinator::poll(){
 void RuntimeCoordinator::stop() {
     return diagnose("stop",[&]{
     AcquisitionTimingSpan timing("runtime.stop-command");
-    owner();++generation_;
+    owner();++generation_;runtime_.cancelSourceVerification();
     if(cancel_)cancel_->store(true);
     faultAfterDrain_=false;runtime_.stopCameras();
-    state_=runtime_.busy() || runtime_.camerasPending() ? RuntimeState::Stopping : loaded_ ? RuntimeState::LoadedStopped : RuntimeState::Unloaded;
+    state_=runtime_.busy() || runtime_.camerasPending() || runtime_.sourceVerificationBusy() ? RuntimeState::Stopping : loaded_ ? RuntimeState::LoadedStopped : RuntimeState::Unloaded;
 
     });
 }

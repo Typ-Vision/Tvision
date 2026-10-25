@@ -5,6 +5,7 @@
 #include "IndustrialExecution.hpp"
 #include "ExperimentalRuntime.hpp"
 #include "RuntimeCameraSessions.hpp"
+#include "SourceVerificationService.hpp"
 #include <QDir>
 #include <QFileInfo>
 #include <QUuid>
@@ -40,6 +41,7 @@ MultiSourceDependencies RuntimeService::cameraComposition(const Recipe& r,const 
     return cameraSessions_?cameraSessions_->compose(std::move(set)):set;
 }
 void RuntimeService::requestCameraPreparation(const Recipe& recipe,const QString& directory){
+    requireVerificationIdle();requireVerified(recipe,directory);
     bool industrial=false;for(const auto& t:editorTools(recipe.definition))if(t.enabled && t.kind=="industrial_camera")industrial=true;
     if(!industrial){cameraSessions_.reset();return;}
     if(identity_.principal.isEmpty() || !identity_.authorize || !identity_.authorize(identity_.principal,ProductionAction::Run) ||
@@ -57,6 +59,21 @@ bool RuntimeService::camerasPending() const{return cameraSessions_ && cameraSess
 bool RuntimeService::camerasDraining() const{return cameraSessions_ && cameraSessions_->draining();}
 QString RuntimeService::cameraError() const{return cameraSessions_?cameraSessions_->error():QString{};}
 bool RuntimeService::cameraCloseFailed() const{return cameraSessions_ && cameraSessions_->closeFailed();}
+void RuntimeService::setSourceVerification(std::shared_ptr<SourceVerificationService> verification){verification_=std::move(verification);}
+bool RuntimeService::sourceVerificationBusy() const {return verification_ && verification_->busy();}
+void RuntimeService::cancelSourceVerification(){if(verification_ && verification_->busy())verification_->cancel();}
+bool RuntimeService::pollSourceVerification(){if(!verification_ || !verification_->busy())return false;return verification_->poll();}
+void RuntimeService::requireVerificationIdle() const {if(sourceVerificationBusy())throw ProductionException(ProductionError::Busy,"Source verification worker owns acquisition");}
+void RuntimeService::requireVerified(const Recipe& recipe,const QString& directory) const {if(verification_ && !verification_->admissionAllowedFor(recipe,directory))throw ProductionException(ProductionError::DependencyChanged,"Whole source verification set is not ready for this recipe");}
+void RuntimeService::rememberVerificationIdentity(const Recipe& recipe,const QString& directory){
+    if(const auto snapshot=active())verificationRecipeIdentities_[snapshot->validation().id]=ProductionRecipeService::recipeContent(recipe,directory);
+}
+void RuntimeService::requireActiveVerified() const {
+    if(!verification_)return;
+    const auto snapshot=active();
+    const auto identity=snapshot ? verificationRecipeIdentities_.value(snapshot->validation().id,ProductionRecipeService::recipeContent(snapshot->recipe(),snapshot->projectDirectory())):QByteArray{};
+    if(!verification_->admissionAllowedForIdentity(identity))throw ProductionException(ProductionError::DependencyChanged,"Whole source verification set is not ready for the active recipe");
+}
 bool RuntimeService::busy() const {return production_.busy() || (multi_ && multi_->busy()) || (experimental_ && experimental_->busy());}
 void RuntimeService::setConfigurationProviders(ScopedProvider scoped,MultiProvider multi,MultiProvider experimental){
     if(busy())throw ProductionException(ProductionError::Busy,"Runtime cycle/recording pending");
@@ -75,7 +92,7 @@ void RuntimeService::setExperimental(bool enabled,MultiProvider provider){
     multi_.reset();multiMode_=false;validation_.reset();policyReset_=true;
 }
 std::shared_ptr<const ProductionSnapshot> RuntimeService::active() const {return policyReset_ ? nullptr:experimental_ ? experimental_->active():multiMode_ ? multi_->active():production_.active();}
-void RuntimeService::requireReady() const {if(policyReset_)throw ProductionException(ProductionError::UnknownValidation,"Run required after Runtime policy change");if(experimental_)experimental_->requireReady();else if(multiMode_)multi_->requireReady();else production_.requireReady(identity_.principal);}
+void RuntimeService::requireReady() const {requireVerificationIdle();requireActiveVerified();if(policyReset_)throw ProductionException(ProductionError::UnknownValidation,"Run required after Runtime policy change");if(experimental_)experimental_->requireReady();else if(multiMode_)multi_->requireReady();else production_.requireReady(identity_.principal);}
 std::optional<ActiveCalibrationSnapshot> RuntimeService::systemSnapshot(const Recipe& r) const {
     if(r.definition.contains("sourceSetup") || r.definition.contains("calibrationPolicy")){if(!scoped_)throw std::runtime_error("Scoped Runtime provider required");auto s=scoped_(r);if(!s || s->scope.isEmpty())throw std::runtime_error("Required setup is not active");if(s->configurationOnly)throw std::runtime_error("Configuration model cannot grant Runtime admission");return s;}
     return system_ ? system_():std::optional<ActiveCalibrationSnapshot>{};
@@ -177,6 +194,7 @@ void RuntimeService::checkConfiguration(const Recipe& r,const QString& directory
     }
 }
 void RuntimeService::prepare(const Recipe& r,const QString& directory) {
+    requireVerificationIdle();requireVerified(r,directory);
     if(busy())throw ProductionException(ProductionError::Busy,"Runtime cycle/recording pending.");
     if(automaticAcquisition_){
         const bool selected=requiresManualCycles(r,directory);
@@ -198,7 +216,7 @@ void RuntimeService::prepare(const Recipe& r,const QString& directory) {
     try {
         observeInstallation(r);declaredPreparation_=true;
         const auto effective=systemRecipe(r,directory);const auto validation=production_.validate(identity_.principal,effective,directory);
-        production_.activate(identity_.principal,validation.id,effective,directory);validation_=validation;multiMode_=false;policyReset_=false;
+        production_.activate(identity_.principal,validation.id,effective,directory);validation_=validation;multiMode_=false;policyReset_=false;rememberVerificationIdentity(r,directory);
     }catch(...){declaredInstallations_=previousDeclarations;validation_=previousValidation;declaredPreparation_=previousMode;throw;}
 }
 RecipeValidation RuntimeService::validate(const Recipe& r,const QString& directory,const ImageFrame& frame) {
@@ -216,17 +234,19 @@ void RuntimeService::observeInstallation(const Recipe& r) {
     for(const auto& t:editorTools(r.definition))if(t.kind=="image_file" || t.kind=="webcam")declaredInstallations_[t.id]=QJsonObject{{"kind",t.kind},{"parameters",t.parameters},{"enabled",t.enabled},{"planarSetup",r.definition.value("planarSetup")}};
 }
 void RuntimeService::activate(const Recipe& r,const QString& directory) {
+    requireVerificationIdle();requireVerified(r,directory);
     if(experimental_)throw ProductionException(ProductionError::InvalidConfiguration,"Experimental Runtime uses separate preparation");
     if(busy())throw ProductionException(ProductionError::Busy,"Runtime cycle/recording pending.");
     if(!validation_)throw ProductionException(ProductionError::UnknownValidation,"Validate the current draft first.");
-    production_.activate(identity_.principal,validation_->id,systemRecipe(r,directory),directory);multiMode_=false;
+    production_.activate(identity_.principal,validation_->id,systemRecipe(r,directory),directory);multiMode_=false;rememberVerificationIdentity(r,directory);
 }
-void RuntimeService::rollback(const QString& id){if(experimental_)throw ProductionException(ProductionError::InvalidConfiguration,"Experimental Runtime cannot activate production history");if(busy())throw ProductionException(ProductionError::Busy,"Cycle pending");production_.rollback(identity_.principal,id);multiMode_=false;}
+void RuntimeService::rollback(const QString& id){requireVerificationIdle();if(experimental_)throw ProductionException(ProductionError::InvalidConfiguration,"Experimental Runtime cannot activate production history");if(busy())throw ProductionException(ProductionError::Busy,"Cycle pending");production_.rollback(identity_.principal,id);multiMode_=false;}
 ProductionCycle RuntimeService::begin(const QJsonObject& communication){
     QElapsedTimer timer;timer.start();
     QJsonObject event{{"action","admission"},{"phase","begin"},{"plcRequest",!communication.isEmpty()}};
     if(const auto s=active())event.insert("recipe",RuntimeDiagnostics::recipeContext(s->recipe()));
     try {
+        requireVerificationIdle();requireActiveVerified();
         if(policyReset_)requireReady();
         auto cycle=experimental_ ? experimental_->begin(communication):multiMode_ ? multi_->begin(communication):production_.beginCycle(identity_.principal,communication);
         cycle.diagnostics=diagnostics_;event["ticket"]=QString::number(cycle.ticket);event["elapsedMs"]=timer.elapsed();

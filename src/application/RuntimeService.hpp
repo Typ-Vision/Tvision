@@ -8,6 +8,7 @@ namespace visionflow {
 class MultiSourceRuntimeService;
 class ExperimentalRuntime;
 class RuntimeCameraSessions;
+class SourceVerificationService;
 struct RuntimeIdentity {
     QString principal;
     ProductionRecipeService::Authorize authorize;
@@ -27,6 +28,11 @@ public:
     void checkConfiguration(const Recipe&,const QString& projectDirectory) const;
     void prepare(const Recipe&,const QString& projectDirectory);
     void requestCameraPreparation(const Recipe&,const QString& projectDirectory);
+    // Optional whole-source verification; never invoked -> legacy admission unchanged.
+    void setSourceVerification(std::shared_ptr<SourceVerificationService>);
+    bool sourceVerificationBusy() const;
+    void cancelSourceVerification();
+    bool pollSourceVerification();
     bool pollCameras();
     void stopCameras();
     bool camerasPending() const;
@@ -59,6 +65,10 @@ public:
     static CycleResult execute(const ProductionCycle&,const QString& catalogPath,const std::shared_ptr<std::atomic_bool>& cancel,ExecutionService::SourceAdapterFactory factory={});
     static MeasurementExecutionContext calibration(const ProductionSnapshot&,const ImageFrame&,const QString& catalogPath);
 private:
+    void requireVerificationIdle() const;
+    void requireVerified(const Recipe&,const QString& directory) const;
+    void requireActiveVerified() const;
+    void rememberVerificationIdentity(const Recipe&,const QString& directory);
     std::optional<ActiveCalibrationSnapshot> systemSnapshot(const Recipe&) const;
     QJsonObject sourceDependencies(const Recipe&) const;
     ProductionDependencies calibrationDependencies(const Recipe&) const;
@@ -91,5 +101,9 @@ private:
     bool automaticAcquisition_=true;
     MultiProvider automaticProvider_;
     std::unique_ptr<RuntimeCameraSessions> cameraSessions_;
+    std::shared_ptr<SourceVerificationService> verification_;
+    // Original recipe identity before systemRecipe adds derived calibration fields.
+    // Entries follow the already bounded in-memory production validation history.
+    QMap<QString,QByteArray> verificationRecipeIdentities_;
 };
 }
