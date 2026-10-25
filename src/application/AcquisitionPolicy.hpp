@@ -7,6 +7,12 @@
 #include <QJsonDocument>
 #include <stdexcept>
 namespace visionflow {
+// Source context for a policy preflight error; no frame or acquisition is invented.
+class AcquisitionPolicyError : public std::runtime_error {
+public:
+    AcquisitionPolicyError(QString source,const std::exception& cause):std::runtime_error(cause.what()),sourceId(std::move(source)){}
+    const QString sourceId;
+};
 // A backend choice, never an admission or permission. Opening is still explicit.
 struct AcquisitionPolicy {
     static bool oecs(const PhysicalDeviceIdentity& id) {
@@ -35,7 +41,10 @@ struct AcquisitionPolicy {
             if(t.kind=="industrial_camera"){
                 const auto r=IndustrialSourceReference::fromJson(t.parameters["sourceReference"].toObject());
                 if(oecs(r.physical))selected=true;else native=true;
-            }else if(t.kind=="image_file")selected=replay(QDir(directory).absoluteFilePath(t.parameters["path"].toString())) || selected;
+            }else if(t.kind=="image_file"){
+                try{selected=replay(QDir(directory).absoluteFilePath(t.parameters["path"].toString())) || selected;}
+                catch(const std::exception& e){throw AcquisitionPolicyError(t.id,e);}
+            }
             else if(t.kind=="webcam")webcam=true;
         }
         if(selected && (native || webcam))throw std::runtime_error("OECS acquisition cannot be combined with native camera or webcam sources in one Runtime recipe.");

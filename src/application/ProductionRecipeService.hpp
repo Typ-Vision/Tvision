@@ -56,9 +56,11 @@ private:
     QJsonObject dependencies_;
     std::shared_ptr<const IndustrialExecutionInputs> industrial_;
 };
+class RuntimeDiagnostics;
 struct ProductionCycle {
     quint64 ticket=0;
     std::shared_ptr<const ProductionSnapshot> snapshot;
+    std::shared_ptr<RuntimeDiagnostics> diagnostics; // evidence only, no production authority
 };
 // Owner thread controller; snapshots may be captured by immutable worker jobs.
 // Archive hooks persist evidence; restart never restores authorization as VALID.

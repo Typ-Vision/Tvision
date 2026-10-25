@@ -54,7 +54,7 @@ QWidget* MainWindow::makeRuntime() {
     connect(runtimePreparation_,&QTableWidget::currentCellChanged,this,[this](int row,int,int,int){if(row>=0 && row<runtimeSources_->count())runtimeSources_->setCurrentIndex(row);});
     auto* split=new QSplitter;runtimeViewer_=new ImageViewer;split->addWidget(runtimeViewer_);
     auto* panel=new QWidget;auto* results=new QVBoxLayout(panel);runtimeTools_=new QComboBox;runtimeTools_->setObjectName("runtimeTools");results->addWidget(runtimeTools_);
-    runtimeSummary_=plain("READY — sonuç yok.");runtimeSummary_->setObjectName("runtimeSummary");runtimeSummary_->setSizePolicy(QSizePolicy::Ignored,QSizePolicy::Preferred);results->addWidget(runtimeSummary_);runtimeEdgeProfile_=new EdgeProfileView;runtimeEdgeProfile_->setObjectName("runtimeEdgeProfile");results->addWidget(runtimeEdgeProfile_);results->addStretch();
+    runtimeSummary_=plain("Yeni çevrim sonucu yok.");runtimeSummary_->setObjectName("runtimeSummary");runtimeSummary_->setSizePolicy(QSizePolicy::Ignored,QSizePolicy::Preferred);results->addWidget(runtimeSummary_);runtimeEdgeProfile_=new EdgeProfileView;runtimeEdgeProfile_->setObjectName("runtimeEdgeProfile");results->addWidget(runtimeEdgeProfile_);results->addStretch();
     runtimeTools_->setMinimumContentsLength(12);runtimeTools_->setSizeAdjustPolicy(QComboBox::AdjustToMinimumContentsLengthWithIcon);
     auto* scroll=new QScrollArea;scroll->setWidgetResizable(true);scroll->setWidget(panel);scroll->setMinimumWidth(250);split->addWidget(scroll);split->setStretchFactor(0,3);split->setStretchFactor(1,2);split->setSizes({680,420});layout->addWidget(split,1);
     connect(runtimeTools_,&QComboBox::currentIndexChanged,this,[this]{showRuntimeResult();});return page;
@@ -145,7 +145,8 @@ void MainWindow::refreshRuntime(bool notification) {
     if(runtimeCoordinator_ && runtimeCoordinator_->loaded()){
         const auto& r=*runtimeCoordinator_->loaded();status+="\nYüklü: "+r.name+QString(" • v%1 • %2").arg(r.recipeVersion).arg(typeLabel(r.applicationType));
     }
-    if(pending && !working)status+="\nKAYIT BEKLİYOR — yeni çevrim engelli";
+    if(runtimeCoordinator_ && runtimeCoordinator_->recordingPending() && !working)status+="\nKAYIT BEKLİYOR — yeni çevrim engelli";
+    if(runtimeCoordinator_ && !runtimeCoordinator_->error().isEmpty()){if(state!=RuntimeState::Fault)status+="\n"+runtimeCoordinator_->error();status+="\n"+runtimeCoordinator_->recovery();}
     if(network)status+="\nPLC: "+plc_->state();
     runtimeStatus_->setText(status);
     refreshRuntimeSources();
@@ -171,7 +172,7 @@ void MainWindow::runtimeAction(const QString& action) {
         if(action=="retry") {
             if(!runtimePending_)return;
             const bool stopped=runtimeCoordinator_->state()==RuntimeState::Stopping || runtimeCoordinator_->state()==RuntimeState::LoadedStopped;
-            runtimeCoordinator_->finish(runtimeCycle_.ticket,*runtimePending_);if(measurementWorkspace_ && runtime_->active())measurementWorkspace_->observeAcquisition(runtime_->active()->recipe(),*runtimePending_);if(stopped)runtimeResult_.reset();else runtimeResult_=std::move(runtimePending_);runtimePending_.reset();runtimeCycle_={};showRuntimeResult();refreshRuntime();return;
+            runtimeCoordinator_->retryRecording();if(measurementWorkspace_ && runtime_->active())measurementWorkspace_->observeAcquisition(runtime_->active()->recipe(),*runtimePending_);if(stopped)runtimeResult_.reset();else runtimeResult_=std::move(runtimePending_);runtimePending_.reset();runtimeCycle_={};showRuntimeResult();refreshRuntime();return;
         }
         if(editorSession_.busy() || cameraSession_.busy())throw std::runtime_error("Önce diğer kamera/editor işini tamamlayın.");
         runtimeResult_.reset();showRuntimeResult();
@@ -182,16 +183,27 @@ void MainWindow::runtimeAction(const QString& action) {
             auto* watcher=runtimeJobs_.watch<CycleResult>(this,SessionJob::Execution);const auto cancel=runtimeCoordinator_->cancellation();
             connect(watcher,&QFutureWatcher<CycleResult>::finished,this,[this,watcher,cancel,timing,commandedAt]{
                 AcquisitionTimingBinding binding(timing);AcquisitionTimingSpan delivery("runtime.command-to-delivery",commandedAt);
-                auto result=watcher->result();watcher->deleteLater();if(cancel->load())RuntimeService::suppressCancelled(runtimeCycle_,result);
-                delivery.finish(cancel->load()?"cancelled":result.state==ExecutionState::Done?"success":"error");runtimePending_=result;
-                try {runtimeCoordinator_->finish(runtimeCycle_.ticket,result);if(measurementWorkspace_ && runtime_->active())measurementWorkspace_->observeAcquisition(runtime_->active()->recipe(),result);runtimeResult_=std::move(runtimePending_);runtimePending_.reset();runtimeCycle_={};showRuntimeResult();}
-                catch(const std::exception& e){runtimeSummary_->setText("Kayıt bekliyor: "+QString::fromUtf8(e.what()));runtimeViewer_->clearImage("Kayıt bekliyor; sonuç yayımlanmadı.");}
-                refreshRuntime();
+                auto result=watcher->result();watcher->deleteLater();
+                delivery.finish(cancel->load()?"cancelled":result.state==ExecutionState::Done?"success":"error");
+                completeRuntimeResult(std::move(result),cancel);
             });
             runtimeJobs_.launch(watcher,[cycle,catalog,cancel,timing,commandedAt]{AcquisitionTimingBinding binding(timing);AcquisitionTiming::record(timing,"runtime.worker-queue",commandedAt);return RuntimeService::execute(cycle,catalog,cancel);});
         }
         refreshRuntime();
-    }catch(const std::exception& e){const auto diagnostic=QString::fromUtf8(e.what());runtimeSummary_->setText(diagnostic.contains("native",Qt::CaseInsensitive) ? "Endüstriyel kamera kullanılamıyor. Bu backend için edinim doğrulaması tamamlanmadı.":diagnostic);runtimeSummary_->setToolTip(diagnostic);refreshRuntime();}
+    }catch(const ProductionException& e){runtimeSummary_->setText((e.code()==ProductionError::Busy ? "Meşgul — ikinci çevrim başlatılmadı: " : runtimeCoordinator_ ? runtimeCoordinator_->recovery()+"\n":"")+QString::fromUtf8(e.what()));refreshRuntime();}
+    catch(const std::exception& e){const auto diagnostic=QString::fromUtf8(e.what());runtimeSummary_->setText(diagnostic.contains("native",Qt::CaseInsensitive) ? "Endüstriyel kamera kullanılamıyor. Bu backend için edinim doğrulaması tamamlanmadı.":diagnostic);runtimeSummary_->setToolTip(diagnostic);refreshRuntime();}
+}
+void MainWindow::completeRuntimeResult(CycleResult result,const std::shared_ptr<std::atomic_bool>& cancel){
+    try {
+        if(cancel && cancel->load())RuntimeService::suppressCancelled(runtimeCycle_,result);
+        runtimeCoordinator_->finish(runtimeCycle_.ticket,result);
+        if(measurementWorkspace_ && runtime_->active())measurementWorkspace_->observeAcquisition(runtime_->active()->recipe(),result);
+        runtimeResult_=result;runtimePending_.reset();runtimeCycle_={};showRuntimeResult();
+    }catch(const ProductionException& e){
+        if(e.code()==ProductionError::PersistenceFailure)runtimePending_=result;else runtimePending_.reset();
+        runtimeSummary_->setText((e.code()==ProductionError::PersistenceFailure ? "Kayıt bekliyor — Kaydı tekrar yaz aynı completion'ı yazar.\n":runtimeCoordinator_->recovery()+"\n")+QString::fromUtf8(e.what()));runtimeViewer_->clearImage("Sonuç yayımlanmadı.");
+    }catch(const std::exception& e){runtimePending_.reset();runtimeSummary_->setText("Completion işlenemedi — tanıyı inceleyin: "+QString::fromUtf8(e.what()));runtimeViewer_->clearImage("Sonuç yayımlanmadı.");}
+    refreshRuntime();
 }
 void MainWindow::refreshRuntimeSources(){
     if(!runtimeSources_)return;
@@ -209,6 +221,7 @@ void MainWindow::refreshRuntimeSources(){
         QString actual="Kare yok";if(runtimeResult_)for(const auto& f:runtimeResult_->frames)if(f.sourceId==tool.id)actual=f.frameId;
         QString readiness=deps.isEmpty() ? "Beyan / Run bekleniyor":"Hazırlık snapshot'ı";
         if(runtimeResult_)for(const auto& result:runtimeResult_->tools)if(result.toolId==tool.id)readiness=executionStateName(result.state)+(result.errorCode.isEmpty() ? "":" / "+result.errorCode);
+        if(runtimeResult_ && runtimeResult_->state==ExecutionState::Skipped){readiness="Durduruldu / iptal — sonuç bastırıldı";actual="Geçerli çevrim karesi yok";}
         QString sourceLabel=tool.name;const auto binding=deps["measurementSource"].toObject()["binding"].toObject();
         const auto target=SystemCalibration::setupReference(SystemCalibration::branch(*recipe,tool.id));
         const auto cameraId=target ? target->camera.value:tool.parameters["sourceReference"].toObject()["cameraId"].toString();bool namedCamera=false;
@@ -253,7 +266,7 @@ void MainWindow::showRuntimeResult() {
     runtimeSummary_->setToolTip({});refreshRuntimeSources();
     runtimeEdgeProfile_->setDiagnostics({});runtimeViewer_->onRoiChanged={};runtimeViewer_->setRoi({},false);runtimeViewer_->setRoiRecipeBound(false);
     runtimeViewer_->setToolOverlay({},{});
-    if(!runtimeResult_){runtimeViewer_->clearImage("Yeni çevrim sonucu yok.");runtimeSummary_->setText("READY — sonuç yok.");QSignalBlocker blocker(runtimeTools_);runtimeTools_->clear();return;}
+    if(!runtimeResult_){runtimeViewer_->clearImage("Yeni çevrim sonucu yok.");runtimeSummary_->setText("Yeni çevrim sonucu yok.");QSignalBlocker blocker(runtimeTools_);runtimeTools_->clear();return;}
     const auto& c=*runtimeResult_;const auto snapshot=runtime_ ? runtime_->active() : nullptr;QStringList lines;
     if(snapshot && snapshot->dependencies().contains("systemCalibration")){const auto s=SystemCalibration::decodeEvidence(snapshot->dependencies()["systemCalibration"].toObject());lines<<QString("Sistem kalibrasyonu: %1 v%2 • etkinleştirme %3").arg(s.record.name()).arg(s.selection.version).arg(s.selection.revision)<<(s.record.residualsMillimetres().isEmpty() ? "Bağımsız kontrol yapılmadı":"Bağımsız kontrol kanıtı mevcut");if(!s.scope.isEmpty()){const auto target=SetupReference::fromJson(s.scope["target"].toObject());lines<<QString("Kamera %1 • kurulum %2 r%3").arg(target.camera.value,target.setup.value).arg(target.revision);}}
     lines<<executionStateName(c.state)+QString(" • %1 ms").arg(c.milliseconds,0,'f',2)<<"Cycle: "+c.cycleId<<"Frame: "+c.frameId<<"Config: "+QString::fromLatin1(c.configId.left(12))<<(runtime_ && runtime_->experimental() ? "Kalıcı kayıt tamamlandı • Parça: Değerlendirilmedi • PLC / robot: Kullanılamıyor":plc_ && plc_->listening() ? "Kalıcı kayıt tamamlandı • PLC durumu Communication ekranında" : "Kalıcı kayıt tamamlandı • İletişim: NOT_REQUESTED");

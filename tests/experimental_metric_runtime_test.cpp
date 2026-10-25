@@ -1,4 +1,5 @@
 #include "FramedModelFixture.hpp"
+#include "application/RuntimeCoordinator.hpp"
 #include "OecsExperimentalFixture.hpp"
 #include "application/MeasurementWorkspace.hpp"
 #include <QCryptographicHash>
@@ -67,6 +68,20 @@ int main(int argc,char** argv){QCoreApplication app(argc,argv);try{
     for(const auto& historical:ProductionStore(archive).recent("experimental_cycles"))if(historical["state"]!="DONE"){const auto text=ExperimentalRuntime::summary(historical);check(!text.contains(": 10 mm") && !text.contains(": 20 mm"),"Stop/error historical summary has no numeric result");check(ExperimentalRuntime::csv({historical}).contains("\"[]\""),"Stop/error CSV results empty");}
     // A new raw-only record is projected onto the original v1 field set to exercise historical decoding.
     ProjectService rawProject;rawProject.createProject("old raw","",dir.filePath("raw.vfproject"),"file");rawProject.createRecipe("raw","",ApplicationType::Measurement,"file");rawProject.setImageFile(rawPath);rawProject.enableMultiSource();RuntimeService old(dir.filePath("old"),{},RuntimeIdentity::localEngineer());MeasurementWorkspace rawWorkspace(rawProject.path(),rawProject.project().id,[]{return true;});old.setExperimental(true,[&](const Recipe& r){return rawWorkspace.productionSources(r,{},true);});old.prepare(*rawProject.activeRecipe(),dir.path());auto rawLease=old.begin();auto rawResult=RuntimeService::execute(rawLease,{},{});old.finish(rawLease.ticket,rawResult);auto legacy=ProductionStore(dir.filePath("old")).recent("experimental_cycles").first();legacy["schema"]="visionflow.experimental-runtime1";legacy["schemaVersion"]=1;auto deps=legacy["dependencies"].toObject();deps["scope"]="experimental_runtime/1";auto entries=deps["sourceSet"].toObject();for(auto i=entries.begin();i!=entries.end();++i){auto e=i->toObject();e.remove("imageInfo");i.value()=e;}deps["sourceSet"]=entries;legacy["dependencies"]=deps;legacy["dependencyId"]=QString::fromLatin1(hash(deps));auto tools=legacy["tools"].toArray();for(int n=0;n<tools.size();++n){auto t=tools[n].toObject();t.remove("calibration");tools[n]=t;}legacy["tools"]=tools;ExperimentalRuntime::validateRecord(legacy);rejects([&]{ProductionResultCodec::validate(legacy);});
+    {const auto recoveryArchive=dir.filePath("coordinator-recovery");RuntimeService recovery(recoveryArchive,{},RuntimeIdentity::localEngineer());
+        recovery.setExperimental(true,[&](const Recipe& r){return rawWorkspace.productionSources(r,{},true);});
+        RuntimeCoordinator c(recovery);c.load(*rawProject.activeRecipe(),dir.path());c.start();const auto cycle=c.begin(RuntimeTrigger::Manual);
+        const auto completed=RuntimeService::execute(cycle,{},c.cancellation());check(completed.state==ExecutionState::Done,"Experimental coordinator replay result");
+        check(QDir().mkpath(recoveryArchive),"Experimental recovery archive fixture");QLockFile disk(recoveryArchive+"/archive.lock");check(disk.tryLock(0),"Experimental coordinator disk lock");rejects([&]{c.finish(cycle.ticket,completed);});
+        check(c.recordingPending() && c.failure()==RuntimeFailure::Persistence,"Experimental typed persistence retry");
+        auto changed=completed;changed.milliseconds+=1;rejects([&]{c.finish(cycle.ticket,changed);});rejects([&]{c.begin(RuntimeTrigger::Manual);});
+        const QJsonValue firstFailure=recovery.diagnostics()->snapshot()["firstFailure"];c.stop();disk.unlock();check(QFile::rename(rawPath,rawPath+".held"),"Hide experimental retry raster");
+        c.retryRecording();check(QFile::rename(rawPath+".held",rawPath),"Restore experimental retry raster");
+        const auto records=ProductionStore(recoveryArchive).recent("experimental_cycles");
+        check(records.size()==1 && records.first()["cycleId"]==completed.cycleId && !recovery.busy() && c.state()==RuntimeState::LoadedStopped && recovery.records().isEmpty(),"Experimental frozen retry records once without executing or trusted promotion");
+        int admissions=0,completions=0;for(const auto& v:recovery.diagnostics()->snapshot()["events"].toArray()){const auto e=v.toObject();admissions+=e["action"]=="admission" && e["outcome"]=="accepted";completions+=e["action"]=="completion";}
+        check(admissions==1 && completions==1 && recovery.diagnostics()->snapshot()["firstFailure"]==firstFailure,"Experimental retry preserves ticket/completion count and first failure");
+    }
     if(argc>2)ProductionStore(archive).append("experimental_cycles",legacy["recordId"].toString(),legacy);
     check(ExperimentalRuntime::summary(legacy).contains("Raw / px") && ExperimentalRuntime::csv({legacy,record}).contains("visionflow.experimental-runtime1"),"mixed legacy/new CSV remains experimental");
     QTextStream(stdout)<<"PASS: two exact experimental models, mixed raw/mm, negative model/geometry/sidecar/ports, frozen retry, Stop, restart and legacy v1; fixture only: "<<typeKey(applicationType)<<'\n';}

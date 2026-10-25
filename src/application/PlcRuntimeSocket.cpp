@@ -52,7 +52,7 @@ void PlcRuntimeSocket::owner() const {if(QThread::currentThread()!=thread())thro
 void PlcRuntimeSocket::log(const QString& message){diagnostics_.append(QDateTime::currentDateTimeUtc().toString(Qt::ISODateWithMs)+" "+message);if(diagnostics_.size()>128)diagnostics_.removeFirst();if(changed)changed();}
 QString PlcRuntimeSocket::state() const {
     owner();if(!listening())return "STOPPED";
-    if(pending_)return "RECORDING_PENDING";
+    if(pending_)return fault_.isEmpty() ? "BUSY":fault_;
     if(watcher_)return "BUSY";
     if(blocking())return fault_.isEmpty() ? "WAIT_ACK" : fault_;
     if(entries_.size()>=128)return "SESSION_FULL";
@@ -136,7 +136,7 @@ void PlcRuntimeSocket::trigger(const QJsonObject& o) {
         return;
     }
     if(watcher_){send({{"type","BUSY"},{"requestId",id}});return;}
-    const auto reason=pending_ ? QString("RECORDING_PENDING") : blocking() ? QString("DELIVERY_PENDING") : entries_.size()>=128 ? QString("SESSION_FULL") : unavailableReason();
+    const auto reason=pending_ ? (fault_.isEmpty() ? QString("BUSY"):fault_) : blocking() ? QString("DELIVERY_PENDING") : entries_.size()>=128 ? QString("SESSION_FULL") : unavailableReason();
     if(!reason.isEmpty()){send({{"type","INVALID"},{"reason",reason},{"requestId",id},{"resultValid",false},{"decision","NOT_EVALUATED"},{"valueMm",QJsonValue(QJsonValue::Null)}});return;}
     if(runtime_->busy()){send({{"type","BUSY"},{"requestId",id}});return;}
     const auto active=runtime_->active();
@@ -155,8 +155,10 @@ void PlcRuntimeSocket::trigger(const QJsonObject& o) {
     watcher_=new QFutureWatcher<CycleResult>(this);
     connect(watcher_,&QFutureWatcher<CycleResult>::finished,this,[this]{
         auto* done=watcher_;watcher_=nullptr;
-        pending_=done->result();done->deleteLater();if(cancel_->load())RuntimeService::suppressCancelled(cycle_,*pending_);
-        retryRecording();
+        pending_=done->result();done->deleteLater();
+        try {if(cancel_->load())RuntimeService::suppressCancelled(cycle_,*pending_);retryRecording();}
+        catch(const ProductionException& e){fault_="INVALID_COMPLETION";log(fault_+" "+QString::fromUtf8(e.what()));}
+        catch(const std::exception& e){fault_="COMPLETION_ERROR";log(fault_+" "+QString::fromUtf8(e.what()));}
     });
     if(started)started();
     watcher_->setFuture(QtConcurrent::run([cycle,catalog,cancel]{
@@ -166,7 +168,7 @@ void PlcRuntimeSocket::trigger(const QJsonObject& o) {
     send({{"type","BUSY"},{"requestId",id}});log("ACCEPTED ticket="+QString::number(cycle_.ticket));
 }
 void PlcRuntimeSocket::retryRecording() {
-    owner();if(!pending_)return;
+    owner();if(!pending_ || fault_=="INVALID_COMPLETION" || fault_=="COMPLETION_ERROR")return;
     try {
         if(runtime_->busy()){if(coordinator_)coordinator_->finish(cycle_.ticket,*pending_);else runtime_->finish(cycle_.ticket,*pending_); }
         if(resultEvent_.isEmpty()) {
@@ -183,11 +185,13 @@ void PlcRuntimeSocket::retryRecording() {
             resultEventId_=uuid();resultEvent_=event("PLC_RESULT",outstanding_);resultEvent_["eventId"]=resultEventId_;
             resultEvent_["ticket"]=QString::number(cycle_.ticket);resultEvent_["response"]=response;
         }
-        store_->append("events",resultEventId_,resultEvent_);
+        try {store_->append("events",resultEventId_,resultEvent_);}
+        catch(const std::exception& e){throw ProductionException(ProductionError::PersistenceFailure,QString::fromUtf8(e.what()));}
         auto result=std::move(*pending_);pending_.reset();entries_[outstanding_].response=resultEvent_["response"].toObject();
         resultEvent_={};resultEventId_.clear();cycle_={};fault_.clear();retries_=0;ackClock_.restart();
         send(entries_[outstanding_].response);if(completed)completed(result);log("RESULT_RECORDED; WAIT_ACK");
-    }catch(const std::exception& e){fault_="RECORDING_PENDING";log("RECORDING_PENDING "+QString::fromUtf8(e.what()));}
+    }catch(const ProductionException& e){fault_=e.code()==ProductionError::PersistenceFailure ? "RECORDING_PENDING":"INVALID_COMPLETION";log(fault_+" "+QString::fromUtf8(e.what()));}
+    catch(const std::exception& e){fault_="COMPLETION_ERROR";log("COMPLETION_ERROR "+QString::fromUtf8(e.what()));}
 }
 void PlcRuntimeSocket::acknowledge(const QString& id) {
     auto it=entries_.find(id);if(it==entries_.end()){error("UNKNOWN_REQUEST",id);return;}

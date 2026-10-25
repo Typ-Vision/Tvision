@@ -6,6 +6,7 @@ görev” ifadeleri yazıldıkları tarihe aittir.
 
 | Dönem / görev | Kayıt |
 | --- | --- |
+| 25 Ekim 2026 — INT-03 | [Runtime tanı/ilk neden, frozen kayıt retry, Starting/Stop/drain ve typed recovery](2026-10-25-int-03.md) |
 | 25 Ekim 2026 — INT-02 | [API/politika matrisi, 64 yol aktarım envanteri ve ayrı Release baseline; üç assertion açık](2026-10-25-int-02.md) |
 | 25 Ekim 2026 — INT-01 | [A0–E2 snapshot, bundle, CameraIntegration tabanı ve koruma doğrulaması](2026-10-25-int-01.md) |
 | 24 Ekim 2026 — CCUX-23b-6 | [600 örnekle birleşik performans/doğruluk kabulü; canlı kabul açık](2026-10-24-ccux-23b-6.md) |

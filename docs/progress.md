@@ -4,14 +4,14 @@
 
 ## Devam noktası
 
-**[INT-02 tamam](archive/2026-10-25-int-02.md):** `230cc72` ↔ `259e41f`;
-[API/envanter](architecture/camera-integration-int02-matrix.md).
-Ayrı Release, tekrarlar dahil 43 testte 40 başarı/3 assertion açık:
-Missing result, schema9 pre-cancel, Camera Manager kayıt/ayar. İki HELLO testi
-erişimli geçti. Kamera/kalibrasyon PNG incelendi; birleşik kabul yok.
-[INT-01 bundle](archive/2026-10-25-int-01.md) korunur;
-dal `codex/camera-a0-e2-integration`, taban `CameraIntegration@3793198`.
-Port/push yok; INT-03 başlamadı. Eski E1/E2 yeni kabul değil.
+**[INT-03 tamam](archive/2026-10-25-int-03.md):** A1 tanı/C1 frozen retry;
+asenkron Starting ve gerçek Stop/drain korunur. Release ilgili 25 test geçti;
+INT-02'nin Missing result, schema9 pre-cancel ve Camera Manager assertion'ları
+aynı nedenle açık. [INT-02](archive/2026-10-25-int-02.md),
+[API/envanter](architecture/camera-integration-int02-matrix.md),
+[INT-01 bundle](archive/2026-10-25-int-01.md) korunur.
+Dal `codex/camera-a0-e2-integration`; taban `CameraIntegration@3793198`.
+Sonraki yalnız INT-04; başlamadı. Push/birleşik kabul yok.
 
 **[CCUX-23b-1–6 yazılım kabulü tamamlandı](archive/2026-10-24-ccux-23b-6.md).**
 600 örnek performans kanıtı kapanışta.

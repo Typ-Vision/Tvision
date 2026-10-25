@@ -46,6 +46,9 @@ struct CycleResult {QString cycleId,frameId,recipeId,evaluationId,targetToolId; 
     // Editor diagnostics only; this does not issue Runtime completion authority.
     QMap<QString,std::shared_ptr<const IndustrialExecutionEvidence>> industrialEvidence;
 private:
+    friend class ExecutionService;
+    friend class RuntimeCoordinator;
+    QString acquisitionFailureSourceId_; // diagnostic policy preflight context; no completion authority
     friend class RuntimeService;
     friend class ProductionRecipeService;
     friend class MultiSourceRuntimeService;

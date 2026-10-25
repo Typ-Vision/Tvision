@@ -120,7 +120,7 @@ public:
         for(const auto& c:e.current.cameras)if(c.id==ref->camera)for(const auto& s:e.current.setups)if(s.id==ref->setup && s.camera==c.id && s.revision==ref->revision){IndependentCaptureRequest::installation(c,s);return {{"target",ref->toJson()},{"device",c.device.toJson()},{"geometry",s.geometry.toJson()}};}
         throw std::runtime_error("Source setup changed; bind explicitly again");
     }
-    void observeAcquisition(const Recipe& r,const CycleResult& cycle){const auto ref=SystemCalibration::setupReference(r);if(!ref)return;const auto source=SystemCalibration::source(r);if(source.kind!="webcam")return;for(const auto& result:cycle.tools)if(result.toolId==source.id && result.state==ExecutionState::Error){active_.disconnect(ref->camera);return;}}
+    void observeAcquisition(const Recipe& r,const CycleResult& cycle){const auto ref=SystemCalibration::setupReference(r);if(!ref)return;const auto source=SystemCalibration::source(r);if(source.kind!="webcam")return;for(const auto& result:cycle.tools)if(result.toolId==source.id && result.state==ExecutionState::Error){active_.disconnect(ref->camera,{{"reason",result.message},{"errorCode",result.errorCode},{"sourceId",source.id},{"cycleId",cycle.cycleId},{"origin","acquisition"}});return;}}
     QMap<QString,QVector<CalibrationModelRecord>> legacyHistories() const {
         QMap<QString,QVector<CalibrationModelRecord>> out;const auto catalog=repository_.catalog(gate_).records();
         for(const auto& r:catalog)if(r.encode()["schemaVersion"].toInt()<=3)out["Sistem • "+r.model().dependency().calibrationId].append(r);

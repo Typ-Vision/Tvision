@@ -62,6 +62,7 @@ public:
     bool verifyCamera(const QString& artifacts);
     bool verifyWebcam(const QString& artifacts);
     bool verifyMeasurement(const QString& artifacts);
+    bool verifyRuntimeFailures(const QString& artifacts);
     bool verifyRuntime(const QString& artifacts);
     bool verifyCommunication(const QString& artifacts);
     bool verifySystemCalibration(const QString& artifacts);
@@ -87,6 +88,7 @@ private:
     Qt::WindowStates operatorWindowState_{};
     void runtimeAction(const QString&);
     void showRuntimeResult();
+    void completeRuntimeResult(CycleResult,const std::shared_ptr<std::atomic_bool>&);
     void refreshLogs();
     void exportLogCsv(const QString& path);
     void ensureRuntime();

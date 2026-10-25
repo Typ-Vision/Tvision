@@ -1,4 +1,5 @@
 #include "ScopedActiveCalibration.hpp"
+#include "RuntimeDiagnostics.hpp"
 #include <stdexcept>
 #include <QFile>
 #include <QCryptographicHash>
@@ -125,7 +126,13 @@ void ScopedActiveCalibrationService::setOperational(const CameraId& camera,const
     const auto e=environment();require(gate_(),"Runtime/worker/pending record/ACK busy");auto next=e;next.operational[camera.value]=setup.value;
     repository_.commit(e,next);if(e.operational.value(camera.value)!=setup.value)disconnect(camera);
 }
-void ScopedActiveCalibrationService::disconnect(const CameraId& camera){owner();++cameraEpochs_[camera.value];for(auto i=permissions_.begin();i!=permissions_.end();)if(i->selection.target.camera==camera)i=permissions_.erase(i);else ++i;}
+void ScopedActiveCalibrationService::disconnect(const CameraId& camera,QJsonObject context){
+    owner();++cameraEpochs_[camera.value];int removed=0;
+    for(auto i=permissions_.begin();i!=permissions_.end();)if(i->selection.target.camera==camera){i=permissions_.erase(i);++removed;}else ++i;
+    context["action"]="permissionInvalidation";context["cameraId"]=camera.value;context["removedPermissions"]=removed;
+    if(!context.contains("reason"))context["reason"]="explicit_disconnect_or_setup_change";
+    RuntimeDiagnostics::publish(context);
+}
 CalibrationAvailabilityStatus ScopedActiveCalibrationService::status(const SetupReference& ref) const {
     ref.validate();const auto e=environment();CalibrationAvailabilityStatus result;
     for(const auto& s:e.selections)if(s.target.camera==ref.camera && s.target.setup==ref.setup)result.remembered=s;
@@ -167,7 +174,7 @@ void ScopedActiveCalibrationService::refreshAvailability(const QVector<DeviceBin
                 require(p.device->backend==found.backend && p.profile && currentProfile(e,*p.profile),"Industrial backend/profile changed");
             }
         }else c.device.resolve(devices);
-    }catch(const std::exception&){disconnect(c.id);}
+    }catch(const std::exception& e){disconnect(c.id,{{"reason",QString::fromUtf8(e.what())},{"origin","availability"}});}
 }
 QVector<ScopedCalibrationSnapshot> ScopedActiveCalibrationService::snapshots(const QVector<SetupReference>& refs,std::function<void()> beforeVerify) const {
     return snapshotsImpl(refs,false,std::move(beforeVerify));

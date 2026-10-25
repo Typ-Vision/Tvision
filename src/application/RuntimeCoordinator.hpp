@@ -3,6 +3,7 @@
 
 namespace visionflow {
 enum class RuntimeState { Unloaded, LoadedStopped, Starting, Running, Stopping, Fault };
+enum class RuntimeFailure { None, Persistence, InvalidCompletion, Dependency, Acquisition, Execution };
 enum class RuntimeTrigger { Manual, SoftwareTrigger };
 
 // Owner-thread lifecycle over the existing immutable/persistent Runtime service.
@@ -23,10 +24,15 @@ public:
     const std::optional<Recipe>& loaded() const;
     RuntimeTrigger mode() const {owner();return mode_;}
     QString error() const;
+    RuntimeFailure failure() const {owner();return failure_;}
+    QString recovery() const;
+    void retryRecording();
     bool recordingPending() const;
     bool deliveryPending() const;
     std::shared_ptr<std::atomic_bool> cancellation() const;
 private:
+    template<class F> auto diagnose(const QString& action,F&& operation,QJsonObject context={}) -> decltype(operation());
+    void remember(RuntimeFailure,const QString&);
     void owner() const;
     void replaceable() const;
     RuntimeService& runtime_;
@@ -35,6 +41,9 @@ private:
     RuntimeTrigger mode_=RuntimeTrigger::Manual;
     std::optional<Recipe> loaded_;
     QString directory_,error_;
+    RuntimeFailure failure_=RuntimeFailure::None;
+    std::optional<CycleResult> frozenCompletion_;
+    quint64 frozenTicket_=0,diagnosticTicket_=0;
     quint64 generation_=0;
     bool recordingPending_=false,deliveryPending_=false;
     bool faultAfterDrain_=false,reloadRequired_=false;

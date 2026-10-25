@@ -54,7 +54,7 @@ public:
                   MeasurementEnvironmentRepository::Fault=MeasurementEnvironmentRepository::Fault::None);
     void deactivate(const SetupId&);
     void setOperational(const CameraId&,const SetupId&);
-    void disconnect(const CameraId&);
+    void disconnect(const CameraId&,QJsonObject context={});
     CalibrationAvailabilityStatus status(const SetupReference&) const;
     // Explicit recheck of the remembered choice, not a new fit or production start.
     void prepareRemembered(const SetupReference&,const IndependentCalibrationSession&);

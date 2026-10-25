@@ -3,6 +3,7 @@
 #include "ProductionStore.hpp"
 #include "CalibrationWorkflow.hpp"
 #include "SystemCalibration.hpp"
+#include "RuntimeDiagnostics.hpp"
 namespace visionflow {
 class MultiSourceRuntimeService;
 class ExperimentalRuntime;
@@ -37,6 +38,8 @@ public:
     ProductionCycle begin(const QJsonObject& communication={});
     void requireReady() const;
     void finish(quint64 ticket,const CycleResult&);
+    static bool sameCompletion(const CycleResult&,const CycleResult&);
+    std::shared_ptr<RuntimeDiagnostics> diagnostics() const {return diagnostics_;}
     void observeInstallation(const Recipe&);
     std::shared_ptr<const ProductionSnapshot> active() const;
     bool busy() const;
@@ -65,6 +68,7 @@ private:
     Recipe systemRecipe(const Recipe&,const QString& directory) const;
     MeasurementExecutionContext completionCalibration(const ImageFrame&) const;
     bool declaredPreparation_=false;
+    std::shared_ptr<RuntimeDiagnostics> diagnostics_=std::make_shared<RuntimeDiagnostics>();
     ProductionStore store_;
     QString catalogPath_;
     RuntimeIdentity identity_;

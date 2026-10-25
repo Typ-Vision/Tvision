@@ -34,7 +34,7 @@ public:
     bool connected() const {return peer_ && peer_->state()==QAbstractSocket::ConnectedState;}
     bool blocking() const {return !outstanding_.isEmpty();}
     bool working() const {return watcher_!=nullptr;}
-    bool recordingPending() const {return pending_.has_value();}
+    bool recordingPending() const {return pending_.has_value() && fault_=="RECORDING_PENDING";}
     quint16 port() const {return server_.serverPort();}
     QString sessionId() const {return session_;}
     QString state() const;

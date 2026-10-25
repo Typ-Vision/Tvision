@@ -1,9 +1,10 @@
 # INT — A0–E2 çalışmalarını CameraIntegration üzerine taşıma
 
-25 Ekim 2026. Uygulayıcı: Codex. Durum: **INT-02 tamamlandı; ürün aktarımı başlamadı**.
+25 Ekim 2026. Uygulayıcı: Codex. Durum: **INT-03 tamamlandı; tanı/kurtarma aktarıldı**.
 Snapshot `230cc72`; taban `CameraIntegration@3793198`; çalışma dalı
 `codex/camera-a0-e2-integration`. [INT-01 kapanışı](../archive/2026-10-25-int-01.md).
-Sonraki kart INT-03; ayrıca yetkilendirilmeden başlatılmaz.
+Sonraki kart INT-04; ayrıca yetkilendirilmeden başlatılmaz.
+[INT-03 kapanışı](../archive/2026-10-25-int-03.md).
 [INT-02 matrisi](camera-integration-int02-matrix.md), [envanter](camera-integration-int02-inventory.md),
 [baseline/kapanış](../archive/2026-10-25-int-02.md): ayrı Release ve görseller hazır;
 Missing result + pre-cancel + Camera Manager assertion'ları açık. İki HELLO testi
@@ -135,6 +136,10 @@ var. Başarısız baseline birleşik kabul diye işaretlenmez.
 **Commit:** `INT-02: define integration contracts and capture baseline`.
 
 ## INT-03 — Tanı ve hata/kayıt kurtarma
+
+**Durum: tamamlandı — 25 Ekim 2026.** A1/C1 mevcut Starting/Stop/drain ile
+birleştirildi; Release/test/görsel ve üç baseline hata ayrımı
+[kapanıştadır](../archive/2026-10-25-int-03.md). INT-04 başlatılmadı.
 
 **Önkoşul:** INT-02.
 **Sahiplik:** RuntimeDiagnostics, RuntimeCoordinator, RuntimeService,

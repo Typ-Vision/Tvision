@@ -8,6 +8,7 @@
 #include <QDir>
 #include <QFileInfo>
 #include <QUuid>
+#include <QElapsedTimer>
 #ifdef Q_OS_WIN
 #ifndef NOMINMAX
 #define NOMINMAX
@@ -209,10 +210,28 @@ void RuntimeService::activate(const Recipe& r,const QString& directory) {
     production_.activate(identity_.principal,validation_->id,systemRecipe(r,directory),directory);multiMode_=false;
 }
 void RuntimeService::rollback(const QString& id){if(experimental_)throw ProductionException(ProductionError::InvalidConfiguration,"Experimental Runtime cannot activate production history");if(busy())throw ProductionException(ProductionError::Busy,"Cycle pending");production_.rollback(identity_.principal,id);multiMode_=false;}
-ProductionCycle RuntimeService::begin(const QJsonObject& communication){if(policyReset_)requireReady();return experimental_ ? experimental_->begin(communication):multiMode_ ? multi_->begin(communication):production_.beginCycle(identity_.principal,communication);}
+ProductionCycle RuntimeService::begin(const QJsonObject& communication){
+    QElapsedTimer timer;timer.start();
+    QJsonObject event{{"action","admission"},{"phase","begin"},{"plcRequest",!communication.isEmpty()}};
+    if(const auto s=active())event.insert("recipe",RuntimeDiagnostics::recipeContext(s->recipe()));
+    try {
+        if(policyReset_)requireReady();
+        auto cycle=experimental_ ? experimental_->begin(communication):multiMode_ ? multi_->begin(communication):production_.beginCycle(identity_.principal,communication);
+        cycle.diagnostics=diagnostics_;event["ticket"]=QString::number(cycle.ticket);event["elapsedMs"]=timer.elapsed();
+        event["outcome"]="accepted";diagnostics_->append(event);return cycle;
+    }catch(const ProductionException& e){event["reason"]=QString::fromUtf8(e.what());event["errorCode"]=int(e.code());event["elapsedMs"]=timer.elapsed();diagnostics_->append(event,e.code()!=ProductionError::Busy);throw;}
+    catch(const std::exception& e){event["reason"]=QString::fromUtf8(e.what());diagnostics_->append(event,true);throw;}
+}
+bool RuntimeService::sameCompletion(const CycleResult& a,const CycleResult& b){return ProductionRecipeService::completionDigest(a)==ProductionRecipeService::completionDigest(b);}
 void RuntimeService::finish(quint64 ticket,const CycleResult& r){
-    if(experimental_){experimental_->finish(ticket,r);return;}
-    if(r.partial)throw std::runtime_error("Editor partial evaluation cannot be recorded as a Runtime cycle.");if(multiMode_)multi_->finish(ticket,r);else production_.finishCycle(ticket,r);}
+    QElapsedTimer timer;timer.start();QJsonObject event{{"action","record"},{"ticket",QString::number(ticket)},{"cycleId",r.cycleId},{"recipeId",r.recipeId},{"executionState",executionStateName(r.state)}};
+    try {
+        if(r.partial)throw ProductionException(ProductionError::InvalidCompletion,"Editor partial evaluation cannot be recorded as a Runtime cycle.");
+        if(experimental_)experimental_->finish(ticket,r);else if(multiMode_)multi_->finish(ticket,r);else production_.finishCycle(ticket,r);
+        event["outcome"]="committed";event["elapsedMs"]=timer.elapsed();diagnostics_->append(event);
+    }catch(const ProductionException& e){event["reason"]=QString::fromUtf8(e.what());event["errorCode"]=int(e.code());event["recordPending"]=e.code()==ProductionError::PersistenceFailure;event["elapsedMs"]=timer.elapsed();diagnostics_->append(event,true);throw;}
+    catch(const std::exception& e){event["reason"]=QString::fromUtf8(e.what());diagnostics_->append(event,true);throw;}
+}
 ImageFrame RuntimeService::probe(const Recipe& recipe,const QString& directory,const std::shared_ptr<std::atomic_bool>& cancel) {
     QString source;int count=0;for(const auto& t:editorTools(recipe.definition))if(t.enabled && (t.kind=="image_file" || t.kind=="webcam")){source=t.id;++count;}
     if(count!=1)throw std::runtime_error("Tek enabled edinim kaynağı gerekir.");
@@ -230,7 +249,25 @@ void RuntimeService::suppressCancelled(const ProductionCycle& cycle,CycleResult&
     result.completionDigest_=ProductionRecipeService::completionDigest(result);
 }
 CycleResult RuntimeService::execute(const ProductionCycle& cycle,const QString& catalogPath,const std::shared_ptr<std::atomic_bool>& cancel,ExecutionService::SourceAdapterFactory factory) {
-    if(ExperimentalRuntime::accepts(cycle)){if(factory)throw std::runtime_error("Experimental Runtime does not accept injected source adapters");return ExperimentalRuntime::execute(cycle,cancel);}
+    const auto report=[&](const CycleResult& result) noexcept {try{
+        const auto recipe=cycle.snapshot->recipe();
+    if(cycle.diagnostics){
+        const QJsonObject context{{"ticket",QString::number(cycle.ticket)},{"cycleId",result.cycleId},{"recipeId",recipe.id}};
+        QMap<QString,QString> sources;for(const auto& tool:editorTools(recipe.definition))if(tool.enabled && (tool.kind=="image_file" || tool.kind=="webcam" || tool.kind=="industrial_camera"))sources[tool.id]=tool.kind;
+        if(result.state==ExecutionState::Error && sources.contains(result.acquisitionFailureSourceId_)){
+            auto event=context;event["action"]="acquisition";event["phase"]="policyPreflight";event["attempted"]=false;
+            event["sourceId"]=result.acquisitionFailureSourceId_;event["sourceKind"]=sources[result.acquisitionFailureSourceId_];
+            event["executionState"]="ERROR";event["reason"]=result.error;cycle.diagnostics->append(event,true);
+        }
+        for(const auto& t:result.tools)if(sources.contains(t.toolId)){
+            auto event=context;event["action"]="acquisition";event["sourceId"]=t.toolId;event["sourceKind"]=sources[t.toolId];event["executionState"]=executionStateName(t.state);event["reason"]=t.message;event["errorCode"]=t.errorCode;event["elapsedMs"]=t.milliseconds;
+            for(const auto& frame:result.frames)if(frame.sourceId==t.toolId)event["frameId"]=frame.frameId;
+            cycle.diagnostics->append(event,t.state==ExecutionState::Error);
+        }
+        auto event=context;event["action"]="completion";event["executionState"]=executionStateName(result.state);event["reason"]=result.error;event["elapsedMs"]=result.milliseconds;cycle.diagnostics->append(event,result.state==ExecutionState::Error);
+    }
+    }catch(...){} };
+    if(ExperimentalRuntime::accepts(cycle)){if(factory)throw std::runtime_error("Experimental Runtime does not accept injected source adapters");auto result=ExperimentalRuntime::execute(cycle,cancel);report(result);return result;}
     if(!cycle.snapshot || !cycle.ticket)throw std::runtime_error("Runtime execution requires a production lease");
     const auto s=cycle.snapshot;const auto recipe=s->recipe();
     QJsonObject acquisition=s->dependencies()["measurementSource"].toObject()["acquisition"].toObject();
@@ -242,6 +279,7 @@ CycleResult RuntimeService::execute(const ProductionCycle& cycle,const QString& 
     catch(const std::exception& e){result.recipeId=recipe.id;result.configId=s->validation().contentId;result.cycleId=QUuid::createUuid().toString(QUuid::WithoutBraces);result.state=ExecutionState::Error;result.error=QString::fromUtf8(e.what());}
     result.completionDigest_=ProductionRecipeService::completionDigest(result);
     result.completionTicket_=cycle.ticket;result.completionSnapshot_=s;
+    report(result);
     return result;
 }
 }
