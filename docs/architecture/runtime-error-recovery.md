@@ -9,7 +9,7 @@ uyarlanmıştır. Coordinator durumu, execution/parça kararı ve kayıt/ACK ayr
 | Run/begin PersistenceFailure | Hazırlık/journal hatası; completion retry sunulmaz. Disk/erişim düzeltilip açık yeni Run gerekir. |
 | InvalidCompletion | Sonuç yayımlanmaz, retry açılmaz; lease/yeni çevrim engeli korunur. Kamera varsa gerçek retire/drain başlar. Unsafe discard eklenmez. |
 | Acquisition / execution ERROR | Kaynak errorCode/message ilk nedendir; terminal ERROR parça FAIL değildir. Industrial/experimental kamera hata politikası korunur; explicit yeni Run gerekir. |
-| Dependency / preparation | İlk neden korunur; mevcut Stop, yeniden Load/Run ve Setup → Calibration akışı kullanılır. Kaynak doğrulama UI'si INT-06 kapsamıdır. |
+| Dependency / preparation | İlk neden korunur; mevcut Stop, yeniden Load/Run ve Setup → Calibration akışı kullanılır. INT-06 Kaynağı doğrula komutu ve kaynak hata tablosu bu akışa bağlıdır. |
 | Busy | Geçici engel; yeni cycle/çekim yok, ilk neden değişmez. |
 | Stop | Generation ilerler, cooperative iptal ve gerçek kamera close/drain beklenir. Geç gerçek completion trusted suppression'dan geçer. Kayıt/ACK silinmez. |
 

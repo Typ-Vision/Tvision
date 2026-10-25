@@ -6,6 +6,7 @@ görev” ifadeleri yazıldıkları tarihe aittir.
 
 | Dönem / görev | Kayıt |
 | --- | --- |
+| 25 Ekim 2026 — INT-06 | [Runtime kaynak doğrulama UI, altı süreç restart regresyonu ve Stop/drain](2026-10-25-int-06.md) |
 | 25 Ekim 2026 — INT-05 tamamlanışı | [Kaynak doğrulama entegrasyonu, inceleme düzeltmeleri ve yeni regresyonlar](2026-10-25-int-05-completion.md) |
 | 25 Ekim 2026 — INT-05 ilk uygulama | [Claude worktree uygulaması ve tarihsel test kanıtları](2026-10-25-int-05.md) |
 | 25 Ekim 2026 — INT-04-05-REVIEW | [INT-04/05 incelemesi: iki P1 ve bir P2, yeniden üretim kanıtları](2026-10-25-int-04-05-review.md) |

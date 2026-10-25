@@ -1,9 +1,10 @@
 # INT — A0–E2 çalışmalarını CameraIntegration üzerine taşıma
 
-25 Ekim 2026. Uygulayıcı: Codex. Durum: **INT-05 tamamlandı; kaynak doğrulama ve sahiplik bütünleştirildi**.
+25 Ekim 2026. Uygulayıcı: Codex. Durum: **INT-06 tamamlandı; Runtime doğrulama akışı ve restart regresyonu bağlı**.
 Snapshot `230cc72`; taban `CameraIntegration@3793198`; çalışma dalı
 `codex/camera-a0-e2-integration`. [INT-01 kapanışı](../archive/2026-10-25-int-01.md).
-Sonraki kart INT-06; bu görevde başlatılmadı.
+Sonraki kart INT-07; bu görevde başlatılmadı.
+[INT-06 kapanışı](../archive/2026-10-25-int-06.md).
 [INT-05 tamamlanışı](../archive/2026-10-25-int-05-completion.md).
 [INT-04 kapanışı](../archive/2026-10-25-int-04.md), [INT-03 kapanışı](../archive/2026-10-25-int-03.md).
 [INT-02 matrisi](camera-integration-int02-matrix.md), [envanter](camera-integration-int02-inventory.md),
@@ -207,6 +208,8 @@ bütün sete izin vermez; yeni generation'a eski completion geçmez; testler ge�
 **Commit:** `INT-05: integrate source verification with camera sessions`.
 
 ## INT-06 — Runtime kullanıcı akışı ve restart regresyonu
+
+**Durum: tamamlandı.** [Yeni doğrulama ve sınırlar](../archive/2026-10-25-int-06.md).
 
 **Önkoşul:** INT-05.
 **Sahiplik:** MainWindowRuntime/Workspace/Calibration/headers, Geometry hata

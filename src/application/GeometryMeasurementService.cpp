@@ -34,7 +34,9 @@ ToolResult GeometryMeasurementService::execute(const ToolDefinition& t,const QMa
         v.origin.exposureAtUtc==m.exposureAtUtc && v.origin.deviceTimestampTicks==m.deviceTimestampTicks && v.origin.deviceClockId==m.deviceClockId,"Geometry inputs differ from actual acquisition");
     const CoordinateFrame rawFrame{m.coordinateSystemId,LengthUnit::Pixel,AxisConvention::XRightYDown};
     if(world){
-        require(ctx.calibration && ctx.current,"Geometry requires current active or accepted legacy calibration");
+        if(!ctx.calibration || !ctx.current)throw std::runtime_error((QString("Geometry requires current active or accepted legacy calibration. ")+
+            (ctx.error.isEmpty() ? QString("Current calibration unavailable"):ctx.error)+
+            "; Runtime: Stop → Kaynağı doğrula. Model/kurulum eksikse Setup → Calibration üzerinden kayıtlı exact seçimi ve kaynak bağını denetleyin.").toUtf8().constData());
         require(ctx.rawSize==image.size(),"Geometry resolver actual resolution differs from image");
         require(!ctx.calibration->dependency().cameraId.startsWith("calibration-test:"),"File-test calibration cannot measure production geometry");
     }

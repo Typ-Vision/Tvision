@@ -1,8 +1,13 @@
 # Kaynak doğrulama ve kamera sahipliği
 
 25 Ekim 2026, INT-05. A0–E2 B3 application komutunun CameraIntegration kamera
-sahipliğine uyarlanmış sözleşmesidir. Kullanıcı akışı (Runtime “Kaynağı doğrula”
-düğmesi, readiness tablosu) INT-06'dadır; bu belge yalnız application katmanını tanımlar.
+sahipliğine uyarlanmış sözleşmesidir. INT-06 Runtime “Kaynağı doğrula” komutunu,
+model/readiness tablosunu ve immutable worker → owner accept → drain yolunu bağlar.
+Başarılı denetim yalnız Run kullanılabilirliğini yeniler; otomatik başlatmaz.
+UI RuntimeService'e aynı workspace verification sahibini verir; proje/reçete/yol
+kimliği completion'da korunur. Stop/çıkış iptal eder; proje/pencere değişimi worker
+ve gerçek drain bitmeden kabul edilmez. Yeni Load UI deneme hatasını temizler;
+set readiness application katmanında yeniden denetlenir.
 [INT politika matrisi](camera-integration-int02-matrix.md),
 [edinim oturumları](camera-setup/acquisition-sessions.md).
 

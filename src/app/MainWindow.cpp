@@ -36,7 +36,7 @@ QFrame* card(const QString& title, const QString& text) {
 MainWindow::~MainWindow(){delete cameraManager_;cameraManager_=nullptr;}
 MainWindow::MainWindow(const QString& settingsFile) : settingsFile_(settingsFile) {
     smokeMode_=QCoreApplication::arguments().contains("--roi-smoke") || QCoreApplication::arguments().contains("--recipe-fields-smoke") || QCoreApplication::arguments().contains("--experimental-editor-smoke") || QCoreApplication::arguments().contains("--multi-source-runtime-smoke") || QCoreApplication::arguments().contains("--multi-source-smoke") || QCoreApplication::arguments().contains("--system-calibration-smoke") || QCoreApplication::arguments().contains("--usability-smoke") || QCoreApplication::arguments().contains("--smoke-test") || QCoreApplication::arguments().contains("--circle-smoke") || QCoreApplication::arguments().contains("--geometry-smoke");
-    smokeMode_=smokeMode_ || QCoreApplication::arguments().contains("--runtime-failure-smoke");
+    smokeMode_=smokeMode_ || QCoreApplication::arguments().contains("--runtime-failure-smoke") || QCoreApplication::arguments().contains("--restart-runtime-smoke");
     smokeMode_=smokeMode_ || QCoreApplication::arguments().contains("--editor-camera-sessions-smoke") || QCoreApplication::arguments().contains("--runtime-camera-sessions-smoke");
     setWindowTitle("VisionFlow Industrial Vision Suite"); resize(1400,900); setMinimumSize(850,600);
     auto* file = menuBar()->addMenu("File");
@@ -233,6 +233,7 @@ void MainWindow::closeEvent(QCloseEvent* event) {
     if(cameraManager_ && cameraManager_->hasPreview()){
         cameraManager_->leave([this]{close();});event->ignore();return;
     }
+    if(measurementWorkspace_ && measurementWorkspace_->sourceVerification()->busy()){if(runtimeCoordinator_)runtimeCoordinator_->stop();else measurementWorkspace_->sourceVerification()->cancel();displayError("Kaynak doğrulama worker/kamera kapanışı bekleniyor.");event->ignore();return;}
     if ((editorSession_.busy() && !editorCameras_.hasTargets()) || cameraSession_.busy() || runtimeJobs_.busy() || (runtime_ && runtime_->busy())) {displayError("Arka plan işi tamamlandıktan sonra pencereyi kapatın."); event->ignore(); return;}
     if (!editorCameraExitAccepted_ && !resolveUnsavedChanges()) { event->ignore(); return; }
     if(drainEditorCameras([this]{editorCameraExitAccepted_=true;close();editorCameraExitAccepted_=false;})){event->ignore();return;}

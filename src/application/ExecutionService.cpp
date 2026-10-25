@@ -206,7 +206,7 @@ CycleResult ExecutionService::run(const QJsonObject& definition,const QString& d
                         if(resolved){
                             cycle.executedTools.append(t.id);
                             if(ToolRegistry::get(t.kind).acquisitionSource)++cycle.acquisitions;
-                            auto injected=multi && t.kind!="industrial_camera" && ToolRegistry::get(t.kind).acquisitionSource && sourceAdapterFactory_ ? sourceAdapterFactory_(t):nullptr;
+                            auto injected=t.kind!="industrial_camera" && ToolRegistry::get(t.kind).acquisitionSource && sourceAdapterFactory_ ? sourceAdapterFactory_(t):nullptr;
                             if(t.kind=="industrial_camera"){
                                 if(!industrial_)throw std::runtime_error("Industrial execution requires immutable camera/setup/profile inputs");
                                 auto request=industrialExecutionRequest(*industrial_,t);

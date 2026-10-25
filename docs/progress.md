@@ -4,11 +4,12 @@
 
 ## Devam noktası
 
-**[INT-05 tamam](archive/2026-10-25-int-05-completion.md):** Claude uygulaması
-entegrasyona alındı; [incelemedeki](archive/2026-10-25-int-04-05-review.md) 2 P1/1 P2
-kapatıldı. Release ON/OFF; ilgili ON 10/10, OFF 9/9 geçti.
-Sonraki INT-06; UI bağlı değil. Push/birleşik kabul yok.
-[INT-04](archive/2026-10-25-int-04.md), [API/envanter](architecture/camera-integration-int02-matrix.md),
+**[INT-06 tamam](archive/2026-10-25-int-06.md):** Runtime Kaynağı doğrula,
+model/readiness ve worker/Stop/drain bağlı. Release ON seçili 15/15, OFF 7/7;
+üç tür × tek/N kaynakta altı restart süreci geçti; normal/850×600 görselleri
+incelendi. Sonraki INT-07; push/birleşik kabul yok.
+[INT-05](archive/2026-10-25-int-05-completion.md),
+[API/envanter](architecture/camera-integration-int02-matrix.md),
 [INT-01 bundle](archive/2026-10-25-int-01.md) korunur.
 Dal `codex/camera-a0-e2-integration`; taban `CameraIntegration@3793198`.
 Tam suite hataları ve tarihsel Camera Manager açığı kapanışta korunur.

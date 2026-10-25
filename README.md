@@ -80,7 +80,8 @@ OECS / GenTL probe komutları, sandbox sınırları ve kanıt bağlantıları
    Yeni kaydın varsayılan kurulum/profili otomatik bağlanır; eksik fiziksel kurulum
    ayrıntıları tamamlanmadan ölçüm izni oluşmaz.
 3. Reçeteyi Editor'da kur; kaynak/araçları bağla, görüntü al ve Run Flow çalıştır.
-4. Kaydedilmiş reçete için Load Recipe → Run → Tek çevrim; sonuçlar Logs/CSV'de.
+4. Kaydedilmiş reçete için Load Recipe → Kaynağı doğrula → Run → Tek çevrim; sonuçlar Logs/CSV'de.
+   Doğrulama kayıtlı metrik kaynak iznini yeni kareyle denetler; Run başlatmaz.
    Load/Run hazırlığı tek başına sonuç değildir. Stop → yeniden Load sürümü değiştirir.
 
 Normal kamera komutları uygun edinim yolunu seçer; ek OECS modu/onayı yoktur.

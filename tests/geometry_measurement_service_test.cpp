@@ -52,6 +52,8 @@ int main(int argc,char** argv){QCoreApplication app(argc,argv);try{
     auto execute=[&](const ToolDefinition& t,const QMap<QString,PortValue>& values,const MeasurementExecutionContext& context){return GeometryMeasurementService::execute(t,values,f.m.frameId,f.m.cycleId,{},context);};
     auto base=[&]{return QMap<QString,PortValue>{{"image",f.port("image",f.image)}};};
     auto points=base();points["p1"]=f.port("p1",QPointF(20,30));points["p2"]=f.port("p2",QPointF(50,70));
+    {MeasurementExecutionContext missing;missing.error="fixture: remembered model permission missing";bool propagated=false;
+    try{execute(tool("point_distance"),points,missing);}catch(const std::exception& e){const auto message=QString::fromUtf8(e.what());propagated=message.contains(missing.error) && message.contains("Kaynağı doğrula") && message.contains("Setup");}check(propagated,"Geometry preserves actual resolver cause and recovery action");}
     for(auto mode:{QString("pixel"),QString("calibrated")})for(auto op:{QString("point_distance"),QString("x_offset"),QString("y_offset")}){
         auto t=tool(op,mode);t.parameters["offset"]="signed";const auto r=execute(t,points,ctx);const double expected=op=="point_distance" ? 50:op=="x_offset" ? 30:40;
         near(number(r,mode=="pixel" ? "valuePx":"valueMm"),expected*(mode=="pixel" ? 1:.1));

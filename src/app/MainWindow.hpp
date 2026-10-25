@@ -62,6 +62,7 @@ public:
     bool verifyCamera(const QString& artifacts);
     bool verifyWebcam(const QString& artifacts);
     bool verifyMeasurement(const QString& artifacts);
+    bool verifyRestartRuntime(const QString& artifacts);
     bool verifyRuntimeFailures(const QString& artifacts);
     bool verifyRuntime(const QString& artifacts);
     bool verifyCommunication(const QString& artifacts);
@@ -230,6 +231,10 @@ private:
     QComboBox* plcMapping_{};
     QLabel* plcStatus_{};
     QLabel* hardwareStatus_{};
+    bool runtimeSourcesReady(QString* reason=nullptr) const;
+    QString runtimeVerificationError_,runtimeWorkspaceKey_;
+    IndependentCaptureBackend runtimeVerificationBackend_;
+    ExecutionService::SourceAdapterFactory runtimeSourceFactory_;
     QString runtimePath_;
     ProductionCycle runtimeCycle_;
     std::optional<CycleResult> runtimeResult_,runtimePending_;

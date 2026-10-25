@@ -58,8 +58,14 @@
    Aynı kayıtlı setup/profile revision değişimi Editor bağlantısını yeniden hazırlar;
    eski kalibrasyon/model izni geri gelmez. Yeni ayar snapshot'ıyla reçete
    DRAFT/dirty olur; otomatik kaydedilmez. **Save** ile taslağı kaydedin.
-8. **Load Recipe → Run → Tek çevrim** ile kaydedilmiş immutable sürümü yürütün.
-   Load bağlantı açmaz; Run bütün kamera kümesini arka planda hazırlar.
+8. **Load Recipe → Kaynağı doğrula → Run → Tek çevrim** ile kaydedilmiş immutable sürümü yürütün.
+   Load bağlantı açmaz. Restart sonrasında kayıtlı metrik modelin oturum izni için
+   **Kaynağı doğrula** seçin. Kaynak tablosu model adı/sürümünü ve kaynak hatasını
+   gösterir. Doğrulama worker ve gerçek kamera kapanışını bekler; başarılı denetim
+   Run veya çevrim başlatmaz. Stop iptal eder; proje değişimi/kapatma worker ve
+   kapanış tamamlandıktan sonra yeniden denenir. Ham dal kalibrasyon istemez;
+   metrik replay canlı fiziksel izni yenileyemez.
+   Run bütün kamera kümesini arka planda hazırlar.
    Hazırlık sonuç üretmez; tek çevrimler hazır bağlantıları kullanır.
    Stop gerçek kamera kapanışını bekler; disk kayıt retry kamerayı tutmaz.
    Kamera/model/ayar değişiminde **Stop → yeniden
