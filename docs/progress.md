@@ -4,15 +4,14 @@
 
 ## Devam noktası
 
-**[INT-09 tamam](archive/2026-10-25-int-09.md):** Yerel `CameraIntegration`
-fast-forward; push/main değişmedi. `VisionFlow.cmd` kaynakla eşleşen EXE'yi açar;
-Yeni smoke ve CTest 4/4 geçti.
-[Kullanım/fiziksel restart devri](architecture/camera-integration-handoff.md).
-[INT-08 önceki kabulü](archive/2026-10-25-int-08.md): ON 135/135, OFF 107/107;
-600 ölçüm, 27/30 medyan, 30/30 p95, normal/küçük görseller. Tam suite bu oturumda
-tekrarlanmadı; üç medyan aşımı ve fiziksel E2/mm/native açık.
-[korunan snapshot/bundle](archive/2026-10-25-int-01.md).
-Sonraki kart yok; fiziksel gözlem için gerçek proje/reçete/kaynak/model gerekli.
+**[CCUX-24A analiz](archive/2026-10-26-ccux-24a.md):** [On talep ve kartlar](architecture/camera-setup/24-usability-analysis.md).
+Kod değişmedi. Circle hatası geri çekildi; yeni varsayılan calibrated. Sıradaki: 24B.
+
+**[INT-09 tamam](archive/2026-10-25-int-09.md):** Yerel CameraIntegration ve
+başlatıcı eşleşti; push/main değişmedi. [Kullanım/restart devri](architecture/camera-integration-handoff.md).
+[INT-08 önceki test/600 ölçüm kanıtı](archive/2026-10-25-int-08.md) tekrarlanmadı;
+üç medyan aşımı ve fiziksel E2/mm/native açık; gerçek proje/reçete/kaynak/model gerekli.
+[Snapshot/bundle](archive/2026-10-25-int-01.md) korunur.
 
 **[CCUX-23b-1–6 yazılım kabulü tamamlandı](archive/2026-10-24-ccux-23b-6.md).**
 Canlı proje/2448×2048 kabulü açık; fixture fiziksel kabul değildir.
