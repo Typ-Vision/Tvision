@@ -4,16 +4,15 @@
 
 ## Devam noktası
 
-**[INT-08 tamam](archive/2026-10-25-int-08.md):** Birleşik yazılım/görsel kabul;
-Release tam UI/ZXing ON 135/135, OFF 107/107. Son EXE'de 600 yeni ölçüm,
-27/30 medyan, 30/30 p95 hedefi; üç medyan aşımı açık kayıtta.
-Normal/850×600 görsel inceleme tamam.
-[Final eşleme](architecture/camera-integration-int08-acceptance.md).
-Sonraki **INT-09**; başlatılmadı, push/fast-forward yok.
-[INT-07](archive/2026-10-25-int-07.md),
-[API](architecture/camera-integration-int02-matrix.md),
-[INT-01 bundle](archive/2026-10-25-int-01.md) korunur.
-Dal `codex/camera-a0-e2-integration`; taban `CameraIntegration@3793198`.
+**[INT-09 tamam](archive/2026-10-25-int-09.md):** Yerel `CameraIntegration`
+fast-forward; push/main değişmedi. `VisionFlow.cmd` kaynakla eşleşen EXE'yi açar;
+Yeni smoke ve CTest 4/4 geçti.
+[Kullanım/fiziksel restart devri](architecture/camera-integration-handoff.md).
+[INT-08 önceki kabulü](archive/2026-10-25-int-08.md): ON 135/135, OFF 107/107;
+600 ölçüm, 27/30 medyan, 30/30 p95, normal/küçük görseller. Tam suite bu oturumda
+tekrarlanmadı; üç medyan aşımı ve fiziksel E2/mm/native açık.
+[korunan snapshot/bundle](archive/2026-10-25-int-01.md).
+Sonraki kart yok; fiziksel gözlem için gerçek proje/reçete/kaynak/model gerekli.
 
 **[CCUX-23b-1–6 yazılım kabulü tamamlandı](archive/2026-10-24-ccux-23b-6.md).**
 Canlı proje/2448×2048 kabulü açık; fixture fiziksel kabul değildir.

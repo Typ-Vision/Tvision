@@ -1,5 +1,12 @@
 # Kaynak → kurulum bağlantısı
 
+Aşağıdaki KMC/ICM bölümleri kendi tarihsel kapsamlarını tanımlar. Güncel
+çok kaynaklı edinim [ortak oturum ömrüne](camera-setup/acquisition-sessions.md)
+bağlıdır; eski “tek edinim kaynağı” veya “industrial edinim açılmaz” ifadeleri
+güncel OECS Editor/Runtime yolunu kapatmaz. Exact model seçimi ve süreç izni
+ayrıdır; restart sonrası açık yeniden izin [kaynak doğrulama](source-verification.md)
+ile yürür. Native production ve experimental PLC/robot kapıları korunur.
+
 KMC-7a uygulaması: reçete definition.sourceSetup opt-in schema1; sourceToolId ile exact schema1 cameraId/setupId/revision hedefi. Eski root1/recipe1–2/editor8 kayıtları no-op açma/kayıtta dönüştürülmez. Kaynak silinirse bağı kaldırılır; başka kamera otomatik seçilmez. Açık bağlama calibrationPolicy=scoped-source/1 yazar; bağı kaldırmak legacy politikaya geri dönmez. Seçimsiz scoped reçete mm için açık ret alır. Yeni bağ DRAFT üretir ve eski calibrationBinding temizlenir.
 
 SystemCalibration yalnız bağlı kurulumun ScopedActiveCalibrationService snapshot’ını kullanır. Snapshot zarf2 özgün kayıt, exact seçim ve yeniden denetlenen fiziksel kurulum/device/geometri kanıtını taşır. Görünen ad kimliğe girmez. Başka kameranın değişimi kullanılan seçim revision’ını değiştirmez. SourceSetup mevcutken global compatibility modeline fallback yoktur.

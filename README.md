@@ -6,6 +6,9 @@ UI algoritma veya donanım SDK'sını doğrudan çağırmaz.
 
 **Güncel görev, son doğrulama ve açık engeller [devir özetindedir](docs/progress.md).**
 
+Birleşik kamera/7×7 kalibrasyon ve Runtime sürümü `CameraIntegration` dalındadır.
+[Başlatıcı ve fiziksel restart devir rehberi](docs/architecture/camera-integration-handoff.md).
+
 ## Uygulanan kapsam
 
 - Ortak Recipe Editor, typed DAG, worker üzerinde yürütme, kaynak başına görüntü/cache,

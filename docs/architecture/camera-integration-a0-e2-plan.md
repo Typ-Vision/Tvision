@@ -1,9 +1,10 @@
 # INT — A0–E2 çalışmalarını CameraIntegration üzerine taşıma
 
-25 Ekim 2026. Uygulayıcı: Codex. Durum: **INT-08 tamamlandı; birleşik yazılım/görsel kabul hazır**.
+25 Ekim 2026. Uygulayıcı: Codex. Durum: **INT-09 tamamlandı; yerel CameraIntegration kapanışı hazır**.
 Snapshot `230cc72`; taban `CameraIntegration@3793198`; çalışma dalı
 `codex/camera-a0-e2-integration`. [INT-01 kapanışı](../archive/2026-10-25-int-01.md).
-Sonraki kart INT-09; bu görevde başlatılmadı.
+INT-01–09 tamamlandı; sonraki otomatik kart yok.
+[INT-09 kapanışı](../archive/2026-10-25-int-09.md), [kullanım/devralma](camera-integration-handoff.md).
 [INT-08 kapanışı](../archive/2026-10-25-int-08.md),
 [kabul/final eşleme](camera-integration-int08-acceptance.md).
 [INT-07 kapanışı](../archive/2026-10-25-int-07.md).

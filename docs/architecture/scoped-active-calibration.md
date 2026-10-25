@@ -1,5 +1,11 @@
 # Kurulum kapsamlı etkinlik — KMC-4
 
+Kayıtlı exact seçim/matematik ile süreç içi izin ayrıdır. Restart seçimi korur,
+izin vermez. Güncel `configuration`/`reauthorizeRemembered` ve bütün-set
+Verify/worker/owner/drain sözleşmesi [kaynak doğrulamada](source-verification.md)
+tanımlıdır. Bu yol fit çalıştırmaz; başarısız denetim eski matematiği silmez,
+production veya experimental kökeni yükseltmez.
+
 `ScopedActiveCalibrationService` application/owner thread'de yaşar. Registry
 hatırlanan seçimi tutar; süreç içi izin diske yazılmaz. N snapshot kopyası worker'a
 verilebilir; canlı registry veya widget verilmez. Kullanılan hedefler açıkça istenir.

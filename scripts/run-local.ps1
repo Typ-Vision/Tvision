@@ -9,7 +9,7 @@ $ErrorActionPreference = 'Stop'
 $projectRoot = Split-Path -Parent $PSScriptRoot
 $buildPath = if ([IO.Path]::IsPathRooted($BuildDirectory)) { $BuildDirectory } else { Join-Path $projectRoot $BuildDirectory }
 $executable = Join-Path $buildPath 'visionflow.exe'
-if (-not (Test-Path -LiteralPath $executable)) { throw 'Önce README içindeki derleme komutlarını çalıştırın.' }
+if (-not (Test-Path -LiteralPath $executable)) { throw "Executable not found: $executable. Build using the README instructions first." }
 $previousPath = $env:PATH
 $previousPlatform = $env:QT_QPA_PLATFORM
 try {

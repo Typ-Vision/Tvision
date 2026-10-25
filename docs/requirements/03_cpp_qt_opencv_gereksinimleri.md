@@ -1,5 +1,12 @@
 # C++ / Qt / OpenCV geliştirme gereksinimleri
 
+Birleşik yolda UI application komutlarını çağırır; SDK/algoritma çağırmaz.
+[Kaynak doğrulama](../architecture/source-verification.md) immutable worker
+girdisi, owner accept ve gerçek drain ister; Run admission tüm kaynak kümesini
+yeniden denetler. [Çıktı görünürlüğü](../architecture/output-visibility.md)
+presentation katmanındadır; DAG/payload/terminal/Logs/CSV değişmez.
+Tanı veya kayıt retry edinim/fit/PLC izni oluşturmaz.
+
 Güncel uygulama durumu ve görev sırası [devir özetindedir](../progress.md). Bu belge gereksinimleri taşır; aşağıdaki tarihli planlar tek başına uygulama kabulü değildir. Üç belgede birebir tekrarlanan teslim paragrafları [taşıma öncesi tam kayıtta](../archive/2026-10-17/03_cpp_qt_opencv_gereksinimleri.md) korunmuştur. Yalnız görevle ilgili bölümleri okuyun; yeni teslim günlüğü eklemeyin.
 
 ICM teknik hedefi: [ortak sözleşmeler](../architecture/industrial-camera-contract-plan.md)
