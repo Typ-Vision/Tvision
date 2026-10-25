@@ -6,6 +6,7 @@ görev” ifadeleri yazıldıkları tarihe aittir.
 
 | Dönem / görev | Kayıt |
 | --- | --- |
+| 25 Ekim 2026 — INT-04-05-REVIEW | [INT-04/05 incelemesi: iki P1 ve bir P2, yeniden üretim kanıtları](2026-10-25-int-04-05-review.md) |
 | 25 Ekim 2026 — INT-04 | [Kayıtlı exact model / çalışma izni ayrımı, yeniden izin ve Release regresyonları](2026-10-25-int-04.md) |
 | 25 Ekim 2026 — INT-03 | [Runtime tanı/ilk neden, frozen kayıt retry, Starting/Stop/drain ve typed recovery](2026-10-25-int-03.md) |
 | 25 Ekim 2026 — INT-02 | [API/politika matrisi, 64 yol aktarım envanteri ve ayrı Release baseline; üç assertion açık](2026-10-25-int-02.md) |

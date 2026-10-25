@@ -1,17 +1,17 @@
 # VisionFlow — güncel devir
 
-25 Ekim 2026. [Arşiv](archive/README.md). [MCP](archive/2026-10-24-mcp-01.md).
+[Arşiv](archive/README.md). [MCP](archive/2026-10-24-mcp-01.md).
 
 ## Devam noktası
 
-**[INT-04 tamam](archive/2026-10-25-int-04.md):** kayıtlı model/izin ayrıldı;
-yeniden izin kaydı korur. 27 Release testi geçti.
+**[INT-04 tamam](archive/2026-10-25-int-04.md).** 27 Release testi geçti.
 Missing result/pre-cancel sürüyor; Camera Manager geçti, tarihsel hata kapanmadı.
 [INT-03 tanı/retry](archive/2026-10-25-int-03.md), [INT-02](archive/2026-10-25-int-02.md),
 [API/envanter](architecture/camera-integration-int02-matrix.md),
 [INT-01 bundle](archive/2026-10-25-int-01.md) korunur.
 Dal `codex/camera-a0-e2-integration`; taban `CameraIntegration@3793198`.
-INT-05 başlamadı. Push/birleşik kabul yok.
+**[INT-05 inceleme: 2 P1/1 P2](archive/2026-10-25-int-04-05-review.md)**; `2b580eb`
+Claude dalında, entegrasyonda yok. Önce düzeltme; INT-06/push/birleşik kabul yok.
 
 **[CCUX-23b-1–6 yazılım kabulü tamamlandı](archive/2026-10-24-ccux-23b-6.md).**
 600 örnek performans kanıtı kapanışta.
@@ -38,8 +38,7 @@ Ek `multi_source_production_contract` önceki hatası 22d kapanışında korunur
 Geçici viewer geometrisi ayrı adlandırılır; araç ROI'leri reçeteye bağlıdır.
 CCUX-16–19 [arşivde](archive/README.md); C0 açık.
 
-**CCUX-15 fiziksel açık:** 7×7, 12 mm kullanıcı beyanı; tarihsel retler ve
-[15c kanıtı](archive/2026-10-22-ccux-15c.md) arşivdedir, güncel kullanıcı başarısı yukarıda.
+**CCUX-15 fiziksel açık:** 7×7, 12 mm kullanıcı beyanı; [15c tarihsel kanıtı](archive/2026-10-22-ccux-15c.md); güncel başarı yukarıda.
 **CCUX-10b:** [Editor seçici/klavye düzeltmesi](archive/2026-10-22-ccux-10b.md).
 **CCUX-03b:** [Ayrı Opto ayar servisi ve fiziksel readback](archive/2026-10-22-ccux-03b.md);
 görüntü/mm kabulü değildir.
