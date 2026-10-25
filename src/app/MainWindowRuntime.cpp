@@ -109,6 +109,7 @@ void MainWindow::ensureRuntime() {
     runtimeVerificationError_.clear();
     runtimeCoordinator_=std::make_unique<RuntimeCoordinator>(*runtime_);
     if(plc_)plc_->bind(runtime_.get(),runtimeCoordinator_.get(),runtimePath_+".production",runtimePath_+".calibrations.json");
+    runtimeProjectId_=service_.project().id;
     runtimeCycle_={};runtimePending_.reset();runtimeResult_.reset();showRuntimeResult();
 }
 void MainWindow::updateOperatorMode(bool active) {
@@ -365,13 +366,34 @@ void MainWindow::showRuntimeResult() {
     if(rawFrame)lines<<"Kaynak: "+selectedSource<<"Seçili frame: "+rawFrame->metadata().frameId;
     const auto selected=runtimeTools_->currentData().toString();
     {QSignalBlocker blocker(runtimeTools_);runtimeTools_->clear();if(snapshot)for(const auto& t:editorTools(snapshot->recipe().definition))if(graph.toolSources.value(t.id)==selectedSource)runtimeTools_->addItem(t.name,t.id);runtimeTools_->setCurrentIndex(std::max(0,runtimeTools_->findData(selected)));}
-    for(const auto& t:c.tools){if(graph.toolSources.value(t.toolId)!=selectedSource)continue;QString name=t.toolId;if(snapshot)for(const auto& tool:editorTools(snapshot->recipe().definition))if(tool.id==t.toolId)name=tool.name;
+    QMap<QString,QSet<QString>> visibleOutputs;
+    for(const auto& t:c.tools){if(graph.toolSources.value(t.toolId)!=selectedSource)continue;QString name=t.toolId;std::optional<ToolDefinition> definition;if(snapshot)for(const auto& tool:editorTools(snapshot->recipe().definition))if(tool.id==t.toolId){name=tool.name;definition=tool;break;}
         lines<<name+" • "+executionStateName(t.state)+" • "+(t.fitDiagnostic ? presentMeasurementDiagnostic(*t.fitDiagnostic):t.errorCode+" "+t.message);
-        for(auto it=t.outputs.cbegin();it!=t.outputs.cend();++it)if(it->port.type!=PortType::Image) {
-            const auto value=ToolResultCodec::display(*it);
-            lines<<"  "+it.key()+(it->diagnostic ? " [diagnostic]: ":": ")+value+" "+it->port.unit;
+        QSet<QString> visible;
+        if(definition){
+            const auto preference=outputPreferences_.load({runtimeProjectId_,snapshot->recipe().id,t.toolId});
+            if(!preference.error.isEmpty())lines<<"  Görünüm tercihi: "+preference.error;
+            QMap<QString,OutputAvailabilityInfo> availability;
+            for(const auto& port:outputPorts(definition->kind)){
+                const auto it=t.outputs.constFind(port.id);
+                availability[port.id]=it==t.outputs.cend() ? OutputAvailabilityInfo{OutputAvailability::Unavailable,"OUTPUT_NOT_PRODUCED"}:OutputAvailabilityInfo{it->valid ? OutputAvailability::Available:OutputAvailability::Unavailable,it->invalidReason};
+            }
+            const auto visibility=OutputVisibilityPolicy::resolve(*definition,preference.selection,availability);
+            visible=visibility.visiblePortIds();
+            visibleOutputs.insert(t.toolId,visible);
+            for(const auto& entry:visibility.ports)if(entry.visible){
+                if(entry.availability.state==OutputAvailability::Unavailable)lines<<"  "+entry.port.id+": kullanılamıyor · "+entry.availability.reason;
+                else {const auto& value=t.outputs[entry.port.id];lines<<"  "+entry.port.id+(value.diagnostic ? " [diagnostic]: ":": ")+ToolResultCodec::display(value)+" "+value.port.unit;}
+            }
+            for(auto it=visibility.invalidOutputReasons.cbegin();it!=visibility.invalidOutputReasons.cend();++it)if(!visible.contains(it.key()))lines<<"  Uyarı · "+it.key()+": kullanılamıyor · "+it.value();
+            if(visible.isEmpty())lines<<"  Sonuç çıkışları gizli (görüntü/overlay viewer'da korunur).";
         }
-        if(t.decision!=PartDecision::NotEvaluated)lines<<QString("  Ölçüm: %1 mm • %2").arg(std::get<double>(t.outputs.value("value").data),0,'f',6).arg(t.decision==PartDecision::Pass ? "PASS" : "FAIL");
+        if(t.decision!=PartDecision::NotEvaluated){
+            const auto value=t.outputs.value("value");const auto* scalar=std::get_if<double>(&value.data);
+            const auto decision=t.decision==PartDecision::Pass ? "PASS":"FAIL";
+            if(visible.contains("value") && value.valid && scalar)lines<<QString("  Ölçüm: %1 mm • %2").arg(*scalar,0,'f',6).arg(decision);
+            else lines<<QString("  Parça kararı: %1").arg(decision);
+        }
         if(t.toolId==runtimeTools_->currentData().toString()){if(t.state==ExecutionState::Done){runtimeEdgeProfile_->setDiagnostics(t.edgeDiagnostics);if((t.edgeDiagnostics || t.outputs.contains("valuePx") || t.outputs.contains("widthPx") || (t.outputs.contains("linePx") || t.outputs.contains("circlePx"))) && snapshot){for(const auto& tool:editorTools(snapshot->recipe().definition))if(tool.id==t.toolId){try{if(tool.parameters.contains("referenceBinding"))throw std::runtime_error("Reference ROI uses current resolver");auto roi=ToolRoi::fromJson(tool.parameters["scanRoi"].toObject());if(roi.frame.unit==LengthUnit::Millimetre && rawFrame){const auto frame=*rawFrame;const auto ctx=RuntimeService::calibration(*snapshot,frame,runtimePath_+".calibrations.json");runtimeViewer_->setRoiMapping(roi.frame,[frame,ctx](QPointF p){return CircleToolService::mapPoint(frame,ctx,p,true);});}else runtimeViewer_->setRoiMapping(roi.frame);runtimeViewer_->setRoi(roi,false);runtimeViewer_->setRoiRecipeBound(true);runtimeViewer_->setRoiEditable(false);}catch(const std::exception&){}break;}}}const auto processed=t.outputs.value("image");if(processed.valid)if(const auto* frame=std::get_if<ImageFrame>(&processed.data))if(!frame->processing().isEmpty()){runtimeViewer_->setPreviewPixels(frame->preview());lines<<"  Görüntü: işlenmiş Gray8 (aynı raw geometri)";}QString annotation;if(t.outputs.contains("valuePx") || t.outputs.contains("widthPx") || (t.outputs.contains("linePx") || t.outputs.contains("circlePx")))annotation=t.message;annotation.replace(" • ","\n");if(t.decision!=PartDecision::NotEvaluated)annotation=QString("%1 mm • %2").arg(std::get<double>(t.outputs.value("value").data),0,'f',3).arg(t.decision==PartDecision::Pass ? "PASS" : "FAIL");runtimeViewer_->setToolOverlay(t.regions,t.points,t.lines,annotation,t.mask.pixels,t.mask.size,t.mask.origin,t.rejectedPoints,(t.outputs.contains("linePx") || t.outputs.contains("circlePx")));const auto codes=t.outputs.value("codes");if(codes.valid)if(const auto* list=std::get_if<CodeResults>(&codes.data))runtimeViewer_->setCodeOverlay(*list);}
     }
     // Resolve only against this recorded cycle and immutable snapshot. A failed
@@ -396,7 +418,7 @@ void MainWindow::showRuntimeResult() {
     for(const auto& t:c.tools)if(t.fitDiagnostic && graph.toolSources.value(t.toolId)==selectedSource){QString name=t.toolId;if(snapshot)for(const auto& configured:editorTools(snapshot->recipe().definition))if(configured.id==t.toolId)name=configured.name;diagnoses<<name+" • "+executionStateName(t.state)<<presentMeasurementDiagnostic(*t.fitDiagnostic);}
     if(snapshot && snapshot->validation().scope.startsWith("experimental_runtime/")){
         QStringList headline{"Kaynak: "+runtimeSources_->currentText()};
-        if(c.state==ExecutionState::Done)for(const auto& t:c.tools)if(t.state==ExecutionState::Done && graph.toolSources.value(t.toolId)==selectedSource)for(auto i=t.outputs.begin();i!=t.outputs.end();++i)if(i->valid && std::holds_alternative<double>(i->data) && (i->port.unit=="mm" || i->port.unit.startsWith("px")))headline<<i.key()+": "+ToolResultCodec::display(*i)+" "+i->port.unit;
+        if(c.state==ExecutionState::Done)for(const auto& t:c.tools)if(t.state==ExecutionState::Done && graph.toolSources.value(t.toolId)==selectedSource)for(auto i=t.outputs.begin();i!=t.outputs.end();++i)if(visibleOutputs.value(t.toolId).contains(i.key()) && i->valid && std::holds_alternative<double>(i->data) && (i->port.unit=="mm" || i->port.unit.startsWith("px")))headline<<i.key()+": "+ToolResultCodec::display(*i)+" "+i->port.unit;
         headline<<"Parça: Değerlendirilmedi • PLC / robot: Kullanılamıyor";
         lines.prepend(headline.join('\n'));lines<<ExperimentalRuntime::sourceSummary(snapshot->dependencies()["sourceSet"].toObject()[selectedSource].toObject(),selectedSource);
     }

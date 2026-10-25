@@ -247,6 +247,18 @@ void MainWindow::selectTool(const QString& id) {
     refreshMatchOverlay();
     refreshFlow();
 }
+void MainWindow::refreshOutputVisibilityControls() {
+    if(!service_.activeRecipe())return;
+    for(const auto& tool:service_.tools())if(tool.id==selectedToolId_) {
+        const auto preference=outputPreferences_.load({service_.project().id,service_.activeRecipe()->id,tool.id});
+        const auto selected=OutputVisibilityPolicy::resolve(tool,preference.selection).visiblePortIds();
+        if(auto* outputs=propertiesBody_->findChild<QWidget*>(tool.kind+"/outputs"))for(auto* box:outputs->findChildren<QCheckBox*>()) {
+            const QSignalBlocker block(box);box->setChecked(selected.contains(box->objectName().mid(QString("outputVisible_").size())));
+        }
+        if(!preference.error.isEmpty())if(auto* error=propertiesBody_->findChild<QLabel*>("outputPreferenceError")){error->setText(preference.error);error->show();}
+        break;
+    }
+}
 void MainWindow::showToolProperties() {
     const auto environment=editorDisplayEnvironment();
     showToolPropertiesView(editorContext(),environment);
@@ -500,7 +512,34 @@ void MainWindow::showToolPropertiesView(const EditorContext& context,const std::
     }
     auto* outputs=propertySection(form,"Çıkışlar",tool.kind+"/outputs",settingsFile_);
     auto* outputForm=static_cast<QFormLayout*>(outputs->layout());
-    for(const auto& output:outputPorts(tool.kind))outputForm->addRow(output.id,note(portTypeName(output.type)+" · "+output.unit+" · "+output.frame));
+    const OutputVisibilityIdentity outputIdentity{service_.project().id,service_.activeRecipe()->id,tool.id};
+    const auto preference=outputPreferences_.load(outputIdentity);
+    auto* outputError=note(preference.error);outputError->setObjectName("outputPreferenceError");outputError->setVisible(!preference.error.isEmpty());outputForm->addRow(outputError);
+    auto* outputHint=note("Yalnız Results listesini değiştirir. Görüntü ve overlay viewer'da kalır.");outputForm->addRow(outputHint);
+    const auto visibility=OutputVisibilityPolicy::resolve(tool,preference.selection);
+    for(const auto& entry:visibility.ports) {
+        const auto& output=entry.port;
+        auto* checkbox=new QCheckBox(output.id,outputs);checkbox->setObjectName("outputVisible_"+output.id);checkbox->setChecked(entry.visible);
+        const QString description=output.type==PortType::Image ? "Güncel görüntü; viewer erişimi seçimden bağımsızdır." : output.type==PortType::Point ? "Hesaplanan nokta koordinatı." : output.type==PortType::Number ? "Hesaplanan sayısal sonuç." : output.type==PortType::Boolean ? "Gerçek sonuçtan gelen doğru/yanlış durumu." : "Aracın hesaplanan "+portTypeName(output.type)+" çıktısı.";
+        checkbox->setAccessibleDescription(description);checkbox->setToolTip(output.id+" · "+portTypeName(output.type)+" · "+output.unit+" · "+output.frame+"\n"+description+"\nResults listesinde göster/gizle.");
+        outputForm->addRow(checkbox,note(portTypeName(output.type)+" · "+output.unit));
+        connect(checkbox,&QCheckBox::toggled,this,[this,outputs,outputIdentity,outputError](bool){
+            QSet<QString> selected;for(auto* box:outputs->findChildren<QCheckBox*>())if(box->isChecked())selected.insert(box->objectName().mid(QString("outputVisible_").size()));
+            const auto saved=outputPreferences_.save(outputIdentity,selected);
+            outputError->setText(saved.error);outputError->setVisible(!saved.ok());
+            refreshOutputVisibilityControls();
+            showExecutionResult();
+        });
+    }
+    for(const bool reset:{true,false}) {
+        auto* button=new QPushButton(reset ? "Varsayılana dön":"Tümünü göster");button->setObjectName(reset ? "outputDefaults":"outputShowAll");outputForm->addRow(button);
+        connect(button,&QPushButton::clicked,this,[this,outputs,outputIdentity,outputError,tool,reset]{
+            const auto saved=reset ? outputPreferences_.reset(outputIdentity):outputPreferences_.showAll(outputIdentity,tool.kind);
+            outputError->setText(saved.error);outputError->setVisible(!saved.ok());
+            refreshOutputVisibilityControls();
+            showExecutionResult();
+        });
+    }
     if(tool.kind=="edge_point" || tool.kind=="edge_pair" || tool.kind=="line_fit" || tool.kind=="circle_fit") {
         auto* editor=tool.kind=="edge_point" ? panel:panel->findChild<QWidget*>("metrologySettings");
         auto* rows=static_cast<QFormLayout*>(editor->layout());
@@ -675,6 +714,7 @@ bool MainWindow::applyToolProperties() {
     if(result==PropertyCommit::Changed) {
         const QScopedValueRollback<bool> guard(propertiesEditing_,true);
         refreshWorkspace();
+        refreshOutputVisibilityControls();
     }
     return result!=PropertyCommit::Failed;
 }

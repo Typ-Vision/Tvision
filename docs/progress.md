@@ -4,18 +4,18 @@
 
 ## Devam noktası
 
-**[INT-06 tamam](archive/2026-10-25-int-06.md):** Runtime Kaynağı doğrula,
-model/readiness ve worker/Stop/drain bağlı. Release ON seçili 15/15, OFF 7/7;
-üç tür × tek/N kaynakta altı restart süreci geçti; normal/850×600 görselleri
-incelendi. Sonraki INT-07; push/birleşik kabul yok.
+**[INT-07 tamam](archive/2026-10-25-int-07.md):** Yerel çıktı tercihleri
+Editor/Runtime'a bağlı; payload/Logs/CSV/PLC korunuyor. Release ilgili ON 17/17,
+OFF 2/2; 600 ölçüm/30 grup ve normal/850×600 görselleri geçti.
+Sonraki INT-08; push/birleşik kabul yok.
+[INT-06](archive/2026-10-25-int-06.md),
 [INT-05](archive/2026-10-25-int-05-completion.md),
 [API/envanter](architecture/camera-integration-int02-matrix.md),
 [INT-01 bundle](archive/2026-10-25-int-01.md) korunur.
 Dal `codex/camera-a0-e2-integration`; taban `CameraIntegration@3793198`.
-Tam suite hataları ve tarihsel Camera Manager açığı kapanışta korunur.
+Suite hataları ve tarihsel Camera Manager açığı kapanışta.
 
 **[CCUX-23b-1–6 yazılım kabulü tamamlandı](archive/2026-10-24-ccux-23b-6.md).**
-600 örnek performans kanıtı kapanışta.
 Canlı proje/2448×2048 kabulü açık; fixture fiziksel kabul değildir.
 Kullanıcı plaka kalibrasyonunu başardı; bağımsız mm kabulü ayrıdır.
 

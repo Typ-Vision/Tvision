@@ -34,10 +34,11 @@ QFrame* card(const QString& title, const QString& text) {
 }
 }
 MainWindow::~MainWindow(){delete cameraManager_;cameraManager_=nullptr;}
-MainWindow::MainWindow(const QString& settingsFile) : settingsFile_(settingsFile) {
+MainWindow::MainWindow(const QString& settingsFile) : settingsFile_(settingsFile), outputPreferences_(settingsFile) {
     smokeMode_=QCoreApplication::arguments().contains("--roi-smoke") || QCoreApplication::arguments().contains("--recipe-fields-smoke") || QCoreApplication::arguments().contains("--experimental-editor-smoke") || QCoreApplication::arguments().contains("--multi-source-runtime-smoke") || QCoreApplication::arguments().contains("--multi-source-smoke") || QCoreApplication::arguments().contains("--system-calibration-smoke") || QCoreApplication::arguments().contains("--usability-smoke") || QCoreApplication::arguments().contains("--smoke-test") || QCoreApplication::arguments().contains("--circle-smoke") || QCoreApplication::arguments().contains("--geometry-smoke");
     smokeMode_=smokeMode_ || QCoreApplication::arguments().contains("--runtime-failure-smoke") || QCoreApplication::arguments().contains("--restart-runtime-smoke");
     smokeMode_=smokeMode_ || QCoreApplication::arguments().contains("--editor-camera-sessions-smoke") || QCoreApplication::arguments().contains("--runtime-camera-sessions-smoke");
+    smokeMode_=smokeMode_ || QCoreApplication::arguments().contains("--runtime-visibility-smoke");
     setWindowTitle("VisionFlow Industrial Vision Suite"); resize(1400,900); setMinimumSize(850,600);
     auto* file = menuBar()->addMenu("File");
     auto* create=file->addAction("New Project"); create->setShortcut(QKeySequence::New);

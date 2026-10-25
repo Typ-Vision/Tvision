@@ -1,3 +1,10 @@
+#include "application/ProductionResultCodec.hpp"
+#include "application/ExperimentalRuntime.hpp"
+#include "application/EditorObservation.hpp"
+#include <QProcessEnvironment>
+#include <QProcess>
+#include <QRegularExpression>
+#include "application/ToolResultCodec.hpp"
 #include "CameraFlowSmokeAudit.hpp"
 #include "MainWindow.hpp"
 #include "ImageViewer.hpp"
@@ -84,6 +91,11 @@ bool MainWindow::verifyExperimentalEditor(const QString& artifacts) {
         runtimeCoordinator_->load(*service_.activeRecipe(),QFileInfo(project).absolutePath());selectPage("runtime");runtimeAction("run");check(runtimeCoordinator_->state()==RuntimeState::Running,"experimental Runtime prepared");runtimeAction("cycle");
         QElapsedTimer timer;timer.start();while(runtimeJobs_.busy() && timer.elapsed()<20000){QApplication::processEvents();QThread::msleep(1);}QApplication::processEvents();check(runtimeResult_ && runtimeResult_->state==ExecutionState::Done,"experimental Runtime replay completion");
         runtimeTools_->setCurrentIndex(runtimeTools_->findData(circle));check(!runtimeSummary_->text().contains(ExperimentalOecsAcquisition::notice()) && runtimeViewer_->hasImage(),"Runtime image/result notice");
+        const auto visibilityResult=*runtimeResult_;const auto visibilityRecords=runtime_->records();const auto visibilityCsv=ExperimentalRuntime::csv(visibilityRecords);const auto visibilitySnapshot=runtime_->active();
+        for(const auto& tool:editorTools(visibilitySnapshot->recipe().definition))check(outputPreferences_.save({runtimeProjectId_,visibilitySnapshot->recipe().id,tool.id},QSet<QString>{}).ok(),"INT07 experimental empty preferences");
+        showRuntimeResult();check(runtimeSummary_->text().contains("Sonuç çıkışları gizli") && !runtimeSummary_->text().contains("valuePx:") && !runtimeSummary_->text().contains("diameterPx:") && !runtimeSummary_->text().contains("widthPx:") && runtimeSummary_->text().contains("Parça: Değerlendirilmedi") && runtimeViewer_->hasImage(),"INT07 experimental headline and list hide scalars, retain state and viewer");
+        for(const auto& tool:editorTools(visibilitySnapshot->recipe().definition))check(outputPreferences_.showAll({runtimeProjectId_,visibilitySnapshot->recipe().id,tool.id},tool.kind).ok(),"INT07 experimental show all");
+        showRuntimeResult();check(runtimeSummary_->text().contains("diameterPx:") && RuntimeService::sameCompletion(visibilityResult,*runtimeResult_) && visibilitySnapshot==runtime_->active() && visibilityRecords==runtime_->records() && visibilityCsv==ExperimentalRuntime::csv(runtime_->records()),"INT07 experimental visibility preserves immutable completion terminal and CSV");
         setWindowState(Qt::WindowNoState);for(const auto size:{QSize(1400,900),QSize(850,600)}){resize(size);QApplication::processEvents();runtimeViewer_->fitImage();QApplication::processEvents();check(CameraFlowSmokeAudit::save(*this,QDir(artifacts).filePath(QString("experimental-runtime-%1.png").arg(size.width()))),"Runtime screenshot");}
         runtimeAction("stop");check(!runtimeResult_ && !runtimeViewer_->hasImage(),"Runtime Stop clears image");selectPage("logs");refreshLogs();check(logTable_->rowCount()==1 && !logTable_->item(0,2)->text().contains("Deneysel"),"experimental Logs row");logTable_->selectRow(0);QApplication::processEvents();check(CameraFlowSmokeAudit::save(*this,QDir(artifacts).filePath("experimental-logs-850.png")),"Logs screenshot");
         selectPage("runtime");runtimeAction("run");QLockFile lock(project+".production/archive.lock");check(lock.tryLock(0),"Runtime archive fixture lock");runtimeAction("cycle");timer.restart();while(runtimeJobs_.busy() && timer.elapsed()<20000){QApplication::processEvents();QThread::msleep(1);}QApplication::processEvents();check(runtimePending_ && !runtimeResult_ && !runtimeViewer_->hasImage(),"failed recording does not publish");runtimeAction("stop");lock.unlock();runtimeAction("retry");check(!runtimePending_ && !runtimeResult_ && !runtimeViewer_->hasImage() && runtimeCoordinator_->state()==RuntimeState::LoadedStopped,"record retry after Stop must not restore live pixels/results");
@@ -94,15 +106,21 @@ bool MainWindow::verifyExperimentalEditor(const QString& artifacts) {
     refreshWorkspace();selectTool(circle);runFlow();wait();const auto invalid=result(circle);
     check(!invalid.outputs.value("circleMm").valid && invalid.decision!=PartDecision::Pass,"missing calibration cannot pass");
     editorSession_.sourceFrames.clear();editorSession_.frame.reset();editorSession_.invalidateResults();
-    check(ExecutionService{}.run(definition,QFileInfo(project).absolutePath(),recipe,{},{}).state==ExecutionState::Error,"default execution/restart rejects experimental replay");
-    {MainWindow restarted(settingsFile_);check(!restarted.findChild<QCheckBox*>("experimentalEditorReplay") && !restarted.findChild<QCheckBox*>("experimentalRuntime"),"restart cannot restore experimental permission");}
-    out<<"TargetOnly, Save/reopen/no-op, invalid calibration, policy invalidation and restart/default isolation passed\n";out.flush();
+    const auto automatic=ExecutionService{}.run(definition,QFileInfo(project).absolutePath(),recipe,{},{});
+    check(automatic.state==ExecutionState::Done,"normal execution selects saved experimental replay automatically");
+    for(const auto& tool:automatic.tools){check(tool.decision==PartDecision::NotEvaluated,"automatic replay never grants a part decision");for(const auto& value:tool.outputs)if(value.valid)check(value.origin.experimentalAcquisition==raw.metadata().experimentalAcquisition && value.port.unit!="mm","automatic replay retains experimental origin without physical calibration");}
+    {MainWindow restarted(settingsFile_);check(!restarted.findChild<QCheckBox*>("experimentalEditorReplay") && !restarted.findChild<QCheckBox*>("experimentalRuntime"),"restart has no obsolete experimental opt-in");}
+    out<<"TargetOnly, Save/reopen/no-op, invalid calibration, automatic replay provenance and stopped restart passed\n";out.flush();
     return true;
 }
 bool MainWindow::verifyEditorUsability(const QString& artifacts) {
-    if(!verifyEditorPropertyCommits(artifacts))return false;
+    if(!qEnvironmentVariableIsSet("VISIONFLOW_D3_RESTART_PROJECT") && !verifyEditorPropertyCommits(artifacts))return false;
     auto check=[](bool ok,const char* message){if(!ok)throw std::runtime_error(message);};
     auto wait=[&]{QElapsedTimer timer;timer.start();do{QApplication::processEvents();QThread::msleep(1);}while(editorSession_.busy() && timer.elapsed()<20000);QApplication::processEvents();check(!editorSession_.busy(),"usability worker deadline");};
+    if(qEnvironmentVariableIsSet("VISIONFLOW_D3_RESTART_PROJECT")) {
+        service_.openProject(qEnvironmentVariable("VISIONFLOW_D3_RESTART_PROJECT"));service_.selectRecipe(qEnvironmentVariable("VISIONFLOW_D3_RESTART_RECIPE"));refreshWorkspace();selectPage("editor");wait();selectTool(qEnvironmentVariable("VISIONFLOW_D3_RESTART_TOOL"));
+        const auto boxes=propertiesBody_->findChildren<QCheckBox*>(QRegularExpression("^outputVisible_"));check(!boxes.isEmpty(),"restart rebuilds actual output checkboxes");for(auto* box:boxes)check(!box->isChecked(),"restart preserves explicit empty selection");check(!editorSession_.cycle && !editorSession_.busy() && !service_.dirty(),"restart does not run or dirty");return true;
+    }
     {QSettings preferences(settingsFile_,QSettings::IniFormat);preferences.remove("properties");}
     {MainWindow firstUse(QDir(artifacts).filePath("annotation-first-use-"+QUuid::createUuid().toString(QUuid::WithoutBraces)+".ini"));check(!firstUse.findChild<QCheckBox*>("showResultAnnotations")->isChecked() && !firstUse.imageViewer_->resultAnnotationsVisible(),"first use defaults annotations off");}
     auto* annotations=findChild<QCheckBox*>("showResultAnnotations");check(annotations,"Editor annotation checkbox");
@@ -252,6 +270,13 @@ bool MainWindow::verifyEditorUsability(const QString& artifacts) {
             const auto state=service_.activeRecipe()->definition;propertiesBody_->findChild<QPushButton*>(kind+"/measurementGroup1Toggle")->click();
             propertiesBody_->findChild<QPushButton*>(kind+"/measurementGroup1Toggle")->click();check(service_.activeRecipe()->definition==state,"opening quality section never changes recipe");
         }
+        check(outputs->findChildren<QCheckBox*>().size()==outputPorts(kind).size(),"D3 one checkbox per actual port");
+        if(kind=="edge_pair") {
+            auto* metricMode=propertiesBody_->findChild<QComboBox*>("mt_mode");
+            metricMode->setCurrentText("pixel");check(propertiesBody_->findChild<QCheckBox*>("outputVisible_widthPx")->isChecked() && !propertiesBody_->findChild<QCheckBox*>("outputVisible_widthMm")->isChecked(),"D3 live metrology mode refreshes default checkbox without rebuilding");
+            propertiesBody_->findChild<QCheckBox*>("outputVisible_widthMm")->click();metricMode->setCurrentText("calibrated");check(propertiesBody_->findChild<QCheckBox*>("outputVisible_widthPx")->isChecked() && propertiesBody_->findChild<QCheckBox*>("outputVisible_widthMm")->isChecked(),"D3 live metrology mode preserves explicit choice");
+            propertiesBody_->findChild<QPushButton*>("outputDefaults")->click();check(!propertiesBody_->findChild<QCheckBox*>("outputVisible_widthPx")->isChecked() && propertiesBody_->findChild<QCheckBox*>("outputVisible_widthMm")->isChecked(),"D3 reset resolves current mode instead of captured tool");
+        }
         service_.save();const auto definition=service_.activeRecipe()->definition;const auto signature=flowSignature();const auto generation=editorSession_.generation;
         auto* scroll=findChild<QScrollArea*>("propertiesScroll");
         for(const int detail:{0,1}) {
@@ -280,6 +305,32 @@ bool MainWindow::verifyEditorUsability(const QString& artifacts) {
     check(selectedToolId_==edge && imageViewer_->roi().has_value(),"real ROI drag commits while preserving selection");const auto roi=imageViewer_->roi();
     click({230,230});click({100,40});check(selectedToolId_==edge,"ROI inside/outside clicks preserve selection");
     propertiesBody_->findChild<QPushButton*>("edgeDraw")->click();QKeyEvent escape(QEvent::KeyPress,Qt::Key_Escape,Qt::NoModifier);QApplication::sendEvent(imageViewer_,&escape);check(!imageViewer_->roiGestureActive() && selectedToolId_==edge && imageViewer_->roi()==roi,"Escape preserves prior ROI and selected tool");
+    // D3: real execution, followed by view-only changes and a fresh-process restart.
+    propertiesBody_->findChild<QPushButton*>("edgeDraw")->click();drag({100,40},{100,200});wait();runExecution(edge);wait();
+    check(editorSession_.cycle.has_value(),"D3 real edge cycle");
+    service_.save();const auto d3Definition=service_.activeRecipe()->definition;const auto d3Signature=flowSignature();const auto d3Generation=editorSession_.generation;const auto d3Cycle=editorSession_.cycle->cycleId;const auto d3Evaluation=editorSession_.cycle->evaluationId;
+    const auto d3Outputs=editorSession_.cycle->tools;const auto d3Roi=imageViewer_->roi();const auto d3Items=imageViewer_->scene()->items().size();
+    auto box=[&](const QString& id){auto* result=propertiesBody_->findChild<QCheckBox*>("outputVisible_"+id);check(result,"D3 real registry checkbox");return result;};
+    editor_observation::Sample toggleSample;editor_observation::Binding toggleBinding(toggleSample);
+    auto unchanged=[&]{for(auto counter:{editor_observation::ModelDecode,editor_observation::PlaneReplay,editor_observation::CatalogDecode})check(toggleSample.calls[counter]==0,"INT07 output toggle does not decode replay or fit");check(!service_.dirty() && service_.activeRecipe()->definition==d3Definition && flowSignature()==d3Signature && editorSession_.generation==d3Generation && !editorSession_.busy() && editorSession_.cycle->cycleId==d3Cycle && editorSession_.cycle->evaluationId==d3Evaluation,"D3 presentation preserves recipe/hash/generation/cycle/job");check(imageViewer_->hasImage() && imageViewer_->roi()==d3Roi && imageViewer_->scene()->items().size()==d3Items,"D3 viewer and overlay retained");check(editorSession_.cycle->tools.size()==d3Outputs.size(),"D3 typed tool results retained");for(int i=0;i<d3Outputs.size();++i){const auto& before=d3Outputs[i];const auto& after=editorSession_.cycle->tools[i];check(before.outputs.keys()==after.outputs.keys() && before.points==after.points && before.lines==after.lines && before.state==after.state && before.errorCode==after.errorCode,"D3 payload structure/geometry/status retained");for(auto it=before.outputs.cbegin();it!=before.outputs.cend();++it){const auto& current=after.outputs[it.key()];check(it->valid==current.valid && it->invalidReason==current.invalidReason && it->frameId==current.frameId && it->cycleId==current.cycleId && ToolResultCodec::display(*it,4)==ToolResultCodec::display(current,4),"D3 typed values and provenance retained");}}};
+    check(box("found")->isChecked() && box("pointMm")->isChecked() && !box("point")->isChecked(),"D3 Edge defaults");
+    showExecutionResult();QFile d3Results(QDir(artifacts).filePath("d3-results.txt"));check(d3Results.open(QIODevice::WriteOnly),"D3 results evidence");d3Results.write(matchInfo_->text().toUtf8());d3Results.close();check(matchInfo_->text().contains("pointMm: kullanılamıyor") && ([&]{for(const auto& result:editorSession_.cycle->tools)if(result.toolId==edge){const auto reason=result.outputs.value("pointMm").invalidReason;return !reason.isEmpty() && matchInfo_->text().contains(reason);}return false;})(),"D3 selected invalid mm reason without fabricated value");
+    box("point")->setFocus();QKeyEvent space(QEvent::KeyPress,Qt::Key_Space,Qt::NoModifier);QApplication::sendEvent(box("point"),&space);QKeyEvent release(QEvent::KeyRelease,Qt::Key_Space,Qt::NoModifier);QApplication::sendEvent(box("point"),&release);
+    check(box("point")->isChecked() && matchInfo_->text().contains("  point:"),"D3 keyboard toggle updates Results immediately");unchanged();
+    propertiesBody_->findChild<QPushButton*>("outputShowAll")->click();check(box("point")->isChecked(),"D3 show all");unchanged();
+    propertiesBody_->findChild<QPushButton*>("outputDefaults")->click();check(!box("point")->isChecked() && !outputPreferences_.load({service_.project().id,service_.activeRecipe()->id,edge}).selection,"D3 reset uses defaults");unchanged();
+    for(auto* output:propertiesBody_->findChildren<QCheckBox*>(QRegularExpression("^outputVisible_")))if(output->isChecked())output->click();
+    check(matchInfo_->text().contains("Sonuç çıkışları gizli") && matchInfo_->text().contains(d3Cycle) && matchInfo_->text().contains("Uyarı · pointMm") && !matchInfo_->text().contains("  found:"),"D3 empty preserves identity and hidden invalid warning");unchanged();
+    selectTool(source);check(box("image")->isChecked(),"D3 source has real image port");box("image")->click();check(imageViewer_->hasImage(),"D3 hidden image remains accessible in viewer");selectTool(edge);check(!box("found")->isChecked() && !box("pointMm")->isChecked(),"D3 selection survives tool switch");
+    QLockFile locked(settingsFile_+".lock");check(locked.tryLock(0),"D3 lock fixture");box("found")->click();check(!box("found")->isChecked() && !propertiesBody_->findChild<QLabel*>("outputPreferenceError")->isHidden(),"D3 failed save restores persisted check and presents reason");locked.unlock();box("found")->click();box("found")->click();check(propertiesBody_->findChild<QLabel*>("outputPreferenceError")->isHidden(),"D3 successful retry clears storage error");
+    findChild<QTabWidget*>("editorTabs")->setCurrentWidget(findChild<QScrollArea*>("resultsScroll"));
+    for(const auto size:{QSize(1400,900),QSize(850,600)}) {
+        resize(size);horizontal_->setSizes({145,750,310});QApplication::processEvents();auto* outputSection=propertiesBody_->findChild<QWidget*>("edge_point/outputs");if(outputSection->isHidden())propertiesBody_->findChild<QPushButton*>("edge_point/outputsToggle")->click();auto* scroll=findChild<QScrollArea*>("propertiesScroll");scroll->ensureWidgetVisible(box("pointMm"));QApplication::processEvents();check(scroll->horizontalScrollBar()->maximum()==0,"D3 checkboxes fit small panel");check(scroll->verticalScrollBar()->maximum()>0,"D3 output list scrolls");imageViewer_->fitImage();grab().save(QDir(artifacts).filePath(QString("d3-empty-%1.png").arg(size.width())));
+        propertiesBody_->findChild<QPushButton*>("outputDefaults")->click();scroll->ensureWidgetVisible(box("pointMm"));QApplication::processEvents();grab().save(QDir(artifacts).filePath(QString("d3-default-%1.png").arg(size.width())));for(auto* output:propertiesBody_->findChildren<QCheckBox*>(QRegularExpression("^outputVisible_")))if(output->isChecked())output->click();
+    }
+    service_.save();QProcess restart;auto restartEnv=QProcessEnvironment::systemEnvironment();restartEnv.insert("VISIONFLOW_D3_RESTART_PROJECT",service_.path());restartEnv.insert("VISIONFLOW_D3_RESTART_RECIPE",service_.activeRecipe()->id);restartEnv.insert("VISIONFLOW_D3_RESTART_TOOL",edge);restart.setProcessEnvironment(restartEnv);restart.start(QCoreApplication::applicationFilePath(),{"--usability-smoke"});check(restart.waitForFinished(20000),"D3 restart deadline");QFile restartLog(QDir(artifacts).filePath("d3-restart.log"));check(restartLog.open(QIODevice::WriteOnly),"D3 restart log");restartLog.write(restart.readAllStandardOutput());restartLog.write(restart.readAllStandardError());restartLog.close();check(restart.exitStatus()==QProcess::NormalExit && restart.exitCode()==0,"D3 new process restores empty checkboxes");
+    const auto failureContext=editorContext();const auto failureSignature=flowSignature();const auto acquisitionError=ExecutionService([](const ToolDefinition&)->std::unique_ptr<AcquisitionAdapter>{throw std::runtime_error("INT07_SOURCE_READ_FAILED");}).run(service_.activeRecipe()->definition,QDir(artifacts).absolutePath(),service_.activeRecipe()->id,failureSignature,{});check(editorSession_.acceptCycle(acquisitionError,failureSignature,failureContext),"D3 accepts actual acquisition failure");refreshFlow();const auto d3ErrorText=matchInfo_->text();QFile d3ErrorLog(QDir(artifacts).filePath("d3-error-results.txt"));check(d3ErrorLog.open(QIODevice::WriteOnly),"D3 error evidence");d3ErrorLog.write(d3ErrorText.toUtf8());d3ErrorLog.close();check(d3ErrorText.contains("ERROR") && d3ErrorText.contains("SKIPPED") && d3ErrorText.contains("Sonuç çıkışları gizli"),"D3 empty preserves actual acquisition error and downstream skipped state");runFlow();wait();
+    QTextStream(stdout)<<"D3 output visibility acceptance passed: real cycle, keyboard, reset/all/empty, invalid mm, viewer/overlay, error/skipped, save failure, scroll, tool switch, fresh process restart.\n";
     // Pending creation uses a real processed raster and never falls back to raw.
     const auto pre=add("preprocess");for(auto t:service_.tools())if(t.id==pre){t.parameters["steps"]=QJsonArray{QJsonObject{{"op","threshold"},{"size",3},{"value",100}}};service_.updateTool(t);}refreshWorkspace();const auto circle=add("circle_fit");check(pendingDrawTool_==circle && !imageViewer_->roiGestureActive(),"missing preprocess cache leaves pending intent");
     propertiesBody_->findChild<QComboBox*>("mt_mode")->setCurrentText("pixel");runExecution(pre);wait();check(pendingDrawTool_.isEmpty() && imageViewer_->roiGestureActive(),"upstream completion prepares only still-selected new tool");
@@ -380,6 +431,16 @@ bool MainWindow::verifyEditorUsability(const QString& artifacts) {
     }
     {MainWindow restarted(settingsFile_);check(restarted.findChild<QCheckBox*>("showResultAnnotations")->isChecked() && restarted.imageViewer_->resultAnnotationsVisible(),"restart loads annotation preference");}
     annotations->setChecked(false);
-    service_.save();return true;
+    service_.save();service_.createRecipe("D3 multi-source identity","",ApplicationType::Measurement,"file");service_.enableMultiSource();
+    const auto d3SourceA=service_.addTool("image_file");service_.setImageFile(path,d3SourceA);const auto d3SourceB=service_.addTool("image_file");service_.setImageFile(path,d3SourceB);service_.save();refreshWorkspace();selectTool(d3SourceA);runExecution(d3SourceA);wait();
+    check(editorSession_.cycle && matchInfo_->text().contains("Kaynak:"),"D3 editor9 actual source identity");const auto sourceCycle=editorSession_.cycle->cycleId;const auto sourceFrame=editorSession_.frame->metadata().frameId;box("image")->click();
+    check(matchInfo_->text().contains("Kaynak:") && matchInfo_->text().contains(sourceCycle) && matchInfo_->text().contains(sourceFrame) && matchInfo_->text().contains("Sonuç çıkışları gizli") && imageViewer_->hasImage() && !service_.dirty() && !editorSession_.busy(),"D3 editor9 hidden image preserves actual source/frame/cycle/viewer");
+    service_.createRecipe("D3 Geometry defaults","",ApplicationType::Measurement,"file");const auto d3Geometry=service_.addTool("geometry_measurement");service_.save();refreshWorkspace();selectTool(d3Geometry);
+    check(box("valueMm")->isChecked() && box("status")->isChecked() && !box("valuePx")->isChecked(),"D3 Geometry calibrated defaults");
+    propertiesBody_->findChild<QComboBox*>("gm_mode")->setCurrentText("pixel");QApplication::processEvents();propertiesBody_->findChild<QComboBox*>("gm_operation")->setCurrentText("line_angle");QApplication::processEvents();
+    check(box("anglePx")->isChecked() && box("status")->isChecked() && !box("valueMm")->isChecked(),"D3 Geometry mode/operation defaults refresh");box("valueMm")->click();
+    propertiesBody_->findChild<QComboBox*>("gm_mode")->setCurrentText("calibrated");QApplication::processEvents();propertiesBody_->findChild<QComboBox*>("gm_operation")->setCurrentText("point_distance");QApplication::processEvents();
+    check(box("valueMm")->isChecked() && box("anglePx")->isChecked() && !box("valuePx")->isChecked(),"D3 Geometry explicit selection survives mode/operation change");
+    service_.save();QTextStream(stdout)<<"D3 editor9 source identity and Geometry mode/operation checkbox acceptance passed.\n";return true;
 }
 }

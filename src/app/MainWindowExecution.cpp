@@ -166,10 +166,22 @@ void MainWindow::showExecutionResultView(const EditorContext& context) {
         QString name=r.toolId;for(const auto& t:service_.tools())if(t.id==r.toolId)name=t.name;
         lines<<name+" • "+executionStateName(r.state)+QString(" • %1 ms ").arg(r.milliseconds,0,'f',2)+(r.fitDiagnostic ? presentMeasurementDiagnostic(*r.fitDiagnostic):r.errorCode+" "+r.message);
         if(service_.activeRecipe()->definition["editor"].toObject()["schemaVersion"]==9)for(const auto& value:r.outputs)if(value.valid){QString source=value.origin.sourceId;for(const auto& t:service_.tools())if(t.id==source)source=t.name;lines<<"  Kaynak: "+source+" | Frame "+value.frameId+" | Cycle "+value.cycleId;break;}
-        for(auto it=r.outputs.begin();it!=r.outputs.end();++it) {
-            const auto& v=it.value();
-            const auto value=ToolResultCodec::display(v,4);
-            lines<<"  "+it.key()+(v.diagnostic ? " [diagnostic]: ":": ")+value+" "+v.port.unit;
+        for(const auto& tool:service_.tools())if(tool.id==r.toolId) {
+            const auto preference=outputPreferences_.load({service_.project().id,service_.activeRecipe()->id,tool.id});
+            if(!preference.error.isEmpty())lines<<"  Görünüm tercihi: "+preference.error;
+            QMap<QString,OutputAvailabilityInfo> availability;
+            for(const auto& port:outputPorts(tool.kind)) {
+                const auto it=r.outputs.constFind(port.id);
+                availability[port.id]=it==r.outputs.cend() ? OutputAvailabilityInfo{OutputAvailability::Unavailable,"OUTPUT_NOT_PRODUCED"} : OutputAvailabilityInfo{it->valid ? OutputAvailability::Available:OutputAvailability::Unavailable,it->invalidReason};
+            }
+            const auto visibility=OutputVisibilityPolicy::resolve(tool,preference.selection,availability);
+            const auto visible=visibility.visiblePortIds();
+            for(const auto& entry:visibility.ports)if(entry.visible) {
+                if(entry.availability.state==OutputAvailability::Unavailable)lines<<"  "+entry.port.id+": kullanılamıyor · "+entry.availability.reason;
+                else {const auto& v=r.outputs[entry.port.id];lines<<"  "+entry.port.id+(v.diagnostic ? " [diagnostic]: ":": ")+ToolResultCodec::display(v,4)+" "+v.port.unit;}
+            }
+            for(auto it=visibility.invalidOutputReasons.cbegin();it!=visibility.invalidOutputReasons.cend();++it)if(!visible.contains(it.key()))lines<<"  Uyarı · "+it.key()+": kullanılamıyor · "+it.value();
+            if(visible.isEmpty())lines<<"  Sonuç çıkışları gizli (görüntü/overlay viewer'da korunur).";
         }
         if(r.toolId==selectedToolId_ && (editorSession_.sourceFrames.isEmpty() || (editorSession_.frame && editorSession_.sourceForTool(context,r.toolId)==editorSession_.frame->metadata().sourceId))) {
             if(r.state==ExecutionState::Done)edgeProfile_->setDiagnostics(r.edgeDiagnostics);

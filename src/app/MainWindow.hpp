@@ -1,4 +1,5 @@
 #pragma once
+#include "presentation/OutputVisibilityPreferences.hpp"
 #include "domain/ToolRoi.hpp"
 #include <QMainWindow>
 #include <QStringList>
@@ -39,6 +40,7 @@ public:
     ~MainWindow() override;
     bool verifyMultiSource(const QString& artifacts);
     bool verifyMultiSourceRuntime(const QString& artifacts);
+    bool verifyRuntimeVisibility(const QString& artifacts);
     bool verifyShell();
     bool verifyEditorResponsiveness(const QString& artifacts);
     bool verifyEditorPropertyCommits(const QString& artifacts);
@@ -118,6 +120,7 @@ private:
     quint64 editorRefreshEpoch_=0; // Supersedes an outer reentrant display operation.
     void selectTool(const QString& id);
     void showToolProperties();
+    void refreshOutputVisibilityControls();
     void showToolPropertiesView(const EditorContext&,const std::optional<MeasurementEnvironment>&);
     void addSelectedTool();
     enum class PropertyCommit { Unchanged, Changed, Failed };
@@ -160,6 +163,8 @@ private:
     void restoreLayout();
     void restoreSession();
     QString settingsFile_;
+    OutputVisibilityPreferences outputPreferences_;
+    QString runtimeProjectId_;
     QListWidget* navigation_{};
     WorkspacePanel* workspacePanel_{};
     QStackedWidget* pages_{};

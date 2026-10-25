@@ -83,6 +83,8 @@ public:
     void abandonCycle(quint64 ticket,const QString& reason);
     QVector<QJsonObject> cycleRecords() const;
     bool busy() const;
+    // Read-only canonical identity, also used to verify presentation invariants.
+    static QByteArray recipeContent(const Recipe&,const QString& directory);
 private:
     friend class RuntimeService;
     friend class MultiSourceRuntimeService;
@@ -90,7 +92,6 @@ private:
     friend class SourceVerificationService; // recipe identity only, never production admission
     friend class MeasurementWorkspace;
     static QJsonObject validateMultiSourceCompletion(const ProductionCycle&,const CycleResult&,const QMap<QString,std::shared_ptr<const ProductionSnapshot>>&);
-    static QByteArray recipeContent(const Recipe&,const QString& directory);
     static QByteArray completionDigest(const CycleResult&);
     void owner() const;
     void permission(const QString&,ProductionAction) const;
