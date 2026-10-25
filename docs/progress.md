@@ -1,15 +1,18 @@
 # VisionFlow — güncel devir
 
-24 Ekim 2026. [Arşiv](archive/README.md). [MCP](archive/2026-10-24-mcp-01.md).
+25 Ekim 2026. [Arşiv](archive/README.md). [MCP](archive/2026-10-24-mcp-01.md).
 
 ## Devam noktası
 
+**[INT-01 tamamlandı](archive/2026-10-25-int-01.md):** snapshot `230cc72`,
+bundle/hash ve eski devir arşivlendi. Dal `codex/camera-a0-e2-integration`,
+taban `CameraIntegration@3793198`; main/hedef ref'leri aynı, push yok.
+Ürün portu ve [INT-02](architecture/camera-integration-a0-e2-plan.md)
+başlatılmadı. Sonraki yalnız INT-02; eski E1/E2 yeni tabanın kabulü değildir.
+
 **[CCUX-23b-1–6 yazılım kabulü tamamlandı](archive/2026-10-24-ccux-23b-6.md).**
 600 ölçüm, üç tür; 30/30 grupta medyan <50 ms/p95 <100 ms.
-Framed Save 2391,64→45,09 ms; parametre 1286,51→29,16 ms.
-Decode/replay/gizli sayfa 0, context/refresh 1. Canlı proje/2448×2048
-kamera karesiyle kabul açık; fixture fiziksel kabul değildir.
-Yeni kart seçimi beklenir; açık 15j/22f aşağıdadır.
+Canlı proje/2448×2048 kabulü açık; fixture fiziksel kabul değildir.
 Kullanıcı plaka kalibrasyonunu başardı; bağımsız mm kabulü ayrıdır.
 
 **[CCUX-15j fiziksel kabul açık](archive/2026-10-23-ccux-15j.md):**
@@ -72,21 +75,16 @@ CCUX-14 fixture bunu kapatmaz. [CCUX planı](architecture/camera-setup/README.md
 
 ## Hazır olanlar
 
-- **EXP-03 Raw/px deneysel Runtime/Logs/CSV, 500 seri hazır**;
-  [teslim](archive/2026-10-21-icm-oecs-exp-03.md),
+- **EXP-01–03 hazır:** [görüntü/Stop/PGM](archive/2026-10-21-icm-oecs-exp-01d.md),
+  [Editor/replay](archive/2026-10-21-icm-oecs-exp-02.md),
+  [Runtime/Logs/CSV, 500 seri](archive/2026-10-21-icm-oecs-exp-03.md),
   [kopma/manuel açma](archive/2026-10-21-icm-oecs-exp-03b.md).
-  Eski 21 CTest ve fiziksel koşum yeni test değildir. Uzun probe sonunda zorunlu
-  sonlandırma sınırı var. PLC/robot kapalı; restart deneysel onayı kapatır.
-- **EXP-02 canlı Editor + PGM/JSON px replay hazır**;
-  [kanıt](archive/2026-10-21-icm-oecs-exp-02.md). Kalibrasyon zinciri CCUX-07–13'te.
-- **EXP-01 görüntü/Stop/PGM hazır, fiziksel kabul kısmi**;
-  [kanıt](archive/2026-10-21-icm-oecs-exp-01d.md). Optik/mm kabulü yok.
-  MUI-01–03/EUI-01–08 tamam; **MUI-04 özgün raster/reçete/ROI problemi açık**.
-- KMC-0–9/10a–e ve ICM ortak yazılım/G2 tamam: reçetesiz N kamera, bağımsız
-  kalibrasyon, kaynak başına immutable model, çok kaynaklı Editor/Runtime.
-  [G2 raporu](architecture/industrial-camera-release-acceptance.md).
-  Geçmiş teslim/kanıt ayrıntıları
-  [önceki devir kaydında](archive/2026-10-21-ccux-plan-02-oncesi.md).
+  Uzun probe zorunlu sonlandırma sınırı; PLC/robot kapalı, restart onayı kapatır.
+  Fiziksel/optik/mm kabulü kısmi/açık. MUI-01–03/EUI-01–08 tamam;
+  **MUI-04 özgün raster/reçete/ROI problemi açık**. Eski testler yeni kabul değildir.
+- KMC-0–9/10a–e ve ICM/G2 yazılımı tamam:
+  [G2](architecture/industrial-camera-release-acceptance.md),
+  [önceki devir](archive/2026-10-21-ccux-plan-02-oncesi.md).
 
 ## Korunacak engeller ve kararlar
 

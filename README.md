@@ -48,7 +48,7 @@ $env:PATH = 'C:\OpenCV\5.0.0\x64\mingw\bin;C:\Qt\6.12.0\mingw_64\bin;C:\Qt\Tools
 cmake -S . -B build/reference-ui -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=C:/Qt/6.12.0/mingw_64 -DOpenCV_DIR=C:/OpenCV/5.0.0/x64/mingw/lib -DVISIONFLOW_BUILD_UI=ON -DVISIONFLOW_WITH_ZXING=ON -DVISIONFLOW_ZXING_PREFIX=C:/Projects/Tvision/build/deps/zxing-prefix
 cmake --build build/reference-ui -j 6
 ctest --test-dir build/reference-ui --output-on-failure
-.\scripts\run-local.ps1
+.\VisionFlow.cmd
 ```
 
 UI kapalı Release yapılandırması:
@@ -65,6 +65,8 @@ ilgili CTest ve normal/küçük ekran görsel kontrolü yapılır.
 
 `run-local.ps1` DLL yollarını yalnız başlattığı sürece ekler. Başka build için
 `-BuildDirectory build`, offscreen smoke için `-SmokeTest` verilebilir.
+Günlük giriş `./VisionFlow.cmd` veya Explorer çift tıklamasıdır; aynı betiği çağırır.
+Dal geçişi mevcut EXE'yi derlemez; kaynakla eşleştirmek için önce yukarıdaki build gerekir.
 EXE'yi tek başına kopyalamak doğrulanmış dağıtım değildir.
 
 OECS / GenTL probe komutları, sandbox sınırları ve kanıt bağlantıları
