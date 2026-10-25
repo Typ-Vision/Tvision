@@ -4,14 +4,17 @@
 
 ## Devam noktası
 
-**[INT-01 tamamlandı](archive/2026-10-25-int-01.md):** snapshot `230cc72`,
-bundle/hash ve eski devir arşivlendi. Dal `codex/camera-a0-e2-integration`,
-taban `CameraIntegration@3793198`; main/hedef ref'leri aynı, push yok.
-Ürün portu ve [INT-02](architecture/camera-integration-a0-e2-plan.md)
-başlatılmadı. Sonraki yalnız INT-02; eski E1/E2 yeni tabanın kabulü değildir.
+**[INT-02 tamam](archive/2026-10-25-int-02.md):** `230cc72` ↔ `259e41f`;
+[API/envanter](architecture/camera-integration-int02-matrix.md).
+Ayrı Release, tekrarlar dahil 43 testte 40 başarı/3 assertion açık:
+Missing result, schema9 pre-cancel, Camera Manager kayıt/ayar. İki HELLO testi
+erişimli geçti. Kamera/kalibrasyon PNG incelendi; birleşik kabul yok.
+[INT-01 bundle](archive/2026-10-25-int-01.md) korunur;
+dal `codex/camera-a0-e2-integration`, taban `CameraIntegration@3793198`.
+Port/push yok; INT-03 başlamadı. Eski E1/E2 yeni kabul değil.
 
 **[CCUX-23b-1–6 yazılım kabulü tamamlandı](archive/2026-10-24-ccux-23b-6.md).**
-600 ölçüm, üç tür; 30/30 grupta medyan <50 ms/p95 <100 ms.
+600 örnek performans kanıtı kapanışta.
 Canlı proje/2448×2048 kabulü açık; fixture fiziksel kabul değildir.
 Kullanıcı plaka kalibrasyonunu başardı; bağımsız mm kabulü ayrıdır.
 

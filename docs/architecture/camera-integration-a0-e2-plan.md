@@ -1,9 +1,13 @@
 # INT — A0–E2 çalışmalarını CameraIntegration üzerine taşıma
 
-25 Ekim 2026. Uygulayıcı: Codex. Durum: **INT-01 tamamlandı; ürün aktarımı başlamadı**.
+25 Ekim 2026. Uygulayıcı: Codex. Durum: **INT-02 tamamlandı; ürün aktarımı başlamadı**.
 Snapshot `230cc72`; taban `CameraIntegration@3793198`; çalışma dalı
 `codex/camera-a0-e2-integration`. [INT-01 kapanışı](../archive/2026-10-25-int-01.md).
-Sonraki kart INT-02; ayrıca yetkilendirilmeden başlatılmaz.
+Sonraki kart INT-03; ayrıca yetkilendirilmeden başlatılmaz.
+[INT-02 matrisi](camera-integration-int02-matrix.md), [envanter](camera-integration-int02-inventory.md),
+[baseline/kapanış](../archive/2026-10-25-int-02.md): ayrı Release ve görseller hazır;
+Missing result + pre-cancel + Camera Manager assertion'ları açık. İki HELLO testi
+erişimli tekrarda geçti; baseline birleşik kabul değildir.
 Kullanıcı uygulamayı sol6.1 ile ayrı, sıralı görevlerde yaptıracak.
 
 ## Amaç ve doğrulanmış başlangıç
@@ -103,6 +107,11 @@ parçası değildir. Kalibrasyon tekrar yazılmayacak, yeni ürün özelliği ek
 **Commit:** `INT-01: preserve A0-E2 and establish integration baseline`.
 
 ## INT-02 — Davranış/API matrisi ve hedef baseline
+
+**Durum: tamamlandı — 25 Ekim 2026.** Matris/64 yol/185 hunk envanteri ve ayrı
+Release baseline [kapanıştadır](../archive/2026-10-25-int-02.md). 43 farklı hedefte
+erişimli tekrarlar dahil 40 başarı/3 açık assertion; tek yeşil corpus iddiası yok.
+Ürün aktarılmadı, INT-03 başlatılmadı.
 
 **Önkoşul:** INT-01 snapshot SHA ve entegrasyon dalı.
 **Oku:** hedef README/progress, CCUX contract C0/C2a/C3, acquisition-sessions,
@@ -227,7 +236,8 @@ responsiveness sayaç/baseline karşılaştırması. Güvenlik kapısı gevşeti
   Socket erişim engelini assertion hatasından ayır; erişimli tekrar doğru raporlanır.
 - Plaka 49 merkez/yön/fit/save/reopen/replay; bilinen ölçü/chessboard;
   camera/session/Stop/drain; restart/whole-set; output/retry/Logs/CSV matrisi.
-- INT-02 Missing result sürüyorsa dar failing regression ile çöz; geniş yeni
+- INT-02 Missing result, schema9 pre-cancel ve Camera Manager kayıt/ayar
+  assertion'ları sürüyorsa her birini dar failing regression ile çöz; geniş yeni
   özellik açma. Başarısızlık kalırsa kartı tamamlandı diye sunma.
 - Kamera ekleme/ayar, kamera merkezli kalibrasyon, 7×7 wizard, Editor ve Runtime
   normal/850×600 ekranları gerçekten açıp incele. Fixture fiziksel kabul değildir.
