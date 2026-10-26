@@ -4,16 +4,18 @@
 
 ## Devam noktası
 
-**[COMM-PLAN-02 hazır](archive/2026-10-26-comm-plan-02.md):** Haberleşme fazı
-[38 sıralı karta](architecture/communication/README.md) bölündü; Sol 6.1 medium/low
-için tek hedef/kapsam/kabul/devir. Çoklu Set Variables, Result/Publish, dış tetik,
-kalıcı teslim, TCP→Modbus→OPC UA; Pose/CalibrationSample yalnız veri temeli.
+**[COMM-PLAN-03 hazır](archive/2026-10-26-comm-plan-03.md):**
+[Haberleşme planı](architecture/communication/README.md) temel ve seçilebilir
+alt fazlara ayrıldı. **Temel sıra COMM-01–23 → COMM-36 → COMM-37**:
+çoklu Set Variables, Result/Publish, dış tetik, kalıcı teslim, TCP, çoklu hedef
+ve genel pose aktarımı. Modbus (24–28), OPC UA (29–33), sample (34), FANUC (35)
+yalnız ihtiyaç seçilince; temel teslimi bekletmez. Fiziksel kabul COMM-38'de ayrı.
+Gönderim çevrim sonunda; akış ortasında gönder/bekle ayrı kapsamdır.
 **İlk COMM-01:** kaynak/kapsama envanteri ve baseline. Uygulama başlamadı;
-codebase-memory araçları bu oturumda yoktu, indeks/kapsama önkoşulu açık.
+codebase-memory araçları yoktu, indeks/kapsama önkoşulu açık.
 [Araştırma](architecture/communication-data-phase.md) ve
 [veri tipi notu](architecture/robot-spatial-data-review.md) korunur.
-Hand-eye solver/robot hareketi kapsam dışı; fiziksel kabul COMM-38'de ayrı.
-Aşağıdaki engeller korunur.
+Hand-eye solver/robot hareketi kapsam dışı. Aşağıdaki engeller korunur.
 
 **[INT-10 tamam](archive/2026-10-26-int-10.md):** CameraIntegration, geçmişi
 koruyan merge ile main üzerinde birleştirildi; çalışma dalı artık main.

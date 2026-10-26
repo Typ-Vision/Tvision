@@ -1,8 +1,12 @@
 # Haberleşme verileri ortak sözleşmesi
 
-COMM-PLAN-02 hedef sözleşmesi; uygulama tamamlandı anlamına gelmez.
+COMM-PLAN-03 hedef sözleşmesi; uygulama tamamlandı anlamına gelmez.
 Yalnız seçili kartın işaret ettiği bölümleri okuyun. Uygulama adları/sürüm
 numaraları COMM-01 envanterinde doğrulanır; buradaki davranışlar korunur.
+
+C0–C7 temel fazın sözleşmesidir. C8 yalnız seçili Modbus, C9 yalnız seçili
+OPC UA alt fazında; C10 kalibrasyon örnekleri/FANUC ihtiyacı seçilirse uygulanır.
+C1 genel mekânsal veri sözleşmesi temel fazda kalır; C10 temel teslim şartı değildir.
 
 ## C0 — Katmanlar ve kapsam
 
@@ -97,6 +101,8 @@ Dosya taşıma eşdeğer endpoint'i kendi kendine seçmez.
 Publish Data tool'u network yapmaz; cycle-bound PublicationIntent üretir.
 En çok 16 output group/cycle, 64 field/group, ilk payload sınırı 64 KiB.
 TerminalCycle + intent/bundle commit tamamlanmadan network yazımı yok.
+Akış ortasında gönderim ve dış yanıt bekleyerek aynı akışı sürdürme yoktur;
+bu ihtiyaç ayrı etkileşim/handshake kapsamı gerektirir.
 Disk kaydı retry aynı cycle/intent kimliğini kullanır; tekrar acquisition yok.
 Terminal immutable; delivery/ACK ayrı ledger olayıdır. Stop yeni admission'ı
 kapatır, mevcut kalıcı pending çıktıyı silmez. Runtime restart kendi kendine Run

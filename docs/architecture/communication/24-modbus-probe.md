@@ -1,6 +1,8 @@
 # COMM-24 — Modbus dependency ve rol probe'u
 
 Durum: başlamadı. Önerilen düzey: **low**. Önkoşul: **COMM-23** tamam.
+**İhtiyaca bağlı alt faz:** yalnız kullanıcı bu alt fazı seçtiğinde uygulanır;
+temel fazın teslim önkoşulu değildir.
 Bir oturumda yalnız bu kart; paralel uygulayıcı yok.
 
 ## Oku

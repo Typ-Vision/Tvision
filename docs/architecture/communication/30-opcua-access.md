@@ -1,6 +1,8 @@
 # COMM-30 — OPC UA typed read/write ve node kimliği
 
 Durum: başlamadı. Önerilen düzey: **medium**. Önkoşul: **COMM-29** tamam.
+**İhtiyaca bağlı alt faz:** yalnız kullanıcı bu alt fazı seçtiğinde uygulanır;
+temel fazın teslim önkoşulu değildir.
 Bir oturumda yalnız bu kart; paralel uygulayıcı yok.
 
 ## Oku

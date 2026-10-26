@@ -1,21 +1,21 @@
 # COMM-36 — Çoklu hedef ve pose paketi tutarlılığı
 
-Durum: başlamadı. Önerilen düzey: **medium**. Önkoşul: **COMM-23, COMM-34, COMM-35** tamam; etkin Modbus/OPC için ayrıca COMM-28/33 kabulü.
+Durum: başlamadı. Önerilen düzey: **medium**. Önkoşul: **COMM-23** tamam. Seçilmiş Modbus/OPC entegrasyonu için ayrıca COMM-28/33; sample/FANUC senaryosu seçilirse COMM-34/35 gerekir. Temel kabul bu ekleri beklemez.
 Bir oturumda yalnız bu kart; paralel uygulayıcı yok.
 
 ## Oku
 
 - AGENTS, progress ve kök README ardından [plan indeksi](README.md).
-- [Ortak sözleşme](contract.md): yalnız **C1, C4, C5, C6, C10**.
+- [Ortak sözleşme](contract.md): yalnız **C1, C4, C5, C6**; C8/C9/C10 yalnız seçilmiş ekler için.
 - [Doğrulama rehberi](verification.md); `source-map.md` oluştuysa yalnız bu kartın satırları.
 - Dar ek okuma: docs/architecture/communication/verification.md.
 - Kaynakta önce ilgili sembolü bul; tüm mimari/arşiv veya bütün kartları yükleme.
 
 ## Tek hedef ve işler
 
-1. Aynı committed bundle'ın etkin TCP/Modbus/OPC hedeflerine bağımsız delivery state ile fan-out'unu tamamla. SDK yoksa ortak portun ikinci test endpoint'iyle fan-out sınanabilir; bu native adaptör kabulü değildir.
+1. Aynı committed bundle'ı iki TCP simulator hedefine bağımsız delivery state ile gönder; çoklu hedef temel kabulünü hiçbir opsiyonel SDK'ya bağlama. Seçili Modbus/OPC adaptörleri sonradan aynı ortak port üzerinden sınanır.
 2. Whole Pose assignment ve mapping projection'ın cycle/config/profile coherence denetimini uygula.
-3. Required PLC + optional UA kesinti politikasıyla robot actual sample input→typed variable→çıktı simulator roundtrip'ini testle.
+3. Required hedef + optional hedef kesinti politikasını iki TCP simulator ile testle. Genel pose input→typed variable→çıktı roundtrip'ini frame/birim/yönelim formatıyla doğrula; CalibrationSample ve FANUC codec gerekmez. Simulator verisi normal Runtime'da gerçek pose üreticisi sayılmaz.
 
 ## Değişiklik sınırı
 
@@ -26,7 +26,10 @@ servisi genişlet; beklenmeyen çapraz katman refactor'ını bu karta katma.
 ## Kabul
 
 - Bir hedef ACK olurken diğeri retry/pending kalabilir; global dağıtık atomiklik iddia edilmez.
-- 6 pose component farklı cycle/revision ise commit yok; source invalidse identity/zero pose gönderilmez.
+- Genel pose tek coherent paket olarak taşınır; x,y,z,rx,ry,rz projection seçilirse
+  rx/ry/rz yönelim tanımı ve birimleri açık profil/codec sözleşmesiyle belirtilir;
+  isimlerden Euler sırası veya robot markası çıkarılmaz. Farklı cycle/revision
+  bileşenleri reddedilir; invalid kaynakta identity/zero pose gönderilmez.
 - Required offline admission block, optional bounded backlog ve restart bağımsız ACK doğrulaması.
 - İlgili Release/test komutlarını çalıştır; UI değişmişse 1400×900 ve 850×600 görsel kontrolü.
 - `python scripts/check-context-docs.py` ve `git diff --check` geçer.

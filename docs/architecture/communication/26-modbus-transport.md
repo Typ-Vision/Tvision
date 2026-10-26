@@ -1,6 +1,8 @@
 # COMM-26 — Modbus client transport/lifecycle
 
 Durum: başlamadı. Önerilen düzey: **medium**. Önkoşul: **COMM-25** tamam.
+**İhtiyaca bağlı alt faz:** yalnız kullanıcı bu alt fazı seçtiğinde uygulanır;
+temel fazın teslim önkoşulu değildir.
 Bir oturumda yalnız bu kart; paralel uygulayıcı yok.
 
 ## Oku

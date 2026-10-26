@@ -1,6 +1,8 @@
 # COMM-35 — FANUC veri profili ve pose codec'i
 
-Durum: başlamadı. Önerilen düzey: **medium**. Önkoşul: **COMM-34** tamam.
+Durum: başlamadı. Önerilen düzey: **medium**. Önkoşul: **COMM-03 ve COMM-23** tamam; COMM-34 gerekli değildir.
+**İhtiyaca bağlı alt faz:** yalnız kullanıcı bu alt fazı seçtiğinde uygulanır;
+temel fazın teslim önkoşulu değildir.
 Bir oturumda yalnız bu kart; paralel uygulayıcı yok.
 
 ## Oku
@@ -15,7 +17,7 @@ Bir oturumda yalnız bu kart; paralel uygulayıcı yok.
 
 1. Named FANUC XYZ-WPR profile'ı için resmi üretici/entegrasyon kaynağındaki matris tanımını doğrula; exact source ve controller belirsizliğini yaz.
 2. mm/degree WPR↔common transform codec'i uygula; frame/TCP/group metadata ayrı zarf kalsın.
-3. Known nontrivial combined-angle fixture'larıyla iki yönlü dönüşüm testle; profile binding actual input/output generic record mapping'e bağlanır.
+3. CalibrationSample gerektirmeden genel spatial input/output üzerinde çalış; Known nontrivial combined-angle fixture'larıyla iki yönlü dönüşüm testle; profile binding actual input/output generic record mapping'e bağlanır.
 
 ## Değişiklik sınırı
 
@@ -41,4 +43,4 @@ Gerçek komut/sonuç/kanıtları `build/comm/COMM-35/` altında tut. Koşulmayan
 fiziksel/native engelleri açık yaz. progress özetini ve arşiv indeksini güncelle;
 `docs/archive/YYYY-MM-DD-comm-35.md` kaydı oluştur, uygulayıcıyı belirt.
 Tamamlanınca `COMM-35: ...` tek yerel commit; push yok. Kabul geçmeden tamam yazma.
-Sonraki tek kart: **COMM-36**.
+Sonraki görev: seçili alt fazın entegrasyon/regresyon kabulü (COMM-36/37 ilgili kapsamı); başka alt faz otomatik başlamaz.

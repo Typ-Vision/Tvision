@@ -1,6 +1,8 @@
 # COMM-34 — Robot actual pose ve CalibrationSample tipleri
 
 Durum: başlamadı. Önerilen düzey: **medium**. Önkoşul: **COMM-03, COMM-15, COMM-16** tamam; opsiyonel SDK'lar beklenmez.
+**İhtiyaca bağlı alt faz:** yalnız kullanıcı bu alt fazı seçtiğinde uygulanır;
+temel fazın teslim önkoşulu değildir.
 Bir oturumda yalnız bu kart; paralel uygulayıcı yok.
 
 ## Oku
@@ -41,4 +43,4 @@ Gerçek komut/sonuç/kanıtları `build/comm/COMM-34/` altında tut. Koşulmayan
 fiziksel/native engelleri açık yaz. progress özetini ve arşiv indeksini güncelle;
 `docs/archive/YYYY-MM-DD-comm-34.md` kaydı oluştur, uygulayıcıyı belirt.
 Tamamlanınca `COMM-34: ...` tek yerel commit; push yok. Kabul geçmeden tamam yazma.
-Sonraki tek kart: **COMM-35**.
+Sonraki görev: seçili alt fazın entegrasyon/regresyon kabulü (COMM-36/37 ilgili kapsamı); başka alt faz otomatik başlamaz.

@@ -34,6 +34,15 @@ python scripts/check-context-docs.py
 git diff --check
 ```
 
+## Faz bazında kabul
+
+Temel sıra COMM-01–23 → COMM-36 → COMM-37'dir. COMM-36 iki TCP simulator
+hedefi ve genel pose paketiyle kabul edilir; COMM-34/35 veya Modbus/OPC SDK'sı
+istenmez. COMM-37 temel kapsamın full regresyonudur. İhtiyaca bağlı alt fazlar
+seçilince kendi kabul kapıları ve COMM-36/37'nin ilgili genişletme/regresyon
+kontrolleri yeni kanıtla uygulanır; tarihsel başarı yeni koşum diye sunulmaz.
+COMM-38 cihaz bazında ayrıdır; yazılım kabulünü bekletmez ve yerine geçmez.
+
 ## Zorunlu hata matrisi
 
 Eksik/stale kaynak, false Boolean'ın geçerli NOK olması, invalid değer, tip/birim

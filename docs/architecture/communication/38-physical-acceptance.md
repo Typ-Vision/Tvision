@@ -1,6 +1,6 @@
 # COMM-38 — Cihaz bazında fiziksel haberleşme kabulü
 
-Durum: başlamadı. Önerilen düzey: **medium**. Önkoşul: **COMM-37** tamam.
+Durum: başlamadı. Önerilen düzey: **medium**. Önkoşul: **COMM-37** ve seçilen protokolün yazılım kabulü tamam; ilgili gerçek cihaz sağlanmış. Temel yazılım tesliminin önkoşulu değildir.
 Bir oturumda yalnız bu kart; paralel uygulayıcı yok.
 
 ## Oku
@@ -14,7 +14,7 @@ Bir oturumda yalnız bu kart; paralel uygulayıcı yok.
 ## Tek hedef ve işler
 
 1. Sağlanan gerçek PLC/robot controller/UA endpoint model-version-option ve mapping sözleşmesini kaydet.
-2. İlk olarak salt status/read ve actual pose metadata doğrula; yetkili gerçek sonuç hattında ölçüm/control→payload→consumer ACK korelasyonunu gözle.
+2. İlk olarak salt status/read; yalnız robot pose kapsamı seçildiyse actual pose metadata doğrula; yetkili gerçek sonuç hattında ölçüm/control→payload→consumer ACK korelasyonunu gözle.
 3. Kopma/geç ACK/Stop/restart ve config mismatch davranışını cihaz bazında kanıtla; sağlanmayan cihazı açık bırak.
 
 ## Değişiklik sınırı

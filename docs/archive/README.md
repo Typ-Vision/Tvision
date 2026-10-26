@@ -6,6 +6,7 @@ görev” ifadeleri yazıldıkları tarihe aittir.
 
 | Dönem / görev | Kayıt |
 | --- | --- |
+| 26 Ekim 2026 — COMM-PLAN-03 | [Temel haberleşme fazı ve ihtiyaca bağlı protokol/robot alt fazları](2026-10-26-comm-plan-03.md) |
 | 26 Ekim 2026 — COMM-PLAN-02 | [Sol 6.1 medium/low için 38 sıralı haberleşme uygulama kartı](2026-10-26-comm-plan-02.md) |
 | 26 Ekim 2026 — COMM-DATA-01 | [Kalibrasyon için temel veri tipleri](2026-10-26-comm-data-01.md) |
 | 26 Ekim 2026 — COMM-PLAN-01 | [Haberleşme verileri resmi kaynak araştırması ve yeni faz önerisi](2026-10-26-comm-plan-01.md) |

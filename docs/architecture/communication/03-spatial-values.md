@@ -6,7 +6,7 @@ Bir oturumda yalnız bu kart; paralel uygulayıcı yok.
 ## Oku
 
 - AGENTS, progress ve kök README ardından [plan indeksi](README.md).
-- [Ortak sözleşme](contract.md): yalnız **C1, C10**.
+- [Ortak sözleşme](contract.md): yalnız **C1**.
 - [Doğrulama rehberi](verification.md); `source-map.md` oluştuysa yalnız bu kartın satırları.
 - Dar ek okuma: docs/architecture/robot-spatial-data-review.md.
 - Kaynakta önce ilgili sembolü bul; tüm mimari/arşiv veya bütün kartları yükleme.

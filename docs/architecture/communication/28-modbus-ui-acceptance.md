@@ -1,6 +1,8 @@
 # COMM-28 — Modbus UI ve yazılım kabulü
 
 Durum: başlamadı. Önerilen düzey: **medium**. Önkoşul: **COMM-27** tamam.
+**İhtiyaca bağlı alt faz:** yalnız kullanıcı bu alt fazı seçtiğinde uygulanır;
+temel fazın teslim önkoşulu değildir.
 Bir oturumda yalnız bu kart; paralel uygulayıcı yok.
 
 ## Oku
@@ -41,4 +43,4 @@ Gerçek komut/sonuç/kanıtları `build/comm/COMM-28/` altında tut. Koşulmayan
 fiziksel/native engelleri açık yaz. progress özetini ve arşiv indeksini güncelle;
 `docs/archive/YYYY-MM-DD-comm-28.md` kaydı oluştur, uygulayıcıyı belirt.
 Tamamlanınca `COMM-28: ...` tek yerel commit; push yok. Kabul geçmeden tamam yazma.
-Sonraki tek kart: **COMM-29**.
+Sonraki görev: seçili alt fazın entegrasyon/regresyon kabulü (COMM-36/37 ilgili kapsamı); başka alt faz otomatik başlamaz.

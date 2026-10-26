@@ -1,6 +1,8 @@
 # COMM-29 — OPC UA SDK/toolchain probe'u
 
-Durum: başlamadı. Önerilen düzey: **medium**. Önkoşul: **COMM-23** tamam; Modbus probe'u engeldeyse bağımsız ilerleyebilir.
+Durum: başlamadı. Önerilen düzey: **medium**. Önkoşul: **COMM-23** tamam; Modbus alt fazından bağımsızdır.
+**İhtiyaca bağlı alt faz:** yalnız kullanıcı bu alt fazı seçtiğinde uygulanır;
+temel fazın teslim önkoşulu değildir.
 Bir oturumda yalnız bu kart; paralel uygulayıcı yok.
 
 ## Oku

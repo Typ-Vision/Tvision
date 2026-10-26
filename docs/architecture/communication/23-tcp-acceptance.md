@@ -41,4 +41,4 @@ Gerçek komut/sonuç/kanıtları `build/comm/COMM-23/` altında tut. Koşulmayan
 fiziksel/native engelleri açık yaz. progress özetini ve arşiv indeksini güncelle;
 `docs/archive/YYYY-MM-DD-comm-23.md` kaydı oluştur, uygulayıcıyı belirt.
 Tamamlanınca `COMM-23: ...` tek yerel commit; push yok. Kabul geçmeden tamam yazma.
-Sonraki tek kart: **COMM-24**.
+Sonraki tek kart: **COMM-36** (temel faz); protokol alt fazı otomatik başlamaz.

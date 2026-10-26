@@ -1,6 +1,6 @@
 # Haberleşme verileri — uygulama planı
 
-**COMM-PLAN-02 · 26 Ekim 2026 · Plan hazır, uygulama başlamadı.**
+**COMM-PLAN-03 · 26 Ekim 2026 · Kapsam ayrıldı, uygulama başlamadı.**
 Bu paket [ilk araştırmanın](../communication-data-phase.md) sekiz geniş kartının
 yerine geçer. [Kalibrasyon veri tipi notu](../robot-spatial-data-review.md) girdi
 olarak korunur. Önceki COMM-01–08 kart başlıkları uygulanmış teslim değildir.
@@ -9,8 +9,10 @@ olarak korunur. Önceki COMM-01–08 kart başlıkları uygulanmış teslim değ
 
 Tek Recipe Editor/Runtime içinde çoklu değişken ataması, gerçek ölçüm ve
 OK/NOK/NOT_EVALUATED kararları, birden çok hedefe sonuç gönderimi ve PLC/robot
-software tetikleri. İlk teslim TCP; ardından Modbus TCP ve OPC UA client.
-Frame/birimli Pose ve CalibrationSample veri temeli de hazırlanır.
+software tetikleri. Temel teslim mevcut TCP hattını genişletir; protokolden bağımsız veri/atama/
+yayın/tetik modeli, çoklu hedef ve frame/birimli genel Pose aktarımı içerir.
+Modbus TCP, OPC UA client ve kalibrasyon/robot profilleri ayrı, ihtiyaca bağlı
+alt fazlardır; temel teslimin tamamlanma şartı değildir.
 
 Hand-eye solver, yeni kalibrasyon sihirbazı, tam 3D parça bulma, robot hareket
 kontrolü, OPC UA server, PROFINET/EtherNet/IP ve genel script dili bu paket
@@ -49,17 +51,36 @@ Sınıf/test/şema adları COMM-01'de current source ile sabitlenir. Aşağıdak
 dosya adları önerilen sahipliktir; mevcut eşdeğeri varsa onu genişlet, paralel
 ikinci framework kurma. Numaralı güncel şemalar eski belgelerden kopyalanmaz.
 
-## Sıralı kartlar
+## Fazlar ve yürütme sırası
 
-Varsayılan sıra aşağıdadır; tek etkin uygulayıcıyla yürütülür. **İlk kart COMM-01**.
-Bir SDK probe'u dış engelde kalırsa ilgili adaptör kartları açık bırakılır;
-bağımsız OPC probe'u (COMM-29) veya veri tipleri (COMM-34) kendi önkoşullarıyla
-ilerleyebilir. Bu paralel çalışma değildir. Enabled olmayan adaptörün kabulü
-tamam sayılmaz; COMM-37 yalnız etkin backend'lerin kabulünü birleştirir ve
-kapalı/engelli yetenekleri açık listeler. Native/backend etkinleştirme ayrı
-protokol kabulü geçmeden yapılmaz.
+Kart ID'leri korunur; numara sırası otomatik görev sırası değildir.
+**Temel faz: COMM-01–23 → COMM-36 → COMM-37** (25 kart). İlk kart COMM-01.
+Bu faz ölçüm/kontrol çıktısını çoklu değişkene atar, PLC/robot/uzak hedef için
+veri paketi hazırlar ve TCP üzerinden dış tetik alır. Genel pose taşıma birim,
+frame ve açık yönelim formatı ister; hand-eye çözümü veya robot hareketi üretmez.
+
+| Alt faz | Kartlar | Başlatma koşulu |
+| --- | --- | --- |
+| Modbus TCP | COMM-24–28 | Kullanıcı hedef PLC için Modbus ihtiyacını seçtiğinde; COMM-23 sonrası |
+| OPC UA client | COMM-29–33 | Kullanıcı uzak hedef için OPC UA client rolünü seçtiğinde; COMM-23 sonrası, Modbus bağımsız |
+| Kalibrasyon örnek verisi | COMM-34 | Gerçek robot pose/görüntü eşleme ihtiyacı seçildiğinde; kartın temel bağımlılıkları sonrası |
+| FANUC profili | COMM-35 | FANUC formatı ihtiyacı seçildiğinde; COMM-03 ve COMM-23 sonrası, COMM-34 bağımsız |
+| Fiziksel saha kabulü | COMM-38 | Sağlanan cihaz ve seçilen protokol için yazılım kabulü sonrası |
+
+Alt faz seçimi olmadan COMM-23/28/33/35 kapanışı başka protokol veya robot
+alt fazını kendiliğinden başlatmaz. Her seçili genişletme sonrası COMM-36'nın
+ilgili entegrasyon senaryoları ve COMM-37 regresyonu yeni kanıtla doğrulanır;
+önceki temel teslim yeniden başlatılmaz. SDK engeli yalnız ilgili alt fazı
+bekletir. Fiziksel kabul açık kalabilir; bu durum yazılım teslimiyle karıştırılmaz.
+
+Set Variables hesaplar; Publish Data gönderilecek paketi tanımlar. Gerçek
+iletim çevrim sonunda kalıcı terminal kayıt sonrası yapılır. Akış ortasında
+robota veri gönder → yanıt bekle → aynı akışa devam et davranışı bu fazda yoktur;
+ihtiyaç olursa ayrı etkileşim/handshake tasarımı gerekir.
+
 Low kartları sınırlı UI/codec/probe işidir; DAG, snapshot, kayıt ve ağ yaşam
-döngüsü kartlarını medium seçmek önerilir.
+döngüsü kartlarını medium seçmek önerilir. Aşağıdaki tablo kart envanteridir;
+yürütme sırası yukarıdaki fazlara göre seçilir.
 
 | Kart | Teslim | Düzey |
 | --- | --- | --- |
@@ -96,8 +117,8 @@ döngüsü kartlarını medium seçmek önerilir.
 | [COMM-31](31-opcua-trigger.md) | OPC UA subscription/trigger/ACK | medium |
 | [COMM-32](32-opcua-lifecycle.md) | OPC UA güvenlik, reconnect ve Stop | medium |
 | [COMM-33](33-opcua-ui-acceptance.md) | OPC UA UI ve yazılım kabulü | medium |
-| [COMM-34](34-calibration-samples.md) | Robot actual pose ve CalibrationSample | medium |
-| [COMM-35](35-robot-format.md) | FANUC veri profili ve pose codec'i | medium |
+| [COMM-34](34-calibration-samples.md) | Opsiyonel: Robot actual pose ve CalibrationSample | medium |
+| [COMM-35](35-robot-format.md) | Opsiyonel: FANUC veri profili ve pose codec'i | medium |
 | [COMM-36](36-multi-endpoint.md) | Çoklu hedef ve pose paketi tutarlılığı | medium |
 | [COMM-37](37-release-acceptance.md) | Birleşik Release/regresyon kabulü | medium |
 | [COMM-38](38-physical-acceptance.md) | Cihaz bazında fiziksel haberleşme kabulü | medium |
@@ -107,11 +128,13 @@ döngüsü kartlarını medium seçmek önerilir.
 - **COMM-08:** Editor'da çok satırlı atama denenebilir; dışarı yazmaz.
 - **COMM-23:** TCP üzerinden ölçüm/kontrol verisi ve dış software tetik çalışır;
   restart belirsizliği/ACK testlidir. Fiziksel PLC kabulü ayrı kalır.
-- **COMM-28 / 33:** sırasıyla Modbus / OPC UA simulator kabulü. Gerçek PLC yoksa
+- **COMM-28 / 33 (seçilirse):** Modbus / OPC UA simulator kabulü. Gerçek PLC yoksa
   yazılım teslimi kapanabilir; fiziksel kabul açıkça COMM-38'e taşınır.
-- **COMM-36:** pose/sample verisi ve çoklu hedef teslimi testlidir; gerçek
-  kalibrasyon veya robot hareket yetkisi oluşturmaz.
-- **COMM-37:** birleşik yazılım kabulü; **COMM-38:** sağlanan her gerçek endpoint
+- **COMM-36:** genel pose paketi ve çoklu hedef teslimi TCP ile testlidir;
+  CalibrationSample, FANUC, Modbus veya OPC gerektirmez. Gerçek kalibrasyon
+  veya robot hareket yetkisi oluşturmaz.
+- **COMM-37:** temel fazın birleşik yazılım kabulü; sonradan seçilen ekler ayrıca
+  regresyondan geçer. **COMM-38:** sağlanan her gerçek endpoint
   için ayrı fiziksel kabul. Eksik donanımın kabulü kapatılmaz.
 
 ## Başlatma mesajı

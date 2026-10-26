@@ -1,8 +1,8 @@
 # COMM-PLAN-01 — Haberleşme verileri araştırması ve faz önerisi
 
 Tarih: 26 Ekim 2026. Durum: araştırma ve öneri; uygulama/saha kabulü değildir.
-**Güncel uygulama planı [COMM-PLAN-02](communication/README.md) içindedir.**
-Aşağıdaki sekiz geniş kart tarihsel öneridir; yeni 38 sıralı kart bunların yerine
+**Güncel uygulama planı [COMM-PLAN-03](communication/README.md) içindedir.**
+Aşağıdaki sekiz geniş kart tarihsel öneridir; temel ve ihtiyaca bağlı alt fazlara ayrılan 38 kart bunların yerine
 geçer. Araştırma bulguları korunur, hiçbir uygulama kartı henüz tamamlanmadı.
 Kullanıcı yeni fazı ölçüm, yüzey kontrolü, robot pose aktarımı ve dış tetikleme
 üzerine yönlendirdi. Bu belge aşağıdaki eski sıra ifadelerinin yerine yeni devam

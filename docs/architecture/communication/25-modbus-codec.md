@@ -1,6 +1,8 @@
 # COMM-25 — Modbus register mapping codec'i
 
 Durum: başlamadı. Önerilen düzey: **low**. Önkoşul: **COMM-24** tamam.
+**İhtiyaca bağlı alt faz:** yalnız kullanıcı bu alt fazı seçtiğinde uygulanır;
+temel fazın teslim önkoşulu değildir.
 Bir oturumda yalnız bu kart; paralel uygulayıcı yok.
 
 ## Oku
