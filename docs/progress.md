@@ -4,12 +4,11 @@
 
 ## Devam noktası
 
-**[CCUX-24E tamam](archive/2026-10-26-ccux-24e.md):** wheel/refresh;
-Release/4 CTest/görsel geçti; native wheel açık (capture takıldı). Ek `ui_runtime_visibility`: `Persist local selection`
-hatası açık. [24D](archive/2026-10-26-ccux-24d.md),
-[24C](archive/2026-10-26-ccux-24c.md),
-[24B](archive/2026-10-26-ccux-24b-completion.md) korunur.
-[24F](architecture/camera-setup/24f-camera-manager.md).
+**[CCUX-24F tamam](archive/2026-10-26-ccux-24f.md):** sol scroll, sağ ortak
+viewer, görünür Optik/Geometri yönetimi. Release/CTest ve iki boyutta
+fixture görseli; fiziksel kabul yok. Sonraki [24G](architecture/camera-setup/24g-calibration-details.md);
+[24E](archive/2026-10-26-ccux-24e.md): native wheel açık; ek
+`ui_runtime_visibility`: `Persist local selection` hatası açık.
 [Plan](architecture/camera-setup/24-usability-plan.md): Kalibre Et korunur; Robot pasif.
 
 **[INT-09 tamam](archive/2026-10-25-int-09.md):** Yerel CameraIntegration ve
@@ -35,7 +34,7 @@ bağlantı ömrü, dosya/iptal/SaveUse drain. Kanıt: `build/ccux/ccux-22e/`.
 SDK kayıtlı kamerayı bulamadı; kare/mm kabulü yok. 22f açık.
 [22d Runtime](archive/2026-10-23-ccux-22d.md), [22c Editor](archive/2026-10-23-ccux-22c.md),
 [API/ömür](architecture/camera-setup/acquisition-sessions.md).
-Ek `multi_source_production_contract` önceki hatası 22d kapanışında korunur.
+`multi_source_production_contract` önceki hatası 22d kapanışında korunur.
 **[22a](archive/2026-10-23-ccux-22a.md):** yazılım tamam; fiziksel baseline/paint açık.
 **[21 ROI](archive/2026-10-22-ccux-21.md) tamam.**
 [20 hash/preview](archive/2026-10-22-ccux-20.md) korunur; canlı teyit açık.

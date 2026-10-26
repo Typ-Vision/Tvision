@@ -126,6 +126,14 @@ BUSY görüntüyü ve geometrisini temizlerken görünüm durumu tutulabilir; ay
 kaynak/boyut gelmezse bu durum kullanılmaz. Stop/normal clear görünümü sıfırlar.
 Fit resize ile yeniden sığdırır; manuel resize ölçeği ve üst/sol konumu korur.
 
+CCUX-24F: Camera Manager ayarları bağımsız sol scroll'da, ham rasteri sunan ortak
+viewer sağdadır. Aynı kaynak/profil ve boyutta kare yenileme görünümü korur;
+kamera/profil/rota değişimi, Stop ve hata eski rasteri temizler. Optik / Geometri
+kartı pending durumunu, endüstriyel kurulum/profil düzenleme ve açık seçim/arşiv
+komutlarını gösterir. Çok profil veya çözülemeyen varsayılan görünür seçim ister;
+tek exact varsayılan için gereksiz seçici açılmaz. Yönetim mevcut application
+komutları ve busy/mutation kapılarıyla çalışır; edinim/readback yerine geçmez.
+
 ## C3 — Model geçerliliği ve kullanıcı akışı
 
 Kalibrasyon sayfası kamera listesidir; alt bölüm seçili kameranın yöntemi, tarihi,

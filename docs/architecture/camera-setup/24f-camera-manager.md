@@ -1,6 +1,6 @@
 # CCUX-24F — görünür kurulum, geniş kamera önizlemesi
 
-Durum: planlandı; 24E sonrası. [Ortak plan](24-usability-plan.md), contract
+Durum: tamamlandı; [26 Ekim kapanışı](../../archive/2026-10-26-ccux-24f.md). [Ortak plan](24-usability-plan.md), contract
 C1/C2/C2a ve [analiz](24-usability-analysis.md) 8 okunur. Sonraki: 24G.
 
 ## Hedef ve dosya haritası

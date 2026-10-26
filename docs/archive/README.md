@@ -6,6 +6,7 @@ görev” ifadeleri yazıldıkları tarihe aittir.
 
 | Dönem / görev | Kayıt |
 | --- | --- |
+| 26 Ekim 2026 — CCUX-24F | [Geniş preview ve görünür kurulum yönetimi](2026-10-26-ccux-24f.md) |
 | 26 Ekim 2026 — CCUX-24E | [Olay konumunda zoom ve aynı kaynakta kare yenileme](2026-10-26-ccux-24e.md) |
 | 26 Ekim 2026 — CCUX-24D | [Üç basamak, kayıpsız özgün değer ve açık edit](2026-10-26-ccux-24d.md) |
 | 26 Ekim 2026 — CCUX-24C | [Ortak kontrol durumu ve yeni Circle calibrated başlangıcı](2026-10-26-ccux-24c.md) |

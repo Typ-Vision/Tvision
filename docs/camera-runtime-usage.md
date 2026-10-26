@@ -1,6 +1,6 @@
 # Kamera, kalibrasyon ve Runtime kullanımı
 
-23 Ekim 2026 mevcut uygulama. [Güncel durum ve açık fiziksel kabul](progress.md).
+26 Ekim 2026 mevcut uygulama. [Güncel durum ve açık fiziksel kabul](progress.md).
 
 ## Kamera → Kalibrasyon → Editor → Runtime
 
@@ -12,7 +12,7 @@
 3. **Ayarları oku** desteklenen cihazın aralık, birim ve gerçek değerlerini getirir.
    Exposure/gain için **Uygula ve kaydet** gerçek readback sonrası kaydeder.
    Opto/OECS ayar yolu görüntü ediniminden bağımsızdır. Başarısız readback başarı
-   sayılmaz. **Ayrıntılar → Optik / geometri taslağı** içinde gerçek lens/düzlemi
+   sayılmaz. **Optik / Geometri** kartındaki düzenleme komutuyla gerçek lens/düzlemi
    tamamlayın; bilinmeyen değerler ölçüm izni vermez. Tam sensör Mono8 gerekir.
 4. **Tek görüntü** bir kare alıp cihazı kapatır; **Canlı görüntü** Durdur'a kadar
    önizleme yapar. Normal komut desteklenen kamera için uygun edinim yolunu seçer;
@@ -20,6 +20,12 @@
    gösterilir; bu video dosyası kaydı değildir. Kamera/ayar değişimi canlıyken
    kilitlidir. **Görünen kareyi kanıtıyla kaydet** yeni `.pgm` + `.pgm.json` yazar.
    Stop/kopma/kamera değişimi kareyi emekliye ayırır ve bekleyen kaydı iptal eder.
+   Ayarlar solda bağımsız kaydırılır; sağ önizlemede Sığdır, 1:1, wheel zoom ve pan
+   kullanılır. Aynı kaynak/boyuttaki yeni kare manuel görünümü korur.
+   Optik / Geometri kartı kurulum durumunu ve endüstriyel kamera için yeni
+   kurulum/profil, açık varsayılan/operasyonel seçim ve arşivleme komutlarını sunar.
+   **Optik / kamera konumu değişti** ilgili kurulumların kullanım iznini keser.
+   Webcam/legacy cihaz eşleme düzenlemesi Kalibrasyon Ayrıntılar'da korunur.
 5. **Setup → Calibration → kamera → Kalibre Et** ile **Bilinen ölçü** veya
    **Kalibrasyon plakası** seçin. Hazır varsayılan hedef otomatik aktarılır.
    Liste kamerayı açmaz; canlı sihirbaz açılışı hedefi arka planda hazırlar.
