@@ -111,6 +111,21 @@ invalidation ve immutable kuralları sürer. İlk uygulama OECS stream start/sto
 kare başına korur; sürekli akış ve pending-command çözümü ayrı konudur.
 [CCUX-22 planı](22-session-lifecycle.md) uygulama kartlarını ve kabulü tanımlar.
 
+## C2b — Ortak viewer görünümü
+
+CCUX-24E: wheel olayının viewport konumu açık zoom merkezidir; düğmeler viewport
+merkezini kullanır. Qt'nin mouse/resize anchor'ı ikinci bir telafi uygulamaz.
+Scroll geometrisinin izin verdiği eksenlerde nokta aynı yerde kalır; küçük sahne
+ve scroll sınırlarında en yakın geçerli konuma sınırlandırılır. Raster/ROI
+koordinatları değiştirilmez; wheel reçete edit'i veya edinim başlatmaz.
+
+Görünüm kimliği kaynaktır, kare/content ID değildir. İlk görüntü ve değişen
+kaynak veya raster boyutu Fit yapar; aynı kaynak/boyutta yeni kare manuel
+pan/zoom'u korur. Editor, Runtime ve Kalibrasyon kaynak anahtarını taşır.
+BUSY görüntüyü ve geometrisini temizlerken görünüm durumu tutulabilir; aynı
+kaynak/boyut gelmezse bu durum kullanılmaz. Stop/normal clear görünümü sıfırlar.
+Fit resize ile yeniden sığdırır; manuel resize ölçeği ve üst/sol konumu korur.
+
 ## C3 — Model geçerliliği ve kullanıcı akışı
 
 Kalibrasyon sayfası kamera listesidir; alt bölüm seçili kameranın yöntemi, tarihi,

@@ -745,7 +745,7 @@ void MainWindow::openImageDialog() {
 bool MainWindow::setDrawingImage() {
     try {
         const auto image=editorSession_.toolImage(editorContext(),selectedToolId_);
-        drawingImage_=image;imageViewer_->setPreviewPixels(image.preview());
+        drawingImage_=image;imageViewer_->setPreviewPixels(image.preview(),editorRecipeId_+"|"+image.metadata().sourceId);
         findChild<QPushButton*>("stopFlow")->setEnabled(true);
         imageInfo_->setText(image.processing().isEmpty() ? "Ham görüntü · bağlı kaynak" : "İşlenmiş görüntü · bağlı Preprocess");
         return true;

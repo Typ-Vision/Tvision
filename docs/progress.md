@@ -4,12 +4,12 @@
 
 ## Devam noktası
 
-**[CCUX-24D tamam](archive/2026-10-26-ccux-24d.md):** mm/px üç basamak;
-No-op/Save/reopen özgün double'ı korur; açık edit/minimum.
-[Envanter](architecture/camera-setup/24d-input-inventory.md).
-[24C](archive/2026-10-26-ccux-24c.md) ortak kontrol/Circle calibrated ve
+**[CCUX-24E tamam](archive/2026-10-26-ccux-24e.md):** wheel/refresh;
+Release/4 CTest/görsel geçti; native wheel açık (capture takıldı). Ek `ui_runtime_visibility`: `Persist local selection`
+hatası açık. [24D](archive/2026-10-26-ccux-24d.md),
+[24C](archive/2026-10-26-ccux-24c.md),
 [24B](archive/2026-10-26-ccux-24b-completion.md) korunur.
-Sıradaki: [24E](architecture/camera-setup/24e-cursor-zoom.md).
+[24F](architecture/camera-setup/24f-camera-manager.md).
 [Plan](architecture/camera-setup/24-usability-plan.md): Kalibre Et korunur; Robot pasif.
 
 **[INT-09 tamam](archive/2026-10-25-int-09.md):** Yerel CameraIntegration ve

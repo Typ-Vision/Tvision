@@ -4,6 +4,8 @@
 #include <QDialog>
 #include <QDir>
 #include <QMouseEvent>
+#include <QWheelEvent>
+#include <QScrollBar>
 #include <QKeyEvent>
 #include <QComboBox>
 #include <QDoubleSpinBox>
@@ -20,7 +22,18 @@ using namespace visionflow;
 int checks=0;
 void check(bool ok,const char* why){++checks;if(!ok)throw std::runtime_error(why);}
 template<class F> void reject(F f,const char* why){bool rejected=false;try{f();}catch(const std::exception&){rejected=true;}check(rejected,why);}
-int main(int argc,char** argv){QApplication app(argc,argv);QFontDatabase::addApplicationFont("C:/Windows/Fonts/segoeui.ttf");app.setStyle("Fusion");try{
+// Reproduction probe for the pre-24E wheel algorithm, isolated from assertions.
+class PreviousWheelViewer:public ImageViewer {
+    void wheelEvent(QWheelEvent* e) override {if(e->angleDelta().y())scale(std::pow(1.2,e->angleDelta().y()/120.),std::pow(1.2,e->angleDelta().y()/120.));e->accept();}
+};
+int main(int argc,char** argv){QApplication app(argc,argv);
+if(app.arguments().contains("--baseline-zoom")){
+    PreviousWheelViewer v;v.resize(850,600);v.show();QImage im(2448,2048,QImage::Format_RGB32);im.fill(Qt::darkGray);v.setImage(im);app.processEvents();v.setTransformationAnchor(QGraphicsView::AnchorUnderMouse);v.actualSize();v.centerOn(1200,1000);v.beginRoi(1);
+    const QPointF at(70,70);QMouseEvent move(QEvent::MouseMove,at,v.viewport()->mapToGlobal(at.toPoint()),Qt::NoButton,Qt::NoButton,Qt::NoModifier);QApplication::sendEvent(v.viewport(),&move);
+    const auto before=v.viewportTransform().inverted().map(at);const auto old=v.transform();const auto bars=QPoint(v.horizontalScrollBar()->value(),v.verticalScrollBar()->value());QWheelEvent e(at,v.viewport()->mapToGlobal(at.toPoint()),{},QPoint(0,120),Qt::NoButton,Qt::NoModifier,Qt::NoScrollPhase,false);QApplication::sendEvent(v.viewport(),&e);const auto drift=v.viewportTransform().map(before)-at;
+    QTextStream(stdout)<<"PRE24E viewport="<<at.x()<<","<<at.y()<<" scene="<<before.x()<<","<<before.y()<<" transform="<<old.m11()<<"->"<<v.transform().m11()<<" scroll="<<bars.x()<<","<<bars.y()<<"->"<<v.horizontalScrollBar()->value()<<","<<v.verticalScrollBar()->value()<<" drift="<<drift.x()<<","<<drift.y()<<"\n";return 0;
+}
+QFontDatabase::addApplicationFont("C:/Windows/Fonts/segoeui.ttf");app.setStyle("Fusion");try{
     ImageViewer viewer;viewer.resize(1400,900);viewer.show();QImage image(640,480,QImage::Format_RGB888);image.fill(QColor("#192b3b"));{QPainter p(&image);p.setPen(QColor("#34485b"));for(int x=0;x<640;x+=20)p.drawLine(x,0,x,479);for(int y=0;y<480;y+=20)p.drawLine(0,y,639,y);}
     viewer.setImage(image);viewer.setRoiFrame("test/raw");app.processEvents();viewer.actualSize();viewer.zoomBy(4);viewer.centerOn(300,240);app.processEvents();
     auto mouse=[&](QEvent::Type type,QPointF p,Qt::MouseButton button,Qt::MouseButtons buttons){const auto at=viewer.mapFromScene(p);QMouseEvent e(type,QPointF(at),QPointF(viewer.viewport()->mapToGlobal(at)),button,buttons,Qt::NoModifier);QApplication::sendEvent(viewer.viewport(),&e);};
@@ -127,5 +140,38 @@ int main(int argc,char** argv){QApplication app(argc,argv);QFontDatabase::addApp
     int mapped=0;for(auto* item:viewer.scene()->items())if(item->data(0)=="scanGuide")++mapped;check(mapped==2,"world guides map through viewer mapping");
     viewer.setScanGuides([](const ToolRoi&){return QVector<QLineF>{{{200,200},{260,200}},{{200,220},{1e6,220}}};});
     mapped=0;for(auto* item:viewer.scene()->items())if(item->data(0)=="scanGuide")++mapped;check(mapped==0,"failed mapping publishes no partial guides");
+    // CCUX-24E: viewport events, including moves consumed by ROI drawing.
+    for(const auto screen:{QSize(1400,900),QSize(850,600)})for(const auto raster:{QSize(640,480),QSize(2448,2048)}) {
+        ImageViewer zoom;zoom.resize(screen);zoom.show();QImage pixels(raster,QImage::Format_RGB32);pixels.fill(QColor("#192b3b"));zoom.setImage(pixels,"camera-a");app.processEvents();
+        int geometryEdits=0;zoom.onRoiEdited=[&]{++geometryEdits;};zoom.onSearchRegionEdited=[&](QRect){++geometryEdits;};
+        auto wheel=[&](QPointF at,int delta){QWheelEvent e(at,zoom.viewport()->mapToGlobal(at.toPoint()),{},QPoint(0,delta),Qt::NoButton,Qt::NoModifier,Qt::NoScrollPhase,false);QApplication::sendEvent(zoom.viewport(),&e);QApplication::processEvents();};
+        const auto points=[&]{const auto r=zoom.viewport()->rect().adjusted(25,25,-25,-25);return QVector<QPointF>{r.center(),r.topLeft(),r.topRight(),r.bottomLeft(),r.bottomRight()};};
+        int bounded=0,anchored=0;
+        auto measured=[&](QPointF at,int delta){
+            const auto before=zoom.viewportTransform().inverted().map(at);const auto scale=zoom.zoomFactor();
+            wheel(at,delta);const auto after=zoom.viewportTransform().map(before);const auto error=after-at;
+            auto constrained=[](QScrollBar* b,double e){return (e>.51 && b->value()==b->maximum()) || (e<-.51 && b->value()==b->minimum());};
+            const bool limited=constrained(zoom.horizontalScrollBar(),error.x()) || constrained(zoom.verticalScrollBar(),error.y());
+            QTextStream(stdout)<<"wheel "<<screen.width()<<" raster="<<raster.width()<<" at="<<at.x()<<","<<at.y()<<" scale="<<scale<<"->"<<zoom.zoomFactor()<<" scene="<<before.x()<<","<<before.y()<<" error="<<error.x()<<","<<error.y()<<" scroll="<<zoom.horizontalScrollBar()->value()<<","<<zoom.verticalScrollBar()->value()<<" bounded="<<limited<<"\n";
+            if(limited)++bounded;else {++anchored;check(std::abs(error.x())<=1 && std::abs(error.y())<=1,"wheel event anchor within one viewport pixel");}
+        };
+        zoom.fitImage();measured(points()[1],120); // First event after Fit, no prior base mouseMove.
+        for(int mode=0;mode<4;++mode)for(const auto at:points()){
+            zoom.setImage(pixels,"camera-a");zoom.actualSize();zoom.zoomBy(4);zoom.centerOn(raster.width()/2.,raster.height()/2.);
+            if(mode==1)zoom.beginRoi(1);
+            if(mode==2){const auto p=zoom.mapToScene(at.toPoint());zoom.setRoi(ToolRoi{{"viewer/raw"},ScanSegment{p,p+QPointF(20,0),4}},false);zoom.setRoiEditable(true);}
+            if(mode==3){const auto p=zoom.viewport()->rect().center();QMouseEvent press(QEvent::MouseButtonPress,p,zoom.viewport()->mapToGlobal(p),Qt::MiddleButton,Qt::MiddleButton,Qt::NoModifier);QApplication::sendEvent(zoom.viewport(),&press);QMouseEvent move(QEvent::MouseMove,p+QPoint(19,11),zoom.viewport()->mapToGlobal(p+QPoint(19,11)),Qt::NoButton,Qt::MiddleButton,Qt::NoModifier);QApplication::sendEvent(zoom.viewport(),&move);QMouseEvent release(QEvent::MouseButtonRelease,p+QPoint(19,11),zoom.viewport()->mapToGlobal(p+QPoint(19,11)),Qt::MiddleButton,Qt::NoButton,Qt::NoModifier);QApplication::sendEvent(zoom.viewport(),&release);}
+            QMouseEvent move(QEvent::MouseMove,at,zoom.viewport()->mapToGlobal(at.toPoint()),Qt::NoButton,Qt::NoButton,Qt::NoModifier);QApplication::sendEvent(zoom.viewport(),&move);
+            const auto fixed=zoom.viewportTransform().inverted().map(at);const auto roiBefore=zoom.roi();
+            for(int n=0;n<12;++n){measured(at,120);measured(at,-120);}
+            const auto drift=zoom.viewportTransform().map(fixed)-at;check(std::abs(drift.x())<=1 && std::abs(drift.y())<=1,"repeated in/out has no cumulative corner drift");check(zoom.roi()==roiBefore,"wheel preserves ROI coordinates");
+        }
+        check(geometryEdits==0,"wheel never edits recipe geometry");
+        zoom.actualSize();zoom.zoomBy(32);const auto upper=zoom.transform();wheel(points()[1],120);check(zoom.transform()==upper,"upper bound no-op");zoom.zoomBy(.000001);const auto lower=zoom.transform();wheel(points()[1],-120);wheel(points()[0],0);check(zoom.transform()==lower,"lower bound and zero wheel no-op");
+        zoom.fitImage();measured(points()[0],-120);zoom.actualSize();zoom.zoomBy(4);zoom.centerOn(raster.width()/2.,raster.height()/2.);measured(points()[2],120);
+        check(zoom.grab().save(dir.filePath(QString("ccux24e-zoom-%1-%2.png").arg(screen.width()).arg(raster.width()))),"zoom evidence PNG");
+        zoom.clearImage();wheel(points()[1],120);check(zoom.transform().isIdentity(),"empty viewer wheel no-op");
+        QTextStream(stdout)<<"matrix anchored="<<anchored<<" bounded="<<bounded<<"\n";
+    }
     QTextStream(stdout)<<checks<<" viewer checks passed\n";return 0;
 }catch(const std::exception& e){QTextStream(stderr)<<e.what()<<" after "<<checks<<"\n";return 1;}}

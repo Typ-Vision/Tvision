@@ -360,7 +360,7 @@ void MainWindow::showRuntimeResult() {
     const auto selectedSource=runtimeSources_->currentData().toString();
     const auto graph=snapshot ? validateSourceGraph(editorTools(snapshot->recipe().definition),editorConnections(snapshot->recipe().definition)):GraphValidation{};
     bool image=false;
-    for(const auto& t:c.tools)for(const auto& v:t.outputs)if(v.valid && v.origin.sourceId==selectedSource && std::holds_alternative<ImageFrame>(v.data) && std::get<ImageFrame>(v.data).processing().isEmpty()){rawFrame=std::get<ImageFrame>(v.data);runtimeViewer_->setImage(rawFrame->preview());image=true;}
+    for(const auto& t:c.tools)for(const auto& v:t.outputs)if(v.valid && v.origin.sourceId==selectedSource && std::holds_alternative<ImageFrame>(v.data) && std::get<ImageFrame>(v.data).processing().isEmpty()){rawFrame=std::get<ImageFrame>(v.data);runtimeViewer_->setImage(rawFrame->preview(),runtimeProjectId_+"|"+(snapshot ? snapshot->recipe().id:QString{})+"|"+selectedSource);image=true;}
     if(!image)runtimeViewer_->clearImage("Bu kaynak için geçerli çevrim görüntüsü yok.");
     const auto selected=runtimeTools_->currentData().toString();
     {QSignalBlocker blocker(runtimeTools_);runtimeTools_->clear();if(snapshot)for(const auto& t:editorTools(snapshot->recipe().definition))if(graph.toolSources.value(t.id)==selectedSource)runtimeTools_->addItem(t.name,t.id);runtimeTools_->setCurrentIndex(std::max(0,runtimeTools_->findData(selected)));}

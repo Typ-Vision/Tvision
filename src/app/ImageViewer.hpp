@@ -11,10 +11,13 @@ namespace visionflow {
 class ImageViewer : public QGraphicsView {
 public:
     explicit ImageViewer(QWidget* parent=nullptr);
-    void setImage(const QImage& image);
+    // Source identity is stable across frames; changing it or raster size fits.
+    // Rebuilds presentation/ROI state while retaining a same-source manual view.
+    void setImage(const QImage& image,const QString& source={});
     // Same-geometry result preview; preserve raw-coordinate ROI, zoom and pan.
-    void setPreviewPixels(const QImage& image);
-    void clearImage(const QString& message="Görüntü yüklenmedi.");
+    void setPreviewPixels(const QImage& image,const QString& source={});
+    // BUSY may retain only view geometry; stale pixels/ROI are always cleared.
+    void clearImage(const QString& message="Görüntü yüklenmedi.",bool preserveView=false);
     void fitImage();
     void zoomBy(double factor);
     void actualSize();
@@ -72,6 +75,10 @@ protected:
     void paintEvent(QPaintEvent* event) override;
     void keyPressEvent(QKeyEvent* event) override;
 private:
+    void zoomAt(double factor,const QPointF& position);
+    QString imageSource_;
+    QSize imageSize_;
+    QPointF savedCenter_;
     AcquisitionTimingContext paintTiming_;
     AcquisitionTiming::Clock::time_point imageAssignedAt_;
     void addResultLabel(const QString&,QPointF,const QColor&,bool background=false);

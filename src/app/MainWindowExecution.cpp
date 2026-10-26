@@ -142,7 +142,7 @@ void MainWindow::showExecutionResultView(const EditorContext& context) {
         QString source=image.metadata().sourceId;for(const auto& candidate:service_.tools())if(candidate.id==source){source=candidate.name;break;}
         imageInfo_->setText(QString("%1 · bağlı kaynak: %2 · %3 × %4 px · Frame %5").arg(image.processing().isEmpty() ? "Ham görüntü":"İşlenmiş görüntü",source).arg(image.size().width()).arg(image.size().height()).arg(image.metadata().frameId));
     }catch(const std::exception&){}
-    if(!editorSession_.frame && !drawingImage_){imageViewer_->clearImage("Bu kaynak için güncel kare yok.");imageInfo_->setText("Görüntü yok.");}
+    if(!editorSession_.frame && !drawingImage_){imageViewer_->clearImage("Bu kaynak için güncel kare yok.",editorSession_.busy());imageInfo_->setText("Görüntü yok.");}
     // Resolve the final raster before uploading: do not bounce processed -> raw -> processed.
     if(editorSession_.cycle)for(const auto& r:editorSession_.cycle->tools)
         if(r.toolId==selectedToolId_ && r.state==ExecutionState::Done &&
@@ -151,7 +151,7 @@ void MainWindow::showExecutionResultView(const EditorContext& context) {
             if(processed.valid)if(const auto* image=std::get_if<ImageFrame>(&processed.data))
                 if(!image->processing().isEmpty())displayPreview=image->preview();
         }
-    if(!displayPreview.isNull())imageViewer_->setPreviewPixels(displayPreview);
+    if(!displayPreview.isNull())imageViewer_->setPreviewPixels(displayPreview,editorRecipeId_+"|"+(editorSession_.frame ? editorSession_.frame->metadata().sourceId:QString{}));
     if(!editorSession_.cycle){matchInfo_->clear();return;}
     if(editorSession_.frame){const auto evidence=editorSession_.cycle->industrialEvidence.value(editorSession_.frame->metadata().sourceId);
         if(evidence)imageInfo_->setText(imageInfo_->text()+QString("\n%1 • %2 | Profil %3 r%4 | actual exposure %5 µs / gain %6 | offset %7,%8")
@@ -254,7 +254,7 @@ void MainWindow::runExecution(const QString& targetTool) {
     if(!multi || targetTool.isEmpty())++editorSession_.generation;
 
     if(multi && !targetTool.isEmpty())editorSession_.invalidateTool(editorContext(),targetTool);
-    editorSession_.references.clear();invalidateMatch();editorSession_.cycle.reset();editorSession_.frame.reset();imageViewer_->clearImage("BUSY — görüntü ediniliyor…");imageInfo_->setText("Yeni çevrim görüntüsü bekleniyor.");auto* watcher=editorSession_.watch<CycleResult>(this,SessionJob::Execution);
+    editorSession_.references.clear();invalidateMatch();editorSession_.cycle.reset();editorSession_.frame.reset();imageViewer_->clearImage("BUSY — görüntü ediniliyor…",true);imageInfo_->setText("Yeni çevrim görüntüsü bekleniyor.");auto* watcher=editorSession_.watch<CycleResult>(this,SessionJob::Execution);
     refreshFlow();matchInfo_->setText("BUSY — acquisition ve DAG çalışıyor…");
     findChild<QTabWidget*>("editorTabs")->setCurrentWidget(findChild<QScrollArea*>("resultsScroll"));
     const auto signature=flowSignature();const auto id=service_.activeRecipe()->id;const auto directory=QFileInfo(service_.path()).absolutePath();const auto cancel=editorSession_.token(SessionJob::Execution);
@@ -267,7 +267,7 @@ void MainWindow::runExecution(const QString& targetTool) {
                 if(service_.activeRecipe()->definition["editor"].toObject()["schemaVersion"]==9){for(const auto& t:service_.tools())if(t.enabled && ToolRegistry::get(t.kind).acquisitionSource)measurementWorkspace_->observeAcquisition(SystemCalibration::branch(*service_.activeRecipe(),t.id),*editorSession_.cycle);}else measurementWorkspace_->observeAcquisition(*service_.activeRecipe(),*editorSession_.cycle);
             }
             if(service_.activeRecipe() && service_.activeRecipe()->definition["editor"].toObject()["schemaVersion"]==9 && !selectedToolId_.isEmpty())editorSession_.selectSource(editorSession_.sourceForTool(editorContext(),selectedToolId_));
-            if(editorSession_.frame) {const auto& frame=*editorSession_.frame;imageViewer_->setImage(frame.preview());imageInfo_->setText(QString("%1×%2 px | Frame %3").arg(frame.size().width()).arg(frame.size().height()).arg(editorSession_.cycle->frameId));}
+            if(editorSession_.frame) {const auto& frame=*editorSession_.frame;imageViewer_->setImage(frame.preview(),editorRecipeId_+"|"+frame.metadata().sourceId);imageInfo_->setText(QString("%1×%2 px | Frame %3").arg(frame.size().width()).arg(frame.size().height()).arg(editorSession_.cycle->frameId));}
             if(!targetTool.isEmpty() && editorSession_.cycle->state!=ExecutionState::Skipped)for(const auto& r:editorSession_.cycle->tools)if(r.toolId==targetTool && r.state==ExecutionState::Done) {
                 const auto region=r.outputs.value("region"),score=r.outputs.value("score"),found=r.outputs.value("found");
                 if(std::holds_alternative<QRect>(region.data) && score.valid && found.valid) {
@@ -293,7 +293,7 @@ void MainWindow::loadImageAsync(const QString& path,bool commit) {
             if(commit){const bool multi=service_.activeRecipe()->definition["editor"].toObject()["schemaVersion"]==9;const auto source=multi ? editorSession_.sourceForTool(editorContext(),selectedToolId_):QString{};if(multi && source.isEmpty())throw std::runtime_error("Önce dosya kaynağını seçin.");selectedToolId_=service_.setImageFile(result.frame->path(),source);}
             auto loaded=*result.frame;if(service_.activeRecipe()->definition["editor"].toObject()["schemaVersion"]==9){auto m=loaded.metadata();m.sourceId=selectedToolId_;loaded=loaded.withMetadata(m);}
             editorSession_.frame=loaded;invalidateMatch();editorSession_.cycle.reset();editorSession_.adoptFrame(editorContext());
-            imageBinding_=editorRecipeId_+"|"+service_.imageFilePath();imageViewer_->setImage(editorSession_.frame->preview());
+            imageBinding_=editorRecipeId_+"|"+service_.imageFilePath();imageViewer_->setImage(editorSession_.frame->preview(),editorRecipeId_+"|"+editorSession_.frame->metadata().sourceId);
             imageInfo_->setText(QString("%1 × %2 px | %3 | %4").arg(editorSession_.frame->size().width()).arg(editorSession_.frame->size().height()).arg(editorSession_.frame->pixelFormat(),QFileInfo(editorSession_.frame->path()).fileName()));refreshWorkspace();
         }catch(const std::exception& e){displayError(QString::fromUtf8(e.what()));}
         else displayError(result.error);

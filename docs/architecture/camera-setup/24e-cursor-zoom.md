@@ -1,6 +1,7 @@
 # CCUX-24E — imleç merkezli ortak zoom
 
-Durum: planlandı; 24D sonrası. [Ortak plan](24-usability-plan.md) ve
+Durum: yazılım kabulü tamamlandı; [kapanış](../../archive/2026-10-26-ccux-24e.md).
+Native wheel/DPI/çok monitör kabulü açık; Windows capture aracı yanıt vermedi. [Ortak plan](24-usability-plan.md) ve
 [analiz](24-usability-analysis.md) 9 okunur. Sonraki: 24F.
 
 ## Hedef ve başlangıç
