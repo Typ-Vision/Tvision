@@ -4,6 +4,13 @@
 
 ## Devam noktası
 
+**[COMM-PLAN-01 tamam](archive/2026-10-26-comm-plan-01.md):** Kullanıcının yeni
+fazı haberleşme verileri. [Araştırma ve önerilen kart sırası](architecture/communication-data-phase.md):
+typed değişkenler, çoklu Set Variables, Result/Publish, dış tetik, kalıcı teslim,
+Modbus/OPC UA ve robot pose. Yalnız araştırma/plan; uygulama ve saha kabulü yok.
+**Sonraki COMM-01:** kaynak incelemesi ve kesin sözleşme. Codebase-memory becerisi/
+araçları bu oturumda yoktu; indeks/kapsama önkoşulu açık. Aşağıdaki engeller korunur.
+
 **[INT-10 tamam](archive/2026-10-26-int-10.md):** CameraIntegration, geçmişi
 koruyan merge ile main üzerinde birleştirildi; çalışma dalı artık main.
 Açık fiziksel/native engeller korunur.
@@ -55,26 +62,9 @@ tolerans/mm, lens/düzlem ve belgeli fiziksel kabulü tamamlanmadı.
 Stop/retry yazılım/görsel kabulü; fiziksel açık. `build/ccux/ccux-14/`.
 
 CCUX-01–13 tamamlandı; [arşiv](archive/README.md).
-- Kamera immutable ID/kısa ID ve atomik varsayılan kurulum/profil; belirsiz eski
-  profil/rota açık seçim ister. Exposure/gain gerçek readback ile kaydedilir.
-  Pending optik kurulum ölçüm izni değildir; Opto/OECS ayar servisi edinimden ayrıdır.
-- Tek/canlı preview ortak worker/session, bir pending istek/latest kare,
-  generation/Stop/drain ve gerçek FPS kullanır; deneysel OECS sıralı
-  FrameBurstStart continuous diye sunulmaz. Sayfa/proje/pencere geçişi drain bekler.
-- Kalibrasyon kayıtlı matematik, uyum ve oturum iznini ayırır; restart/replug izin
-  başlatmaz. Exact yeniden probe gerekir. Optik değişikliği pending revision
-  üretir; A→B→A izni canlandırmaz. Tek Kaydet ve kullan önceki seçimi hata/rette korur.
-- Deneysel canlı/PGM+JSON → aday → ayrı etkin seçim → Editor/Runtime mm zinciri
-  typed köken/hash ve exact kamera/geometri/model ID/content/version taşır.
-  Trusted active/system/completion'a yükselmez; Raw/px dalı global model almaz.
-  [Son servis/UI sözleşme teslimi](archive/2026-10-22-ccux-13.md).
-- Editor kamera seçimi varsayılan bağları atomik kurar; aynı kameranın uygun ayar
-  güncellemesi Run Flow hazırlığında serialized snapshot/DRAFT/dirty yeniler.
-  Geometri/seri/legacy otomatik onarılmaz. Yeni reçete genel referans miras almaz;
-  üç tür boş kaynakla DRAFT; metadata edit legacy/scoped bağ ve no-op hash korur.
-- Runtime aktif immutable snapshot'ı kullanır; model/ayar değişimi Stop ve yeniden
-  Load ister. Deneysel runtime1/2 Logs/CSV birimleri/kökeni korur; hata/Stop sonuç
-  üretmez, restart geçmişi okur. PLC/robot kapalıdır.
+Kamera kimliği/profil, oturum drain, kalibrasyon izni, typed köken/hash,
+Editor binding ve immutable Runtime kararlarının [korunan ayrıntıları](archive/2026-10-26-comm-plan-01.md#önceki-kamera-özetinden-korunan-ayrıntılar).
+Restart üretim izni başlatmaz; PLC/robot çıkışı kapalı kalır.
 
 Arşiv rasteri karanlık/kısmen bulanık; **bağımsız fiziksel mm kabulü açık**.
 CCUX-14 fixture bunu kapatmaz. [CCUX planı](architecture/camera-setup/README.md) sürer;

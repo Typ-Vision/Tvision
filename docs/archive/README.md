@@ -6,6 +6,7 @@ görev” ifadeleri yazıldıkları tarihe aittir.
 
 | Dönem / görev | Kayıt |
 | --- | --- |
+| 26 Ekim 2026 — COMM-PLAN-01 | [Haberleşme verileri resmi kaynak araştırması ve yeni faz önerisi](2026-10-26-comm-plan-01.md) |
 | 26 Ekim 2026 — INT-10 | [CameraIntegration çalışmalarının main üzerinde birleştirilmesi](2026-10-26-int-10.md) |
 | 26 Ekim 2026 — CCUX-24I | [Birleşik UX kabulü, iki Release, test birleşimi ve açık native/fiziksel sınırlar](2026-10-26-ccux-24i.md) |
 | 26 Ekim 2026 — CCUX-24H | [Kaynak/çevrim/snapshot bağlı çoklu Runtime overlay](2026-10-26-ccux-24h.md) |
