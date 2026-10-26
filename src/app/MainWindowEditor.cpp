@@ -1,4 +1,5 @@
 #include "PrecisionInput.hpp"
+#include "SetVariablesEditor.hpp"
 #include "application/EditorObservation.hpp"
 #include "application/CalibrationWorkflow.hpp"
 #include "application/ExperimentalOecsAcquisition.hpp"
@@ -342,6 +343,13 @@ void MainWindow::showToolPropertiesView(const EditorContext& context,const std::
         }catch(const std::exception& ex){displayError(QString::fromUtf8(ex.what()));}});
         auto* manage=new QPushButton(cameras->count()==1 ? "Kamera ekle — Setup":"Kameraları aç");manage->setObjectName("sourceCameraManage");form->addRow(manage);connect(manage,&QPushButton::clicked,this,[this]{selectPage("camera");});
         form->addRow(note("Raw/px kalibrasyonsuzdur. mm yalnız bu kameranın uygun etkin modeliyle hesaplanır. Model/optik değişimi world ROI ve referansı yeniden denetler."));
+    } else if (tool.kind=="set_variables") {
+        const auto* cycle=editorSession_.cycle && editorSession_.accepts(editorSession_.cycle->configId,context) && !editorSession_.busy() ? &*editorSession_.cycle:nullptr;
+        auto* settings=new SetVariablesEditor(tool,context.definition,cycle);form->addRow(settings);
+        auto* apply=new QPushButton("Atamaları uygula");apply->setObjectName("assignmentApply");form->addRow(apply);
+        connect(apply,&QPushButton::clicked,this,[this]{if(applyToolProperties())QTimer::singleShot(0,this,&MainWindow::showToolProperties);});
+        auto* cancel=new QPushButton("Taslağı geri al");cancel->setObjectName("assignmentCancel");form->addRow(cancel);
+        connect(cancel,&QPushButton::clicked,this,[this]{QTimer::singleShot(0,this,&MainWindow::showToolProperties);});
     } else if (tool.kind=="image_file") {
         auto* path=new QLineEdit(tool.parameters["path"].toString()); path->setReadOnly(true); path->setCursorPosition(0); path->setPlaceholderText("Seçilmedi"); path->setToolTip(path->text()); form->addRow("File",path);
         auto* choose=new QPushButton("Open Image…"); form->addRow(choose); connect(choose,&QPushButton::clicked,this,&MainWindow::openImageDialog);
@@ -647,6 +655,7 @@ void MainWindow::showToolPropertiesView(const EditorContext& context,const std::
 ToolDefinition MainWindow::readToolProperties(ToolDefinition tool) const {
     tool.name=propertiesBody_->findChild<QLineEdit*>("toolName")->text().trimmed(); tool.description=propertiesBody_->findChild<QLineEdit*>("toolDescription")->text();
     tool.enabled=propertiesBody_->findChild<QCheckBox*>("toolEnabled")->isChecked();
+    if(tool.kind=="set_variables")if(auto* settings=dynamic_cast<SetVariablesEditor*>(propertiesBody_->findChild<QWidget*>("setVariablesEditor")))tool.parameters=settings->parameters();
     if (auto* score=propertiesBody_->findChild<QDoubleSpinBox*>("minScore")) tool.parameters["minScore"]=score->value()/100;
     if(tool.kind=="pattern_pose" || tool.kind=="shape_pose")if(auto* settings=dynamic_cast<PoseMatchEditor*>(propertiesBody_->findChild<QWidget*>("poseMatchSettings")))tool.parameters=settings->parameters();
     if (auto* threshold=propertiesBody_->findChild<QSpinBox*>("threshold")) tool.parameters["threshold"]=threshold->value();
@@ -695,11 +704,12 @@ MainWindow::PropertyCommit MainWindow::commitToolProperties() {
                 if(i.value()!=displayedProperties_->parameters.value(i.key()))tool.parameters[i.key()]=i.value();
             for(auto i=displayedProperties_->parameters.begin();i!=displayedProperties_->parameters.end();++i)
                 if(!displayed.parameters.contains(i.key()))tool.parameters.remove(i.key());
+            if(tool.kind=="set_variables")if(auto* settings=dynamic_cast<SetVariablesEditor*>(propertiesBody_->findChild<QWidget*>("setVariablesEditor")))settings->validateDraft();
             if(tool.name==original.name && tool.description==original.description && tool.enabled==original.enabled && tool.parameters==original.parameters) {
                 displayedProperties_=displayed;
                 return PropertyCommit::Unchanged;
             }
-            const bool geometryChange=tool.kind=="geometry_measurement" &&
+              const bool geometryChange=tool.kind=="geometry_measurement" &&
                 (tool.parameters["operation"]!=original.parameters["operation"] || tool.parameters["mode"]!=original.parameters["mode"]);
             if(tool.kind=="geometry_measurement")validateGeometryMeasurement(tool.parameters);
             if(geometryChange) {
@@ -715,6 +725,8 @@ MainWindow::PropertyCommit MainWindow::commitToolProperties() {
             return PropertyCommit::Changed;
         }
     } catch (const std::exception& e) {
+        if(auto* settings=dynamic_cast<SetVariablesEditor*>(propertiesBody_->findChild<QWidget*>("setVariablesEditor")))
+            settings->error("Atama kaydedilmedi: "+QString::fromUtf8(e.what())+"\nTüm satırlar birlikte doğrulanır. Hedef UUID, kaynak tipi, birimi ve revision bağını kontrol edin. Taslağı düzeltin veya geri alın; önceki kayıt korunur.");
         if(auto* mode=propertiesBody_->findChild<QComboBox*>("propertyDetailMode"))mode->setCurrentIndex(1);
         displayError(QString::fromUtf8(e.what()));
         return PropertyCommit::Failed;

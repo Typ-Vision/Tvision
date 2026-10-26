@@ -23,7 +23,7 @@ ToolDefinition assignment(const QString& name,const AssignmentConfig& c){return 
 int main(int argc,char** argv){QCoreApplication app(argc,argv);try {
     QTemporaryDir dir(QCoreApplication::applicationDirPath()+"/assignment-XXXXXX");check(dir.isValid(),"Fixture directory");
     QImage image(30,30,QImage::Format_Grayscale8);image.fill(255);check(image.save(dir.filePath("part.png")),"Actual image fixture");
-    check(!ToolCatalog::canAdd("set_variables"),"Assignment UI stays closed until its UI card");
+    check(ToolCatalog::canAdd("set_variables"),"Assignment UI available after COMM-08");
     QTcpServer endpoint;check(endpoint.listen(QHostAddress::LocalHost,0),"Network observer");int networkCalls=0;QObject::connect(&endpoint,&QTcpServer::newConnection,[&]{++networkCalls;});
     ToolRegistry::registerType({"bundle_consumer","Bundle consumer",1,{},{{"values",PortType::AssignmentBundle,"","cycle"}},{},[](const ToolDefinition&){},false,false,{},7});
     ToolExecutors::registerExecutor("bundle_consumer",[](const ToolDefinition& t,const QMap<QString,PortValue>& input,const QString&,const QString&,const QString& cycle,const std::shared_ptr<std::atomic_bool>&){const auto b=std::get<AssignmentBundle>(input["values"].data);check(b.committed && b.cycleId==cycle,"Consumer sees current committed typed bundle");++consumed;ToolResult r;r.toolId=t.id;r.state=ExecutionState::Done;return r;});

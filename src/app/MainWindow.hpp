@@ -46,6 +46,7 @@ public:
     bool verifyEditorResponsiveness(const QString& artifacts);
     bool verifyEditorPropertyCommits(const QString& artifacts);
     bool verifyVariableCatalog(const QString& artifacts);
+    bool verifyAssignmentUi(const QString& artifacts);
     bool verifyWorkspace(const QString& artifactDirectory);
     bool verifyEditor(const QString& artifactDirectory);
     bool verifySession();

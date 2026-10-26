@@ -1,6 +1,7 @@
 # COMM-08 — Çok satırlı Set Variables UI
 
-Durum: başlamadı. Önerilen düzey: **medium**. Önkoşul: **COMM-07** tamam.
+Durum: **tamamlandı** — [kapanış ve kanıt](../../archive/2026-10-26-comm-08.md).
+Önerilen düzey: **medium**. Önkoşul: **COMM-07** tamam.
 Bir oturumda yalnız bu kart; paralel uygulayıcı yok.
 
 ## Oku

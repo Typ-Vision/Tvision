@@ -169,6 +169,17 @@ Yeni CTest `assignment_execution_contract` → `assignment_execution_test`.
 ToolCatalog sunum filtresi bu aracı COMM-08 UI teslimine kadar gizler.
 [Kabul ve sınırlar](../../archive/2026-10-26-comm-06.md).
 
+## COMM-08 güncel UI genişletmesi
+
+`src/app/SetVariablesEditor.*`, `MainWindowEditor.cpp`: Toolbox'ta açık
+Set Variables için çok satırlı draft, type/unit uyumlu output/bundle picker ve
+strict typed JSON constant. Tek ProjectService updateTool komutu atomik commit
+eder; boş/duplicate/invalid atama inline hata verir. Editor preview ağ yazmaz.
+`tests/editor_assignment_ui.cpp`, `main.cpp --assignments-smoke`, CTest
+`ui_assignment_editor`: üç satır Save/reopen/gerçek Flow, sıra/partial Run Tool,
+ret/cancel/no-op, klavye ve iki boyut offscreen. Schema/execution bump yok.
+[Kapanış ve sınırlar](../../archive/2026-10-26-comm-08.md).
+
 ## COMM-07 güncel UI genişletmesi
 
 `src/app/MainWindowVariables.cpp`: ortak Editor Variables sekmesinde katalog,

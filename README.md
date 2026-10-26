@@ -85,6 +85,9 @@ OECS / GenTL probe komutları, sandbox sınırları ve kanıt bağlantıları
 3. Reçeteyi Editor'da kur; kaynak/araçları bağla, görüntü al ve Run Flow çalıştır.
    Variables sekmesinde reçete değişkenlerini ekle/düzenle/sil; sistem satırları salt
    okunurdur. Değerler yalnız güncel Editor çevriminden gelir; tanımda saklanmaz.
+   Toolbox → Set Variables: Properties'de satır ekle/sil/taşı; hedef ve uyumlu
+   port/bundle veya typed JSON sabit seç. Atamaları uygula tüm taslağı tek
+   komutta kaydeder; Taslağı geri al değişiklikleri atar. Run Tool/Flow dışarı yazmaz.
    Properties → Çıkışlar sonuç listesinde gösterilecek portları seçer; tercih yerel
    INI’de saklanır. Viewer/overlay ve Logs/CSV/PLC verisi bu seçimden bağımsızdır.
 4. Kaydedilmiş reçete için Load Recipe → Kaynağı doğrula → Run → Tek çevrim; sonuçlar Logs/CSV'de.

@@ -4,9 +4,13 @@
 
 ## Devam noktası
 
-**[COMM-07 tamam](archive/2026-10-26-comm-07.md):** Editor Variable Catalog,
-readonly system ve çevrim değerleri. Release UI; 7 test (düzeltme tekrarları dahil),
-iki boyut offscreen. **Sonraki COMM-08**; tool UI kapalı.
+**[COMM-08 tamam](archive/2026-10-26-comm-08.md):** Set Variables Toolbox ve
+çok satırlı Properties; typed constant/uyumlu port/bundle, atomik draft commit.
+Release UI; 9 ilgili CTest, 1400×900/850×600 offscreen. **Sonraki COMM-09**;
+bu oturumda başlatılmadı. Editor preview dışarı yazmaz.
+
+**[COMM-07](archive/2026-10-26-comm-07.md):** Editor Variable Catalog,
+readonly system ve çevrim değerleri.
 
 **[COMM-06](archive/2026-10-26-comm-06.md):** Assignment DAG/executor/cache.
 
