@@ -1,6 +1,7 @@
 # COMM-02 — Typed scalar değer ve geçerlilik
 
-Durum: başlamadı. Önerilen düzey: **medium**. Önkoşul: **COMM-01** tamam.
+Durum: **tamamlandı** — [COMM-02 kapanışı](../../archive/2026-10-26-comm-02.md).
+Önerilen düzey: **medium**. Önkoşul: **COMM-01** tamam.
 Bir oturumda yalnız bu kart; paralel uygulayıcı yok.
 
 ## Oku

@@ -4,13 +4,19 @@
 
 ## Devam noktası
 
+**[COMM-02 tamam](archive/2026-10-26-comm-02.md):** Qt Core CommunicationValues
+scalar type/tag, null/validity/reason, birim ve köken zarfı; strict codec, kayıpsız
+Int64 decimal string, finite/range/4096 UTF-8 byte ve enum catalog denetimi.
+UI OFF Release derlendi; 113 yeni kontrol ve ilgili CTest 5/5 geçti.
+Legacy no-op byte/hash/reçete yolu değişmedi. **Sonraki tek kart COMM-03.**
+
 **[COMM-01 tamam](archive/2026-10-26-comm-01.md):**
 [Kaynak haritası](architecture/communication/source-map.md) actual servis/test/şema,
 extension ve admission/native kapılarını sabitler. İndeks actual
 `C:/OpenCode/TVision` checkout/HEAD'iyle eşleşti; eski `C:/Projects/Tvision` yok.
 Kısmi coverage kaynakla tamamlandı. UI/OFF Release derlendi; UI ON 20 benzersiz
 ilgili test ilk koşum+localhost tekrarıyla, UI OFF 19/19 geçti. Ürün/UI değişmedi.
-**Sonraki tek kart COMM-02.** Temel sıra COMM-01–23 → COMM-36 → COMM-37;
+Temel sıra COMM-01–23 → COMM-36 → COMM-37;
 Modbus 24–28, OPC UA 29–33, sample 34, FANUC 35 ihtiyaç seçilince.
 [Haberleşme planı](architecture/communication/README.md): çevrim sonunda gönderim;
 akış ortasında gönder/bekle ayrı kapsam. Fiziksel COMM-38, hand-eye solver/robot
