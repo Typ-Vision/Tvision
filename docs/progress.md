@@ -4,18 +4,19 @@
 
 ## Devam noktası
 
-**[COMM-PLAN-03 hazır](archive/2026-10-26-comm-plan-03.md):**
-[Haberleşme planı](architecture/communication/README.md) temel ve seçilebilir
-alt fazlara ayrıldı. **Temel sıra COMM-01–23 → COMM-36 → COMM-37**:
-çoklu Set Variables, Result/Publish, dış tetik, kalıcı teslim, TCP, çoklu hedef
-ve genel pose aktarımı. Modbus (24–28), OPC UA (29–33), sample (34), FANUC (35)
-yalnız ihtiyaç seçilince; temel teslimi bekletmez. Fiziksel kabul COMM-38'de ayrı.
-Gönderim çevrim sonunda; akış ortasında gönder/bekle ayrı kapsamdır.
-**İlk COMM-01:** kaynak/kapsama envanteri ve baseline. Uygulama başlamadı;
-codebase-memory araçları yoktu, indeks/kapsama önkoşulu açık.
-[Araştırma](architecture/communication-data-phase.md) ve
+**[COMM-01 tamam](archive/2026-10-26-comm-01.md):**
+[Kaynak haritası](architecture/communication/source-map.md) actual servis/test/şema,
+extension ve admission/native kapılarını sabitler. İndeks actual
+`C:/OpenCode/TVision` checkout/HEAD'iyle eşleşti; eski `C:/Projects/Tvision` yok.
+Kısmi coverage kaynakla tamamlandı. UI/OFF Release derlendi; UI ON 20 benzersiz
+ilgili test ilk koşum+localhost tekrarıyla, UI OFF 19/19 geçti. Ürün/UI değişmedi.
+**Sonraki tek kart COMM-02.** Temel sıra COMM-01–23 → COMM-36 → COMM-37;
+Modbus 24–28, OPC UA 29–33, sample 34, FANUC 35 ihtiyaç seçilince.
+[Haberleşme planı](architecture/communication/README.md): çevrim sonunda gönderim;
+akış ortasında gönder/bekle ayrı kapsam. Fiziksel COMM-38, hand-eye solver/robot
+hareketi ayrıdır. [Araştırma](architecture/communication-data-phase.md) ve
 [veri tipi notu](architecture/robot-spatial-data-review.md) korunur.
-Hand-eye solver/robot hareketi kapsam dışı. Aşağıdaki engeller korunur.
+Aşağıdaki fiziksel/native engeller kapanmadı.
 
 **[INT-10 tamam](archive/2026-10-26-int-10.md):** CameraIntegration, geçmişi
 koruyan merge ile main üzerinde birleştirildi; çalışma dalı artık main.

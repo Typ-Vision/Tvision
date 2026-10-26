@@ -1,6 +1,6 @@
 # COMM-01 — Kaynak/kapsama envanteri ve baseline
 
-Durum: başlamadı. Önerilen düzey: **medium**. Önkoşul yok; ilk karttır.
+Durum: tamamlandı; [kaynak haritası](source-map.md) ve [kapanış](../../archive/2026-10-26-comm-01.md). Önerilen düzey: **medium**. Önkoşul yok; ilk karttır.
 Bir oturumda yalnız bu kart; paralel uygulayıcı yok.
 
 ## Oku
@@ -13,7 +13,7 @@ Bir oturumda yalnız bu kart; paralel uygulayıcı yok.
 
 ## Tek hedef ve işler
 
-1. Codebase-memory list_projects/index_status ile C:/Projects/Tvision kökünü ve checkout ilişkisini doğrula; seçili yolların coverage'ını kontrol et.
+1. Codebase-memory list_projects/index_status ile eski C:/Projects/Tvision kökünü ve actual C:/OpenCode/TVision checkout ilişkisini doğrula; seçili yolların coverage'ını kontrol et.
 2. ToolValues/Registry/Graph, ProjectService/Repository, ExecutionService/EditorSession, RuntimeService/Coordinator, ProductionStore/ResultCodec ve PlcRuntimeSocket sorumluluklarını dar sembol aramasıyla eşle.
 3. source-map.md içine actual dosya/sembol/test/şema tablosu, önerilen extension noktaları ve exact baseline komutlarını yaz; ürün kodunu değiştirme.
 

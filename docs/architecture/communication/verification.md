@@ -5,7 +5,7 @@
 Kök README'nin yerel Qt/MinGW/OpenCV PATH ve Release komutlarını kullanın.
 COMM-01 güncel CMake target/CTest adlarını ve baseline'ı
 `docs/architecture/communication/source-map.md` içine kaydeder; sonraki kartlar
-bu dosyanın yalnız ilgili tablosunu okur. Henüz oluşturulmuş değildir.
+bu [kaynak haritasının](source-map.md) yalnız ilgili tablosunu okur.
 
 Yeni test, hata/uyumluluk/state sınırını kanıtlamalı; implementation satırlarını
 tekrarlayan test yazmayın. İlgili mevcut regression'ları koruyun. Yeni network

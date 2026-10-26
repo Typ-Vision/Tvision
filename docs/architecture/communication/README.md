@@ -1,6 +1,6 @@
 # Haberleşme verileri — uygulama planı
 
-**COMM-PLAN-03 · 26 Ekim 2026 · Kapsam ayrıldı, uygulama başlamadı.**
+**COMM-PLAN-03 · 26 Ekim 2026 · Kapsam ayrıldı; COMM-01 baseline tamamlandı.**
 Bu paket [ilk araştırmanın](../communication-data-phase.md) sekiz geniş kartının
 yerine geçer. [Kalibrasyon veri tipi notu](../robot-spatial-data-review.md) girdi
 olarak korunur. Önceki COMM-01–08 kart başlıkları uygulanmış teslim değildir.
@@ -39,15 +39,13 @@ değildir. Agent/model ayarı otomatik değiştirilmez; paralel ajan çalıştı
 
 ## Başlangıç önkoşulu
 
-Bu plan mevcut belge sözleşmeleri ve dosya envanteriyle hazırlanmıştır; yapısal
-kaynak incelemesi değildir. Codebase-memory becerisi/araçları bu oturumda yoktur.
-**COMM-01**, AGENTS'in `C:/Projects/Tvision` indeksini, bu checkout ile ilişkisini
-ve ilgili coverage'ı doğrulayacak; eksikleri kaynak okuyarak tamamlayacaktır.
-Bağlantı hatası boş sonuç değildir. Araç yoksa envanter/baseline hazırlığı
-yapılabilir; yapısal inceleme tamamlandı denemez, uygulama kartına geçilmez.
-Bu engel nedeniyle plan/sözleşme belgelerinin hazırlanması engellenmez.
+[COMM-01 kaynak haritası](source-map.md) actual dosya/sembol/test/şema ve Release
+baseline'ını sabitler. Eski `C:/Projects/Tvision` yoktur; mevcut checkout ve hazır
+indeks `C:/OpenCode/TVision` kökü/HEAD'iyle eşleştirildi. Seçili coverage'ın kısmi
+satırları kaynakla tamamlandı. Sonraki kartlar bu haritanın ilgili bölümünü kullanır;
+indeks erişim/kapsama hatası boş sonuç olarak yorumlanmaz.
 
-Sınıf/test/şema adları COMM-01'de current source ile sabitlenir. Aşağıdaki yeni
+Sınıf/test/şema adları COMM-01 kaynak haritasında current source ile sabitlendi. Aşağıdaki yeni
 dosya adları önerilen sahipliktir; mevcut eşdeğeri varsa onu genişlet, paralel
 ikinci framework kurma. Numaralı güncel şemalar eski belgelerden kopyalanmaz.
 
