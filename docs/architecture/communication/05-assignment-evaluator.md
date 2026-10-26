@@ -1,6 +1,7 @@
 # COMM-05 — Atomik çoklu atama evaluator'ı
 
-Durum: başlamadı. Önerilen düzey: **medium**. Önkoşul: **COMM-04** tamam.
+Durum: **tamamlandı** — [kapanış ve kanıt](../../archive/2026-10-26-comm-05.md).
+Önerilen düzey: **medium**. Önkoşul: **COMM-04** tamam.
 Bir oturumda yalnız bu kart; paralel uygulayıcı yok.
 
 ## Oku

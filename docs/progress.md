@@ -4,26 +4,26 @@
 
 ## Devam noktası
 
-**[COMM-04 tamam](archive/2026-10-26-comm-04.md):** Variable katalog codec'i,
-UUID/type/unit/frame/enum ve atomik proje komutları; legacy byte/no-op korunur.
-UI OFF Release ve ilgili 13/13 CTest geçti. **Sonraki tek kart COMM-05.**
-Fiziksel/native engeller korunur.
+**[COMM-05 tamam](archive/2026-10-26-comm-05.md):** Typed constant/tool-output/
+upstream bundle bağları; immutable RHS ve atomik çoklu atama evaluator'ı.
+UI OFF Release; 14/14 CTest ve son 149 evaluator kontrolü geçti.
+**Sonraki kart COMM-06**; başlatılmadı. Fiziksel/native engeller korunur.
+
+**[COMM-04 tamam](archive/2026-10-26-comm-04.md):** UUID/type/unit/frame/enum
+variable kataloğu ve atomik proje komutları; legacy byte/no-op korunur.
 
 **[COMM-03 tamam](archive/2026-10-26-comm-03.md):** FrameRef UUID/revision,
-mm/wxyz SpatialTransform, strict codec ve inverse/compose. 120 spatial kontrol;
-o koşumda 13/15 CTest. İki eski Circle fixture hatası kapanıştaki önceki UI ON
-binary'lerinde de üretildi; açık kaldı, COMM-04 bunları yeniden koşmadı.
+mm/wxyz SpatialTransform ve inverse/compose. O koşumda 13/15 CTest;
+eski UI ON'da da üretilen iki Circle fixture hatası açık, COMM-04/05'te koşulmadı.
 
 **[COMM-02 tamam](archive/2026-10-26-comm-02.md):** Qt Core typed scalar,
-strict codec, kayıpsız Int64 ve validity/unit/köken. 113 kontrol, CTest 5/5;
-legacy no-op/hash korundu.
+strict codec, kayıpsız Int64 ve validity/unit/köken; legacy no-op/hash korunur.
 **[COMM-01 tamam](archive/2026-10-26-comm-01.md):** [Kaynak haritası](architecture/communication/source-map.md),
 actual kök/indeks ve Release baseline sabit. [Plan](architecture/communication/README.md):
 COMM-01–23 → 36 → 37; opsiyonel Modbus 24–28, OPC UA 29–33, sample 34, FANUC 35.
 Çevrim sonunda gönderim; akış ortası gönder/bekle ayrı kapsam. Fiziksel COMM-38,
 hand-eye/robot hareketi ayrı. [Araştırma](architecture/communication-data-phase.md)
 ve [veri tipi notu](architecture/robot-spatial-data-review.md) korunur.
-Aşağıdaki fiziksel/native engeller kapanmadı.
 
 **[INT-10 tamam](archive/2026-10-26-int-10.md):** CameraIntegration, geçmişi
 koruyan merge ile main üzerinde birleştirildi; çalışma dalı artık main.
