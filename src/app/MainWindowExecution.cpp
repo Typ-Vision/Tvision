@@ -86,6 +86,7 @@ void MainWindow::refreshFlowView(const EditorContext& context,const std::optiona
     }
     }
     editorSession_.reconcile(context);
+    refreshVariableCatalog(context);
     QString text="Önce reçete açın.";
     if(service_.activeRecipe()) {
         const auto graph=service_.activeRecipe()->definition["editor"].toObject()["schemaVersion"]==9 ? validateSourceGraph(service_.tools(),editorConnections(service_.activeRecipe()->definition)):validateGraph(service_.tools(),editorConnections(service_.activeRecipe()->definition));

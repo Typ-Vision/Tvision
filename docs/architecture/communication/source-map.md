@@ -168,3 +168,21 @@ kullanır; toolSignature geçişli parametreler yanında variableCatalog'u içer
 Yeni CTest `assignment_execution_contract` → `assignment_execution_test`.
 ToolCatalog sunum filtresi bu aracı COMM-08 UI teslimine kadar gizler.
 [Kabul ve sınırlar](../../archive/2026-10-26-comm-06.md).
+
+## COMM-07 güncel UI genişletmesi
+
+`src/app/MainWindowVariables.cpp`: ortak Editor Variables sekmesinde katalog,
+add/edit/cancel/remove ve salt okunur system satırları. ProjectService variable
+komutları kullanılır; UI JSON proje dosyasını yazmaz. Enum metadata ve opsiyonel
+frame kısıtı aynı VariableDefinition doğrulamasına gider; UUID düzenlenemez.
+`refreshFlowView` session reconcile sonrası kabul edilmiş cycle/bundle alanlarını
+gösterir; variable tanımına değer yazılmaz. Geçersizleşmede Missing/boş görünür.
+Katalog seçiliyken alt panelin minimum alanı satır/hata görünürlüğünü korur.
+
+`tests/editor_variable_catalog.cpp`, `main.cpp --variables-smoke`, CTest
+`ui_variable_catalog`: gerçek image_file → Set Variables Boolean false,
+UUID/no-op/cancel, referanslı silme/tip hatası, sistem erişimi, Properties binding,
+klavye/scroll ve 1400×900/850×600 görünür satır alanı. Mevcut
+`tests/editor_property_commits.cpp` değişmedi; `ui_editor_usability` regresyonunda
+çalıştı. Şema/execution sürümü değişmedi; Set Variables tool UI COMM-08'e kadar
+kapalıdır. [Kapanış](../../archive/2026-10-26-comm-07.md).

@@ -83,6 +83,8 @@ OECS / GenTL probe komutları, sandbox sınırları ve kanıt bağlantıları
    Yeni kaydın varsayılan kurulum/profili otomatik bağlanır; eksik fiziksel kurulum
    ayrıntıları tamamlanmadan ölçüm izni oluşmaz.
 3. Reçeteyi Editor'da kur; kaynak/araçları bağla, görüntü al ve Run Flow çalıştır.
+   Variables sekmesinde reçete değişkenlerini ekle/düzenle/sil; sistem satırları salt
+   okunurdur. Değerler yalnız güncel Editor çevriminden gelir; tanımda saklanmaz.
    Properties → Çıkışlar sonuç listesinde gösterilecek portları seçer; tercih yerel
    INI’de saklanır. Viewer/overlay ve Logs/CSV/PLC verisi bu seçimden bağımsızdır.
 4. Kaydedilmiş reçete için Load Recipe → Kaynağı doğrula → Run → Tek çevrim; sonuçlar Logs/CSV'de.

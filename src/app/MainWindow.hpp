@@ -45,6 +45,7 @@ public:
     bool verifyShell();
     bool verifyEditorResponsiveness(const QString& artifacts);
     bool verifyEditorPropertyCommits(const QString& artifacts);
+    bool verifyVariableCatalog(const QString& artifacts);
     bool verifyWorkspace(const QString& artifactDirectory);
     bool verifyEditor(const QString& artifactDirectory);
     bool verifySession();
@@ -118,6 +119,11 @@ private:
     bool resolveUnsavedChanges();
     void displayError(const QString& message);
     void refreshEditor();
+    QWidget* makeVariableCatalog();
+    void refreshVariableCatalog(const EditorContext&);
+    void editVariable(const QString& id = {});
+    void removeSelectedVariable();
+    QTableWidget* variableTable_=nullptr;
     quint64 editorRefreshEpoch_=0; // Supersedes an outer reentrant display operation.
     void selectTool(const QString& id);
     void showToolProperties();

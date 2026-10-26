@@ -1,6 +1,6 @@
 # COMM-07 — Variable Catalog UI
 
-Durum: başlamadı. Önerilen düzey: **low**. Önkoşul: **COMM-06** tamam.
+Durum: tamamlandı — [kapanış ve kanıt](../../archive/2026-10-26-comm-07.md). Önerilen düzey: **low**. Önkoşul: **COMM-06** tamam.
 Bir oturumda yalnız bu kart; paralel uygulayıcı yok.
 
 ## Oku

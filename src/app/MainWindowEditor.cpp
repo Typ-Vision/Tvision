@@ -154,7 +154,13 @@ QWidget* MainWindow::makeEditor() {
     imageViewer_->onRegion=[this](QRect roi){commitRoi(roi);};
     imageViewer_->onSearchRegionStarting=[this]{return !editorSession_.busy() && applyToolProperties();};
     imageViewer_->onSearchRegionActivityChanged=[this]{findChild<QPushButton*>("stopFlow")->setEnabled(editorSession_.busy() || !pendingDrawTool_.isEmpty() || imageViewer_->drawingActive());};
-    for (const auto name : {"Log","Variables","Communication","Diagnostics"}) tabs->addTab(note(QString(name)+" — henüz veri yok."),name);
+    auto* variables=makeVariableCatalog();tabs->addTab(variables,"Variables");
+    connect(tabs,&QTabWidget::currentChanged,this,[tabs,variables]{
+        // The catalog needs rows as well as its commands/error area. QTabWidget's
+        // explicit compact minimum otherwise clips its page inside the splitter.
+        tabs->setMinimumHeight(tabs->currentWidget()==variables ? 280:100);
+    });
+    for (const auto name : {"Log","Communication","Diagnostics"}) tabs->addTab(note(QString(name)+" — henüz veri yok."),name);
     vertical_=new QSplitter(Qt::Vertical); vertical_->setObjectName("editorVertical"); vertical_->setChildrenCollapsible(false);
     vertical_->addWidget(horizontal_); vertical_->addWidget(bottom); vertical_->setStretchFactor(0,1); layout->addWidget(vertical_,1);
     horizontal_->setSizes({170,780,280}); vertical_->setSizes({640,160});

@@ -4,10 +4,11 @@
 
 ## Devam noktası
 
-**[COMM-06 tamam](archive/2026-10-26-comm-06.md):** Set Variables registry/DAG,
-cycle typed bundle, atomik executor ve Editor cache/TargetOnly bağlantısı.
-UI OFF Release; test kanıtı kapanışta. **Sonraki kart COMM-07**.
-Tool UI/yayın açılmadı; fiziksel/native engeller korunur.
+**[COMM-07 tamam](archive/2026-10-26-comm-07.md):** Editor Variable Catalog,
+readonly system ve çevrim değerleri. Release UI; 7 test (düzeltme tekrarları dahil),
+iki boyut offscreen. **Sonraki COMM-08**; tool UI kapalı.
+
+**[COMM-06](archive/2026-10-26-comm-06.md):** Assignment DAG/executor/cache.
 
 **[COMM-05 tamam](archive/2026-10-26-comm-05.md):** Atomik evaluator.
 
