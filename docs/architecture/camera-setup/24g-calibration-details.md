@@ -1,6 +1,6 @@
 # CCUX-24G — yalnız Ayrıntılar düğmelerini sadeleştirme
 
-Durum: planlandı; 24F yönetim hedefleri hazır olmalı.
+Durum: yazılım/görsel kabul tamamlandı; [kapanış](../../archive/2026-10-26-ccux-24g.md).
 [Ortak plan](24-usability-plan.md), contract C3/C3a ve
 [analiz](24-usability-analysis.md) 7'nin **güncel düzeltmesi** okunur. Sonraki: 24H.
 

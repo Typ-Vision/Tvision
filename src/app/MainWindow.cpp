@@ -1,4 +1,5 @@
 #include "CameraManager.hpp"
+#include "CalibrationOverview.hpp"
 #include "MainWindow.hpp"
 #include "WorkspacePanel.hpp"
 #include <QAction>
@@ -47,6 +48,7 @@ MainWindow::MainWindow(const QString& settingsFile) : settingsFile_(settingsFile
     connect(open,&QAction::triggered,this,&MainWindow::openProjectDialog);
     saveAction_=file->addAction("Save Project / Recipes"); saveAction_->setShortcut(QKeySequence::Save);
     connect(saveAction_,&QAction::triggered,this,&MainWindow::saveProject);
+    auto* transfer=file->addAction("Kalibrasyon bağımlılıkları…");transfer->setObjectName("projectCalibrationTransfers");connect(transfer,&QAction::triggered,this,[this]{if(calibrationOverview_)calibrationOverview_->showProjectTransfers();});
     file->addSeparator(); auto* exit = file->addAction("Exit");
     exit->setShortcut(QKeySequence::Quit); connect(exit,&QAction::triggered,this,&QWidget::close);
     auto* view = menuBar()->addMenu("View");

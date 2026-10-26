@@ -23,7 +23,7 @@ public:
     void leave(std::function<void()>);
     bool hasPreview() const {return previewActive_ || lastFrame_.has_value();}
     const CameraInventory& inventory() const {return inventory_;}
-    std::function<void()> onChanged, onProject;
+    std::function<void()> onChanged, onProject, onLegacyManagement;
 private:
     void attempt(std::function<void()>);
     void select();

@@ -63,6 +63,7 @@ CameraManager::CameraManager(std::function<MeasurementWorkspace*()> context,std:
         const int i=table_->currentRow();auto* ws=context_();if(!ws || i<0 || !rows_[i].camera)throw std::runtime_error("Kayıtlı kamera seçin.");
         auto e=ws->environment();ws->renameCamera(rows_[i].camera->id,shortId_->text(),name_->text().trimmed().isEmpty()?shortId_->text():name_->text(),e.revision);refresh();if(onChanged)onChanged();
     });});
+    connect(button(layout,"Webcam / eski kurulum yönetimi…","cameraLegacyManagement"),&QPushButton::clicked,this,[this]{leave([this]{if(onLegacyManagement)onLegacyManagement();});});
     auto* setupCard=new QGroupBox("Optik / Geometri");setupCard->setObjectName("cameraSetupCard");auto* sv=new QVBoxLayout(setupCard);layout->addWidget(setupCard);
     setupStatus_=text("Kayıtlı kamera seçin.","cameraSetupStatus");sv->addWidget(setupStatus_);
     auto* pf=new QFormLayout;pf->setRowWrapPolicy(QFormLayout::WrapLongRows);sv->addLayout(pf);

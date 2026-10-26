@@ -25,7 +25,8 @@
    Optik / Geometri kartı kurulum durumunu ve endüstriyel kamera için yeni
    kurulum/profil, açık varsayılan/operasyonel seçim ve arşivleme komutlarını sunar.
    **Optik / kamera konumu değişti** ilgili kurulumların kullanım iznini keser.
-   Webcam/legacy cihaz eşleme düzenlemesi Kalibrasyon Ayrıntılar'da korunur.
+   Webcam/legacy cihaz eşleme ve profilsiz kurulum düzenlemesi Kameralar →
+   **Webcam / eski kurulum yönetimi…** yolundadır.
 5. **Setup → Calibration → kamera → Kalibre Et** ile **Bilinen ölçü** veya
    **Kalibrasyon plakası** seçin. Hazır varsayılan hedef otomatik aktarılır.
    Liste kamerayı açmaz; canlı sihirbaz açılışı hedefi arka planda hazırlar.
@@ -46,9 +47,13 @@
 6. Kalibrasyon listesinde **Kalibrasyon yok**, **Kayıtlı / bağlantı ve uyum denetimi
    bekleniyor**, **Geçerli**, **Yeniden kalibrasyon gerekli** durumlarını okuyun.
    Restart kayıtları korur; etkin mm değerini/iznini kendiliğinden geri getirmez.
-   Bağımsız fiziksel kontrol yapılmadıysa bu durum görünür. Dosya denemesi, geçmiş,
-   legacy ilişkilendirme ve **Optik / kamera konumu değişti** Ayrıntılar'dadır;
-   eski kalibrasyon ekranlarına ayrı geçiş yoktur. Robot yöntemi desteklenmez.
+   Bağımsız fiziksel kontrol yapılmadıysa bu durum görünür. Ayrıntılar geçmişi ve
+   gerektiğinde kurulum/profil seçimini gösterir; uygun geçmiş satırı seçilince
+   **Bu kaydı kullan** gerçek uyum denetimini açar. Seçili model varsa
+   **Kalibrasyonu devre dışı bırak**, eski kayıt/dosya denemesi varsa açık
+   eşleme/ilişkilendirme eylemi görünür. Transfer için **File → Kalibrasyon
+   bağımlılıkları…** kullanılır. Optik değişikliği Kameralar'dadır. Kalibre Et'in
+   Bilinen ölçü/plaka ve dosya seçenekleri korunur; Robot Kalibrasyonu görünür/pasiftir.
 7. Yeni reçeteyi üç uygulama türünden biriyle açın. Boş reçete DRAFT'tır.
    Ortak Editor'da kaynak ekleyip **Properties → Kamera ID / ad** seçin; varsayılan
    kurulum/profil atomik bağlanır, seçim kare almaz. Açık reçete düzenleme komutu

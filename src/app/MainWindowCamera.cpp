@@ -20,6 +20,7 @@ QWidget* MainWindow::makeCameraManager(){
     },cameraSession_,settingsFile_);
     cameraManager_->onProject=[this]{selectPage("projects");};
     cameraManager_->onChanged=[this]{calibrationRefresh_.invalidate("camera change");refreshCalibration();};
+    cameraManager_->onLegacyManagement=[this]{if(calibrationOverview_)calibrationOverview_->showCameraManagement();};
     return cameraManager_;
 }
 void MainWindow::discoverCameras(){cameraManager_->scan();}

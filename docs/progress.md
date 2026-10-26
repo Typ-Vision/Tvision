@@ -4,9 +4,10 @@
 
 ## Devam noktası
 
-**[CCUX-24F tamam](archive/2026-10-26-ccux-24f.md):** sol scroll, sağ ortak
-viewer, görünür Optik/Geometri yönetimi. Release/CTest ve iki boyutta
-fixture görseli; fiziksel kabul yok. Sonraki [24G](architecture/camera-setup/24g-calibration-details.md);
+**[CCUX-24G tamam](archive/2026-10-26-ccux-24g.md):** sade Ayrıntılar;
+Kalibre Et korunur, Robot pasif. Yönetim Kameralar, transfer File'da.
+Release/CTest/iki boyut fixture geçti; fiziksel açık.
+Sonraki [24H](architecture/camera-setup/24h-runtime-overlays.md).
 [24E](archive/2026-10-26-ccux-24e.md): native wheel açık; ek
 `ui_runtime_visibility`: `Persist local selection` hatası açık.
 [Plan](architecture/camera-setup/24-usability-plan.md): Kalibre Et korunur; Robot pasif.

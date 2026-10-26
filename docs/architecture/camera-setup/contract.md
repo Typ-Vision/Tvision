@@ -174,6 +174,18 @@ kamera konumu değişti” bildirimi bulunur. Geometriye etkili ayarlar sırf pr
 adı altında oldukları için exposure gibi ele alınmaz. Restart uyum kontrolü
 native capability ve güncel kimlik/probe/izin ömrü sınırlarını aşamaz.
 
+### CCUX-24G — Ayrıntılar ve yönetim erişimi
+
+Ayrıntılar salt okunur geçmiş, gerekli kurulum/profil seçimi ve uygun seçili
+geçmiş kaydının “Bu kaydı kullan” eylemini taşır. Aktivasyon aynı gerçek probe ve
+uyum incelemesini kullanır. Seçili model için devre dışı bırakma durum alanındadır;
+eski kayıt/dosya denemesi mevcutsa eşleme/ilişkilendirme koşullu gösterilir.
+Endüstriyel yönetim Camera Manager Optik / Geometri'de, webcam/eski cihaz eşleme
+ve profilsiz kurulum formu Camera Manager'ın ayrı yönetim girişindedir.
+Transfer File → Kalibrasyon bağımlılıkları yolundan aynı komutları kullanır.
+Ekran açmak migration, yazma veya probe başlatmaz. Kalibre Et yöntemleri ve tüm
+sihirbazlar korunur; Robot Kalibrasyonu (Sonradan devreye alınacak) görünür/pasiftir.
+
 ## C3a — Çerçeveli plaka kalibrasyonu
 
 23 Ekim hedefi; **CCUX-15e gözlem/model servis ayrımı uygulandı**
