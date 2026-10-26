@@ -53,7 +53,13 @@ public:
     void clearCalibrationBinding();
     void setRuntimeOptions(QString trigger,QString measurementToolId);
     void setCalibrationSetup(QString lensId,QString workingPlaneId);
+    QVector<VariableDefinition> variables() const;
+    QString addVariable(VariableDefinition definition);
+    void renameVariable(const QString& id,QString name);
+    void updateVariable(const VariableDefinition& definition);
+    void removeVariable(const QString& id);
 private:
+    void setVariables(const QVector<VariableDefinition>&);
     void setTools(const QVector<ToolDefinition>& tools,const QVector<ToolConnection>* bindings=nullptr);
     ProjectRepository repository_;
     std::optional<Project> project_;

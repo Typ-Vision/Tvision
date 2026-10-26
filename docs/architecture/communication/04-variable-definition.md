@@ -1,6 +1,7 @@
 # COMM-04 — Variable tanımı, codec ve proje komutları
 
-Durum: başlamadı. Önerilen düzey: **medium**. Önkoşul: **COMM-03** tamam.
+Durum: **tamamlandı** — [26 Ekim 2026 kapanışı](../../archive/2026-10-26-comm-04.md).
+Önerilen düzey: **medium**. Önkoşul: **COMM-03** tamam.
 Bir oturumda yalnız bu kart; paralel uygulayıcı yok.
 
 ## Oku

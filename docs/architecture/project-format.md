@@ -53,6 +53,33 @@ Tarih: 7 Ekim 2026. Native format: `.vfproject`, UTF-8 JSON. Bu format HTML demo
 
 ## Dosya yapısı
 
+COMM-04: İsteğe bağlı `definition.variableCatalog` kendi `schemaVersion: 1` ve
+`variables` dizisini taşır. Root 1, recipe 1–2 ve editor 1–9 değişmez. Katalog
+yalnız ilk gerçek variable edit komutunda eklenir; boş katalog da sonraki kayıtta
+korunur. Aç/no-op Save eski byte/hash ve revizyonu korur.
+
+Her variable exact alanları: canonical UUID `id`, case-fold benzersiz 1–64
+yazdırılabilir karakter `name`, `type`, `unit`, `comment` (4096 UTF-8 byte),
+`enumDefinitionId`, `enumCodes`, `frameConstraint`. En fazla 256 tanım vardır.
+Tipler Boolean/Int32/UInt32/Int64/Float64/String/Enum ve SpatialTransform;
+birimler unitless/mm/m/rad/degree. Sayısal olmayan scalar unitless olur.
+Enum 1–256 benzersiz Int32 kodu ve açık tanım ID'si ister; aynı ID çelişen kod
+kümesi taşıyamaz. SpatialTransform mm kullanır; opsiyonel frameConstraint
+`{source: FrameRef, target: FrameRef}` ile yönü/revizyonu kısıtlar. Diğer tiplerde
+frameConstraint null, Enum dışındaki tiplerde enumDefinitionId boş/enumCodes []
+olur. Eksik/fazla alan ve bilinmeyen sürüm/tip/birim reddedilir. Current/default
+value, validity ve çevrim sonucu tanıma yazılmaz.
+
+ProjectService addVariable UUID üretir; renameVariable/updateVariable/removeVariable
+tek candidate doğrulaması ve DRAFT/dirty/revision-on-save yolunu kullanır.
+İsim/yorum değişimi UUID binding'ini korur. Silme veya tip/birim/frame/enum
+sözleşme değişimi öncesinde katalog dışındaki definition içinde UUID referansları
+denetlenir; kullanım varsa açık hata ve değişmeden kalan candidate döner.
+Bu koruyucu tarama UUID metni/nesne anahtarına da uygulanır; yorumda aynı UUID
+geçmesi muhafazakâr biçimde değişimi engelleyebilir. System alanları bu yerel
+kataloğa dahil değildir; tanımlar system yazma yetkisi oluşturmaz. Evaluator,
+çevrim context'i ve UI sonraki kartlardır.
+
 6C eklemesi: root schema 1 içinde recipe schema 1 ve 2 desteklenir. Schema 2 zorunlu `calibrationBinding` alanında CalibrationDependency schema 1 nesnesi veya null taşır. Referans ID ile binding ID eşleşmelidir; eksik/yanlış tip/future schema reddedilir. Legacy recipe schema 1 binding içeremez; açılışta sürüm/dirty değişmez. Explicit binding komutu 1→2 yükseltir; mevcut JSON/base64 ve atomik proje commit korunur. Kanıt katalog dosyası ayrı CalibrationService kaydıdır, `.vfproject` içine gömülmez; proje ile tek transaction veya taşınabilir paket değildir.
 
 Planar Calibration UI `definition.planarSetup` altında iki zorunlu metin alanı lensId/workingPlaneId taşır; alanlar 1–256 trimmed karakterdir. ProjectService setCalibrationSetup değişimi binding'i temizler ve DRAFT/dirty yapar. Source/raw resolution/coordinate current değerleri acquisition frame'den alınır; kurulum kaydı calibration dependency'den türetilmez. Evidence kataloğunun convention yolu `<proje.vfproject>.calibrations.json`; proje ve katalog birlikte taşınmalıdır. Runtime/provider henüz üretim kabulü değildir.

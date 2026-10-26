@@ -6,6 +6,7 @@ görev” ifadeleri yazıldıkları tarihe aittir.
 
 | Dönem / görev | Kayıt |
 | --- | --- |
+| 26 Ekim 2026 — COMM-04 | [Variable tanımı, strict katalog codec ve atomik proje komutları](2026-10-26-comm-04.md) |
 | 26 Ekim 2026 — COMM-03 | [Frame/birimli SpatialTransform, quaternion ve strict codec](2026-10-26-comm-03.md) |
 | 26 Ekim 2026 — COMM-02 | [Typed scalar değer, geçerlilik ve strict codec](2026-10-26-comm-02.md) |
 | 26 Ekim 2026 — COMM-01 | [Kaynak/kapsama haritası ve güncel Release baseline](2026-10-26-comm-01.md) |

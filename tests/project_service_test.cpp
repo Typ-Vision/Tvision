@@ -8,6 +8,7 @@
 #include <QSaveFile>
 #include <QTemporaryDir>
 #include <QTextStream>
+#include <QUuid>
 #include <stdexcept>
 
 using namespace visionflow;
@@ -19,12 +20,88 @@ template<class F> void rejected(F action, const char* message) {
 void write(const QString& path, const QByteArray& bytes) {
     QFile file(path); check(file.open(QIODevice::WriteOnly),"fixture open"); check(file.write(bytes)==bytes.size(),"fixture write");
 }
+QByteArray bytes(const QString& path) {QFile f(path);check(f.open(QIODevice::ReadOnly),"read fixture");return f.readAll();}
+void variablesContract(const QString& path) {
+    ProjectService service;service.createProject("Variables","",path,"");
+    const auto recipe=service.createRecipe("Part","",ApplicationType::Measurement);service.save();
+    const auto legacy=bytes(path);service.openProject(path);service.selectRecipe(recipe);service.save();
+    check(bytes(path)==legacy && !service.activeRecipe()->definition.contains("variableCatalog"),"legacy no-op preserves exact bytes without catalog");
+    VariableDefinition d;d.name="Length";d.type=VariableType::Float64;d.unit=ScalarUnit::Millimetre;d.comment="Real measurement";
+    const auto id=service.addVariable(d);check(service.dirty() && service.recipeDirty(recipe) && service.activeRecipe()->recipeVersion==1,"variable edit stages revision");
+    check(service.variables()[0].id==id && service.activeRecipe()->status==RecipeStatus::Draft,"generated stable UUID and DRAFT");
+    const auto candidate=ProjectRepository::encode(service.project());
+    d.name="length";rejected([&]{service.addVariable(d);},"case-fold duplicate rejected");
+    d.name="Other";d.type=VariableType(99);rejected([&]{service.addVariable(d);},"illegal type rejected");
+    d.type=VariableType::Boolean;rejected([&]{service.addVariable(d);},"Boolean with mm rejected");
+    d.unit=ScalarUnit::Unitless;d.name=" ";rejected([&]{service.addVariable(d);},"blank variable rejected");
+    rejected([&]{service.removeVariable("unknown");},"missing removal rejected");
+    check(ProjectRepository::encode(service.project())==candidate,"rejected commands preserve candidate atomically");
+    service.save();service.openProject(path);service.selectRecipe(recipe);
+    check(service.variables()[0].id==id && service.variables()[0].comment=="Real measurement" && service.activeRecipe()->recipeVersion==2,"save/reopen definition and UUID");
+    const auto saved=bytes(path);service.renameVariable(id,"Length");service.updateVariable(service.variables()[0]);service.save();
+    check(!service.dirty() && bytes(path)==saved,"no-op variable edits preserve exact bytes");
+    service.renameVariable(id,"Renamed");service.discardChanges();check(service.variables()[0].name=="Length" && !service.dirty(),"discard restores variable catalog");
+    // A future consumer binds by UUID; rename retains binding, contract edits fail closed.
+    auto referenced=service.project();referenced.recipes[0].status=RecipeStatus::Valid;
+    referenced.recipes[0].definition["consumerFixture"]=QJsonObject{{"variableId",id}};
+    ProjectRepository{}.save(path,referenced);service.openProject(path);service.selectRecipe(recipe);
+    service.renameVariable(id,"Renamed");check(service.activeRecipe()->status==RecipeStatus::Draft && service.activeRecipe()->definition["consumerFixture"].toObject()["variableId"]==id,"rename preserves UUID binding and invalidates validation");
+    const auto before=ProjectRepository::encode(service.project());
+    rejected([&]{service.removeVariable(id);},"referenced deletion rejected");
+    auto changed=service.variables()[0];changed.type=VariableType::Int64;
+    rejected([&]{service.updateVariable(changed);},"referenced type edit rejected");changed=service.variables()[0];changed.unit=ScalarUnit::Metre;
+    rejected([&]{service.updateVariable(changed);},"referenced unit edit rejected");
+    check(ProjectRepository::encode(service.project())==before,"reference guard failure is atomic");service.save();
+    QVector<VariableDefinition> list;
+    for(int i=0;i<maxRecipeVariables;++i){VariableDefinition v;v.id=QUuid::createUuid().toString(QUuid::WithoutBraces);v.name="V"+QString::number(i);list.append(v);}
+    auto catalog=withRecipeVariables({},list);check(recipeVariables(catalog)==list,"256 variable boundary");
+    auto full=service.project();full.recipes[0].definition=catalog;
+    const auto fullPath=path+".full";ProjectRepository{}.save(fullPath,full);
+    ProjectService capped;capped.openProject(fullPath);capped.selectRecipe(recipe);
+    VariableDefinition overflow;overflow.name="Overflow";rejected([&]{capped.addVariable(overflow);},"service rejects 257th variable");
+    check(!capped.dirty() && capped.variables().size()==256,"limit failure leaves service clean");
+    auto extra=list[0];extra.id=QUuid::createUuid().toString(QUuid::WithoutBraces);extra.name="Extra";list.append(extra);
+    rejected([&]{withRecipeVariables({},list);},"257 variables rejected");list.removeLast();list[1].id=list[0].id;
+    rejected([&]{withRecipeVariables({},list);},"duplicate variable UUID rejected");
+    for(int type=0;type<=int(VariableType::SpatialTransform);++type) {
+        VariableDefinition v;v.id=id;v.name="Typed";v.type=VariableType(type);
+        if(v.type==VariableType::Enum){v.enumDefinitionId="decision/1";v.enumCodes={-1,0,2};}
+        if(v.type==VariableType::SpatialTransform){v.unit=ScalarUnit::Millimetre;FrameRef f{"camera","","",id,1};v.frameConstraint=VariableFrameConstraint{f,f};}
+        check(VariableDefinition::fromJson(v.toJson())==v,"all supported type metadata roundtrip");
+    }
+    auto invalid=service.variables()[0].toJson();invalid["value"]=123;
+    rejected([&]{VariableDefinition::fromJson(invalid);},"runtime value cannot enter definition codec");invalid.remove("value");invalid["frameConstraint"]=false;
+    rejected([&]{VariableDefinition::fromJson(invalid);},"malformed frame constraint rejected");
+    invalid=service.variables()[0].toJson();invalid["id"]="not-a-uuid";
+    rejected([&]{VariableDefinition::fromJson(invalid);},"invalid variable UUID rejected");
+    invalid=service.variables()[0].toJson();invalid["type"]="Pose2D";
+    rejected([&]{VariableDefinition::fromJson(invalid);},"legacy Pose2D is not a spatial variable type");
+    invalid=service.variables()[0].toJson();invalid["enumCodes"]=QJsonArray{1};
+    rejected([&]{VariableDefinition::fromJson(invalid);},"foreign enum metadata rejected");
+    invalid=service.variables()[0].toJson();invalid.remove("unit");
+    rejected([&]{VariableDefinition::fromJson(invalid);},"missing definition field rejected");
+    auto bad=service.project();bad.recipes[0].definition["variableCatalog"]=QJsonObject{{"schemaVersion",2},{"variables",QJsonArray{}}};
+    rejected([&]{ProjectRepository{}.save(path,bad);},"future catalog rejected on save");
+    auto disk=QJsonDocument::fromJson(bytes(path)).object();auto recipes=disk["recipes"].toArray();auto r=recipes[0].toObject();r["definition"]=bad.recipes[0].definition;recipes[0]=r;disk["recipes"]=recipes;
+    const auto badPath=path+".bad";write(badPath,QJsonDocument(disk).toJson());
+    const auto current=ProjectRepository::encode(service.project());rejected([&]{service.openProject(badPath);},"future catalog rejected on load");
+    check(ProjectRepository::encode(service.project())==current,"bad catalog open preserves active project");
+    // Removing last variable keeps opt-in catalog; never silently migrates back.
+    auto clean=service.project();clean.recipes[0].definition.remove("consumerFixture");ProjectRepository{}.save(path,clean);service.openProject(path);service.selectRecipe(recipe);
+    service.removeVariable(id);service.save();service.openProject(path);service.selectRecipe(recipe);
+    check(service.variables().isEmpty() && service.activeRecipe()->definition.contains("variableCatalog"),"empty opted-in catalog persists");
+    d.name="Editable";const auto editable=service.addVariable(d);auto edit=service.variables()[0];edit.type=VariableType::Int64;
+    service.updateVariable(edit);check(service.variables()[0].type==VariableType::Int64 && service.variables()[0].id==editable,"unreferenced type edit preserves UUID");
+    service.discardChanges();check(service.variables().isEmpty(),"discard add and type edit");
+    QTextStream(stdout)<<"PASS: COMM-04 variable commands, identity, references, limits, strict codec and legacy bytes\n";
+}
 }
 int main(int argc, char** argv) {
     QCoreApplication app(argc,argv);
     try {
         QTemporaryDir dir(QDir(QCoreApplication::applicationDirPath()).filePath("project-test-XXXXXX"));
         check(dir.isValid(),"temporary directory");
+        variablesContract(dir.filePath("variables.vfproject"));
         const QString path=dir.filePath("test.vfproject");
         ProjectService service; service.createProject("Test Projesi","Açıklama",path,"ImageFile","RobotModel","TCP Socket","Cal_1");
         const auto projectId=service.project().id;

@@ -4,12 +4,15 @@
 
 ## Devam noktası
 
+**[COMM-04 tamam](archive/2026-10-26-comm-04.md):** Variable katalog codec'i,
+UUID/type/unit/frame/enum ve atomik proje komutları; legacy byte/no-op korunur.
+UI OFF Release ve ilgili 13/13 CTest geçti. **Sonraki tek kart COMM-05.**
+Fiziksel/native engeller korunur.
+
 **[COMM-03 tamam](archive/2026-10-26-comm-03.md):** FrameRef UUID/revision,
-mm/wxyz SpatialTransform strict codec, q/-q ve norm politikası, saf inverse/compose;
-ToolValues açık spatial tag, eski Pose2D/Reference ayrımı. UI OFF Release geçti;
-120 spatial kontrol; ilgili CTest 13/15 geçti. İki eski Circle fixture hatası önceki
-UI ON binary'lerinde de aynı şekilde üretildi; ayrıntı kapanışta, açık kaldı.
-**Sonraki tek kart COMM-04.** Fiziksel/native engeller korunur.
+mm/wxyz SpatialTransform, strict codec ve inverse/compose. 120 spatial kontrol;
+o koşumda 13/15 CTest. İki eski Circle fixture hatası kapanıştaki önceki UI ON
+binary'lerinde de üretildi; açık kaldı, COMM-04 bunları yeniden koşmadı.
 
 **[COMM-02 tamam](archive/2026-10-26-comm-02.md):** Qt Core typed scalar,
 strict codec, kayıpsız Int64 ve validity/unit/köken. 113 kontrol, CTest 5/5;

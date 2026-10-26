@@ -4,6 +4,8 @@
 #include <QString>
 #include <QVector>
 #include "Coordinates.hpp"
+#include "CommunicationValues.hpp"
+#include "SpatialTransform.hpp"
 #include <optional>
 
 namespace visionflow {
@@ -14,6 +16,30 @@ QString typeLabel(ApplicationType type);
 ApplicationType parseType(const QString& key);
 QString statusKey(RecipeStatus status);
 RecipeStatus parseStatus(const QString& key);
+
+enum class VariableType { Boolean, Int32, UInt32, Int64, Float64, String, Enum, SpatialTransform };
+struct VariableFrameConstraint {
+    FrameRef source, target;
+    bool operator==(const VariableFrameConstraint&) const = default;
+};
+// Recipe-cycle local definition only: no persisted current/default value.
+struct VariableDefinition {
+    QString id, name;
+    VariableType type=VariableType::Boolean;
+    ScalarUnit unit=ScalarUnit::Unitless;
+    std::optional<VariableFrameConstraint> frameConstraint;
+    QString comment;
+    QString enumDefinitionId;
+    QSet<qint32> enumCodes;
+    bool operator==(const VariableDefinition&) const = default;
+    void validate() const;
+    QJsonObject toJson() const;
+    static VariableDefinition fromJson(const QJsonObject&);
+};
+constexpr int maxRecipeVariables=256;
+QVector<VariableDefinition> recipeVariables(const QJsonObject& definition);
+QJsonObject withRecipeVariables(const QJsonObject&, const QVector<VariableDefinition>&);
+bool variableReferenced(const QJsonObject& definition, const QString& id);
 
 struct Recipe {
     QString id;
