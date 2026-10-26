@@ -4,24 +4,22 @@
 
 ## Devam noktası
 
-**[COMM-02 tamam](archive/2026-10-26-comm-02.md):** Qt Core CommunicationValues
-scalar type/tag, null/validity/reason, birim ve köken zarfı; strict codec, kayıpsız
-Int64 decimal string, finite/range/4096 UTF-8 byte ve enum catalog denetimi.
-UI OFF Release derlendi; 113 yeni kontrol ve ilgili CTest 5/5 geçti.
-Legacy no-op byte/hash/reçete yolu değişmedi. **Sonraki tek kart COMM-03.**
+**[COMM-03 tamam](archive/2026-10-26-comm-03.md):** FrameRef UUID/revision,
+mm/wxyz SpatialTransform strict codec, q/-q ve norm politikası, saf inverse/compose;
+ToolValues açık spatial tag, eski Pose2D/Reference ayrımı. UI OFF Release geçti;
+120 spatial kontrol; ilgili CTest 13/15 geçti. İki eski Circle fixture hatası önceki
+UI ON binary'lerinde de aynı şekilde üretildi; ayrıntı kapanışta, açık kaldı.
+**Sonraki tek kart COMM-04.** Fiziksel/native engeller korunur.
 
-**[COMM-01 tamam](archive/2026-10-26-comm-01.md):**
-[Kaynak haritası](architecture/communication/source-map.md) actual servis/test/şema,
-extension ve admission/native kapılarını sabitler. İndeks actual
-`C:/OpenCode/TVision` checkout/HEAD'iyle eşleşti; eski `C:/Projects/Tvision` yok.
-Kısmi coverage kaynakla tamamlandı. UI/OFF Release derlendi; UI ON 20 benzersiz
-ilgili test ilk koşum+localhost tekrarıyla, UI OFF 19/19 geçti. Ürün/UI değişmedi.
-Temel sıra COMM-01–23 → COMM-36 → COMM-37;
-Modbus 24–28, OPC UA 29–33, sample 34, FANUC 35 ihtiyaç seçilince.
-[Haberleşme planı](architecture/communication/README.md): çevrim sonunda gönderim;
-akış ortasında gönder/bekle ayrı kapsam. Fiziksel COMM-38, hand-eye solver/robot
-hareketi ayrıdır. [Araştırma](architecture/communication-data-phase.md) ve
-[veri tipi notu](architecture/robot-spatial-data-review.md) korunur.
+**[COMM-02 tamam](archive/2026-10-26-comm-02.md):** Qt Core typed scalar,
+strict codec, kayıpsız Int64 ve validity/unit/köken. 113 kontrol, CTest 5/5;
+legacy no-op/hash korundu.
+**[COMM-01 tamam](archive/2026-10-26-comm-01.md):** [Kaynak haritası](architecture/communication/source-map.md),
+actual kök/indeks ve Release baseline sabit. [Plan](architecture/communication/README.md):
+COMM-01–23 → 36 → 37; opsiyonel Modbus 24–28, OPC UA 29–33, sample 34, FANUC 35.
+Çevrim sonunda gönderim; akış ortası gönder/bekle ayrı kapsam. Fiziksel COMM-38,
+hand-eye/robot hareketi ayrı. [Araştırma](architecture/communication-data-phase.md)
+ve [veri tipi notu](architecture/robot-spatial-data-review.md) korunur.
 Aşağıdaki fiziksel/native engeller kapanmadı.
 
 **[INT-10 tamam](archive/2026-10-26-int-10.md):** CameraIntegration, geçmişi

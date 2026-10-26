@@ -6,6 +6,7 @@ görev” ifadeleri yazıldıkları tarihe aittir.
 
 | Dönem / görev | Kayıt |
 | --- | --- |
+| 26 Ekim 2026 — COMM-03 | [Frame/birimli SpatialTransform, quaternion ve strict codec](2026-10-26-comm-03.md) |
 | 26 Ekim 2026 — COMM-02 | [Typed scalar değer, geçerlilik ve strict codec](2026-10-26-comm-02.md) |
 | 26 Ekim 2026 — COMM-01 | [Kaynak/kapsama haritası ve güncel Release baseline](2026-10-26-comm-01.md) |
 | 26 Ekim 2026 — COMM-PLAN-03 | [Temel haberleşme fazı ve ihtiyaca bağlı protokol/robot alt fazları](2026-10-26-comm-plan-03.md) |

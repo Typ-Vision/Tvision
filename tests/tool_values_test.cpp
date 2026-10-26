@@ -43,6 +43,11 @@ int main(int argc,char** argv) {
             auto altered=json;altered["extra"]=true;reject([&]{ToolResultCodec::decode(altered);},"unknown envelope rejected");
             altered=json;altered["schemaVersion"]=2;reject([&]{ToolResultCodec::decode(altered);},"future envelope rejected");
         }
+        // Legacy port envelopes cannot silently accept the new 3D domain tag.
+        FrameRef spatialFrame{"", "robot", "cell", "00000000-0000-0000-0000-000000000001", 1};
+        auto spatialInLegacy=ToolResultCodec::encode(values[13]);
+        spatialInLegacy["value"]=ToolValues::encode(SpatialTransform{spatialFrame,spatialFrame,{},{}});
+        reject([&]{ToolResultCodec::decode(spatialInLegacy);},"spatial payload rejected by legacy Pose2D port");
         const auto c=std::get<CodeResults>(ToolResultCodec::decode(ToolResultCodec::encode(values[5])).data);
         check(c.items.size()==2 && c.items[0].text==unicode && c.items[0].bytes==code.bytes,"same text physical codes retained; binary/Unicode/GS retained");
         auto missing=values[6];missing.valid=false;missing.invalidReason="backend unavailable";

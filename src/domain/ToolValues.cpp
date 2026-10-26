@@ -52,6 +52,7 @@ QJsonObject ToolValues::encode(const ToolValueData& value) {
         else if constexpr(std::is_same_v<T,Circle2D>){type="Circle2D";data=circle(v);}
         else if constexpr(std::is_same_v<T,Arc2D>){type="Arc2D";data={{"circle",circle(v.circle)},{"startDegrees",v.startDegrees},{"sweepDegrees",v.sweepDegrees}};}
         else if constexpr(std::is_same_v<T,Pose2D>){type="Pose2D";data={{"position",point(v.position)},{"angleRadians",v.angleRadians},{"frame",frame(v.frame)}};}
+        else if constexpr(std::is_same_v<T,SpatialTransform>){type="SpatialTransform";data=v.toJson();}
         else if constexpr(std::is_same_v<T,InspectionResults>){type="InspectionResults";QJsonArray a;for(const auto& i:v.items)a.append(QJsonObject{{"name",i.name},{"reason",i.reason},{"accepted",i.accepted}});data={{"items",a}};}
     },value);
     QJsonObject o{{"schemaVersion",1},{"type",type},{"data",data}};
@@ -82,6 +83,7 @@ ToolValueData ToolValues::decode(const QJsonObject& o) {
     if(type=="Circle2D")return circle(d);
     if(type=="Arc2D"){keys(d,{"circle","startDegrees","sweepDegrees"});require(d["circle"].isObject(),"Arc circle missing");Arc2D a{circle(d["circle"].toObject()),number(d,"startDegrees"),number(d,"sweepDegrees")};require(a.startDegrees>=-360 && a.startDegrees<=360 && a.sweepDegrees!=0 && std::abs(a.sweepDegrees)<=360,"Invalid arc angle/sweep");return a;}
     if(type=="Pose2D"){keys(d,{"position","angleRadians","frame"});Pose2D p{point(d["position"]),number(d,"angleRadians"),frame(d["frame"])};p.validate();return p;}
+    if(type=="SpatialTransform")return SpatialTransform::fromJson(d);
     if(type=="InspectionResults") {
         keys(d,{"items"});InspectionResults r;QSet<QString> names;for(auto item:array(d,"items",128)){require(item.isObject(),"Inspection must be object");auto i=item.toObject();keys(i,{"name","reason","accepted"});auto name=text(i,"name",128);require(!name.isEmpty() && !names.contains(name) && i["accepted"].isBool(),"Invalid/duplicate inspection");names.insert(name);r.items.append({name,text(i,"reason",2048),i["accepted"].toBool()});}return r;
     }

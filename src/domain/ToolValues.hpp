@@ -1,5 +1,6 @@
 #pragma once
 #include "Coordinates.hpp"
+#include "SpatialTransform.hpp"
 #include <QByteArray>
 #include <QJsonObject>
 #include <variant>
@@ -14,7 +15,7 @@ struct Circle2D {QPointF centre;double radius=0;CoordinateFrame frame;};
 struct Arc2D {Circle2D circle;double startDegrees=0,sweepDegrees=0;};
 struct InspectionResult {QString name,reason;bool accepted=false;};
 struct InspectionResults {QVector<InspectionResult> items;};
-using ToolValueData=std::variant<QString,CodeResults,PointSet,Profile,Line2D,Circle2D,Arc2D,Pose2D,InspectionResults>;
+using ToolValueData=std::variant<QString,CodeResults,PointSet,Profile,Line2D,Circle2D,Arc2D,Pose2D,InspectionResults,SpatialTransform>;
 // Strict bounded payload format, independent of OpenCV and acquisition storage.
 // Payloads never imply a shared camera: their PortValue envelope supplies the
 // source/frame/cycle origin. SourceFrameIndex validates it per acquired branch;

@@ -79,7 +79,10 @@ PortValue ToolResultCodec::decode(const QJsonObject& o) {
         require(value.isObject(),"Invalid geometry");auto p=value.toObject();
         if(pt==PortType::Point){keys(p,{"x","y"});v.data=QPointF(num(p,"x"),num(p,"y"));}
         else {keys(p,{"x","y","width","height"});for(auto key:{"x","y","width","height"}){auto n=num(p,key);require(n>=-100000000 && n<=100000000 && std::floor(n)==n,"Invalid Region integer");}v.data=QRect(int(num(p,"x")),int(num(p,"y")),int(num(p,"width")),int(num(p,"height")));}
-    } else {require(value.isObject(),"Typed payload must be object");std::visit([&](const auto& p){v.data=p;},ToolValues::decode(value.toObject()));}
+    } else {require(value.isObject(),"Typed payload must be object");std::visit([&](const auto& p){
+        if constexpr(std::is_same_v<std::decay_t<decltype(p)>,SpatialTransform>)throw std::runtime_error("Spatial payload requires an explicit spatial port contract");
+        else v.data=p;
+    },ToolValues::decode(value.toObject()));}
     validate(v,v.port,v.frameId,v.cycleId);return v;
 }
 QString ToolResultCodec::display(const PortValue& v,int precision) {

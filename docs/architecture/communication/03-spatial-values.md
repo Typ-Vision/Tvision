@@ -1,6 +1,6 @@
 # COMM-03 — Frame/birimli Pose ve Transform
 
-Durum: başlamadı. Önerilen düzey: **medium**. Önkoşul: **COMM-02** tamam.
+Durum: **tamamlandı** — [kapanış](../../archive/2026-10-26-comm-03.md). Önerilen düzey: **medium**. Önkoşul: **COMM-02** tamam.
 Bir oturumda yalnız bu kart; paralel uygulayıcı yok.
 
 ## Oku
@@ -42,3 +42,13 @@ fiziksel/native engelleri açık yaz. progress özetini ve arşiv indeksini gün
 `docs/archive/YYYY-MM-DD-comm-03.md` kaydı oluştur, uygulayıcıyı belirt.
 Tamamlanınca `COMM-03: ...` tek yerel commit; push yok. Kabul geçmeden tamam yazma.
 Sonraki tek kart: **COMM-04**.
+
+## Uygulama notu
+
+FrameRef/Rotation3D/SpatialTransform bağımsız Qt Core domain codec'i ve
+ToolValues `SpatialTransform` tag'i eklendi. Norm toleransı `1e-6`; yalnız bu
+sınırdaki sapma normalize edilir. q/-q canonical encoding, exact owner/UUID/
+revision compose kontrolü ve mm/wxyz sözleşmesi testlidir. Euler/HALCON/raw
+matrix importer, 3D producer ve Runtime spatial portu bu kartta sunulmaz.
+UI OFF Release ve 120 yeni kontrol geçti; seçili regresyon 13/15, iki tarihsel
+Circle fixture hatası önceki binary ile de üretildi ve açık kaydedildi.
