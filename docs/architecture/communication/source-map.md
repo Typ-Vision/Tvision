@@ -151,3 +151,20 @@ saklanır. Liste komutları full suite koşumu değildir; seçili regex UI ON'da
 UI OFF'ta 19 test seçer. Ürün/UI kodu değişmediğinden ekran görüntüsü kontrolü
 koşulmadı. Fiziksel mm/PLC/robot, native correlation/Stop bariyeri, lens, native
 DPI/çok monitör, CUDA ve dağıtım engelleri korunur.
+
+## COMM-06 güncel genişletmesi
+
+`set_variables` registry sürümü 1, minimum Editor şeması 7; mevcut reader 1–9
+korunur. `AssignmentConfig.*` strict parametre/bundle codec'ini taşır.
+`assignmentConnections` / `executionConnections` kayıtlı satırdaki producer UUID,
+port ve revision'dan DAG kenarı türetir; variable adı üzerinden bağ kurulmaz.
+`AssignmentExecution.*` saf evaluator'ı mevcut ExecutionService'e bağlar.
+`PortType::AssignmentBundle` / `PortData::AssignmentBundle` cycle/config temellidir;
+görüntü frame'i veya geometrik source yerine geçmez. `ToolResultCodec` typed
+roundtrip'i doğrular. Execution kimliği **visionflow.execution/31** oldu.
+
+EditorSession aynı dependency kenarlarını invalidation ve hedef kapsamı için
+kullanır; toolSignature geçişli parametreler yanında variableCatalog'u içerir.
+Yeni CTest `assignment_execution_contract` → `assignment_execution_test`.
+ToolCatalog sunum filtresi bu aracı COMM-08 UI teslimine kadar gizler.
+[Kabul ve sınırlar](../../archive/2026-10-26-comm-06.md).

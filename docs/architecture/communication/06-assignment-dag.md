@@ -1,6 +1,6 @@
 # COMM-06 — Set Variables registry/DAG/executor
 
-Durum: başlamadı. Önerilen düzey: **medium**. Önkoşul: **COMM-05** tamam.
+Durum: tamamlandı — [kapanış](../../archive/2026-10-26-comm-06.md). Önerilen düzey: **medium**. Önkoşul: **COMM-05** tamam.
 Bir oturumda yalnız bu kart; paralel uygulayıcı yok.
 
 ## Oku

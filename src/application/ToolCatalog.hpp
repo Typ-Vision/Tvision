@@ -16,7 +16,7 @@ struct ToolCatalog {
     }
     static QVector<ToolDescriptor> entries() {
         auto result=ToolRegistry::entries();
-        result.erase(std::remove_if(result.begin(),result.end(),[](const auto& entry){return entry.kind=="edge";}),result.end());
+        result.erase(std::remove_if(result.begin(),result.end(),[](const auto& entry){return entry.kind=="edge" || entry.kind=="set_variables";}),result.end());
         return result;
     }
     static bool canAdd(const QString& kind) {

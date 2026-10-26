@@ -30,4 +30,11 @@ struct AssignmentBundle {
     bool committed=false;
     QMap<QString,AssignmentValue> fields;
 };
+// Shape codec only; catalog enum/type authority is checked by the evaluator.
+QJsonObject encodeAssignmentValue(const AssignmentValue&);
+AssignmentValue decodeAssignmentValue(const QJsonObject&);
+QJsonObject encodeAssignmentConfig(const AssignmentConfig&);
+AssignmentConfig decodeAssignmentConfig(const QJsonObject&,const QString& producerId);
+QJsonObject encodeAssignmentBundle(const AssignmentBundle&);
+AssignmentBundle decodeAssignmentBundle(const QJsonObject&);
 }

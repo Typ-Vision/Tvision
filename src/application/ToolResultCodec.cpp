@@ -22,6 +22,7 @@ QJsonValue ToolResultCodec::payload(const PortValue& v) {
         else if constexpr(std::is_same_v<T,QPointF>){require(finite(p),"Nonfinite Point");return QJsonObject{{"x",p.x()},{"y",p.y()}};}
         else if constexpr(std::is_same_v<T,QRect>){require(p.width()>0 && p.height()>0,"Invalid Region");return QJsonObject{{"x",p.x()},{"y",p.y()},{"width",p.width()},{"height",p.height()}};}
         else if constexpr(std::is_same_v<T,ImageFrame>){require(!p.size().isEmpty(),"Empty Image");QJsonObject o{{"width",p.size().width()},{"height",p.size().height()},{"pixelFormat",p.pixelFormat()}};if(!p.processingId().isEmpty())o["processingId"]=QString::fromLatin1(p.processingId().toHex());return o;}
+        else if constexpr(std::is_same_v<T,AssignmentBundle>)return encodeAssignmentBundle(p);
         else return ToolValues::encode(ToolValueData(p));
     },v.data);
 }
@@ -30,6 +31,10 @@ void ToolResultCodec::validate(const PortValue& v,const PortDefinition& expected
     require(!portTypeName(v.port.type).isEmpty() && !v.port.id.isEmpty() && v.port.id.size()<=128 && v.port.unit.size()<=32 && !v.port.frame.isEmpty() && v.port.frame.size()<=128,"Invalid port declaration");
     if(!v.valid){if(int(v.port.type)>int(PortType::Boolean))require(!v.invalidReason.isEmpty() && v.invalidReason.size()<=2048,"Invalid typed port requires reason");return;}
     if(int(v.port.type)>int(PortType::Boolean))require(!v.evaluationId.isEmpty() && v.evaluationId.size()<=256 && !v.method.isEmpty() && v.method.size()<=128 && v.methodVersion>=1 && v.methodVersion<=1000000 && v.invalidReason.isEmpty(),"Typed value method/evaluation provenance missing");
+    if(v.port.type==PortType::AssignmentBundle){
+        require(v.port.unit.isEmpty() && v.port.frame=="cycle" && v.frameId.isEmpty() && v.cycleId==cycleId && !cycleId.isEmpty() && std::holds_alternative<AssignmentBundle>(v.data),"Bundle port identity mismatch");
+        const auto& b=std::get<AssignmentBundle>(v.data);require(b.cycleId==cycleId,"Bundle cycle mismatch");encodeAssignmentBundle(b);return;
+    }
     require(!frameId.isEmpty() && !cycleId.isEmpty() && v.frameId==frameId && v.cycleId==cycleId && v.origin.frameId==frameId && v.origin.cycleId==cycleId && !v.origin.sourceId.isEmpty() && !v.origin.coordinateSystemId.isEmpty(),"Port frame/cycle/source mismatch");
     const auto name=portTypeName(v.port.type);
     const auto encoded=payload(v);
@@ -39,6 +44,7 @@ void ToolResultCodec::validate(const PortValue& v,const PortDefinition& expected
         else if constexpr(std::is_same_v<T,QPointF>)return "Point";
         else if constexpr(std::is_same_v<T,QRect>)return "Region";
         else if constexpr(std::is_same_v<T,ImageFrame>)return "Image";
+        else if constexpr(std::is_same_v<T,AssignmentBundle>)return "AssignmentBundle";
         else return ToolValues::encode(ToolValueData(p))["type"].toString();
     },v.data);
     require(!name.isEmpty() && name==actual,"Port union/type mismatch");
@@ -62,18 +68,19 @@ QJsonObject ToolResultCodec::encode(const PortValue& v) {
         {"value",v.valid ? payload(v):QJsonValue(QJsonValue::Null)}};
 }
 PortValue ToolResultCodec::decode(const QJsonObject& o) {
-    require(QJsonDocument(o).toJson(QJsonDocument::Compact).size()<=ToolValues::maxJsonBytes+4096,"Port envelope too big");
+    require(QJsonDocument(o).toJson(QJsonDocument::Compact).size()<=(o["type"]=="AssignmentBundle" ? 8*1024*1024:ToolValues::maxJsonBytes)+4096,"Port envelope too big");
     keys(o,{"schemaVersion","id","type","unit","coordinateFrame","required","valid","frameId","cycleId","sourceId","sourceCoordinates","value","evaluationId","method","methodVersion","diagnostic","invalidReason"});
     require(o["schemaVersion"].isDouble() && o["schemaVersion"].toDouble()==1 && o["valid"].isBool() && o["required"].isBool(),"Invalid port schema/flags");
     const auto type=str(o,"type");PortType pt=PortType::Image;
-    for(int n=int(PortType::Region);n<=int(PortType::InspectionResults);++n)if(portTypeName(PortType(n))==type)pt=PortType(n);
+    for(int n=int(PortType::Region);n<=int(PortType::AssignmentBundle);++n)if(portTypeName(PortType(n))==type)pt=PortType(n);
     require(pt!=PortType::Image,"Unknown/non-serializable port type");
     PortValue v;v.port={str(o,"id"),pt,str(o,"unit"),str(o,"coordinateFrame"),o["required"].toBool()};v.valid=o["valid"].toBool();
     v.frameId=str(o,"frameId");v.cycleId=str(o,"cycleId");v.origin={str(o,"sourceId"),v.frameId,v.cycleId,str(o,"sourceCoordinates")};
     v.evaluationId=str(o,"evaluationId");v.method=str(o,"method",128);v.invalidReason=str(o,"invalidReason",2048);const auto mv=num(o,"methodVersion");require(mv>=0 && mv<=1000000 && mv==std::floor(mv) && o["diagnostic"].isBool(),"Invalid method version/diagnostic");v.methodVersion=int(mv);v.diagnostic=o["diagnostic"].toBool();
     if(!v.valid){require(o["value"].isNull(),"Invalid port cannot carry payload");validate(v,v.port,v.frameId,v.cycleId);return v;}
     const auto value=o["value"];
-    if(pt==PortType::Number){require(value.isDouble() && std::isfinite(value.toDouble()),"Invalid number");v.data=value.toDouble();}
+    if(pt==PortType::AssignmentBundle){require(value.isObject(),"Bundle payload required");v.data=decodeAssignmentBundle(value.toObject());}
+    else if(pt==PortType::Number){require(value.isDouble() && std::isfinite(value.toDouble()),"Invalid number");v.data=value.toDouble();}
     else if(pt==PortType::Boolean){require(value.isBool(),"Invalid bool");v.data=value.toBool();}
     else if(pt==PortType::Point || pt==PortType::Region) {
         require(value.isObject(),"Invalid geometry");auto p=value.toObject();
@@ -101,6 +108,7 @@ QString ToolResultCodec::display(const PortValue& v,int precision) {
             return rows.join("\n");
         }
         else if constexpr(std::is_same_v<T,InspectionResults>){QStringList rows;for(const auto& check:p.items)rows<<check.name+": "+(check.accepted ? "Uygun":"Uygun değil")+(check.reason.isEmpty() ? "":" — "+check.reason);return rows.join(" | ");}
+        else if constexpr(std::is_same_v<T,AssignmentBundle>)return QString("%1 assigned variables (revision %2)").arg(p.fields.size()).arg(p.revision);
         else return QString::fromUtf8(QJsonDocument(ToolValues::encode(ToolValueData(p))).toJson(QJsonDocument::Compact));
     },v.data);
 }

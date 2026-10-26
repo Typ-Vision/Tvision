@@ -5,6 +5,7 @@
 #include "AcquisitionService.hpp"
 #include "domain/Coordinates.hpp"
 #include "domain/ToolValues.hpp"
+#include "domain/AssignmentConfig.hpp"
 #include <functional>
 #include <QMap>
 #include <QPointF>
@@ -17,7 +18,7 @@
 namespace visionflow {
 enum class ExecutionState { Ready, Busy, Done, Error, Skipped };
 QString executionStateName(ExecutionState state);
-using PortData=std::variant<ImageFrame,QRect,QPointF,double,bool,QString,CodeResults,PointSet,Profile,Line2D,Circle2D,Arc2D,Pose2D,InspectionResults>;
+using PortData=std::variant<ImageFrame,QRect,QPointF,double,bool,QString,CodeResults,PointSet,Profile,Line2D,Circle2D,Arc2D,Pose2D,InspectionResults,AssignmentBundle>;
 struct PortValue {PortDefinition port; PortData data=false; bool valid=false; QString frameId,cycleId; FrameMetadata origin;
     QString evaluationId,method;int methodVersion=0;bool diagnostic=false;QString invalidReason;
 };
@@ -77,7 +78,7 @@ public:
     // Never persisted and never issues production completion authority.
     ExecutionService withExperimentalEditorReplay(bool enabled=true) const {auto service=*this;service.experimentalEditorReplay_=enabled;service.automaticAcquisition_=false;return service;}
     // Bump when execution semantics change; validation records bind this identity.
-    static QString version() { return QStringLiteral("visionflow.execution/30"); }
+    static QString version() { return QStringLiteral("visionflow.execution/31"); }
     static QByteArray toolSignature(const QJsonObject&,const QString& directory,const QString& tool,const QByteArray& scope);
     CycleResult runTool(const QJsonObject& definition,const QString& directory,const QString& recipeId,const QByteArray& configId,
         const std::shared_ptr<std::atomic_bool>& cancel,const QString& target,const TargetEvaluation& evaluation,const CalibrationResolver& resolver={}) const;

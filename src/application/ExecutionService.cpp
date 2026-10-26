@@ -1,4 +1,5 @@
 #include "MeasurementDiagnostic.hpp"
+#include "AssignmentExecution.hpp"
 #include "ExecutionService.hpp"
 #include "ToolOverlayGeometry.hpp"
 #include "AcquisitionPolicy.hpp"
@@ -31,10 +32,11 @@
 namespace visionflow {
 QString executionStateName(ExecutionState s) {switch(s){case ExecutionState::Ready:return "READY";case ExecutionState::Busy:return "BUSY";case ExecutionState::Done:return "DONE";case ExecutionState::Error:return "ERROR";case ExecutionState::Skipped:return "SKIPPED";}return {};}
 QByteArray ExecutionService::toolSignature(const QJsonObject& definition,const QString& directory,const QString& tool,const QByteArray& scope) {
-    const auto tools=editorTools(definition);const auto connections=editorConnections(definition);
+    const auto tools=editorTools(definition);const auto connections=executionConnections(definition);
     QSet<QString> required{tool};QStringList pending{tool};
     while(!pending.isEmpty()){const auto id=pending.takeFirst();for(const auto& c:connections)if(c.targetTool==id && !required.contains(c.sourceTool)){required.insert(c.sourceTool);pending.append(c.sourceTool);}}
     QCryptographicHash hash(QCryptographicHash::Sha256);hash.addData(scope);hash.addData(version().toUtf8());
+    if(std::any_of(tools.begin(),tools.end(),[&](const auto& t){return required.contains(t.id) && t.kind=="set_variables";}))hash.addData(QJsonDocument(withRecipeVariables({},recipeVariables(definition))).toJson(QJsonDocument::Compact));
     for(const auto& t:tools)if(required.contains(t.id)) {
         hash.addData(QJsonDocument(QJsonObject{{"id",t.id},{"kind",t.kind},{"enabled",t.enabled},{"parameters",t.parameters},{"version",ToolRegistry::get(t.kind).version}}).toJson(QJsonDocument::Compact));
         if(!t.dependencies.isEmpty() || !ToolRegistry::get(t.kind).requiredBackend.isEmpty()) {
@@ -68,7 +70,10 @@ CycleResult ExecutionService::run(const QJsonObject& definition,const QString& d
         if(!experimentalEditorReplay && ((frameSnapshot && !frameSnapshot->metadata().experimentalAcquisition.isEmpty()) || (targetOnly && !targetOnly->frame.metadata().experimentalAcquisition.isEmpty())))throw std::runtime_error("Experimental frame requires explicit Editor replay policy");
         validateEditorDefinition(definition);
         if(multi && (limits.deadlineMs<=0 || limits.imageBytes==0))throw std::runtime_error("Invalid execution budget");
-        auto tools=editorTools(definition);auto connections=editorConnections(definition);
+        auto tools=editorTools(definition);auto connections=executionConnections(definition);
+        // A target slice must not hide competing writers elsewhere in the recipe.
+        if(!targetTool.isEmpty() && std::any_of(tools.begin(),tools.end(),[](const auto& t){return t.kind=="set_variables";}))
+            for(const auto& error:validateGraph(tools,connections).errors)if(error.startsWith("Ambiguous branch variable writes:"))throw std::runtime_error(error.toUtf8().constData());
         if(!targetTool.isEmpty()) {
             if(std::none_of(tools.begin(),tools.end(),[&](const auto& t){return t.id==targetTool;}))throw std::runtime_error("Seçili tool bulunamadı.");
             QSet<QString> required{targetTool};QStringList pending{targetTool};
@@ -104,12 +109,22 @@ CycleResult ExecutionService::run(const QJsonObject& definition,const QString& d
         if(multi && graph.requiredSources.size()==1)cycle.frameId=frameIds.first();
         if(multi && frameSnapshot && graph.requiredSources.size()!=1)throw std::runtime_error("A single frame snapshot cannot represent multiple sources");
         if(targetOnly) {
-            if(multi && (graph.requiredSources.size()!=1 || targetOnly->frame.metadata().sourceId!=graph.requiredSources.first()))throw std::runtime_error("Target raw frame source mismatch");
+            if(multi && (graph.requiredSources.size()>1 || (!graph.requiredSources.isEmpty() && targetOnly->frame.metadata().sourceId!=graph.requiredSources.first())))throw std::runtime_error("Target raw frame source mismatch");
             if(cycle.frameId.isEmpty() || cycle.cycleId.isEmpty())throw std::runtime_error("Önce görüntü al.");
             if(resolver)measurement=resolver(targetOnly->frame);
             for(auto it=targetOnly->cache.cbegin();it!=targetOnly->cache.cend();++it)
-                if(it->signature==toolSignature(definition,directory,it.key(),targetOnly->scope))completed[it.key()]=it->result;
-            if(multi){
+                if(it->signature==toolSignature(definition,directory,it.key(),targetOnly->scope)){
+                    auto cached=it->result;
+                    // A matching transitive signature recertifies this immutable cached
+                    // value for the current Editor request; no upstream tool is rerun.
+                    for(auto& p:cached.outputs)if(auto b=std::get_if<AssignmentBundle>(&p.data)){
+                        ToolResultCodec::validate(p,p.port,{},cycle.cycleId);
+                        b->configId=QString::fromLatin1(configId.toHex());
+                        for(auto& v:b->fields)std::visit([&](auto& e){e.configId=b->configId;},v);
+                    }
+                    completed[it.key()]=cached;
+                }
+            if(multi && !graph.requiredSources.isEmpty()){
                 const auto raw=completed.value(graph.requiredSources.first()).outputs.value("image");
                 const auto* image=std::get_if<ImageFrame>(&raw.data);
                 if(!raw.valid || !image || image->contentId()!=targetOnly->frame.contentId() ||
@@ -134,13 +149,18 @@ CycleResult ExecutionService::run(const QJsonObject& definition,const QString& d
                 QMap<QString,PortValue> inputs;bool unavailable=false;QStringList missing;
                 for(const auto& c:connections)if(c.targetTool==id) {
                     const auto source=completed.value(c.sourceTool);const auto value=source.outputs.value(c.sourcePort);
-                    if(source.state!=ExecutionState::Done || !value.valid || value.frameId!=toolFrameId || value.cycleId!=cycle.cycleId) {
+                    if(source.state!=ExecutionState::Done || !value.valid || (value.port.type!=PortType::AssignmentBundle && value.frameId!=(t.kind=="set_variables" && targetOnly ? targetOnly->frame.metadata().frameId:toolFrameId) && (t.kind!="set_variables" || targetOnly)) || value.cycleId!=cycle.cycleId) {
                         unavailable=true;for(const auto& upstream:tools)if(upstream.id==c.sourceTool)missing.append(upstream.name);
                     }
                     else inputs[c.targetPort]=value;
                 }
                 if(unavailable) {r.state=ExecutionState::Skipped;r.message=targetOnly ? ("Girdi güncel değil: "+missing.join(", ")+". Önce görüntü al veya bağlı üst aracı çalıştır.") : "Upstream sonucu geçersiz/ERROR/SKIPPED";}
                 else try {
+                    if(t.kind=="set_variables") {
+                        cycle.executedTools.append(t.id);
+                        r=executeAssignments(t,definition,completed,cycle.cycleId,QString::fromLatin1(configId.toHex()));
+                        for(auto& p:r.outputs){p.evaluationId=cycle.evaluationId;ToolResultCodec::validate(p,p.port,{},cycle.cycleId);}
+                    } else {
                     ToolDependencyResolver::resolve(t,directory);
                     const auto declaredInputs=inputPorts(t.kind);
                     for(auto it=inputs.cbegin();it!=inputs.cend();++it) {
@@ -149,11 +169,12 @@ CycleResult ExecutionService::run(const QJsonObject& definition,const QString& d
                             throw std::runtime_error("Giriş port tipi/birim/frame sözleşmesi uyumsuz.");
                         auto declared=*expected;declared.id=it->port.id; // Connection maps output ID to input ID.
                         ToolResultCodec::validate(*it,declared,toolFrameId,cycle.cycleId);
-                        if(multi){const auto raw=completed.value(source).outputs.value("image");SourceFrameIndex index(cycle.cycleId,{source},{raw.origin});index.validatePort(source,*it,declared);}
+                        if(multi && it->port.type!=PortType::AssignmentBundle){const auto raw=completed.value(source).outputs.value("image");SourceFrameIndex index(cycle.cycleId,{source},{raw.origin});index.validatePort(source,*it,declared);}
                     }
                     QString coordinates,sourceFrame,sourceId;
                     std::optional<CoordinateFrame> geometricFrame;
                     for(const auto& value:inputs) {
+                        if(value.port.type==PortType::AssignmentBundle)continue;
                         if(const auto frame=ToolResultCodec::coordinates(value)) {
                             if(geometricFrame && *geometricFrame!=*frame)throw std::runtime_error("Typed input geometric frames/axes differ");
                             geometricFrame=frame;
@@ -278,7 +299,7 @@ CycleResult ExecutionService::run(const QJsonObject& definition,const QString& d
                             const auto raw=r.outputs.value("image");
                             SourceFrameIndex index(cycle.cycleId,{t.id},{raw.origin});index.validatePort(t.id,raw,outputPorts(t.kind).first());
                         }
-                        for(const auto& value:r.outputs)if(value.valid) {
+                        for(const auto& value:r.outputs)if(value.valid && value.port.type!=PortType::AssignmentBundle) {
                             const auto raw=completed.value(source).outputs.value("image");
                             const auto origin=ToolRegistry::get(t.kind).acquisitionSource ? value.origin:raw.origin;
                             SourceFrameIndex index(cycle.cycleId,{source},{origin});index.validatePort(source,value,value.port);
@@ -295,6 +316,7 @@ CycleResult ExecutionService::run(const QJsonObject& definition,const QString& d
                         catch(const std::exception& e){measurement={};measurement.error=QString::fromUtf8(e.what());}
                         if(multi)measurements[t.id]=measurement;
                     }
+                }
                 }catch(const std::exception& e) {r.fitDiagnostic.reset();r.edgeDiagnostics.reset();r.overlayGeometry.reset();r.outputs.clear();r.regions.clear();r.mask={};r.searchRegion={};r.points.clear();r.rejectedPoints.clear();r.lines.clear();r.decision=PartDecision::NotEvaluated;r.calibration.reset();r.state=ExecutionState::Error;r.message=QString::fromUtf8(e.what());
                     if(const auto* fit=dynamic_cast<const FitDiagnosticError*>(&e)) {
                         r.fitDiagnostic=fit->evidence;r.errorCode=fit->evidence.code;

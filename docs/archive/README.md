@@ -6,6 +6,7 @@ görev” ifadeleri yazıldıkları tarihe aittir.
 
 | Dönem / görev | Kayıt |
 | --- | --- |
+| 26 Ekim 2026 — COMM-06 | [Set Variables registry, typed bundle DAG ve Editor executor/cache](2026-10-26-comm-06.md) |
 | 26 Ekim 2026 — COMM-05 | [Immutable RHS ve atomik çoklu atama evaluator'ı](2026-10-26-comm-05.md) |
 | 26 Ekim 2026 — COMM-04 | [Variable tanımı, strict katalog codec ve atomik proje komutları](2026-10-26-comm-04.md) |
 | 26 Ekim 2026 — COMM-03 | [Frame/birimli SpatialTransform, quaternion ve strict codec](2026-10-26-comm-03.md) |

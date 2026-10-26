@@ -1,4 +1,5 @@
 #include "ToolGraph.hpp"
+#include "AssignmentConfig.hpp"
 #include "ToolRegistry.hpp"
 #include "ReferenceConfig.hpp"
 #include "PoseTrackingConfig.hpp"
@@ -10,7 +11,7 @@
 namespace visionflow {
 QString portTypeName(PortType type) {
     switch(type) {case PortType::Image:return "Image";case PortType::Region:return "Region";case PortType::Point:return "Point";case PortType::Number:return "Number";case PortType::Boolean:return "Boolean";
-    case PortType::Text:return "Text";case PortType::CodeResults:return "CodeResults";case PortType::PointSet:return "PointSet";case PortType::Profile:return "Profile";case PortType::Line2D:return "Line2D";case PortType::Circle2D:return "Circle2D";case PortType::Arc2D:return "Arc2D";case PortType::Pose2D:return "Pose2D";case PortType::InspectionResults:return "InspectionResults";} return {};
+    case PortType::Text:return "Text";case PortType::CodeResults:return "CodeResults";case PortType::PointSet:return "PointSet";case PortType::Profile:return "Profile";case PortType::Line2D:return "Line2D";case PortType::Circle2D:return "Circle2D";case PortType::Arc2D:return "Arc2D";case PortType::Pose2D:return "Pose2D";case PortType::InspectionResults:return "InspectionResults";case PortType::AssignmentBundle:return "AssignmentBundle";} return {};
 }
 QVector<PortDefinition> inputPorts(const QString& kind) {return ToolRegistry::get(kind).inputs;}
 QVector<PortDefinition> outputPorts(const QString& kind) {return ToolRegistry::get(kind).outputs;}
@@ -45,7 +46,22 @@ QJsonObject withEditorConnections(QJsonObject definition,const QVector<ToolConne
     QJsonArray normalized;for(const auto& t:tools)normalized.append(encodeEditorTool(t,schema));
     e["tools"]=normalized;e["schemaVersion"]=schema; e["connections"]=array; definition["editor"]=e; return definition;
 }
-GraphValidation validateGraph(const QVector<ToolDefinition>& tools,const QVector<ToolConnection>& connections) {
+QVector<ToolConnection> assignmentConnections(const QVector<ToolDefinition>& tools) {
+    QVector<ToolConnection> result;
+    for(const auto& t:tools)if(t.kind=="set_variables") {
+        const auto config=decodeAssignmentConfig(t.parameters,t.id);int row=0;
+        for(const auto& r:config.rows){const auto port=QString("@assignment/%1").arg(row++);
+            if(auto s=std::get_if<ToolOutputAssignmentSource>(&r.source))result.append({s->toolId,s->port,t.id,port});
+            else if(auto s=std::get_if<BundleAssignmentSource>(&r.source))result.append({s->producerId,"bundle",t.id,port});
+        }
+    }return result;
+}
+QVector<ToolConnection> executionConnections(const QJsonObject& definition) {
+    auto result=editorConnections(definition);for(const auto& c:assignmentConnections(editorTools(definition)))if(!result.contains(c))result.append(c);return result;
+}
+GraphValidation validateGraph(const QVector<ToolDefinition>& tools,const QVector<ToolConnection>& explicitConnections) {
+    auto connections=explicitConnections;
+    try{for(const auto& c:assignmentConnections(tools))if(!connections.contains(c))connections.append(c);}catch(const std::exception& e){GraphValidation r;r.errors<<QString::fromUtf8(e.what());return r;}
     GraphValidation r; QMap<QString,ToolDefinition> nodes; QMap<QString,int> indegree; QMap<QString,QStringList> next; QSet<QString> bound;
     for (const auto& t:tools) {if(nodes.contains(t.id))r.errors<<"Duplicate tool ID: "+t.id;nodes[t.id]=t; indegree[t.id]=0;}
     for (const auto& c:connections) {
@@ -53,7 +69,17 @@ GraphValidation validateGraph(const QVector<ToolDefinition>& tools,const QVector
         auto outputs=outputPorts(nodes[c.sourceTool].kind), inputs=inputPorts(nodes[c.targetTool].kind);
         auto out=std::find_if(outputs.begin(),outputs.end(),[&](const auto& p){return p.id==c.sourcePort;});
         auto in=std::find_if(inputs.begin(),inputs.end(),[&](const auto& p){return p.id==c.targetPort;});
-        if (out==outputs.end() || in==inputs.end()) r.errors<<"Eksik port: "+c.targetPort;
+        if(nodes[c.targetTool].kind=="set_variables") {
+            bool valid=false;const auto config=decodeAssignmentConfig(nodes[c.targetTool].parameters,c.targetTool);
+            for(int i=0;i<config.rows.size();++i)if(c.targetPort==QString("@assignment/%1").arg(i)) {
+                if(auto s=std::get_if<ToolOutputAssignmentSource>(&config.rows[i].source))valid=c.sourceTool==s->toolId && c.sourcePort==s->port && ToolRegistry::get(nodes[c.sourceTool].kind).version==s->revision && out!=outputs.end() && (out->type==PortType::Number || out->type==PortType::Boolean || out->type==PortType::Text);
+                else if(auto s=std::get_if<BundleAssignmentSource>(&config.rows[i].source)) {
+                    if(nodes[c.sourceTool].kind=="set_variables") {const auto upstream=decodeAssignmentConfig(nodes[c.sourceTool].parameters,c.sourceTool);valid=c.sourceTool==s->producerId && c.sourcePort=="bundle" && upstream.revision==s->revision && std::any_of(upstream.rows.begin(),upstream.rows.end(),[&](const auto& row){return row.targetId==s->fieldId;});}
+                }
+            }
+            if(!valid)r.errors<<"Invalid assignment UUID/port/revision binding: "+c.targetTool;
+        }
+        else if (out==outputs.end() || in==inputs.end()) r.errors<<"Eksik port: "+c.targetPort;
         else if (out->type!=in->type || out->unit!=in->unit || out->frame!=in->frame) r.errors<<"Port tip/birim/frame uyumsuzluğu: "+c.sourcePort+" → "+c.targetPort;
         const auto key=c.targetTool+"/"+c.targetPort;
         if (bound.contains(key)) r.errors<<"Girişe birden fazla bağlantı: "+key;
@@ -103,6 +129,11 @@ GraphValidation validateGraph(const QVector<ToolDefinition>& tools,const QVector
             }
         }catch(const std::exception& e){r.errors<<t.name+": "+QString::fromUtf8(e.what());}
     }
+    // Two writers are legal only with an explicit dependency path ordering them.
+    auto reaches=[&](const QString& a,const QString& b){QSet<QString> seen;QStringList pending{a};while(!pending.isEmpty()){const auto id=pending.takeFirst();if(id==b)return true;if(seen.contains(id))continue;seen.insert(id);pending.append(next.value(id));}return false;};
+    QMap<QString,QStringList> writers;
+    for(const auto& t:tools)if(t.enabled && t.kind=="set_variables")for(const auto& row:decodeAssignmentConfig(t.parameters,t.id).rows)writers[row.targetId].append(t.id);
+    for(const auto& ids:writers)for(int i=0;i<ids.size();++i)for(int j=i+1;j<ids.size();++j)if(!reaches(ids[i],ids[j]) && !reaches(ids[j],ids[i]))r.errors<<"Ambiguous branch variable writes: "+ids[i]+" / "+ids[j];
     QStringList ready; for (const auto& t:tools) if (indegree[t.id]==0) ready<<t.id;
     while (!ready.isEmpty()) {const auto id=ready.takeFirst(); r.order<<id; for (const auto& target:next[id]) if (--indegree[target]==0) ready<<target;}
     if (r.order.size()!=tools.size()) r.errors<<"Döngüsel bağımlılık (DAG gerekli).";
@@ -114,9 +145,11 @@ GraphValidation validateGraph(const QVector<ToolDefinition>& tools,const QVector
             origins.insert(id);if(t.enabled)r.requiredSources.append(id);
         }
         for(const auto& c:connections)if(c.targetTool==id && nodes.contains(c.sourceTool)) {
+            if(nodes[c.sourceTool].kind=="set_variables")continue;
             const auto source=r.toolSources.value(c.sourceTool);
             if(!source.isEmpty())origins.insert(source);
         }
+        if(t.kind=="set_variables")continue;
         if(origins.size()>1)r.errors<<t.name+": cross-source inputs are not supported";
         else if(origins.size()==1) {
             const auto source=*origins.cbegin();r.toolSources[id]=source;
@@ -128,7 +161,8 @@ GraphValidation validateGraph(const QVector<ToolDefinition>& tools,const QVector
 GraphValidation validateSourceGraph(const QVector<ToolDefinition>& tools,const QVector<ToolConnection>& connections) {
     auto result=validateGraph(tools,connections);QMap<QString,ToolDefinition> nodes;
     for(const auto& t:tools)nodes[t.id]=t;
-    for(const auto& c:connections)if(nodes.contains(c.sourceTool) && nodes.contains(c.targetTool) && nodes[c.targetTool].enabled && !nodes[c.sourceTool].enabled)
+    auto all=connections;try{for(const auto& c:assignmentConnections(tools))if(!all.contains(c))all.append(c);}catch(const std::exception&){return result;}
+    for(const auto& c:all)if(nodes.contains(c.sourceTool) && nodes.contains(c.targetTool) && nodes[c.targetTool].enabled && !nodes[c.sourceTool].enabled)
         result.errors<<nodes[c.targetTool].name+": disabled upstream "+c.sourceTool;
     return result;
 }

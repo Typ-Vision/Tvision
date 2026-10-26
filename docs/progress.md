@@ -4,17 +4,19 @@
 
 ## Devam noktası
 
-**[COMM-05 tamam](archive/2026-10-26-comm-05.md):** Typed constant/tool-output/
-upstream bundle bağları; immutable RHS ve atomik çoklu atama evaluator'ı.
-UI OFF Release; 14/14 CTest ve son 149 evaluator kontrolü geçti.
-**Sonraki kart COMM-06**; başlatılmadı. Fiziksel/native engeller korunur.
+**[COMM-06 tamam](archive/2026-10-26-comm-06.md):** Set Variables registry/DAG,
+cycle typed bundle, atomik executor ve Editor cache/TargetOnly bağlantısı.
+UI OFF Release; test kanıtı kapanışta. **Sonraki kart COMM-07**.
+Tool UI/yayın açılmadı; fiziksel/native engeller korunur.
+
+**[COMM-05 tamam](archive/2026-10-26-comm-05.md):** Atomik evaluator.
 
 **[COMM-04 tamam](archive/2026-10-26-comm-04.md):** UUID/type/unit/frame/enum
-variable kataloğu ve atomik proje komutları; legacy byte/no-op korunur.
+variable kataloğu ve atomik proje komutları.
 
 **[COMM-03 tamam](archive/2026-10-26-comm-03.md):** FrameRef UUID/revision,
-mm/wxyz SpatialTransform ve inverse/compose. O koşumda 13/15 CTest;
-eski UI ON'da da üretilen iki Circle fixture hatası açık, COMM-04/05'te koşulmadı.
+mm/wxyz SpatialTransform ve inverse/compose. İki eski Circle fixture hatası
+açık; bu kartta koşulmadı.
 
 **[COMM-02 tamam](archive/2026-10-26-comm-02.md):** Qt Core typed scalar,
 strict codec, kayıpsız Int64 ve validity/unit/köken; legacy no-op/hash korunur.

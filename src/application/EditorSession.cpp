@@ -45,7 +45,7 @@ QByteArray EditorSession::signature(const EditorContext& c) const {
 }
 QByteArray EditorSession::referenceSignature(const EditorContext& c,const QString& tool) const {
     if(c.recipeId.isEmpty() || !frame)return {};
-    auto connections=editorConnections(c.definition);QSet<QString> required{tool};QStringList pending{tool};
+    auto connections=executionConnections(c.definition);QSet<QString> required{tool};QStringList pending{tool};
     while(!pending.isEmpty()){auto id=pending.takeFirst();for(const auto& b:connections)if(b.targetTool==id && !required.contains(b.sourceTool)){required.insert(b.sourceTool);pending.append(b.sourceTool);}}
     auto tools=editorTools(c.definition);tools.erase(std::remove_if(tools.begin(),tools.end(),[&](const auto& t){return !required.contains(t.id);}),tools.end());
     connections.erase(std::remove_if(connections.begin(),connections.end(),[&](const auto& b){return !required.contains(b.targetTool);}),connections.end());
@@ -59,7 +59,7 @@ std::optional<QPointF> EditorSession::referencePoint(const EditorContext& c,cons
     }return {};
 }
 QString EditorSession::sourceForTool(const EditorContext& c,const QString& tool) const {
-    const auto graph=validateSourceGraph(editorTools(c.definition),editorConnections(c.definition));
+    const auto graph=validateSourceGraph(editorTools(c.definition),executionConnections(c.definition));
     return graph.toolSources.value(tool);
 }
 bool EditorSession::selectSource(const QString& source) {
@@ -117,7 +117,7 @@ void EditorSession::reconcile(const EditorContext& c) {
     }
 }
 void EditorSession::invalidateTool(const EditorContext& c,const QString& tool) {
-    QSet<QString> removed{tool};QStringList pending{tool};const auto connections=editorConnections(c.definition);
+    QSet<QString> removed{tool};QStringList pending{tool};const auto connections=executionConnections(c.definition);
     while(!pending.isEmpty()){const auto id=pending.takeFirst();for(const auto& link:connections)if(link.sourceTool==id && !removed.contains(link.targetTool)){removed.insert(link.targetTool);pending.append(link.targetTool);}}
     for(const auto& id:removed){cache_.remove(id);references.remove(id);}
     if(cycle)cycle->tools.erase(std::remove_if(cycle->tools.begin(),cycle->tools.end(),[&](const auto& r){return removed.contains(r.toolId);}),cycle->tools.end());
@@ -178,7 +178,7 @@ PoseTeaching EditorSession::teachPose(const ToolDefinition& tool,const ImageFram
 }
 ImageFrame EditorSession::toolImage(const EditorContext& c,const QString& tool) const {
     const auto e=evaluation(c,tool);
-    for(const auto& link:editorConnections(c.definition))if(link.targetTool==tool && link.targetPort=="image") {
+    for(const auto& link:executionConnections(c.definition))if(link.targetTool==tool && link.targetPort=="image") {
         const auto cached=e.cache.constFind(link.sourceTool);
         if(cached==e.cache.cend() || cached->result.state!=ExecutionState::Done)break;
         const auto port=cached->result.outputs.value(link.sourcePort);
@@ -230,7 +230,7 @@ ToolDefinition EditorSession::taughtTracking(const EditorContext& c,const ToolDe
 }
 QJsonObject EditorSession::taughtSearch(const EditorContext& c,const ToolDefinition& tool,const QRect& roi) const {
     auto p=tool.parameters;
-    if(tool.kind=="edge")for(const auto& b:editorConnections(c.definition))if(b.targetTool==tool.id && b.targetPort=="reference") {
+    if(tool.kind=="edge")for(const auto& b:executionConnections(c.definition))if(b.targetTool==tool.id && b.targetPort=="reference") {
         auto point=referencePoint(c,b.sourceTool);if(!point)throw std::runtime_error("Referans bulunamadı. Önce geçerli match sonucu üretin.");
         p["referenceOrigin"]=QJsonObject{{"x",point->x()},{"y",point->y()}};
         for(const auto& source:editorTools(c.definition))if(source.id==b.sourceTool)p["referenceGeometry"]=referenceGeometry(source);

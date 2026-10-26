@@ -173,3 +173,36 @@ Kabul: Releaıe CTeıt 8/8 (83 6/6, 84 7/7); teıt fixture extenıion, owned ada
 K3: typed legacy scale/raw homography modelleri aynı worker resolver ve Measurement yolunda. H iki noktayı ayrı world mm'ye map eder; domain/current/provenance hataları boş çıktı/NotEvaluated üretir. Test study fiziksel camera binding'ine girmez.
 
 T7.3: execution/13, Geometry Measurement v2; Toolbox/typed feature picker/negatif signed tolerans/immutable completion replay artık bağlıdır. [Sözleşme](geometry-measurement-adapter.md). PartDecision NOT_EVALUATED; hata/Stop eski değer bırakmaz.
+
+## COMM-06 — Set Variables yürütme sözleşmesi
+
+`set_variables` parameters: pozitif `revision` ve en çok 64 `{targetId,source}`
+satırı. Source `constant` typed value, `tool_output` UUID/port/registry revision
+veya `bundle` producer UUID/field UUID/bundle revision'dır. Alanlar strict codec
+ile okunur; enum membership'inin otoritesi reçetenin variableCatalog'udur.
+Boş satırlı taslak saklanabilir, yürütme evaluator tarafından reddedilir.
+
+Bağlar `executionConnections` tarafından `@assignment/N` dependency portlarıyla
+elde edilir. Kayıtlı editor connections değiştirilmez. Graph yanlış producer,
+port, revision, field, cycle ve sırasız iki dalın aynı variable'a yazmasını
+reddeder. Açık dependency yoluyla sıralanan yazım geçerlidir. Set Variables'ın
+`bundle` çıkışı ayrı typed porttur; frame=`cycle`, acquisition frameId boştur.
+Farklı kaynakların scalar verileri aynı cycle bundle'ında açıkça birleşebilir;
+bu izin geometrik cross-source bağlantı yasağını kaldırmaz.
+
+ExecutionService saf AssignmentEvaluator'ı çağırır; bütün RHS aynı immutable
+completed görünümünden okunur ve hata grubun tüm çıktısını kaldırır. Eski
+Number yalnız Float64'e, Boolean/String kendi tipine bağlanır; px→mm ve
+narrowing/signedness dönüşümü yapılmaz. Int64/Enum/spatial typed constant veya
+upstream bundle üzerinden kayıpsız taşınır. Değerler reçeteye yazılmaz.
+
+TargetOnly upstream çalıştırmaz ve acquisition yapmaz. Geçişli cache imzası
+variableCatalog'u da kapsar; imzası geçerli cached bundle, mevcut Editor isteği
+config kimliği için kopyada yeniden belgelenir. Cycle ve field köken denetimleri
+korunur; stale upstream full-flow fallback oluşturmaz. Mevcut tek raw-frame
+TargetEvaluation sınırı korunur: birden çok acquisition kaynağını gerektiren
+TargetOnly isteği reddedilir; çok kaynak join full-flow'da çalışır.
+
+Execution identity `visionflow.execution/31`; Toolbox aracı henüz açmaz.
+COMM-07/08 UI, COMM-09 immutable Runtime variable context ayrı kartlardır.
+Editor hesaplaması yayın veya transport çağrısı üretmez.
