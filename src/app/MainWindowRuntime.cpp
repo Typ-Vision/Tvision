@@ -14,6 +14,8 @@
 #include "application/CameraLocalConfiguration.hpp"
 #include "application/ExperimentalOecsAcquisition.hpp"
 #include <QCheckBox>
+#include <QSettings>
+#include "application/RuntimeOverlay.hpp"
 #include "application/ReferenceService.hpp"
 #include <QFileDialog>
 #include <QSaveFile>
@@ -48,13 +50,16 @@ QWidget* MainWindow::makeRuntime() {
     const QVector<QPair<QString,QString>> commands{{"verify","Kaynağı doğrula"},{"run","Run"},{"stop","Stop"},{"cycle","Tek çevrim"},{"retry","Kaydı tekrar yaz"}};
     for(const auto& command:commands){auto* b=new QPushButton(command.second);b->setObjectName("runtime_"+command.first);actions->addWidget(b);connect(b,&QPushButton::clicked,this,[this,action=command.first]{runtimeAction(action);});}
     layout->addLayout(actions);
+    auto* allTools=new QCheckBox("Tüm araçları göster");allTools->setObjectName("runtimeAllTools");
+    {QSettings settings(settingsFile_,QSettings::IniFormat);allTools->setChecked(settings.value("runtime/allToolOverlays",true).toBool());}
+    connect(allTools,&QCheckBox::toggled,this,[this](bool checked){QSettings settings(settingsFile_,QSettings::IniFormat);settings.setValue("runtime/allToolOverlays",checked);settings.sync();showRuntimeResult();});
     runtimeSources_=new QComboBox;runtimeSources_->setObjectName("runtimeSourceSelector");runtimeSources_->setAccessibleName("Runtime görüntü kaynağı");layout->addWidget(runtimeSources_);
     runtimePreparation_=new QTableWidget;runtimePreparation_->setObjectName("runtimePreparation");runtimePreparation_->setColumnCount(4);runtimePreparation_->setHorizontalHeaderLabels({"Kaynak / kamera","Model / birim","Hazırlık","Gerçek kare"});runtimePreparation_->setEditTriggers(QAbstractItemView::NoEditTriggers);runtimePreparation_->setSelectionBehavior(QAbstractItemView::SelectRows);runtimePreparation_->setSelectionMode(QAbstractItemView::SingleSelection);runtimePreparation_->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);runtimePreparation_->setMinimumHeight(130);runtimePreparation_->setMaximumHeight(170);layout->addWidget(runtimePreparation_);
     auto* history=new QPushButton("Logs / CSV");history->setObjectName("runtimeHistory");connect(history,&QPushButton::clicked,this,[this]{selectPage("logs");refreshLogs();});actions->addWidget(history);
     connect(runtimeSources_,&QComboBox::currentIndexChanged,this,[this]{showRuntimeResult();});
     connect(runtimePreparation_,&QTableWidget::currentCellChanged,this,[this](int row,int,int,int){if(row>=0 && row<runtimeSources_->count())runtimeSources_->setCurrentIndex(row);});
     auto* split=new QSplitter;runtimeViewer_=new ImageViewer;split->addWidget(runtimeViewer_);
-    auto* panel=new QWidget;auto* results=new QVBoxLayout(panel);runtimeTools_=new QComboBox;runtimeTools_->setObjectName("runtimeTools");results->addWidget(runtimeTools_);
+    auto* panel=new QWidget;auto* results=new QVBoxLayout(panel);results->addWidget(allTools);runtimeTools_=new QComboBox;runtimeTools_->setObjectName("runtimeTools");results->addWidget(runtimeTools_);
     runtimeSummary_=plain("Yeni çevrim sonucu yok.");runtimeSummary_->setObjectName("runtimeSummary");runtimeSummary_->setSizePolicy(QSizePolicy::Ignored,QSizePolicy::Preferred);results->addWidget(runtimeSummary_);runtimeEdgeProfile_=new EdgeProfileView;runtimeEdgeProfile_->setObjectName("runtimeEdgeProfile");results->addWidget(runtimeEdgeProfile_);results->addStretch();
     runtimeTools_->setMinimumContentsLength(12);runtimeTools_->setSizeAdjustPolicy(QComboBox::AdjustToMinimumContentsLengthWithIcon);
     auto* scroll=new QScrollArea;scroll->setWidgetResizable(true);scroll->setWidget(panel);scroll->setMinimumWidth(250);split->addWidget(scroll);split->setStretchFactor(0,3);split->setStretchFactor(1,2);split->setSizes({680,420});layout->addWidget(split,1);
@@ -352,6 +357,7 @@ void MainWindow::showRuntimeResult() {
     runtimeViewer_->setToolOverlay({},{});
     if(!runtimeResult_){runtimeViewer_->clearImage("Yeni çevrim sonucu yok.");runtimeSummary_->setText("Yeni çevrim sonucu yok.");QSignalBlocker blocker(runtimeTools_);runtimeTools_->clear();return;}
     const auto& c=*runtimeResult_;const auto snapshot=runtime_ ? runtime_->active() : nullptr;QStringList lines;
+    if(!RuntimeService::presentationMatches(c,snapshot) || c.recipeId!=snapshot->recipe().id || c.configId!=snapshot->validation().contentId){runtimeViewer_->clearImage("Bu sürüm için güncel çevrim yok.");runtimeSummary_->setText("Bu sürüm için güncel çevrim yok.");return;}
     if(snapshot && snapshot->dependencies().contains("systemCalibration")){const auto s=SystemCalibration::decodeEvidence(snapshot->dependencies()["systemCalibration"].toObject());lines<<QString("Sistem kalibrasyonu: %1 v%2 • etkinleştirme %3").arg(s.record.name()).arg(s.selection.version).arg(s.selection.revision)<<(s.record.residualsMillimetres().isEmpty() ? "Bağımsız kontrol yapılmadı":"Bağımsız kontrol kanıtı mevcut");}
     lines<<executionStateName(c.state)+QString(" • %1 ms").arg(c.milliseconds,0,'f',2)<<(runtime_ && runtime_->experimental() ? "Kalıcı kayıt tamamlandı • Parça: Değerlendirilmedi • PLC / robot: Kullanılamıyor":plc_ && plc_->listening() ? "Kalıcı kayıt tamamlandı • PLC durumu Communication ekranında" : "Kalıcı kayıt tamamlandı • İletişim: NOT_REQUESTED");
     if(snapshot && snapshot->dependencies().contains("sourceSet")){const auto evidence=snapshot->dependencies()["sourceSet"].toObject()[runtimeSources_->currentData().toString()].toObject()["systemCalibration"].toObject();if(!evidence.isEmpty()){const auto model=SystemCalibration::decodeEvidence(evidence);lines<<QString("Seçili kaynak modeli: %1 v%2").arg(model.record.name()).arg(model.selection.version);}}
@@ -367,6 +373,7 @@ void MainWindow::showRuntimeResult() {
     QMap<QString,QSet<QString>> visibleOutputs;
     for(const auto& t:c.tools){if(graph.toolSources.value(t.toolId)!=selectedSource)continue;QString name=t.toolId;std::optional<ToolDefinition> definition;if(snapshot)for(const auto& tool:editorTools(snapshot->recipe().definition))if(tool.id==t.toolId){name=tool.name;definition=tool;break;}
         lines<<name+" • "+executionStateName(t.state)+" • "+(t.fitDiagnostic ? presentMeasurementDiagnostic(*t.fitDiagnostic):t.errorCode+" "+t.message);
+        if(t.overlayGeometry && !t.overlayGeometry->reason.isEmpty())lines<<"  Tarama alanı gösterilmedi: "+t.overlayGeometry->reason;
         QSet<QString> visible;
         if(definition){
             const auto preference=outputPreferences_.load({runtimeProjectId_,snapshot->recipe().id,t.toolId});
@@ -392,26 +399,18 @@ void MainWindow::showRuntimeResult() {
             if(visible.contains("value") && value.valid && scalar)lines<<QString("  Ölçüm: %1 mm • %2").arg(*scalar,0,'f',6).arg(decision);
             else lines<<QString("  Parça kararı: %1").arg(decision);
         }
-        if(t.toolId==runtimeTools_->currentData().toString()){if(t.state==ExecutionState::Done){runtimeEdgeProfile_->setDiagnostics(t.edgeDiagnostics);if((t.edgeDiagnostics || t.outputs.contains("valuePx") || t.outputs.contains("widthPx") || (t.outputs.contains("linePx") || t.outputs.contains("circlePx"))) && snapshot){for(const auto& tool:editorTools(snapshot->recipe().definition))if(tool.id==t.toolId){try{if(tool.parameters.contains("referenceBinding"))throw std::runtime_error("Reference ROI uses current resolver");auto roi=ToolRoi::fromJson(tool.parameters["scanRoi"].toObject());if(roi.frame.unit==LengthUnit::Millimetre && rawFrame){const auto frame=*rawFrame;const auto ctx=RuntimeService::calibration(*snapshot,frame,runtimePath_+".calibrations.json");runtimeViewer_->setRoiMapping(roi.frame,[frame,ctx](QPointF p){return CircleToolService::mapPoint(frame,ctx,p,true);});}else runtimeViewer_->setRoiMapping(roi.frame);runtimeViewer_->setRoi(roi,false);runtimeViewer_->setRoiRecipeBound(true);runtimeViewer_->setRoiEditable(false);}catch(const std::exception&){}break;}}}const auto processed=t.outputs.value("image");if(processed.valid)if(const auto* frame=std::get_if<ImageFrame>(&processed.data))if(!frame->processing().isEmpty()){runtimeViewer_->setPreviewPixels(frame->preview());lines<<"  Görüntü: işlenmiş Gray8 (aynı raw geometri)";}QString annotation;if(t.outputs.contains("valuePx") || t.outputs.contains("widthPx") || (t.outputs.contains("linePx") || t.outputs.contains("circlePx")))annotation=t.message;annotation.replace(" • ","\n");if(t.decision!=PartDecision::NotEvaluated)annotation=QString("%1 mm • %2").arg(std::get<double>(t.outputs.value("value").data),0,'f',3).arg(t.decision==PartDecision::Pass ? "PASS" : "FAIL");runtimeViewer_->setToolOverlay(t.regions,t.points,t.lines,annotation,t.mask.pixels,t.mask.size,t.mask.origin,t.rejectedPoints,(t.outputs.contains("linePx") || t.outputs.contains("circlePx")));const auto codes=t.outputs.value("codes");if(codes.valid)if(const auto* list=std::get_if<CodeResults>(&codes.data))runtimeViewer_->setCodeOverlay(*list);}
+        if(t.toolId==runtimeTools_->currentData().toString() && t.state==ExecutionState::Done)runtimeEdgeProfile_->setDiagnostics(t.edgeDiagnostics);
     }
-    // Resolve only against this recorded cycle and immutable snapshot. A failed
-    // current reference leaves the viewer empty of ROI, never nominal geometry.
-    if(snapshot && rawFrame)for(const auto& tool:editorTools(snapshot->recipe().definition))
-        if(tool.id==runtimeTools_->currentData().toString() && tool.parameters.contains("referenceBinding"))try {
-            const auto binding=toolReferenceBinding(tool);ToolDefinition producer;ToolResult source,current;
-            for(const auto& node:editorTools(snapshot->recipe().definition))if(node.id==binding.sourceTool)producer=node;
-            for(const auto& r:c.tools){if(r.toolId==binding.sourceTool)source=r;if(r.toolId==tool.id)current=r;}
-            if(current.state!=ExecutionState::Done)break;
-            if(binding.world) {
-                const auto ctx=RuntimeService::calibration(*snapshot,*rawFrame,runtimePath_+".calibrations.json");
-                const auto mapped=ReferenceService::resolveWorld(binding,producer,source,*rawFrame,ctx);
-                if(mapped.map){runtimeViewer_->setRoiMapping(binding.nominal.frame,mapped.map->nominalToRaw);runtimeViewer_->setRoi(binding.nominal,false);}
-            }else {
-                const auto mapped=ReferenceService::resolve(binding,producer,source,*rawFrame);
-                if(mapped.roi){runtimeViewer_->setRoiMapping(mapped.roi->frame);runtimeViewer_->setRoi(mapped.roi,false);}
-            }
-            runtimeViewer_->setRoiRecipeBound(true);runtimeViewer_->setRoiEditable(false);
-        }catch(const std::exception&){}
+    if(snapshot && rawFrame){
+        const bool all=findChild<QCheckBox*>("runtimeAllTools")->isChecked();
+        const auto layers=runtimeOverlays(c,editorTools(snapshot->recipe().definition),graph,*rawFrame,snapshot,all ? QString{}:runtimeTools_->currentData().toString());
+        runtimeViewer_->setRuntimeOverlays(layers);
+        for(const auto& layer:layers.layers)if(layer.detail.contains("Tarama alanı"))lines<<layer.name+": "+layer.detail;
+        if(!all)for(const auto& t:c.tools)if(t.toolId==runtimeTools_->currentData().toString() && t.state==ExecutionState::Done){
+            const auto preview=t.outputs.value("image");if(preview.valid && preview.origin.sourceId==rawFrame->metadata().sourceId && preview.frameId==rawFrame->metadata().frameId && preview.cycleId==c.cycleId)
+                if(const auto* frame=std::get_if<ImageFrame>(&preview.data))if(frame->size()==rawFrame->size())runtimeViewer_->setPreviewPixels(frame->preview());
+        }
+    }
     QStringList diagnoses;
     for(const auto& t:c.tools)if(t.fitDiagnostic && graph.toolSources.value(t.toolId)==selectedSource){QString name=t.toolId;if(snapshot)for(const auto& configured:editorTools(snapshot->recipe().definition))if(configured.id==t.toolId)name=configured.name;diagnoses<<name+" • "+executionStateName(t.state)<<presentMeasurementDiagnostic(*t.fitDiagnostic);}
     if(snapshot && snapshot->validation().scope.startsWith("experimental_runtime/")){

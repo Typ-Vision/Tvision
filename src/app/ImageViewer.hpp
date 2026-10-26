@@ -2,6 +2,7 @@
 #include <QGraphicsView>
 #include <functional>
 #include "domain/ToolRoi.hpp"
+#include "application/RuntimeOverlayTypes.hpp"
 #include "domain/ToolValues.hpp"
 #include "hardware/AcquisitionTiming.hpp"
 #include <optional>
@@ -32,6 +33,7 @@ public:
     std::function<void(QRect)> onSearchRegionEdited;
     std::function<void()> onSearchRegionActivityChanged;
     std::function<bool()> onSearchRegionStarting;
+    void setRuntimeOverlays(const RuntimeOverlayCollection&);
     void setToolOverlay(const QVector<QRect>& regions,const QVector<QPointF>& points,const QVector<QLineF>& lines={},const QString& annotation={},const QByteArray& mask={},const QSize& maskSize={},const QPoint& maskOrigin={},const QVector<QPointF>& rejected={},bool densePoints=false);
     // Opt-in Editor preference; other viewers retain their existing presentation.
     void setResultAnnotationsVisible(bool visible);

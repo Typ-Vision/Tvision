@@ -1,6 +1,7 @@
 # CCUX-24H — Runtime'da bütün araç overlay'leri
 
-Durum: planlandı; 24G sonrası, 24E viewer ve 24B panel düzeni kullanılır.
+Durum: yazılım/görsel kabulü tamamlandı. [Kapanış](../../archive/2026-10-26-ccux-24h.md).
+[Uygulanan veri sözleşmesi/API](runtime-overlays.md); fiziksel kabul ayrı kalır.
 [Ortak plan](24-usability-plan.md), contract C4/C5 ve
 [analiz](24-usability-analysis.md) 10 okunur. Sonraki: 24I.
 

@@ -27,7 +27,8 @@ struct RegionMask {QByteArray pixels; QSize size; QPoint origin;};
 struct EdgeProfilePoint { double distance=0,raw=0; std::optional<double> smooth; };
 struct EdgeDisplayCandidate { QPointF point; double distance=0,strength=0; bool accepted=false,selected=false; QString reason,refinement; };
 struct EdgeDiagnostics { QLineF scan; double width=0,length=0; int sampleCount=0,derivativeCount=0,candidateCount=0; QVector<EdgeProfilePoint> profile; QVector<QPointF> derivative; QVector<EdgeDisplayCandidate> candidates; };
-struct ToolResult {std::optional<FitDiagnostic> fitDiagnostic;std::optional<EdgeDiagnostics> edgeDiagnostics;RegionMask mask;QString toolId; ExecutionState state=ExecutionState::Ready; QString message; QMap<QString,PortValue> outputs; QVector<QRect> regions; QVector<QPointF> points,rejectedPoints; QVector<QLineF> lines; QRect searchRegion; double milliseconds=0; PartDecision decision=PartDecision::NotEvaluated; QString errorCode; std::optional<CalibrationDependency> calibration;};
+struct ToolOverlayGeometry { FrameMetadata origin; QSize rawSize; QVector<QVector<QPointF>> outlines; QVector<QLineF> guides,resultLines; QString reason; };
+struct ToolResult {std::optional<ToolOverlayGeometry> overlayGeometry;std::optional<FitDiagnostic> fitDiagnostic;std::optional<EdgeDiagnostics> edgeDiagnostics;RegionMask mask;QString toolId; ExecutionState state=ExecutionState::Ready; QString message; QMap<QString,PortValue> outputs; QVector<QRect> regions; QVector<QPointF> points,rejectedPoints; QVector<QLineF> lines; QRect searchRegion; double milliseconds=0; PartDecision decision=PartDecision::NotEvaluated; QString errorCode; std::optional<CalibrationDependency> calibration;};
 class PlanarCalibration;
 struct MeasurementExecutionContext {
     std::shared_ptr<const PlanarCalibration> calibration;

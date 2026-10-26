@@ -4,13 +4,13 @@
 
 ## Devam noktası
 
-**[CCUX-24G tamam](archive/2026-10-26-ccux-24g.md):** sade Ayrıntılar;
-Kalibre Et korunur, Robot pasif. Yönetim Kameralar, transfer File'da.
-Release/CTest/iki boyut fixture geçti; fiziksel açık.
-Sonraki [24H](architecture/camera-setup/24h-runtime-overlays.md).
-[24E](archive/2026-10-26-ccux-24e.md): native wheel açık; ek
-`ui_runtime_visibility`: `Persist local selection` hatası açık.
-[Plan](architecture/camera-setup/24-usability-plan.md): Kalibre Et korunur; Robot pasif.
+**[CCUX-24H tamam](archive/2026-10-26-ccux-24h.md):** kaynak/kare/snapshot bağlı
+salt okunur çoklu Runtime overlay; tüm araçlar yerel/varsayılan açık.
+Release/10 CTest/iki boyut fixture geçti; fiziksel açık.
+Sonraki [24I](architecture/camera-setup/24i-integrated-acceptance.md).
+[24G](archive/2026-10-26-ccux-24g.md): Kalibre Et korunur, Robot pasif.
+[24E](archive/2026-10-26-ccux-24e.md): native wheel açık; tercih hatası
+repo TEMP/localhost ile aşıldı; varsayılan TEMP açık.
 
 **[INT-09 tamam](archive/2026-10-25-int-09.md):** Yerel CameraIntegration ve
 başlatıcı eşleşti; push/main değişmedi. [Kullanım/restart devri](architecture/camera-integration-handoff.md).

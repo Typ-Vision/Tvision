@@ -254,6 +254,7 @@ ProductionCycle RuntimeService::begin(const QJsonObject& communication){
     }catch(const ProductionException& e){event["reason"]=QString::fromUtf8(e.what());event["errorCode"]=int(e.code());event["elapsedMs"]=timer.elapsed();diagnostics_->append(event,e.code()!=ProductionError::Busy);throw;}
     catch(const std::exception& e){event["reason"]=QString::fromUtf8(e.what());diagnostics_->append(event,true);throw;}
 }
+bool RuntimeService::presentationMatches(const CycleResult& result,const std::shared_ptr<const ProductionSnapshot>& snapshot){return snapshot && (result.completionSnapshot_==snapshot || result.experimentalSnapshot_==snapshot);}
 bool RuntimeService::sameCompletion(const CycleResult& a,const CycleResult& b){return ProductionRecipeService::completionDigest(a)==ProductionRecipeService::completionDigest(b);}
 void RuntimeService::finish(quint64 ticket,const CycleResult& r){
     QElapsedTimer timer;timer.start();QJsonObject event{{"action","record"},{"ticket",QString::number(ticket)},{"cycleId",r.cycleId},{"recipeId",r.recipeId},{"executionState",executionStateName(r.state)}};

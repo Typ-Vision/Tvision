@@ -40,7 +40,7 @@ bool MainWindow::verifyRuntimeVisibility(const QString& artifacts){
         const auto calibration=MeasurementService{}.validate(CalibrationWorkflow::teach(*service_.activeRecipe(),frame,"scale",1,sample("fit",{0,0},{400,0},10)),{sample("x",{10,30},{810,30},20),sample("y",{40,10},{40,510},12.5)},.001);
         CalibrationService(catalog).save(calibration);CalibrationWorkflow::bind(service_,frame,catalog,"scale");service_.save();refreshWorkspace();until([&]{return !editorSession_.busy();},"Editor idle");ensureRuntime();
         const auto projectId=service_.project().id;const auto recipe=*service_.activeRecipe();const auto tools=service_.tools();
-        auto selection=[&](const QString& id,const OutputVisibilityOverride& value){check(outputPreferences_.save({projectId,recipe.id,id},value).ok(),"Persist local selection");};
+        auto selection=[&](const QString& id,const OutputVisibilityOverride& value){const auto saved=outputPreferences_.save({projectId,recipe.id,id},value);if(!saved.ok())QTextStream(stderr)<<saved.error<<'\n';check(saved.ok(),"Persist local selection");};
         // These connected points are hidden before execution, not removed from the graph.
         for(const auto& tool:tools)selection(tool.id,QSet<QString>{});
         runtimeCoordinator_->load(recipe,dir.path());selectPage("runtime");runtimeAction("run");check(!runtimeResult_ && !runtimeViewer_->hasImage() && !runtimeSummary_->text().contains("PASS"),"No invented initial value/decision");

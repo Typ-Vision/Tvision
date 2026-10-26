@@ -82,6 +82,11 @@
    Kamera/model/ayar değişiminde **Stop → yeniden
    Load Recipe → Run** gerekir. Kaynak tablosu kamera, kalibrasyon ve birimi;
    ipuçları profil/köken ayrıntısını gösterir. Stop geç sonucu ve görüntüyü bastırır.
+   **Tüm araçları göster** varsayılan açıktır; seçili kaynağın güncel çevrimindeki
+   araçları ayrı renk/etiketlerle ham görüntüde gösterir. Kesikli çizgiler tarama
+   alanı, düz çizgiler gerçek sonuçlardır. Kapatınca seçili araç ve varsa aynı
+   geometrili işlenmiş görüntü gösterilir; araç seçimi kenar profilini yönetir.
+   Tercih yereldir; yeniden çekim yapmaz ve reçeteyi değiştirmez.
    OECS sonuçlarında parça kararı NOT_EVALUATED, PLC/robot Kullanılamıyor kalır.
 9. **Logs**'ta normal ve eski/yeni OECS kayıtlarını seçin. Tek **Seçili kayıt türünü
    dışa aktar (CSV)** komutu seçilen türün exporter'ını kullanır; model ID/content/

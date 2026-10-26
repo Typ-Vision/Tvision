@@ -152,6 +152,7 @@ int main(int argc,char** argv){QCoreApplication app(argc,argv);try{
         RuntimeService runtime(dir.filePath("archive"),project.path()+".calibrations.json",RuntimeIdentity::localEngineer());reject([&]{runtime.checkConfiguration(*project.activeRecipe(),dir.path());});
         check(QImage(reinterpret_cast<const uchar*>(moved.constData()),256,256,256,QImage::Format_Grayscale8).save(path),"save moved actual PNG");
         const auto acquired=ExecutionService{}.run(definition,dir.path(),recipeId,"cfg",{}, {},{},resolver);done(acquired);check(acquired.acquisitions==1,"actual PNG acquisition executes tracked DAG");
+        for(const auto& id:consumers){const auto& r=result(acquired,id);check(r.overlayGeometry && r.overlayGeometry->reason.isEmpty() && !r.overlayGeometry->outlines.isEmpty() && !r.overlayGeometry->guides.isEmpty(),"24H execution owns actual pose-resolved raw geometry");if(id==consumers[2] || id==consumers[3])check(!r.overlayGeometry->resultLines.isEmpty(),"24H actual world fit shape has calibrated raw projection");}
         for(const auto& id:consumers)check(result(acquired,id).state==ExecutionState::Done && result(acquired,id).decision==PartDecision::NotEvaluated,"tracked tool result is separate from part decision");
         check(QImage(reinterpret_cast<const uchar*>(bytes.constData()),256,256,256,QImage::Format_Grayscale8).save(path),"restore teaching fixture");
     }

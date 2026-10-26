@@ -6,6 +6,7 @@
 #include <QMouseEvent>
 #include <QWheelEvent>
 #include <QPainter>
+#include <QPainterPath>
 #include <QScrollBar>
 #include <cmath>
 #include <algorithm>
@@ -158,6 +159,30 @@ void ImageViewer::addResultLabel(const QString& text,QPointF at,const QColor& co
         toolOverlay_<<box;resultAnnotations_<<box;
     }
     toolOverlay_<<label;resultAnnotations_<<label;updateResultAnnotations();
+}
+void ImageViewer::setRuntimeOverlays(const RuntimeOverlayCollection& collection) {
+    resultAnnotations_.clear();for(auto* item:toolOverlay_){scene_->removeItem(item);delete item;}toolOverlay_.clear();
+    if(!imageItem_ || imageSize_!=collection.rawSize)return;
+    for(const auto& layer:collection.layers){
+        const auto first=toolOverlay_.size();QPen pen(layer.color,2);pen.setCosmetic(true);
+        auto path=[&](const QVector<QPointF>& points,const QPen& p){if(points.isEmpty())return;QPainterPath v;v.moveTo(points.first());for(int i=1;i<points.size();++i)v.lineTo(points[i]);toolOverlay_<<scene_->addPath(v,p);};
+        QPen scanPen(layer.color,1,Qt::DashLine);scanPen.setCosmetic(true);
+        for(const auto& scan:layer.scans)path(scan,scanPen);
+        for(const auto& guide:layer.guides){toolOverlay_<<scene_->addLine(guide,scanPen);const auto d=guide.p2()-guide.p1();const double length=guide.length();if(length>0){const auto u=d/length;const auto n=QPointF(-u.y(),u.x());path({guide.p2()-u*4+n*3,guide.p2(),guide.p2()-u*4-n*3},scanPen);}}
+        if(!layer.mask.pixels.isEmpty() && layer.mask.size.width()>0 && layer.mask.size.height()>0 && qint64(layer.mask.size.width())*layer.mask.size.height()==layer.mask.pixels.size()){
+            QImage mask(layer.mask.size,QImage::Format_ARGB32_Premultiplied);mask.fill(Qt::transparent);
+            auto color=layer.color;color.setAlpha(90);for(int y=0;y<mask.height();++y){auto* row=reinterpret_cast<QRgb*>(mask.scanLine(y));for(int x=0;x<mask.width();++x)if(layer.mask.pixels[y*mask.width()+x])row[x]=qPremultiply(color.rgba());}
+            auto* item=scene_->addPixmap(QPixmap::fromImage(mask));item->setPos(layer.mask.origin);toolOverlay_<<item;
+        }
+        for(const auto& r:layer.regions)toolOverlay_<<scene_->addRect(r,pen);
+        for(const auto& line:layer.lines)toolOverlay_<<scene_->addLine(line,pen);
+        for(const auto& code:layer.codes.items){auto corners=code.corners;if(!corners.isEmpty())corners<<corners.first();path(corners,pen);}
+        for(const auto& p:layer.points){auto* item=scene_->addEllipse(-3,-3,6,6,pen,QBrush(QColor("#101923")));item->setPos(p);item->setFlag(QGraphicsItem::ItemIgnoresTransformations);toolOverlay_<<item;}
+        QPen rejected(QColor("#ff6666"),2);rejected.setCosmetic(true);for(const auto& p:layer.rejected){auto* item=scene_->addEllipse(-5,-5,10,10,rejected);item->setPos(p);item->setFlag(QGraphicsItem::ItemIgnoresTransformations);toolOverlay_<<item;}
+        QPointF at;if(!layer.scans.isEmpty() && !layer.scans.first().isEmpty())at=layer.scans.first().first();else if(!layer.points.isEmpty())at=layer.points.first();else if(!layer.lines.isEmpty())at=layer.lines.first().p1();else if(!layer.regions.isEmpty())at=layer.regions.first().topLeft();
+        addResultLabel(layer.name+" • "+layer.state,at,layer.color,true);
+        for(auto i=first;i<toolOverlay_.size();++i){if(toolOverlay_[i]->zValue()<5)toolOverlay_[i]->setZValue(qgraphicsitem_cast<QGraphicsPixmapItem*>(toolOverlay_[i]) ? 1:2);toolOverlay_[i]->setData(0,"runtimeOverlay");toolOverlay_[i]->setData(1,layer.toolId);toolOverlay_[i]->setToolTip(layer.name+"\n"+layer.detail);}
+    }
 }
 void ImageViewer::setCodeOverlay(const CodeResults& codes) {
     if(!imageItem_)return;

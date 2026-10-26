@@ -44,6 +44,7 @@ public:
     ProductionCycle begin(const QJsonObject& communication={});
     void requireReady() const;
     void finish(quint64 ticket,const CycleResult&);
+    static bool presentationMatches(const CycleResult&,const std::shared_ptr<const ProductionSnapshot>&);
     static bool sameCompletion(const CycleResult&,const CycleResult&);
     std::shared_ptr<RuntimeDiagnostics> diagnostics() const {return diagnostics_;}
     void observeInstallation(const Recipe&);

@@ -40,6 +40,7 @@ public:
     ~MainWindow() override;
     bool verifyMultiSource(const QString& artifacts);
     bool verifyMultiSourceRuntime(const QString& artifacts);
+    bool verifyRuntimeOverlays(const QString& artifacts);
     bool verifyRuntimeVisibility(const QString& artifacts);
     bool verifyShell();
     bool verifyEditorResponsiveness(const QString& artifacts);

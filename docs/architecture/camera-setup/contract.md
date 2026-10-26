@@ -235,6 +235,12 @@ değişmez. Yeni reçete eski proje referanslarını miras almaz. Aktif Runtime
 yüklediği immutable snapshot'ı kullanır; kamera/model değişimi durdurma ve yeniden
 hazırlama ister. Yeni aktif modeli çalışan çevrime sessiz ekleme yoktur.
 
+Runtime çoklu viewer sunumu aynı immutable snapshot, kaynak ve gerçek çevrim/kare
+ile sınırlıdır. Tarama geometrisi yürütmenin çözülmüş referenceBinding/poseTracking
+kanıtından gelir; UI nominal fallback veya yeni edinim üretmez. Koleksiyon salt
+okunurdur; yerel tüm-araçlar tercihi reçeteyi/sonucu değiştirmez.
+[Uygulanan sunum API ve uzay sözleşmesi](runtime-overlays.md).
+
 ## C5 — Deneysel mm, üretim ve kanıt
 
 EXP-02'nin eksik kalibrasyon kökeni ve EXP-03'ün Raw/px sınırı kontrollü genişletilir.
