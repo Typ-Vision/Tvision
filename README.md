@@ -100,6 +100,7 @@ build altında, yerel panel ayarları config/local.ui.ini içindedir.
 - Güncel görev ve engeller: [progress](docs/progress.md).
 - Aktif geliştirme: [CCUX plan indeksi](docs/architecture/camera-setup/README.md),
   ortak sözleşme ve yalnız seçili kart. Hand-eye bu paketin dışında.
+- Yeni haberleşme fazı: [uygulama kartları ve başlatma mesajı](docs/architecture/communication/README.md).
 - Kamera backend/kimlik: [ICM](docs/architecture/industrial-camera-plan.md).
 - UI/ürün kuralları: [UI gereksinimleri](docs/requirements/02_machine_vision_ui_gereksinimleri.md).
 - Proje/katman: [proje formatı](docs/architecture/project-format.md),

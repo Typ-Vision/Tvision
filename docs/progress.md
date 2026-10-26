@@ -4,14 +4,15 @@
 
 ## Devam noktası
 
-**[COMM-PLAN-01 tamam](archive/2026-10-26-comm-plan-01.md):** Kullanıcının yeni
-fazı haberleşme verileri. [Araştırma ve önerilen kart sırası](architecture/communication-data-phase.md):
-typed değişkenler, çoklu Set Variables, Result/Publish, dış tetik, kalıcı teslim,
-Modbus/OPC UA ve robot pose. Yalnız araştırma/plan; uygulama ve saha kabulü yok.
-**[COMM-DATA-01](archive/2026-10-26-comm-data-01.md):** PDF incelendi;
-[kalibrasyon için temel veri tipleri](architecture/robot-spatial-data-review.md).
-Kullanıcı kapsamı yalnız bu tipleri öğrenmeye daralttı; detaylı plan sonra.
-COMM-01 henüz başlamadı. Codebase-memory indeks/kapsama önkoşulu açık.
+**[COMM-PLAN-02 hazır](archive/2026-10-26-comm-plan-02.md):** Haberleşme fazı
+[38 sıralı karta](architecture/communication/README.md) bölündü; Sol 6.1 medium/low
+için tek hedef/kapsam/kabul/devir. Çoklu Set Variables, Result/Publish, dış tetik,
+kalıcı teslim, TCP→Modbus→OPC UA; Pose/CalibrationSample yalnız veri temeli.
+**İlk COMM-01:** kaynak/kapsama envanteri ve baseline. Uygulama başlamadı;
+codebase-memory araçları bu oturumda yoktu, indeks/kapsama önkoşulu açık.
+[Araştırma](architecture/communication-data-phase.md) ve
+[veri tipi notu](architecture/robot-spatial-data-review.md) korunur.
+Hand-eye solver/robot hareketi kapsam dışı; fiziksel kabul COMM-38'de ayrı.
 Aşağıdaki engeller korunur.
 
 **[INT-10 tamam](archive/2026-10-26-int-10.md):** CameraIntegration, geçmişi
