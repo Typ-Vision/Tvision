@@ -4,11 +4,12 @@
 
 ## Devam noktası
 
-**[CCUX-24C tamam](archive/2026-10-26-ccux-24c.md):** Ortak kontrol durumu;
-yeni Circle calibrated/mm; mevcut pixel ve immutable model kanıtı korunur.
-Release, ilgili regresyonlar ve 1400×900/850×600 görsel kontrolü.
+**[CCUX-24D tamam](archive/2026-10-26-ccux-24d.md):** mm/px üç basamak;
+No-op/Save/reopen özgün double'ı korur; açık edit/minimum.
+[Envanter](architecture/camera-setup/24d-input-inventory.md).
+[24C](archive/2026-10-26-ccux-24c.md) ortak kontrol/Circle calibrated ve
 [24B](archive/2026-10-26-ccux-24b-completion.md) korunur.
-Güncel kullanıcı sırası: 24C→[24D](architecture/camera-setup/24d-input-precision.md)→24E.
+Sıradaki: [24E](architecture/camera-setup/24e-cursor-zoom.md).
 [Plan](architecture/camera-setup/24-usability-plan.md): Kalibre Et korunur; Robot pasif.
 
 **[INT-09 tamam](archive/2026-10-25-int-09.md):** Yerel CameraIntegration ve

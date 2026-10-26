@@ -1,3 +1,4 @@
+#include "PrecisionInput.hpp"
 #include "PoseMatchEditor.hpp"
 #include <QFormLayout>
 #include <QLabel>
@@ -17,14 +18,14 @@ PoseMatchEditor::PoseMatchEditor(const QString& kind,const QJsonObject& p,QWidge
         else if(key=="scaleStep"){lo=.02;hi=.5;}
         else if(key=="nmsDistance"){lo=2;hi=1024;}
         else if(key=="pyramidLevels" || key=="maxCandidates"){lo=key=="pyramidLevels" ? 1:2;hi=key=="pyramidLevels" ? 3:32;n->setDecimals(0);}
-        n->setRange(lo,hi);n->setValue(it->toDouble());form->addRow(key,n);connect(n,&QDoubleSpinBox::editingFinished,this,[this]{if(onChanged)onChanged();});
+        n->setRange(lo,hi);loadPrecisionInput(n,it->toDouble(),key=="nmsDistance",key=="nmsDistance");form->addRow(key,n);connect(n,&QDoubleSpinBox::editingFinished,this,[this]{if(onChanged)onChanged();});
     }
     auto* selection=new QComboBox;selection->setObjectName("pose_selection");selection->addItems({"reject_ambiguous","best"});selection->setCurrentText(p["selection"].toString());form->addRow("Selection",selection);connect(selection,&QComboBox::currentIndexChanged,this,[this]{if(onChanged)onChanged();});
-    for(const auto key:{"x","y"}){auto* n=new QDoubleSpinBox;n->setObjectName(QString("pose_anchor_")+key);n->setDecimals(9);n->setRange(0,255);n->setValue(p["anchor"].toObject()[key].toDouble());form->addRow(QString("Anchor ")+key+" (model px)",n);connect(n,&QDoubleSpinBox::editingFinished,this,[this]{if(onChanged)onChanged();});}
+    for(const auto key:{"x","y"}){auto* n=new QDoubleSpinBox;n->setObjectName(QString("pose_anchor_")+key);n->setDecimals(9);n->setRange(0,255);loadPrecisionInput(n,p["anchor"].toObject()[key].toDouble(),true);form->addRow(QString("Anchor ")+key+" (model px)",n);connect(n,&QDoubleSpinBox::editingFinished,this,[this]{if(onChanged)onChanged();});}
 }
-QPointF PoseMatchEditor::teachingAnchor() const {return {findChild<QDoubleSpinBox*>("pose_anchor_x")->value(),findChild<QDoubleSpinBox*>("pose_anchor_y")->value()};}
+QPointF PoseMatchEditor::teachingAnchor() const {return {precisionValue(findChild<QDoubleSpinBox*>("pose_anchor_x")),precisionValue(findChild<QDoubleSpinBox*>("pose_anchor_y"))};}
 QJsonObject PoseMatchEditor::parameters() const {
-    auto p=original_;for(auto it=original_.begin();it!=original_.end();++it)if(it->isDouble())p[it.key()]=findChild<QDoubleSpinBox*>("pose_"+it.key())->value();
+    auto p=original_;for(auto it=original_.begin();it!=original_.end();++it)if(it->isDouble())p[it.key()]=precisionValue(findChild<QDoubleSpinBox*>("pose_"+it.key()));
     p["selection"]=findChild<QComboBox*>("pose_selection")->currentText();
     if(!p["anchor"].toObject().isEmpty()){const auto a=teachingAnchor();p["anchor"]=QJsonObject{{"x",a.x()},{"y",a.y()}};}
     return p;

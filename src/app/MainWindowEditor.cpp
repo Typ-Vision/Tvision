@@ -1,3 +1,4 @@
+#include "PrecisionInput.hpp"
 #include "application/EditorObservation.hpp"
 #include "application/CalibrationWorkflow.hpp"
 #include "application/ExperimentalOecsAcquisition.hpp"
@@ -381,7 +382,7 @@ void MainWindow::showToolPropertiesView(const EditorContext& context,const std::
         auto* fitPanel=new QWidget;auto* fitForm=new QFormLayout(fitPanel);fitForm->setContentsMargins(0,0,0,0);fitForm->setRowWrapPolicy(QFormLayout::WrapAllRows);fitPanel->hide();
         auto* fitButton=new QPushButton("Refit ayarları…");form->addRow(fitButton);connect(fitButton,&QPushButton::clicked,fitPanel,[fitPanel]{fitPanel->setVisible(!fitPanel->isVisible());});
         for(auto i=defaults.begin();i!=defaults.end();++i)if(i->isDouble()){
-            auto* n=new QDoubleSpinBox;n->setObjectName("gm_"+i.key());n->setDecimals(i.key()=="fitMinPoints" ? 0:9);n->setRange(-1e9,1e12);n->setValue(tool.parameters.value(i.key()).toDouble(i->toDouble()));
+            auto* n=new QDoubleSpinBox;n->setObjectName("gm_"+i.key());n->setDecimals(i.key()=="fitMinPoints" ? 0:9);n->setRange(-1e9,1e12);const bool length=(QStringList{"lower","upper","nominal"}.contains(i.key()) && tool.parameters["operation"]!="line_angle") || QStringList{"fitInlierDistance","fitMaxRms","fitMaxResidual","lineMinSpan"}.contains(i.key());loadPrecisionInput(n,tool.parameters.value(i.key()).toDouble(i->toDouble()),length,length && (i.key().startsWith("fit") || i.key()=="lineMinSpan"));
             const bool limit=i.key()=="lower" || i.key()=="upper" || i.key()=="nominal";
             (limit ? form:fitForm)->addRow(i.key()+(limit ? (tool.parameters["operation"]=="line_angle" ? " (deg)":tool.parameters["mode"]=="pixel" ? " (px)":" (mm)"):""),n);connect(n,&QDoubleSpinBox::editingFinished,this,[this]{applyToolProperties();});
         }
@@ -404,9 +405,9 @@ void MainWindow::showToolPropertiesView(const EditorContext& context,const std::
         const auto saved=tool.parameters["scanRoi"].toObject();if(!saved.isEmpty())scan=std::get<ScanSegment>(ToolRoi::fromJson(saved).geometry);
         auto* draw=new QPushButton("Ok çiz (A → B)");draw->setObjectName("edgeDraw");draw->setEnabled(frame.has_value() && !editorSession_.busy());form->addRow(draw);
         connect(draw,&QPushButton::clicked,this,[this]{if(auto* dialog=findChild<QDialog*>("roiGeometryDialog"))dialog->close();refreshMatchOverlay();if(!editorSession_.busy() && applyToolProperties() && setDrawingImage())imageViewer_->beginRoi(0);});
-        for(const auto& entry:QVector<QPair<QString,double>>{{"ax",scan.start.x()},{"ay",scan.start.y()},{"bx",scan.end.x()},{"by",scan.end.y()},{"width",scan.width}}){auto* spin=new QDoubleSpinBox;spin->setObjectName("scan_"+entry.first);spin->setDecimals(9);spin->setRange(entry.first=="width" ? .000000001:-1e8,entry.first=="width" ? 1024:1e8);spin->setValue(entry.second);form->addRow(entry.first+(isWorldPoseTracking(tool) ? " (nominal world mm)":" (raw px)"),spin);}
+        for(const auto& entry:QVector<QPair<QString,double>>{{"ax",scan.start.x()},{"ay",scan.start.y()},{"bx",scan.end.x()},{"by",scan.end.y()},{"width",scan.width}}){auto* spin=new QDoubleSpinBox;spin->setObjectName("scan_"+entry.first);spin->setDecimals(9);spin->setRange(entry.first=="width" ? .000000001:-1e8,entry.first=="width" ? 1024:1e8);loadPrecisionInput(spin,entry.second,true,entry.first=="width");form->addRow(entry.first+(isWorldPoseTracking(tool) ? " (nominal world mm)":" (raw px)"),spin);}
         auto* apply=new QPushButton("Koordinatları uygula");apply->setObjectName("edgeApplyScan");apply->setEnabled(frame.has_value() && !editorSession_.busy());form->addRow(apply);
-        connect(apply,&QPushButton::clicked,this,[this,frameId]{if(auto* dialog=findChild<QDialog*>("roiGeometryDialog"))dialog->close();refreshMatchOverlay();if(editorSession_.busy() || !applyToolProperties())return;auto value=[this](const char* key){return propertiesBody_->findChild<QDoubleSpinBox*>(QString("scan_")+key)->value();};try{ToolRoi roi{{frameId},ScanSegment{{value("ax"),value("ay")},{value("bx"),value("by")},value("width")}};if(!editorSession_.frame || (roi.frame.unit==LengthUnit::Pixel && !roi.inside(editorSession_.frame->size())))throw std::runtime_error("Ok şeridi görüntü sınırları dışında.");imageViewer_->setRoi(roi);}catch(const std::exception& e){displayError(QString::fromUtf8(e.what()));}});
+        connect(apply,&QPushButton::clicked,this,[this,frameId]{if(auto* dialog=findChild<QDialog*>("roiGeometryDialog"))dialog->close();refreshMatchOverlay();if(editorSession_.busy() || !applyToolProperties())return;auto value=[this](const char* key){return precisionValue(propertiesBody_->findChild<QDoubleSpinBox*>(QString("scan_")+key));};try{ToolRoi roi{{frameId},ScanSegment{{value("ax"),value("ay")},{value("bx"),value("by")},value("width")}};if(!editorSession_.frame || (roi.frame.unit==LengthUnit::Pixel && !roi.inside(editorSession_.frame->size())))throw std::runtime_error("Ok şeridi görüntü sınırları dışında.");imageViewer_->setRoi(roi);}catch(const std::exception& e){displayError(QString::fromUtf8(e.what()));}});
         auto* reverse=new QPushButton("Yönü ters çevir");reverse->setObjectName("edgeReverse");reverse->setEnabled(!saved.isEmpty() && frame.has_value() && !editorSession_.busy());form->addRow(reverse);
         connect(reverse,&QPushButton::clicked,this,[this]{if(auto* dialog=findChild<QDialog*>("roiGeometryDialog"))dialog->close();refreshMatchOverlay();if(editorSession_.busy() || !applyToolProperties())return;try{for(auto t:service_.tools())if(t.id==selectedToolId_){auto roi=ToolRoi::fromJson(t.parameters["scanRoi"].toObject());auto& g=std::get<ScanSegment>(roi.geometry);std::swap(g.start,g.end);imageViewer_->setRoi(roi);break;}}catch(const std::exception& e){displayError(QString::fromUtf8(e.what()));}});
         form->addRow(note(saved.isEmpty() ? "Ok öğretilmedi; çizim veya koordinatları uygula gerekir.":"Ok reçeteye bağlıdır; tutamaçları sürükleyin. Ctrl+Z geometriyi geri alır. Escape çizimi iptal eder."));
@@ -447,7 +448,7 @@ void MainWindow::showToolPropertiesView(const EditorContext& context,const std::
     } else if(tool.kind=="measurement") {
         form->addRow("Operation",note("Distance (mm) / inclusive tolerance"));
         for(const auto key:{"lowerMm","upperMm"}) {
-            auto* value=new QDoubleSpinBox;value->setObjectName(key);value->setDecimals(6);value->setRange(0,1000000000);value->setSuffix(" mm");value->setValue(tool.parameters[key].toDouble());form->addRow(QString(key)=="lowerMm" ? "Alt tolerans" : "Üst tolerans",value);
+            auto* value=new QDoubleSpinBox;value->setObjectName(key);value->setDecimals(6);value->setRange(0,1000000000);value->setSuffix(" mm");loadPrecisionInput(value,tool.parameters[key].toDouble(),true);form->addRow(QString(key)=="lowerMm" ? "Alt tolerans" : "Üst tolerans",value);
             connect(value,&QDoubleSpinBox::editingFinished,this,[this]{applyToolProperties();});
         }
     } else form->addRow("Operation",note("Euclidean Distance (px)"));
@@ -658,13 +659,13 @@ ToolDefinition MainWindow::readToolProperties(ToolDefinition tool) const {
     if(auto* contrast=propertiesBody_->findChild<QDoubleSpinBox*>("minContrast"))tool.parameters["minContrast"]=contrast->value();
     if(auto* index=propertiesBody_->findChild<QSpinBox*>("webcamIndex"))tool.parameters["deviceIndex"]=index->value();
     if(auto* timeout=propertiesBody_->findChild<QSpinBox*>("webcamTimeout"))tool.parameters["timeoutMs"]=timeout->value();
-    for(const auto key:{"lowerMm","upperMm"})if(auto* value=propertiesBody_->findChild<QDoubleSpinBox*>(key))tool.parameters[key]=value->value();
+    for(const auto key:{"lowerMm","upperMm"})if(auto* value=propertiesBody_->findChild<QDoubleSpinBox*>(key))tool.parameters[key]=precisionValue(value);
     if(tool.kind=="geometry_measurement"){
         auto p=tool.parameters;const auto defaults=geometryMeasurementDefaults();
         for(auto i=defaults.begin();i!=defaults.end();++i){const auto id="gm_"+i.key();
             if(auto* c=propertiesBody_->findChild<QComboBox*>(id))p[i.key()]=c->currentText();
             else if(auto* c=propertiesBody_->findChild<QCheckBox*>(id))p[i.key()]=c->isChecked();
-            else if(auto* n=propertiesBody_->findChild<QDoubleSpinBox*>(id))p[i.key()]=n->value();
+            else if(auto* n=propertiesBody_->findChild<QDoubleSpinBox*>(id))p[i.key()]=precisionValue(n);
         }
         if(p["operation"]=="line_intersection")p["toleranceEnabled"]=false;
         if(!tool.parameters.contains("toleranceEnabled") && p["toleranceEnabled"]==defaults["toleranceEnabled"] && p["nominal"]==defaults["nominal"] && p["lower"]==defaults["lower"] && p["upper"]==defaults["upper"])

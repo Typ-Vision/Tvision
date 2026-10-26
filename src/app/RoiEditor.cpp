@@ -1,3 +1,4 @@
+#include "PrecisionInput.hpp"
 #include <QString>
 #include "RoiEditor.hpp"
 #include "ImageViewer.hpp"
@@ -25,12 +26,12 @@ class RoiEditor : public QDialog {
     QString frame_;
     void populate(QJsonObject g){
         geometry_=g;table_->setRowCount(0);
-        auto add=[&](QString key,double value){int row=table_->rowCount();table_->insertRow(row);auto* label=new QTableWidgetItem(key);label->setFlags(label->flags() & ~Qt::ItemIsEditable);table_->setItem(row,0,label);auto* spin=new QDoubleSpinBox;spin->setRange(-1e8,1e8);spin->setDecimals(9);spin->setValue(value);table_->setCellWidget(row,1,spin);};
+        auto add=[&](QString key,double value){int row=table_->rowCount();table_->insertRow(row);auto* label=new QTableWidgetItem(key);label->setFlags(label->flags() & ~Qt::ItemIsEditable);table_->setItem(row,0,label);auto* spin=new QDoubleSpinBox;spin->setRange(-1e8,1e8);spin->setDecimals(9);loadPrecisionInput(spin,value,coordinateLength(key),positiveExtent(key));table_->setCellWidget(row,1,spin);};
         for(auto it=g.begin();it!=g.end();++it){if(it->isDouble())add(it.key(),it->toDouble());else if(it.key()=="vertices"){const auto points=it->toArray();for(int i=0;i<points.size();++i){const auto p=points[i].toArray();add(QString("P%1.x").arg(i+1),p[0].toDouble());add(QString("P%1.y").arg(i+1),p[1].toDouble());}}else if(it->isArray()){const auto p=it->toArray();add(it.key()+".x",p[0].toDouble());add(it.key()+".y",p[1].toDouble());}}
     }
     QJsonObject read() const {
         auto g=geometry_;auto points=g.value("vertices").toArray();
-        for(int row=0;row<table_->rowCount();++row){const auto key=table_->item(row,0)->text();const auto value=static_cast<QDoubleSpinBox*>(table_->cellWidget(row,1))->value();const auto dot=key.indexOf('.');if(dot<0)g[key]=value;else {const auto name=key.left(dot);const int axis=key.endsWith('x') ? 0:1;if(name.startsWith('P')){const int i=name.mid(1).toInt()-1;auto p=points[i].toArray();p[axis]=value;points[i]=p;}else{auto p=g[name].toArray();p[axis]=value;g[name]=p;}}}
+        for(int row=0;row<table_->rowCount();++row){const auto key=table_->item(row,0)->text();const auto value=precisionValue(static_cast<QDoubleSpinBox*>(table_->cellWidget(row,1)));const auto dot=key.indexOf('.');if(dot<0)g[key]=value;else {const auto name=key.left(dot);const int axis=key.endsWith('x') ? 0:1;if(name.startsWith('P')){const int i=name.mid(1).toInt()-1;auto p=points[i].toArray();p[axis]=value;points[i]=p;}else{auto p=g[name].toArray();p[axis]=value;g[name]=p;}}}
         if(g.contains("vertices"))g["vertices"]=points;return g;
     }
     void defaults(){

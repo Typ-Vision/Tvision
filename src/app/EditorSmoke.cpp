@@ -1,3 +1,5 @@
+#include "domain/GeometryMeasurementConfig.hpp"
+#include <QKeyEvent>
 #include <QMouseEvent>
 #include "MetrologyEditor.hpp"
 #include "MainWindow.hpp"
@@ -639,6 +641,16 @@ bool MainWindow::verifyGeometry(const QString& artifacts){
     service_.setConnections({{source,"image",edge,"image"},{source,"image",edge2,"image"},{source,"image",line,"image"}});refreshWorkspace();selectPage("editor");runFlow();wait();check(editorSession_.frame.has_value(),"Geometry acquired frame");
     service_.setCalibrationSetup("lens","plane");const auto frame=*editorSession_.frame;const auto setup=CalibrationWorkflow::installation(*service_.activeRecipe(),frame);auto sample=[&](QString name,QPointF a,QPointF b,double mm){return CalibrationSample{name,{a,setup.source},{b,setup.source},mm};};const auto accepted=MeasurementService{}.validate(CalibrationWorkflow::teach(*service_.activeRecipe(),frame,"geometry-scale",1,sample("teach",{0,0},{100,0},10)),{sample("x",{10,20},{110,20},10),sample("y",{30,10},{30,110},10)},.001);const auto catalog=service_.path()+".calibrations.json";CalibrationService(catalog).save(accepted);CalibrationWorkflow::bind(service_,frame,catalog,"geometry-scale");refreshWorkspace();
     QListWidgetItem* item=nullptr;for(int i=0;i<toolbox_->count();++i)if(toolbox_->item(i)->data(Qt::UserRole)=="geometry_measurement")item=toolbox_->item(i);check(item,"Geometry Toolbox");toolbox_->setCurrentItem(item);findChild<QPushButton*>("addTool")->click();const auto id=selectedToolId_;
+    // CCUX-24D: real recipe commit/save/reopen retains untouched doubles.
+    for(auto t:service_.tools())if(t.id==id){t.parameters["nominal"]=1.23456789;t.parameters["fitMaxRms"]=.000123456789;service_.updateTool(t);}
+    selectTool(id);const auto precisionDefinition=service_.activeRecipe()->definition;service_.save();const auto precisionRevision=service_.activeRecipe()->recipeVersion;
+    check(applyToolProperties() && service_.activeRecipe()->definition==precisionDefinition,"precision no-op Properties preserves recipe content");
+    selectTool(source);selectTool(id);check(applyToolProperties(),"precision tool switch commit");service_.save();check(service_.activeRecipe()->recipeVersion==precisionRevision,"precision no-op save hash/version");
+    const auto precisionRecipe=service_.activeRecipe()->id;service_.openProject(service_.path());service_.selectRecipe(precisionRecipe);refreshWorkspace();selectTool(id);check(applyToolProperties() && service_.activeRecipe()->definition==precisionDefinition,"precision save reopen retains exact recipe");
+    propertiesBody_->findChild<QCheckBox*>("gm_toleranceEnabled")->toggle();
+    for(const auto& t:service_.tools())if(t.id==id)check(t.parameters["nominal"]==1.23456789 && t.parameters["fitMaxRms"]==.000123456789,"unrelated real recipe commit keeps legacy precision");
+    auto* preciseInput=propertiesBody_->findChild<QDoubleSpinBox*>("gm_nominal");preciseInput->selectAll();for(const auto ch:QString("1.235")){QKeyEvent key(QEvent::KeyPress,0,Qt::NoModifier,QString(ch));QApplication::sendEvent(preciseInput,&key);}check(applyToolProperties(),"explicit three-decimal recipe edit");
+    for(auto t:service_.tools())if(t.id==id){check(t.parameters["nominal"]==1.235,"explicit recipe value committed");t.parameters=geometryMeasurementDefaults();service_.updateTool(t);}refreshWorkspace();selectTool(id);
     auto binding=[&](QString input,QString producer,QString port){auto* c=propertiesBody_->findChild<QComboBox*>("input_"+input);check(c && c->findData(producer+"/"+port)>0,"typed feature choice present");c->setCurrentIndex(c->findData(producer+"/"+port));wait();};
     auto operation=[&](QString op){selectTool(id);propertiesBody_->findChild<QComboBox*>("gm_operation")->setCurrentText(op);wait();};
     auto result=[&]()->ToolResult{check(editorSession_.cycle.has_value(),"Geometry UI cycle");for(const auto& r:editorSession_.cycle->tools)if(r.toolId==id)return r;throw std::runtime_error("Geometry result absent");};

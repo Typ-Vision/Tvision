@@ -6,6 +6,7 @@ görev” ifadeleri yazıldıkları tarihe aittir.
 
 | Dönem / görev | Kayıt |
 | --- | --- |
+| 26 Ekim 2026 — CCUX-24D | [Üç basamak, kayıpsız özgün değer ve açık edit](2026-10-26-ccux-24d.md) |
 | 26 Ekim 2026 — CCUX-24C | [Ortak kontrol durumu ve yeni Circle calibrated başlangıcı](2026-10-26-ccux-24c.md) |
 | 26 Ekim 2026 — CCUX-24B kapanış | [Yarım kalan teslimin doğrulanması ve tek commit ile kapanışı](2026-10-26-ccux-24b-completion.md) |
 | 26 Ekim 2026 — CCUX-24B | [Kalıcı Flow, sade sonuçlar ve Properties; Release/test/görsel kabul](2026-10-26-ccux-24b.md) |

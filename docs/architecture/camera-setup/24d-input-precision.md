@@ -1,6 +1,7 @@
 # CCUX-24D — üç ondalıklı giriş, kayıpsız mevcut değer
 
-Durum: planlandı; 24C sonrası. [Ortak plan](24-usability-plan.md) ve
+Durum: tamamlandı; [kapanış](../../archive/2026-10-26-ccux-24d.md),
+[alan envanteri ve edit sözleşmesi](24d-input-inventory.md). [Ortak plan](24-usability-plan.md) ve
 [analiz](24-usability-analysis.md) 6 okunur. Sonraki: 24E.
 
 ## Envanter ve sınır
