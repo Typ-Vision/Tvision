@@ -139,6 +139,13 @@ sessiz gevşetilmez. Preview gerçek sonuç değildir; sahte mm/PASS yoktur.
 | Kopma/restart | Kayıt korunur, kullanım izni düşer; exact yeniden bağlantı/uyumla aynı matematik kullanılabilir; aktif üretim kendiliğinden başlamaz |
 | Kalibrasyon değişimi | İlgili metrik downstream ve world ROI/reference yeniden denetlenir; başka kaynak etkilenmez |
 
+Kontrol sunumu model kaydının kendi örnek/residual/sınır ve `controlAccepted`
+kanıtını birlikte kullanır: yapılmadı/bilinmiyor, ölçüm var sınır yok, sınır içinde,
+sınır dışında. Fit/RMS ve eski model validation bu kontrolün yerine geçmez.
+Kontrol başarısı `physicalAcceptance`, admission veya PLC/robot iznini değiştirmez.
+Editor/Runtime rutin sabit fiziksel kabul cümlesi göstermez; gerçek hatalar korunur.
+Tarihsel çevrim sunumu kayıtlı immutable modele bağlıdır; güncel modelden türetilmez.
+
 Fiziksel lens/konum değişimi yazılımla algılanamayabilir: ayrıntılarda “Optik /
 kamera konumu değişti” bildirimi bulunur. Geometriye etkili ayarlar sırf profil
 adı altında oldukları için exposure gibi ele alınmaz. Restart uyum kontrolü

@@ -50,6 +50,8 @@ public:
     const QVector<double>& residualsMillimetres() const {return residuals_;}
     const std::optional<bool>& controlAccepted() const {return accepted_;}
     const QString& contentId() const {return contentId_;}
+    // Presentation only: independent control never grants physical/production admission.
+    QString controlSummary() const;
     bool activatable() const;
     bool experimentallyActivatable() const;
 private:

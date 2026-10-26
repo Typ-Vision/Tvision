@@ -223,7 +223,7 @@ QString ExperimentalRuntime::sourceSummary(const QJsonObject& entry,const QStrin
     else if(!camera.isEmpty())text+=" • Kamera: "+camera["id"].toString()+" / "+camera["name"].toString();
     if(model.isEmpty())return text+" • Raw / px • metrik model kullanılmıyor";
     const auto typed=decodeModel(model,source);const auto& active=typed.snapshot.calibration;
-    return text+QString(" • mm • %1 v%2 • Model: %3 • Content: %4 • Bağımsız fiziksel kabul yapılmadı")
+    return text+QString(" • mm • %1 v%2 • Model: %3 • Content: %4")
         .arg(active.record.name()).arg(active.selection.version).arg(active.selection.id,active.selection.contentId);
 }
 namespace {

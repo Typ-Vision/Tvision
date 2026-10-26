@@ -276,6 +276,12 @@ Seçili Line Fit/Circle için nominal kılavuz Run öncesi de N tarama oku göst
 bulunan nokta sayısıyla azalmaz. Circle iç→dış veya dış→iç yönünü, Line Fit gerçek
 kutu scan eksenini kullanır. Saf yerleşim hesabı yürütücüyle ortaktır; world ROI
 mevcut raw dönüşümünden geçer. Tam dairede uç tekrarı yok, signed yayda iki uç dahil.
+Yeni Circle uygulama oluşturma komutunda `calibrated` açılır;
+`scanWidth`, `inlierDistance`, `maxResidual`, `unitsPerSample` 0.1,
+`maxRms` 0.035 başlangıçlarını kullanır. Domain/legacy decode varsayılanı,
+mevcut/kopyalanmış/import edilmiş pixel araçlar ve açık pixel seçimi korunur.
+Kalibrasyon eksikliği gerçek hata üretir; otomatik/global model atanmaz.
+
 Circle Basic Start/Sweep değişimi nominal geometriyi önizler; editingFinished ve
 Koordinatları uygula aynı doğrulamadan geçer. Geçersiz geçici sayı son geçerli ROI'yi
 bozmaz; önizleme reçeteyi değiştirmez ve eski fit göstermez. Yeni fit yalnız Run'dadır.

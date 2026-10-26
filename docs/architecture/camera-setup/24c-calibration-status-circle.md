@@ -1,6 +1,6 @@
 # CCUX-24C — kontrol durumları ve yeni Circle varsayılanı
 
-Durum: planlandı; 24B sonrası. [Ortak plan](24-usability-plan.md), contract
+Durum: uygulandı; [kapanış](../../archive/2026-10-26-ccux-24c.md). [Ortak plan](24-usability-plan.md), contract
 C3–C5 ve [analiz](24-usability-analysis.md) 2/5 okunur. Sonraki: 24D.
 
 ## Hedef ve dosya haritası

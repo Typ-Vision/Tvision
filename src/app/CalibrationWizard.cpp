@@ -116,7 +116,7 @@ CalibrationWizard::CalibrationWizard(bool plate,std::optional<ToolDefinition> so
     connect(button(finish,"Seçili çiftle kontrol et","wizardControl"),&QPushButton::clicked,this,[this]{attempt([this]{if(!resultRecord_ || points_->selectedItems().size()!=2)throw std::runtime_error("Hesaplanmış model ve iki farklı algılanmış nokta seçin.");
         const auto selected=points_->selectedItems();QPointF a,b;for(const auto& p:session_.points()){if(p.id==selected[0]->data(Qt::UserRole).toString())a=p.pixel;if(p.id==selected[1]->data(Qt::UserRole).toString())b=p.pixel;}
         auto controls=controls_;bool replaced=false;for(auto& sample:controls.samples)if((sample.first.position==a && sample.second.position==b) || (sample.first.position==b && sample.second.position==a)){sample.knownMillimetres=controlKnown_->value();replaced=true;break;}if(!replaced)controls.samples.append({uuid(),{a,setup_->source},{b,setup_->source},controlKnown_->value()});controls.limitMillimetres=limited_->isChecked() ? std::optional(limit_->value()):std::nullopt;
-        auto model=CalibrationModelRecord::create(resultRecord_->model(),*setup_,resultRecord_->image(),controls);controls_=controls;resultRecord_=model;pendingControl_=false;result_->setText(QString("Bağımsız kontrol: %1 mm fark. %2").arg(model.residualsMillimetres().last(),0,'g',10).arg(model.controlAccepted() ? (*model.controlAccepted() ? "Sınır içinde":"Sınır dışında — etkinleştirilemez"):"Kabul sınırı tanımlanmadı"));});});
+        auto model=CalibrationModelRecord::create(resultRecord_->model(),*setup_,resultRecord_->image(),controls);controls_=controls;resultRecord_=model;pendingControl_=false;result_->setText(QString("Bağımsız kontrol: %1 mm fark. %2").arg(model.residualsMillimetres().last(),0,'g',10).arg(model.controlSummary()));});});
     finish->addStretch();
     auto pending=[this]{if(checking_){pendingControl_=true;status_->setText("Kontrol girdisi değişti; yeniden kontrol edin.");}};
     connect(controlKnown_,&QDoubleSpinBox::valueChanged,this,pending);connect(limit_,&QDoubleSpinBox::valueChanged,this,pending);connect(limited_,&QCheckBox::toggled,this,pending);
@@ -151,7 +151,7 @@ void CalibrationWizard::setSaveAndUse(SaveUse command){saveUse_=std::move(comman
 void CalibrationWizard::showSaveResult(const CalibrationSaveUseResult& outcome){
     status_->clear();
     const auto prefix="";
-    const auto control=outcome.independentControlAccepted ? (*outcome.independentControlAccepted ? "Bağımsız kontrol sınır içinde.":"Bağımsız kontrol reddedildi.") : "Bağımsız fiziksel kontrol yapılmadı.";
+    const auto control=namedRecord_ ? namedRecord_->controlSummary() : resultRecord_ ? resultRecord_->controlSummary() : QString("Bağımsız kontrol yapılmadı / bilinmiyor");
     if(outcome.state==CalibrationSaveUseState::Activated){savedAndUsed_=true;independent_.closeCamera();activationProbe_.closeCamera();result_->setText(QString(prefix)+"Kaydedildi ve bu oturumda kullanıma hazır.\n"+control);back_->setEnabled(false);}
     else result_->setText(QString(prefix)+(outcome.state==CalibrationSaveUseState::CandidateSaved ? "Aday kaydedildi; kullanıma alınamadı. Önceki seçim korunuyor. Yeniden deneyebilirsiniz.\n":"Kaydet ve kullan tamamlanamadı. Önceki seçim korunuyor.\n")+outcome.error+"\n"+control);
     refresh();if(savedAndUsed_)back_->setEnabled(false);

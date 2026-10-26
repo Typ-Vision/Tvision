@@ -4,12 +4,12 @@
 
 ## Devam noktası
 
-**[CCUX-24B tamam](archive/2026-10-26-ccux-24b-completion.md):** Kalıcı sağ Flow,
-sade sonuçlar ve metrologi Properties; Release güncel, yeni CTest 4/4,
-1400×900/850×600 görsel kontrolü. Sonraki: [24C](architecture/camera-setup/24c-calibration-status-circle.md).
-Sıra yalnız 24B→24C; 24D yapılmayacak.
+**[CCUX-24C tamam](archive/2026-10-26-ccux-24c.md):** Ortak kontrol durumu;
+yeni Circle calibrated/mm; mevcut pixel ve immutable model kanıtı korunur.
+Release, ilgili regresyonlar ve 1400×900/850×600 görsel kontrolü.
+[24B](archive/2026-10-26-ccux-24b-completion.md) korunur.
+Güncel kullanıcı sırası: 24C→[24D](architecture/camera-setup/24d-input-precision.md)→24E.
 [Plan](architecture/camera-setup/24-usability-plan.md): Kalibre Et korunur; Robot pasif.
-24C: yalnız yeni Circle calibrated; kullanıcı Circle hata bildirimini geri çekti.
 
 **[INT-09 tamam](archive/2026-10-25-int-09.md):** Yerel CameraIntegration ve
 başlatıcı eşleşti; push/main değişmedi. [Kullanım/restart devri](architecture/camera-integration-handoff.md).
