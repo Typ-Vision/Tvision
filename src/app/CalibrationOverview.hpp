@@ -1,12 +1,14 @@
 #pragma once
 #include "application/MeasurementWorkspace.hpp"
 #include <QWidget>
-class QGridLayout;class QLabel;class QComboBox;class QTableWidget;
+class QDialog;class QPushButton;class QGridLayout;class QLabel;class QComboBox;class QTableWidget;
 namespace visionflow {
 class CalibrationOverview:public QWidget {
 public:
     explicit CalibrationOverview(std::function<MeasurementWorkspace*()> context,QWidget* parent=nullptr);
     void refresh();
+    void showCameraManagement();
+    void showProjectTransfers();
     void transferFile(const QString& action,const QString& path); // same command used by file chooser/tests
     std::function<void()> onChanged;
     std::function<void()> onCameraManager;
@@ -19,6 +21,7 @@ protected:
 private:
     void attempt(std::function<void()>);
     void activate();
+    void updateRecordAction();
     void configureCapture(IndependentCaptureRequest&) const;
     QString localSettings_;
     void migrate();
@@ -40,6 +43,8 @@ private:
     QComboBox *setups_,*profiles_;
     QTableWidget* records_;
     QVector<QWidget*> cardWidgets_;
+    QDialog *management_,*transfers_;
+    QPushButton *useRecord_,*deactivate_,*migrate_,*associate_;
     bool refreshing_=false;
 };
 }

@@ -1,5 +1,12 @@
 # Runtime, reçete yükleme ve tek araç çalışma planı
 
+Bu belgenin aşağıdaki P/T sıraları tarihsel plan bağlamıdır. Güncel ortak
+Editor/Runtime akışı [kullanım rehberinde](../camera-runtime-usage.md),
+Load → Verify → Run ve Stop/drain sözleşmesi [kaynak doğrulamada](source-verification.md),
+immutable completion/kayıt retry davranışı [kurtarmada](runtime-error-recovery.md)
+tanımlıdır. Eski binary yolları günlük başlatma hedefi değildir;
+`VisionFlow.cmd` → `build/reference-ui/visionflow.exe` kullanılır.
+
 9 Ekim tool planı revizyonu: [T0–T15 reçete tool planı](recipe-tools-plan.md) yeni kapsamın uygulama sırasıdır; ilk adım T0.1, lens en son T15. Bu plan P1–P6'yı yeniden açmaz, P7/6D.2'yi tamamlamaz. Görüntüden kod okuma eski P9'dan T3'e taşınmıştır; otomatik reçete seçimi ve OPC UA aynı iş değildir. T1 typed sonuç/kayıt, T10 genel karar ve explicit vf.socket/3 çoklu sonuç mapping'i planlar; mevcut vf.socket/2 uygulanmış sözleşmesi değişmedi. Aşağıdaki eski ileri aşama sıraları tarihsel kayıttır.
 
 9 Ekim güncel durum: **C1–C5 tamamlandı**. Setup → Calibration üç yöntem ve beş bölüm sunar: Manuel ölçek (px/mm), Bilinen uzunluktan ölçek ve Kalibrasyon plakası (perspektif). Manuel girdi boş başlar; px/mm ve salt okunur tersi, üretim sonucundan ayrı deneme, en az iki bağımsız doğrulama, katalog/recipe Save/reopen, gerçek Edge → Measurement → Runtime ve CSV bağlıdır. Güncel Release binary `build/manual-calibration-ui/visionflow.exe`; Measurement tool 2, execution/6. Sonraki P7/6D.2; K4 fiziksel kabul ertelenmiştir.

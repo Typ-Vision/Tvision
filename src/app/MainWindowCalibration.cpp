@@ -13,7 +13,7 @@ QWidget* MainWindow::makeCalibration() {
 }
 MeasurementWorkspace* MainWindow::measurementWorkspace(){
         const auto key=service_.hasProject() ? service_.path()+"\n"+service_.project().id:QString{};
-        if(key!=measurementWorkspaceKey_){measurementWorkspace_.reset();measurementWorkspaceKey_.clear();
+        if(key!=measurementWorkspaceKey_){if(measurementWorkspace_ && measurementWorkspace_->sourceVerification()->busy()){measurementWorkspace_->sourceVerification()->cancel();throw std::runtime_error("Source verification worker/camera drain pending");}measurementWorkspace_.reset();measurementWorkspaceKey_.clear();
             if(service_.hasProject() && !service_.path().isEmpty()){
                 measurementWorkspace_=std::make_shared<MeasurementWorkspace>(service_.path(),service_.project().id,[this]{return !editorSession_.busy() && !cameraSession_.busy() && !runtimeJobs_.busy() && !(runtime_ && runtime_->busy()) && !(runtimeCoordinator_ && (runtimeCoordinator_->state()==RuntimeState::Running || runtimeCoordinator_->state()==RuntimeState::Starting || runtimeCoordinator_->state()==RuntimeState::Stopping)) && !(plc_ && plc_->blocking());});
                 measurementWorkspaceKey_=key;

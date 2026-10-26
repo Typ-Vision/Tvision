@@ -35,6 +35,8 @@ int main(int argc,char** argv){QCoreApplication app(argc,argv);try{
     const auto accepted=CalibrationModelRecord::create(model,setup,image,{{holdout},0.001});check(accepted.controlAccepted()==true && accepted.activatable(),"explicit control bound accepted");
     auto wrong=holdout;wrong.knownMillimetres=22;
     const auto failed=CalibrationModelRecord::create(model,setup,image,{{wrong},0.01});check(failed.controlAccepted()==false && !failed.activatable() && failed.residualsMillimetres()[0]==2,"failed control saved as actual evidence blocks activation");
+    check(record.controlSummary().contains("yapılmadı") && controlled.controlSummary().contains("sınır tanımlanmadı") && accepted.controlSummary().contains("sınır içinde") && failed.controlSummary().contains("sınır dışında"),"four independent control states use actual evidence");
+    for(const auto& r:{record,controlled,accepted,failed})check(CalibrationModelRecord::decode(r.encode()).controlSummary()==r.controlSummary(),"control presentation survives exact replay");
     reject([&]{CalibrationModelRecord::create(model,setup,image,{{teach},0.1});},"teaching control rejected");auto reverse=teach;std::swap(reverse.first,reverse.second);reverse.id="reversed";
     reject([&]{CalibrationModelRecord::create(model,setup,image,{{reverse},0.1});},"reversed teaching control rejected");
     reject([&]{CalibrationModelRecord::create(model,setup,image,{{holdout,holdout},0.1});},"duplicate control rejected");
@@ -70,6 +72,8 @@ int main(int argc,char** argv){QCoreApplication app(argc,argv);try{
     dependency.calibrationId="declared-file";trialImage.origin="setup_file";service.save(CalibrationModelRecord::create(math.teach(dependency,teach),setup,trialImage));service.activate("declared-file",1,setup);check(service.resolve(setup).record.image().origin=="setup_file","file declaration retains file provenance");
     auto legacyValidated=math.validate(model,{holdout,{"y",{{40,10},setup.source},{{40,610},setup.source},15}},0.001);const auto legacyBytes=math.encode(legacyValidated);
     const auto migrated=CalibrationModelRecord::create(legacyValidated,setup,image);check(math.encode(migrated.model())==legacyBytes && migrated.model().validated() && migrated.residualsMillimetres().isEmpty(),"legacy accepted evidence preserved separately from new control");
+    check(migrated.controlSummary().contains("yapılmadı"),"legacy model validation does not fabricate independent control");
+    check(CalibrationModelRecord::adoptLegacy(legacyValidated,setup,"Legacy holdout").controlSummary().contains("sınır içinde"),"explicit adopted legacy holdouts retain their actual result");
     auto manualDependency=model.dependency();manualDependency.calibrationId="manual";
     const auto manual=math.manualScale(manualDependency,40,{"acquired",image.sourceToolId,image.frameId,setup.resolution});
     const auto manualRecord=CalibrationModelRecord::create(manual,setup,image);

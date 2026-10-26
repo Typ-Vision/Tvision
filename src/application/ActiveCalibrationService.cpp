@@ -73,6 +73,22 @@ CalibrationModelRecord CalibrationModelRecord::createValidated(const PlanarCalib
     if(control.limitMillimetres)r.accepted_=maximum<=*control.limitMillimetres;
     auto o=r.encode();o.remove("contentId");r.contentId_=digest(o);return r;
 }
+QString CalibrationModelRecord::controlSummary() const {
+    // Adopted legacy records may carry explicit holdouts in their original math.
+    // A bare validated/accepted flag is insufficient evidence.
+    if(legacy_) {
+        const auto original=MeasurementService{}.encode(model_);
+        const auto samples=original["holdout"].toArray();
+        if(!samples.isEmpty() && samples.size()==residuals_.size() && original["maxErrorMm"].isDouble() && accepted_)
+            return *accepted_ ? "Bağımsız kontrol sınır içinde" : "Bağımsız kontrol sınır dışında — etkinleştirilemez";
+        return "Bağımsız kontrol yapılmadı / bilinmiyor";
+    }
+    const bool measured=!control_.samples.isEmpty() && residuals_.size()==control_.samples.size();
+    if(!measured)return "Bağımsız kontrol yapılmadı / bilinmiyor";
+    if(!control_.limitMillimetres)return "Bağımsız kontrol ölçümleri mevcut; sınır tanımlanmadı";
+    if(!accepted_)return "Bağımsız kontrol sonucu bilinmiyor";
+    return *accepted_ ? "Bağımsız kontrol sınır içinde" : "Bağımsız kontrol sınır dışında — etkinleştirilemez";
+}
 bool CalibrationModelRecord::activatable() const {return !image_.experimental && image_.origin!="trial_file" && (!accepted_ || *accepted_);}
 bool CalibrationModelRecord::experimentallyActivatable() const {return image_.experimental.has_value() && (!accepted_ || *accepted_);}
 QJsonObject CalibrationModelRecord::encode() const {

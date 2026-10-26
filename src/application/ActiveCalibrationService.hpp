@@ -50,6 +50,8 @@ public:
     const QVector<double>& residualsMillimetres() const {return residuals_;}
     const std::optional<bool>& controlAccepted() const {return accepted_;}
     const QString& contentId() const {return contentId_;}
+    // Presentation only: independent control never grants physical/production admission.
+    QString controlSummary() const;
     bool activatable() const;
     bool experimentallyActivatable() const;
 private:
@@ -80,6 +82,7 @@ struct ActiveCalibrationSnapshot {
     ActiveCalibrationSelection selection;
     QJsonObject scope; // schema1 exact physical setup; empty for legacy compatibility
     QJsonObject acquisition; // CCUX-06 fresh session evidence; never rewrites model/scope2
+    bool configurationOnly=false; // Static inspection cannot grant Runtime admission.
 };
 // A validated mathematical view, never a session permission. One current,
 // bounded generation per project/path; callers may retain immutable snapshots.

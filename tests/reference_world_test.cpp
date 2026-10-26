@@ -1,4 +1,5 @@
 #include "application/ReferenceService.hpp"
+#include "application/ToolOverlayGeometry.hpp"
 #include "application/WorldTrackingService.hpp"
 #include "application/MeasurementService.hpp"
 #include "application/PoseMatchService.hpp"
@@ -74,6 +75,8 @@ int main(int argc,char** argv){QCoreApplication app(argc,argv);try{
             counted.nominalToRaw=[&](QPointF q){++taps;const auto r=original(q);near(r,moved(q),1e-5);return r;};
             const auto measured=WorldTrackingService::execute(t,raster,counted);check(taps>100 && measured.outputs["found"].valid && std::get<bool>(measured.outputs["found"].data),"every actual tap maps; real raster feature found");
             check(measured.decision==PartDecision::NotEvaluated,"no part decision manufactured");
+            const auto overlay=toolOverlayGeometry(t,t,raster,ctx,{},mapped.map,measured);check(overlay.reason.isEmpty() && !overlay.outlines.isEmpty() && !overlay.guides.isEmpty(),"24H resolved world raw overlay evidence");
+            const auto hidden=toolOverlayGeometry(t,t,raster,ctx,{},WorldTrackingMap{[](QPointF)->QPointF{throw std::runtime_error("domain rejected");},{},{},{},{}},measured);check(!hidden.reason.isEmpty() && hidden.outlines.isEmpty() && hidden.guides.isEmpty(),"24H mapping failure removes every primitive");
             if(kind=="edge_point")near(std::get<QPointF>(measured.outputs["point"].data),moved({15,wy(13)}),.45);
             if(kind=="edge_pair"){const double expected=QLineF(toWorld(moved({15,wy(13)})),toWorld(moved({15,wy(17)}))).length();check(std::abs(std::get<double>(measured.outputs["widthMm"].data)-expected)<.2,"current world endpoint width oracle");}
             if(kind=="line_fit"){check(measured.outputs["lineMm"].valid && measured.outputs["accepted"].valid,"actual world line refit and tolerance");check(!measured.outputs["originPx"].valid,"unavailable raw fit stays unavailable");}

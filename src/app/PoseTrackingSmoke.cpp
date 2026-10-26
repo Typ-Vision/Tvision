@@ -1,4 +1,5 @@
 #include "MainWindow.hpp"
+#include "CameraFlowSmokeAudit.hpp"
 #include "ImageViewer.hpp"
 #include "PoseMatchEditor.hpp"
 #include "domain/PoseTrackingConfig.hpp"
@@ -71,7 +72,7 @@ bool MainWindow::verifyPoseTracking(const QString& artifacts) {
         for(const QString consumerKind:{"edge_point","edge_pair","line_fit","circle_fit","blob","code_read","edge"}) {
             if(consumerKind=="code_read"){bool available=false;for(int i=0;i<toolbox_->count();++i)if(toolbox_->item(i)->data(Qt::UserRole)==consumerKind && !(toolbox_->item(i)->flags()&Qt::ItemIsEnabled))available=false;else if(toolbox_->item(i)->data(Qt::UserRole)==consumerKind)available=true;if(!available)continue;}
             const auto id=add(consumerKind);consumers.append(id);bind(id);
-            auto t=configured(id);if(QStringList{"edge_pair","line_fit","circle_fit"}.contains(consumerKind)){check(t.parameters["mode"]=="calibrated","new metric consumer defaults to mm");propertiesBody_->findChild<QComboBox*>("mt_mode")->setCurrentText("pixel");t=configured(id);}const CoordinateFrame raw{editorSession_.frame->metadata().coordinateSystemId};
+            auto t=configured(id);if(QStringList{"edge_pair","line_fit","circle_fit"}.contains(consumerKind)){check(t.parameters["mode"]=="calibrated","UI creation defaults: circle/line/pair calibrated");propertiesBody_->findChild<QComboBox*>("mt_mode")->setCurrentText("pixel");t=configured(id);}const CoordinateFrame raw{editorSession_.frame->metadata().coordinateSystemId};
             ToolRoi roi{raw,ScanSegment{{95,50},{95,70},2}};
             if(consumerKind=="edge_pair")roi.geometry=ScanSegment{{95,85},{95,105},2};
             if(consumerKind=="line_fit")roi.geometry=RotatedRectangle{{115,60},{24,20},0};
@@ -156,10 +157,10 @@ bool MainWindow::verifyPoseTracking(const QString& artifacts) {
             findChild<QPushButton*>("runtime_cycle")->click();wait();
             if(!runtimeResult_)QTextStream(stderr)<<runtimeSummary_->text()<<"\n";
             check(runtimeResult_ && runtimeResult_->state==ExecutionState::Done,"Reference UI actual Runtime persisted");
-            runtimeTools_->setCurrentIndex(runtimeTools_->findData(edgeId));showRuntimeResult();check(runtimeViewer_->roi().has_value(),"Runtime current resolved reference ROI");
+            runtimeTools_->setCurrentIndex(runtimeTools_->findData(edgeId));showRuntimeResult();const auto runtimeScan=CameraFlowSmokeAudit::runtimeScan(*runtimeViewer_,edgeId);check(!runtimeScan.isEmpty(),"Runtime current resolved reference scan layer");
             const auto edgeResult=std::find_if(runtimeResult_->tools.cbegin(),runtimeResult_->tools.cend(),[&](const auto& r){return r.toolId==edgeId;});
             check(edgeResult!=runtimeResult_->tools.cend() && edgeResult->outputs["point"].valid && QLineF(std::get<QPointF>(edgeResult->outputs["point"].data),{140,155}).length()<.3,"Runtime actual rotated edge oracle");
-            if(label=="raw")check(QLineF(std::get<ScanSegment>(runtimeViewer_->roi()->geometry).start,{150,155}).length()<.3,"Runtime ROI current position independent oracle");
+            if(label=="raw")check(QLineF((runtimeScan[0]+runtimeScan[3])/2,{150,155}).length()<.3,"Runtime scan current position independent oracle");
             setWindowState(Qt::WindowNoState);
             for(int w:{1400,850}){resize(w,w==1400 ? 900:600);QApplication::processEvents();runtimeViewer_->fitImage();QApplication::processEvents();grab().save(QDir(artifacts).filePath("r7-"+kind+"-"+label+"-runtime-"+QString::number(w)+".png"));}
             const auto records=ProductionStore(service_.path()+".production").recent("cycles");
@@ -205,7 +206,7 @@ bool MainWindow::verifyPoseTracking(const QString& artifacts) {
                 set("mmPerSample",.1);
                 check(service_.activeRecipe()->definition==beforeAuthor,"pending world coordinates never mutate recipe");
                 if(tool.kind=="edge_point"){
-                    set("width",-1);dialog->findChild<QPushButton*>("teachWorldRoi")->click();check(dialog->isVisible() && !dialog->findChild<QLabel*>("worldRoiError")->text().isEmpty() && service_.activeRecipe()->definition==beforeAuthor,"invalid world geometry rejected atomically");set("width",.2);
+                    set("width",-1);check(dialog->findChild<QDoubleSpinBox*>("world_roi_width")->value()==.001,"world extent minimum is .001");set("by",-5);dialog->findChild<QPushButton*>("teachWorldRoi")->click();check(dialog->isVisible() && !dialog->findChild<QLabel*>("worldRoiError")->text().isEmpty() && service_.activeRecipe()->definition==beforeAuthor,"invalid world geometry rejected atomically");set("by",-7);set("width",.2);
                     dialog->grab().save(QDir(artifacts).filePath(kind+"-world-authoring.png"));
                 }
                 dialog->findChild<QPushButton*>("teachWorldRoi")->click();wait();check(toolReferenceBinding(configured(id)).world && toolReferenceBinding(configured(id)).sourceTool==poseId && validateGraph(service_.tools(),editorConnections(service_.activeRecipe()->definition)).valid(),"world authoring atomically teaches geometry and graph");

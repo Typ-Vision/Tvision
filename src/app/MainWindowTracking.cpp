@@ -1,3 +1,4 @@
+#include "PrecisionInput.hpp"
 #include "MainWindow.hpp"
 #include "domain/PoseTrackingConfig.hpp"
 #include "application/PoseRoiService.hpp"
@@ -35,7 +36,7 @@ void MainWindow::addTrackingProperties(QFormLayout* host,const ToolDefinition& t
     if(!selected.isEmpty() && picker->findData(selected)<0)picker->addItem("Eksik / devre dışı: "+selected,selected);
     for(int i=0;i<picker->count();++i)picker->setItemData(i,picker->itemText(i),Qt::ToolTipRole);
     picker->setCurrentIndex(selected.isEmpty() ? 0:picker->findData(selected));form->addRow("Kaynak / çıktı",picker);
-    auto number=[&](const char* name,double value){auto* n=new QDoubleSpinBox;n->setObjectName(name);n->setDecimals(9);n->setRange(-1e8,1e8);n->setValue(value);return n;};
+    auto number=[&](const char* name,double value){auto* n=new QDoubleSpinBox;n->setObjectName(name);n->setDecimals(9);n->setRange(-1e8,1e8);loadPrecisionInput(n,value,QString(name)!="referenceOffsetAngle");return n;};
     auto* x=number("referenceOffsetX",offset.x());auto* y=number("referenceOffsetY",offset.y());auto* a=number("referenceOffsetAngle",angle);
     form->addRow("X ofseti [px]",x);form->addRow("Y ofseti [px]",y);form->addRow("Açı ofseti [°]",a);
     auto* help=new QLabel;help->setObjectName("poseTrackingStatus");help->setWordWrap(true);form->addRow(help);
@@ -43,7 +44,7 @@ void MainWindow::addTrackingProperties(QFormLayout* host,const ToolDefinition& t
         help->setText(fixed ? "Referans hareketi uygulanmaz. Seçim yalnız Bağla ile kaydedilir.":pose ? "Model eksenlerinde X/Y; açı ofseti model referansı etrafında uygulanır. Güncel kaynak sonucu gerekir.":"Bu kaynak yalnız konum üretir. X/Y görüntü eksenlerindedir; ROI'nin kendi yönü korunur. Güncel kaynak sonucu gerekir.");};
     connect(picker,&QComboBox::currentIndexChanged,this,[state]{state();});state();
     auto* advanced=propertySection(form,"Referans ayrıntıları…",tool.kind+"/referenceDetails",settingsFile_);auto* details=static_cast<QFormLayout*>(advanced->layout());
-    auto* sampling=new QDoubleSpinBox;sampling->setObjectName("trackingMmPerSample");sampling->setDecimals(9);sampling->setRange(1e-9,1e9);sampling->setValue(unit);if(world)details->addRow("Nominal mm / örnek",sampling);else sampling->setParent(advanced);
+    auto* sampling=new QDoubleSpinBox;sampling->setObjectName("trackingMmPerSample");sampling->setDecimals(9);sampling->setRange(1e-9,1e9);loadPrecisionInput(sampling,unit);if(world)details->addRow("Nominal mm / örnek",sampling);else sampling->setParent(advanced);
     auto* identity=new QLabel(selected.isEmpty() ? "Öğretilmiş ilişki yok.":"Kayıtlı ilişki. Model/ROI/port veya kalibrasyon değişimi yeniden öğretim gerektirir. Çözülen geometri salt okunurdur.");identity->setWordWrap(true);identity->setToolTip(selected);details->addRow(identity);
     if(tool.parameters.contains("referenceBinding")){const auto b=toolReferenceBinding(tool);auto* hashes=new QLabel("Kaynak geometri: "+b.geometryId.left(12)+"\nROI kimliği: "+b.roiIdentity().left(12));hashes->setObjectName("referenceTeachingIdentity");hashes->setWordWrap(true);hashes->setToolTip(b.geometryId+"\n"+b.roiIdentity());details->addRow(hashes);}
     if(tool.kind=="edge_point" || tool.kind=="edge_pair" || tool.kind=="line_fit" || tool.kind=="circle_fit"){
@@ -51,20 +52,20 @@ void MainWindow::addTrackingProperties(QFormLayout* host,const ToolDefinition& t
         connect(author,&QPushButton::clicked,this,[this,picker]{editWorldTrackingRoi(picker->currentData().toString());});
     }
     auto* teach=new QPushButton(selected.isEmpty() ? "Referansa bağla":"İlişkiyi yeniden kaydet");teach->setObjectName("teachPoseReference");teach->setEnabled(editorSession_.frame.has_value() && !editorSession_.busy());form->addRow(teach);
-    connect(teach,&QPushButton::clicked,this,[this,picker,sampling]{teachPoseReference(picker->currentData().toString(),sampling->value());});
+    connect(teach,&QPushButton::clicked,this,[this,picker,sampling]{teachPoseReference(picker->currentData().toString(),precisionValue(sampling));});
     auto* cancel=new QPushButton("İptal");cancel->setObjectName("cancelReferenceEdit");form->addRow(cancel);connect(cancel,&QPushButton::clicked,this,[this]{QTimer::singleShot(0,this,[this]{refreshWorkspace();});});
     auto* remove=new QPushButton(world && tool.kind!="circle_fit" ? "Referansı + mm ROI kaldır":"Referansı kaldır");remove->setObjectName("clearPoseReference");remove->setEnabled(!selected.isEmpty() && !editorSession_.busy());form->addRow(remove);connect(remove,&QPushButton::clicked,this,[this]{teachPoseReference({},0);});
     auto edit=[this,picker,x,y,a,selected,id=tool.id]{
         if(editorSession_.busy() || selectedToolId_!=id || picker->currentData().toString()!=selected)return;
         try{for(const auto& t:service_.tools())if(t.id==id && t.parameters.contains("referenceBinding")){
-            auto b=toolReferenceBinding(t);b.offsetPx={x->value(),y->value()};b.angleOffsetRadians=a->value()*std::numbers::pi/180;
+            auto b=toolReferenceBinding(t);b.offsetPx={precisionValue(x),precisionValue(y)};if(precisionInputEdited(a))b.angleOffsetRadians=precisionValue(a)*std::numbers::pi/180;
             const auto e=editorSession_.evaluation(editorContext());const auto image=editorSession_.toolImage(editorContext(),id);if(!e.cache.contains(b.sourceTool))throw std::runtime_error("Güncel kaynak sonucu yok. Önce kaynak aracını çalıştırın.");
             for(const auto& source:service_.tools())if(source.id==b.sourceTool){
                 if(b.world){const auto ctx=calibrationResolver(*service_.activeRecipe())(image);const auto r=ReferenceService::resolveWorld(b,source,e.cache[b.sourceTool].result,image,ctx);if(!r.map)throw std::runtime_error(r.reason.toUtf8().constData());auto candidate=t;candidate.parameters["referenceBinding"]=b.toJson();WorldTrackingService::preflight(candidate,image,*r.map);}
                 else {const auto r=ReferenceService::resolve(b,source,e.cache[b.sourceTool].result,image);if(!r.roi)throw std::runtime_error(r.reason.toUtf8().constData());}
             }
             service_.bindReference(id,b);QTimer::singleShot(0,this,[this]{refreshWorkspace();});return;
-        }}catch(const std::exception& e){for(const auto& t:service_.tools())if(t.id==id && t.parameters.contains("referenceBinding")){const auto b=toolReferenceBinding(t);x->setValue(b.offsetPx.x());y->setValue(b.offsetPx.y());a->setValue(b.angleOffsetRadians*180/std::numbers::pi);}displayError(QString::fromUtf8(e.what()));}
+        }}catch(const std::exception& e){for(const auto& t:service_.tools())if(t.id==id && t.parameters.contains("referenceBinding")){const auto b=toolReferenceBinding(t);loadPrecisionInput(x,b.offsetPx.x(),true);loadPrecisionInput(y,b.offsetPx.y(),true);loadPrecisionInput(a,b.angleOffsetRadians*180/std::numbers::pi);}displayError(QString::fromUtf8(e.what()));}
     };
     for(auto* n:{x,y,a})connect(n,&QDoubleSpinBox::editingFinished,this,edit);
 }
@@ -92,13 +93,13 @@ void MainWindow::editWorldTrackingRoi(const QString& producer){
             values["mmPerSample"]=tool.parameters.contains("referenceBinding") ? toolReferenceBinding(tool).mmPerSample:isWorldPoseTracking(tool) ? worldPoseTracking(tool).mmPerSample:.1;
             const QMap<QString,QString> labels{{"ax","Başlangıç X"},{"ay","Başlangıç Y"},{"bx","Bitiş X"},{"by","Bitiş Y"},{"cx","Merkez X"},{"cy","Merkez Y"},{"width","Genişlik"},{"height","Yükseklik"},{"inner","İç yarıçap"},{"outer","Dış yarıçap"},{"angle","Yön açısı"},{"start","Başlangıç açısı"},{"sweep","Tarama açısı"},{"mmPerSample","Nominal mm / örnek"}};
             fields->addRow("Dünya düzlemi",new QLabel(target.id+(target.axes==AxisConvention::XRightYUp ? " · +Y yukarı":" · +Y aşağı")));
-            for(auto i=values.begin();i!=values.end();++i){auto* n=new QDoubleSpinBox;n->setObjectName("world_roi_"+i.key());n->setDecimals(9);n->setRange(-1e8,1e8);if(i.key()=="mmPerSample")n->setRange(1e-9,1e9);n->setValue(i->toDouble());fields->addRow(labels.value(i.key())+(i.key()=="mmPerSample" ? "":i.key()=="angle" || i.key()=="start" || i.key()=="sweep" ? " (deg)":" (mm)"),n);}
+            for(auto i=values.begin();i!=values.end();++i){auto* n=new QDoubleSpinBox;n->setObjectName("world_roi_"+i.key());n->setDecimals(9);n->setRange(-1e8,1e8);if(i.key()=="mmPerSample")n->setRange(1e-9,1e9);loadPrecisionInput(n,i->toDouble(),i.key()!="mmPerSample" && coordinateLength(i.key()),positiveExtent(i.key()));fields->addRow(labels.value(i.key())+(i.key()=="mmPerSample" ? "":i.key()=="angle" || i.key()=="start" || i.key()=="sweep" ? " (deg)":" (mm)"),n);}
             auto* error=new QLabel;error->setObjectName("worldRoiError");error->setWordWrap(true);layout->addWidget(error);
             auto* buttons=new QDialogButtonBox(QDialogButtonBox::Save|QDialogButtonBox::Cancel);buttons->button(QDialogButtonBox::Save)->setText("Öğret ve kaydet");buttons->button(QDialogButtonBox::Save)->setObjectName("teachWorldRoi");layout->addWidget(buttons);
             connect(buttons,&QDialogButtonBox::rejected,dialog,&QDialog::reject);
             connect(buttons,&QDialogButtonBox::accepted,dialog,[this,dialog,error,target,id,kind,producer,signature]{try{
                 if(id!=selectedToolId_ || signature!=flowSignature() || editorSession_.busy())throw std::runtime_error("Editör değişti; ROI ekranını yeniden açın.");
-                auto n=[&](const char* key){return dialog->findChild<QDoubleSpinBox*>(QString("world_roi_")+key)->value();};
+                auto n=[&](const char* key){return precisionValue(dialog->findChild<QDoubleSpinBox*>(QString("world_roi_")+key));};
                 ToolRoi value;value.frame=target;
                 if(kind=="circle_fit")value.geometry=ArcRoi{{{n("cx"),n("cy")},n("inner"),n("outer")},n("start"),n("sweep")};
                 else if(kind=="line_fit")value.geometry=RotatedRectangle{{n("cx"),n("cy")},{n("width"),n("height")},n("angle")};
@@ -116,9 +117,9 @@ void MainWindow::teachPoseReference(const QString& key,double mmPerSample,std::o
         for(auto tool:service_.tools())if(tool.id==selectedToolId_) {
             if(producer.isEmpty()){service_.clearReference(tool.id);refreshWorkspace();return;}
             QPointF offset;double angle=0;
-            if(auto* x=propertiesBody_->findChild<QDoubleSpinBox*>("referenceOffsetX"))offset.setX(x->value());
-            if(auto* y=propertiesBody_->findChild<QDoubleSpinBox*>("referenceOffsetY"))offset.setY(y->value());
-            if(port=="pose")if(auto* a=propertiesBody_->findChild<QDoubleSpinBox*>("referenceOffsetAngle"))angle=a->value()*std::numbers::pi/180;
+            if(auto* x=propertiesBody_->findChild<QDoubleSpinBox*>("referenceOffsetX"))offset.setX(precisionValue(x));
+            if(auto* y=propertiesBody_->findChild<QDoubleSpinBox*>("referenceOffsetY"))offset.setY(precisionValue(y));
+            if(port=="pose")if(auto* a=propertiesBody_->findChild<QDoubleSpinBox*>("referenceOffsetAngle"))angle=precisionValue(a)*std::numbers::pi/180;
             MeasurementExecutionContext calibration;
             if(nominal){tool.parameters.remove("poseTracking");tool.parameters.remove("referenceBinding");tool.parameters["scanRoi"]=nominal->toJson();if(tool.kind!="edge_point")tool.parameters["mode"]="calibrated";}
             const auto json=tool.parameters.value("scanRoi").toObject();

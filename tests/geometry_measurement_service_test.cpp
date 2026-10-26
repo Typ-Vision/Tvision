@@ -52,6 +52,8 @@ int main(int argc,char** argv){QCoreApplication app(argc,argv);try{
     auto execute=[&](const ToolDefinition& t,const QMap<QString,PortValue>& values,const MeasurementExecutionContext& context){return GeometryMeasurementService::execute(t,values,f.m.frameId,f.m.cycleId,{},context);};
     auto base=[&]{return QMap<QString,PortValue>{{"image",f.port("image",f.image)}};};
     auto points=base();points["p1"]=f.port("p1",QPointF(20,30));points["p2"]=f.port("p2",QPointF(50,70));
+    {MeasurementExecutionContext missing;missing.error="fixture: remembered model permission missing";bool propagated=false;
+    try{execute(tool("point_distance"),points,missing);}catch(const std::exception& e){const auto message=QString::fromUtf8(e.what());propagated=message.contains(missing.error) && message.contains("Kaynağı doğrula") && message.contains("Setup");}check(propagated,"Geometry preserves actual resolver cause and recovery action");}
     for(auto mode:{QString("pixel"),QString("calibrated")})for(auto op:{QString("point_distance"),QString("x_offset"),QString("y_offset")}){
         auto t=tool(op,mode);t.parameters["offset"]="signed";const auto r=execute(t,points,ctx);const double expected=op=="point_distance" ? 50:op=="x_offset" ? 30:40;
         near(number(r,mode=="pixel" ? "valuePx":"valueMm"),expected*(mode=="pixel" ? 1:.1));
@@ -198,7 +200,7 @@ int main(int argc,char** argv){QCoreApplication app(argc,argv);try{
     const auto circleId=projectService.addTool("circle_fit");
     for(auto t:projectService.tools()){
         if(t.id==edge || t.id==line)t.enabled=false;
-        if(t.id==circleId){t.parameters["scanRoi"]=ToolRoi{{source+"/image"},Annulus{{128.25,127.75},34,46}}.toJson();t.parameters["stepPx"]=.5;t.parameters["polarity"]="rising";}
+        if(t.id==circleId){t.parameters=defaultParameters("circle_fit");t.parameters["scanRoi"]=ToolRoi{{source+"/image"},Annulus{{128.25,127.75},34,46}}.toJson();t.parameters["stepPx"]=.5;t.parameters["polarity"]="rising";}
         if(t.id==geometry){t.parameters["operation"]="circle_diameter";t.parameters["offset"]="absolute";}projectService.updateTool(t);
     }
     projectService.setConnections({{source,"image",circleId,"image"},{source,"image",geometry,"image"},{circleId,"circlePx",geometry,"circle1"},{circleId,"observationsPx",geometry,"samples1"}});
@@ -211,7 +213,7 @@ int main(int argc,char** argv){QCoreApplication app(argc,argv);try{
     QImage holes(256,256,QImage::Format_Grayscale8);for(int y=0;y<256;++y)for(int x=0;x<256;++x){double d=std::min(std::hypot(x-80.,y-128.),std::hypot(x-176.,y-128.))-20.;holes.scanLine(y)[x]=uchar(std::lround(128+100*std::erf(d/(std::sqrt(2.)*1.4))));}check(holes.save(dir.filePath("stripe.png")),"independent two holes raster");
     const auto secondCircle=projectService.addTool("circle_fit");
     for(auto t:projectService.tools()){
-        if(t.id==circleId || t.id==secondCircle){t.parameters["scanRoi"]=ToolRoi{{source+"/image"},Annulus{{t.id==circleId ? 80.:176.,128},14,26}}.toJson();t.parameters["stepPx"]=.5;t.parameters["polarity"]="rising";}
+        if(t.id==circleId || t.id==secondCircle){t.parameters=defaultParameters("circle_fit");t.parameters["scanRoi"]=ToolRoi{{source+"/image"},Annulus{{t.id==circleId ? 80.:176.,128},14,26}}.toJson();t.parameters["stepPx"]=.5;t.parameters["polarity"]="rising";}
         if(t.id==geometry)t.parameters["operation"]="circle_centre_distance";projectService.updateTool(t);
     }
     projectService.setConnections({{source,"image",circleId,"image"},{source,"image",secondCircle,"image"},{source,"image",geometry,"image"},{circleId,"circlePx",geometry,"circle1"},{circleId,"observationsPx",geometry,"samples1"},{secondCircle,"circlePx",geometry,"circle2"},{secondCircle,"observationsPx",geometry,"samples2"}});projectService.save();

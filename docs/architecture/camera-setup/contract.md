@@ -111,6 +111,29 @@ invalidation ve immutable kuralları sürer. İlk uygulama OECS stream start/sto
 kare başına korur; sürekli akış ve pending-command çözümü ayrı konudur.
 [CCUX-22 planı](22-session-lifecycle.md) uygulama kartlarını ve kabulü tanımlar.
 
+## C2b — Ortak viewer görünümü
+
+CCUX-24E: wheel olayının viewport konumu açık zoom merkezidir; düğmeler viewport
+merkezini kullanır. Qt'nin mouse/resize anchor'ı ikinci bir telafi uygulamaz.
+Scroll geometrisinin izin verdiği eksenlerde nokta aynı yerde kalır; küçük sahne
+ve scroll sınırlarında en yakın geçerli konuma sınırlandırılır. Raster/ROI
+koordinatları değiştirilmez; wheel reçete edit'i veya edinim başlatmaz.
+
+Görünüm kimliği kaynaktır, kare/content ID değildir. İlk görüntü ve değişen
+kaynak veya raster boyutu Fit yapar; aynı kaynak/boyutta yeni kare manuel
+pan/zoom'u korur. Editor, Runtime ve Kalibrasyon kaynak anahtarını taşır.
+BUSY görüntüyü ve geometrisini temizlerken görünüm durumu tutulabilir; aynı
+kaynak/boyut gelmezse bu durum kullanılmaz. Stop/normal clear görünümü sıfırlar.
+Fit resize ile yeniden sığdırır; manuel resize ölçeği ve üst/sol konumu korur.
+
+CCUX-24F: Camera Manager ayarları bağımsız sol scroll'da, ham rasteri sunan ortak
+viewer sağdadır. Aynı kaynak/profil ve boyutta kare yenileme görünümü korur;
+kamera/profil/rota değişimi, Stop ve hata eski rasteri temizler. Optik / Geometri
+kartı pending durumunu, endüstriyel kurulum/profil düzenleme ve açık seçim/arşiv
+komutlarını gösterir. Çok profil veya çözülemeyen varsayılan görünür seçim ister;
+tek exact varsayılan için gereksiz seçici açılmaz. Yönetim mevcut application
+komutları ve busy/mutation kapılarıyla çalışır; edinim/readback yerine geçmez.
+
 ## C3 — Model geçerliliği ve kullanıcı akışı
 
 Kalibrasyon sayfası kamera listesidir; alt bölüm seçili kameranın yöntemi, tarihi,
@@ -139,10 +162,29 @@ sessiz gevşetilmez. Preview gerçek sonuç değildir; sahte mm/PASS yoktur.
 | Kopma/restart | Kayıt korunur, kullanım izni düşer; exact yeniden bağlantı/uyumla aynı matematik kullanılabilir; aktif üretim kendiliğinden başlamaz |
 | Kalibrasyon değişimi | İlgili metrik downstream ve world ROI/reference yeniden denetlenir; başka kaynak etkilenmez |
 
+Kontrol sunumu model kaydının kendi örnek/residual/sınır ve `controlAccepted`
+kanıtını birlikte kullanır: yapılmadı/bilinmiyor, ölçüm var sınır yok, sınır içinde,
+sınır dışında. Fit/RMS ve eski model validation bu kontrolün yerine geçmez.
+Kontrol başarısı `physicalAcceptance`, admission veya PLC/robot iznini değiştirmez.
+Editor/Runtime rutin sabit fiziksel kabul cümlesi göstermez; gerçek hatalar korunur.
+Tarihsel çevrim sunumu kayıtlı immutable modele bağlıdır; güncel modelden türetilmez.
+
 Fiziksel lens/konum değişimi yazılımla algılanamayabilir: ayrıntılarda “Optik /
 kamera konumu değişti” bildirimi bulunur. Geometriye etkili ayarlar sırf profil
 adı altında oldukları için exposure gibi ele alınmaz. Restart uyum kontrolü
 native capability ve güncel kimlik/probe/izin ömrü sınırlarını aşamaz.
+
+### CCUX-24G — Ayrıntılar ve yönetim erişimi
+
+Ayrıntılar salt okunur geçmiş, gerekli kurulum/profil seçimi ve uygun seçili
+geçmiş kaydının “Bu kaydı kullan” eylemini taşır. Aktivasyon aynı gerçek probe ve
+uyum incelemesini kullanır. Seçili model için devre dışı bırakma durum alanındadır;
+eski kayıt/dosya denemesi mevcutsa eşleme/ilişkilendirme koşullu gösterilir.
+Endüstriyel yönetim Camera Manager Optik / Geometri'de, webcam/eski cihaz eşleme
+ve profilsiz kurulum formu Camera Manager'ın ayrı yönetim girişindedir.
+Transfer File → Kalibrasyon bağımlılıkları yolundan aynı komutları kullanır.
+Ekran açmak migration, yazma veya probe başlatmaz. Kalibre Et yöntemleri ve tüm
+sihirbazlar korunur; Robot Kalibrasyonu (Sonradan devreye alınacak) görünür/pasiftir.
 
 ## C3a — Çerçeveli plaka kalibrasyonu
 
@@ -192,6 +234,12 @@ topluca silmek ayrı bir hedef değildir. Eski kayıt metadata düzenlemesinde
 değişmez. Yeni reçete eski proje referanslarını miras almaz. Aktif Runtime
 yüklediği immutable snapshot'ı kullanır; kamera/model değişimi durdurma ve yeniden
 hazırlama ister. Yeni aktif modeli çalışan çevrime sessiz ekleme yoktur.
+
+Runtime çoklu viewer sunumu aynı immutable snapshot, kaynak ve gerçek çevrim/kare
+ile sınırlıdır. Tarama geometrisi yürütmenin çözülmüş referenceBinding/poseTracking
+kanıtından gelir; UI nominal fallback veya yeni edinim üretmez. Koleksiyon salt
+okunurdur; yerel tüm-araçlar tercihi reçeteyi/sonucu değiştirmez.
+[Uygulanan sunum API ve uzay sözleşmesi](runtime-overlays.md).
 
 ## C5 — Deneysel mm, üretim ve kanıt
 

@@ -6,6 +6,9 @@ UI algoritma veya donanım SDK'sını doğrudan çağırmaz.
 
 **Güncel görev, son doğrulama ve açık engeller [devir özetindedir](docs/progress.md).**
 
+Birleşik kamera/7×7 kalibrasyon ve Runtime sürümü `main` dalındadır.
+[Başlatıcı ve fiziksel restart devir rehberi](docs/architecture/camera-integration-handoff.md).
+
 ## Uygulanan kapsam
 
 - Ortak Recipe Editor, typed DAG, worker üzerinde yürütme, kaynak başına görüntü/cache,
@@ -48,7 +51,7 @@ $env:PATH = 'C:\OpenCV\5.0.0\x64\mingw\bin;C:\Qt\6.12.0\mingw_64\bin;C:\Qt\Tools
 cmake -S . -B build/reference-ui -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=C:/Qt/6.12.0/mingw_64 -DOpenCV_DIR=C:/OpenCV/5.0.0/x64/mingw/lib -DVISIONFLOW_BUILD_UI=ON -DVISIONFLOW_WITH_ZXING=ON -DVISIONFLOW_ZXING_PREFIX=C:/Projects/Tvision/build/deps/zxing-prefix
 cmake --build build/reference-ui -j 6
 ctest --test-dir build/reference-ui --output-on-failure
-.\scripts\run-local.ps1
+.\VisionFlow.cmd
 ```
 
 UI kapalı Release yapılandırması:
@@ -65,6 +68,8 @@ ilgili CTest ve normal/küçük ekran görsel kontrolü yapılır.
 
 `run-local.ps1` DLL yollarını yalnız başlattığı sürece ekler. Başka build için
 `-BuildDirectory build`, offscreen smoke için `-SmokeTest` verilebilir.
+Günlük giriş `./VisionFlow.cmd` veya Explorer çift tıklamasıdır; aynı betiği çağırır.
+Dal geçişi mevcut EXE'yi derlemez; kaynakla eşleştirmek için önce yukarıdaki build gerekir.
 EXE'yi tek başına kopyalamak doğrulanmış dağıtım değildir.
 
 OECS / GenTL probe komutları, sandbox sınırları ve kanıt bağlantıları
@@ -78,7 +83,10 @@ OECS / GenTL probe komutları, sandbox sınırları ve kanıt bağlantıları
    Yeni kaydın varsayılan kurulum/profili otomatik bağlanır; eksik fiziksel kurulum
    ayrıntıları tamamlanmadan ölçüm izni oluşmaz.
 3. Reçeteyi Editor'da kur; kaynak/araçları bağla, görüntü al ve Run Flow çalıştır.
-4. Kaydedilmiş reçete için Load Recipe → Run → Tek çevrim; sonuçlar Logs/CSV'de.
+   Properties → Çıkışlar sonuç listesinde gösterilecek portları seçer; tercih yerel
+   INI’de saklanır. Viewer/overlay ve Logs/CSV/PLC verisi bu seçimden bağımsızdır.
+4. Kaydedilmiş reçete için Load Recipe → Kaynağı doğrula → Run → Tek çevrim; sonuçlar Logs/CSV'de.
+   Doğrulama kayıtlı metrik kaynak iznini yeni kareyle denetler; Run başlatmaz.
    Load/Run hazırlığı tek başına sonuç değildir. Stop → yeniden Load sürümü değiştirir.
 
 Normal kamera komutları uygun edinim yolunu seçer; ek OECS modu/onayı yoktur.

@@ -1,6 +1,6 @@
 # Endüstriyel Machine Vision Yazılımı — UI Sayfa ve Ekran Gereksinimleri
 
-## 22 Ekim 2026 — çalışma süresince kamera bağlantısı (plan)
+## Çalışma süresince kamera bağlantısı
 
 Program/proje açılışı ve Runtime Load Recipe kamera bağlantısı kurmaz. Editor'da
 reçeteyi açma, Runtime Run ve seçili kamerada canlı kalibrasyon işlemine giriş
@@ -8,7 +8,9 @@ bağlantıyı hazırlar; aynı iş içindeki çekimler bu bağlantıyı kullanı
 çıkış, Runtime Stop, kalibrasyon bitiş/iptali bağlantıyı bırakır. Kaydet tek
 başına bağlantıyı kesmez; iptal edilen çıkış oturumu korur. Kamera yokken reçete
 düzenlenebilir; hazırlık arka planda yapılır, hazır olmadan çekim çalışmaz.
-Bu hedef henüz uygulanmadı. Ayrıntılı yaşam döngüsü
+Editor/Runtime/kalibrasyon bağlantı ömrü yazılımda uygulanmıştır; fiziksel kabul
+ayrıdır. Kaynağı doğrula kendi worker ve kapanışını tamamlar; Run başlatmaz.
+Ayrıntılı yaşam döngüsü
 [C2a sözleşmesinde](../architecture/camera-setup/contract.md#c2a--çalışma-süresince-bağlantı),
 uygulama ve kabul [CCUX-22 planındadır](../architecture/camera-setup/22-session-lifecycle.md).
 
@@ -105,7 +107,7 @@ Ana arayüz modern, koyu temalı, endüstriyel kullanıma uygun ve yüksek kontr
 | Editor sol panel | Toolbox |
 | Editor orta panel | Image Viewer / isteğe bağlı genişletilmiş Flow Editor |
 | Editor sağ panel | Properties |
-| Editor alt panel | Flow, Results, Log, Variables, Communication, Diagnostics |
+| Editor alt panel | Solda Results/Kenar profili/Bağlantılar ve diğer sekmeler; sağda kalıcı tek Flow listesi |
 
 Panel genişlikleri/yükseklikleri değiştirilebilir, düzen kullanıcı bazında saklanabilir olmalıdır. Küçük ekranda paneller sekmeli veya alt alta görünmeli; toolbar ve Properties erişilebilir kalmalıdır.
 
@@ -274,6 +276,12 @@ Seçili Line Fit/Circle için nominal kılavuz Run öncesi de N tarama oku göst
 bulunan nokta sayısıyla azalmaz. Circle iç→dış veya dış→iç yönünü, Line Fit gerçek
 kutu scan eksenini kullanır. Saf yerleşim hesabı yürütücüyle ortaktır; world ROI
 mevcut raw dönüşümünden geçer. Tam dairede uç tekrarı yok, signed yayda iki uç dahil.
+Yeni Circle uygulama oluşturma komutunda `calibrated` açılır;
+`scanWidth`, `inlierDistance`, `maxResidual`, `unitsPerSample` 0.1,
+`maxRms` 0.035 başlangıçlarını kullanır. Domain/legacy decode varsayılanı,
+mevcut/kopyalanmış/import edilmiş pixel araçlar ve açık pixel seçimi korunur.
+Kalibrasyon eksikliği gerçek hata üretir; otomatik/global model atanmaz.
+
 Circle Basic Start/Sweep değişimi nominal geometriyi önizler; editingFinished ve
 Koordinatları uygula aynı doğrulamadan geçer. Geçersiz geçici sayı son geçerli ROI'yi
 bozmaz; önizleme reçeteyi değiştirmez ve eski fit göstermez. Yeni fit yalnız Run'dadır.
@@ -654,3 +662,15 @@ Sonraki geliştirme önerisi (henüz uygulanmadı): önce manuel px/mm ve kalibr
 ## 8 Ekim — Manuel ölçek uygulama planı hazır
 
 [Manuel px/mm ve sade Calibration planı](../architecture/manual-scale-calibration-plan.md) önceki kısa kapsam notunun ayrıntılı devamıdır. C1 matematik/codec → C2 katalog/Measurement/Runtime → C3 sade ekran → C4 UI kabul → C5 birleşik test/belgeler. C1–C5 tamamlandı: matematik/codec, katalog/reçete/Runtime/CSV, sade üç yöntem ekranı ve birleşik yazılım kabulü mevcut. Yeni manual_planar_scale/1, record/dependency schema 3, eski hash/encode koruması, beş bölümlü üç yöntem UI ve doğrulamasız deneme/üretim ayrımı tanımlandı. Belgenin 7. bölümü GPT-6.1 Sol medium için kopyalanabilir başlangıç talimatıdır. P7 bu kapsamdan sonra; K4 ertelenmiş kalır.
+
+### CCUX-24B — sonuç sunumu ve kalıcı Flow
+
+Editor alt alanında Flow tek liste ve seçim modeliyle sağda kalır; Run Flow,
+Run Tool ve sol Results/Kenar profili/Bağlantılar sekme geçişleri listeyi gizlemez.
+Bağlantılar DAG özeti ve Validate DAG komutunu içerir. Yerel alt splitter ayarı
+sürümlüdür; eksik veya geçersiz ayar kullanılabilir başlangıca döner.
+Editor/Runtime normal sonuç paneli teknik kaynak/frame/cycle kimlik satırlarını
+sunmaz; değer/birim, süre, yürütme durumu ve gerçek hata korunur. Çok kaynaklı
+görüntü seçicisi korunur. Korelasyon metadata'sı, tanı ve kalıcı Logs/CSV verisi
+aynı kalır. Measurement ve Circle/Line/Edge Pair Properties kalibrasyon özeti
+ve aç düğmesi içermez; application katmanındaki model geçerlilik denetimi sürer.

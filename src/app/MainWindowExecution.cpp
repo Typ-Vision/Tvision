@@ -53,7 +53,7 @@ CalibrationResolver MainWindow::calibrationResolver(const Recipe& recipe) const 
     catch(const std::exception& e){const auto error=QString::fromUtf8(e.what());return [error](const ImageFrame& f){MeasurementExecutionContext c;c.rawSize=f.size();c.error=error;return c;};}
     return [recipe,path](const ImageFrame& f){return CalibrationWorkflow::resolve(recipe,f,path);};
 }
-QString MainWindow::calibrationSummary(const EditorContext* context) const {try{if(service_.activeRecipe() && service_.activeRecipe()->definition["editor"].toObject()["schemaVersion"]==9){const auto source=editorSession_.sourceForTool(context ? *context:editorContext(),selectedToolId_);if(source.isEmpty() || !measurementWorkspace_)return "Kaynak seçin";const auto branch=SystemCalibration::branch(*service_.activeRecipe(),source);const auto ref=SystemCalibration::setupReference(branch);if(ref){const auto status=measurementWorkspace_->calibrations().status(*ref);const auto prefix=QString{};if(status.state==CalibrationAvailability::None)return prefix+"Kalibrasyon yok — raw/px kullanılabilir";if(status.state==CalibrationAvailability::RecalibrationRequired)return prefix+"Yeniden kalibrasyon gerekli";if(!status.sessionPermitted)return prefix+"Kayıtlı / bağlantı ve oturum denetimi bekleniyor";if(status.experimental)return prefix+"Etkin model • bağımsız fiziksel kabul yok";}if(const auto s=measurementWorkspace_->forRecipe(branch))return s->record.name()+QString(" • v%1 • bu kaynak").arg(s->selection.version);return "Bu kaynakta kalibrasyon bağı yok";}if(service_.activeRecipe() && measurementWorkspace_){const auto ref=SystemCalibration::setupReference(*service_.activeRecipe());if(ref){const auto status=measurementWorkspace_->calibrations().status(*ref);const auto prefix=QString{};if(status.state==CalibrationAvailability::None)return prefix+"Kalibrasyon yok — raw/px kullanılabilir";if(status.state==CalibrationAvailability::RecalibrationRequired)return prefix+"Yeniden kalibrasyon gerekli";if(!status.sessionPermitted)return prefix+"Kayıtlı / bağlantı ve oturum denetimi bekleniyor";if(status.experimental)return prefix+"Etkin model • bağımsız fiziksel kabul yok";}}if(const auto s=systemCalibrationSnapshot())return s->record.name()+QString(" • v%1 • etkinleştirme %2").arg(s->selection.version).arg(s->selection.revision);if(service_.activeRecipe() && service_.activeRecipe()->calibrationBinding)return "Kayıtlı reçete kalibrasyonu — uyum her çalıştırmada denetlenir";return "Aktif kalibrasyon yok — Kalibrasyon sayfasında kamera seçin";}catch(const std::exception& e){return QString::fromUtf8(e.what());}}
+QString MainWindow::calibrationSummary(const EditorContext* context) const {try{if(service_.activeRecipe() && service_.activeRecipe()->definition["editor"].toObject()["schemaVersion"]==9){const auto source=editorSession_.sourceForTool(context ? *context:editorContext(),selectedToolId_);if(source.isEmpty() || !measurementWorkspace_)return "Kaynak seçin";const auto branch=SystemCalibration::branch(*service_.activeRecipe(),source);const auto ref=SystemCalibration::setupReference(branch);if(ref){const auto status=measurementWorkspace_->calibrations().status(*ref);const auto prefix=QString{};if(status.state==CalibrationAvailability::None)return prefix+"Kalibrasyon yok — raw/px kullanılabilir";if(status.state==CalibrationAvailability::RecalibrationRequired)return prefix+"Yeniden kalibrasyon gerekli";if(!status.sessionPermitted)return prefix+"Kayıtlı / bağlantı ve oturum denetimi bekleniyor";if(status.experimental)return prefix+"Etkin model";}if(const auto s=measurementWorkspace_->forRecipe(branch))return s->record.name()+QString(" • v%1 • bu kaynak").arg(s->selection.version);return "Bu kaynakta kalibrasyon bağı yok";}if(service_.activeRecipe() && measurementWorkspace_){const auto ref=SystemCalibration::setupReference(*service_.activeRecipe());if(ref){const auto status=measurementWorkspace_->calibrations().status(*ref);const auto prefix=QString{};if(status.state==CalibrationAvailability::None)return prefix+"Kalibrasyon yok — raw/px kullanılabilir";if(status.state==CalibrationAvailability::RecalibrationRequired)return prefix+"Yeniden kalibrasyon gerekli";if(!status.sessionPermitted)return prefix+"Kayıtlı / bağlantı ve oturum denetimi bekleniyor";if(status.experimental)return prefix+"Etkin model";}}if(const auto s=systemCalibrationSnapshot())return s->record.name()+QString(" • v%1 • etkinleştirme %2").arg(s->selection.version).arg(s->selection.revision);if(service_.activeRecipe() && service_.activeRecipe()->calibrationBinding)return "Kayıtlı reçete kalibrasyonu — uyum her çalıştırmada denetlenir";return "Aktif kalibrasyon yok — Kalibrasyon sayfasında kamera seçin";}catch(const std::exception& e){return QString::fromUtf8(e.what());}}
 std::optional<MeasurementEnvironment> MainWindow::editorDisplayEnvironment() const {
     editor_observation::Scope observation(editor_observation::DisplayEnvironment);
     return measurementWorkspace_ ? std::optional{measurementWorkspace_->environment()}:std::nullopt;
@@ -142,7 +142,7 @@ void MainWindow::showExecutionResultView(const EditorContext& context) {
         QString source=image.metadata().sourceId;for(const auto& candidate:service_.tools())if(candidate.id==source){source=candidate.name;break;}
         imageInfo_->setText(QString("%1 · bağlı kaynak: %2 · %3 × %4 px · Frame %5").arg(image.processing().isEmpty() ? "Ham görüntü":"İşlenmiş görüntü",source).arg(image.size().width()).arg(image.size().height()).arg(image.metadata().frameId));
     }catch(const std::exception&){}
-    if(!editorSession_.frame && !drawingImage_){imageViewer_->clearImage("Bu kaynak için güncel kare yok.");imageInfo_->setText("Görüntü yok.");}
+    if(!editorSession_.frame && !drawingImage_){imageViewer_->clearImage("Bu kaynak için güncel kare yok.",editorSession_.busy());imageInfo_->setText("Görüntü yok.");}
     // Resolve the final raster before uploading: do not bounce processed -> raw -> processed.
     if(editorSession_.cycle)for(const auto& r:editorSession_.cycle->tools)
         if(r.toolId==selectedToolId_ && r.state==ExecutionState::Done &&
@@ -151,25 +151,36 @@ void MainWindow::showExecutionResultView(const EditorContext& context) {
             if(processed.valid)if(const auto* image=std::get_if<ImageFrame>(&processed.data))
                 if(!image->processing().isEmpty())displayPreview=image->preview();
         }
-    if(!displayPreview.isNull())imageViewer_->setPreviewPixels(displayPreview);
+    if(!displayPreview.isNull())imageViewer_->setPreviewPixels(displayPreview,editorRecipeId_+"|"+(editorSession_.frame ? editorSession_.frame->metadata().sourceId:QString{}));
     if(!editorSession_.cycle){matchInfo_->clear();return;}
     if(editorSession_.frame){const auto evidence=editorSession_.cycle->industrialEvidence.value(editorSession_.frame->metadata().sourceId);
         if(evidence)imageInfo_->setText(imageInfo_->text()+QString("\n%1 • %2 | Profil %3 r%4 | actual exposure %5 µs / gain %6 | offset %7,%8")
             .arg(evidence->request.device.identity.model,evidence->request.device.identity.serial,evidence->request.profile.name).arg(evidence->request.profile.revision)
             .arg(evidence->actual.settings.exposureTimeUs).arg(evidence->actual.settings.gain).arg(evidence->actual.geometry.offset.x()).arg(evidence->actual.geometry.offset.y()));
     }
-    QStringList lines;if(editorSession_.cycle->partial)lines<<"Seçili araç değerlendirmesi • "+editorSession_.cycle->evaluationId;lines<<QString("%1 | Cycle %2 | Frame %3 | %4 ms").arg(executionStateName(editorSession_.cycle->state),editorSession_.cycle->cycleId,editorSession_.cycle->frameId).arg(editorSession_.cycle->milliseconds,0,'f',2);
+    QStringList lines;if(editorSession_.cycle->partial)lines<<"Seçili araç değerlendirmesi";lines<<QString("%1 | %2 ms").arg(executionStateName(editorSession_.cycle->state)).arg(editorSession_.cycle->milliseconds,0,'f',2);
     if(!editorSession_.cycle->error.isEmpty())lines<<editorSession_.cycle->error;
     auto ordered=editorSession_.cycle->tools;
     std::stable_sort(ordered.begin(),ordered.end(),[this](const auto& a,const auto& b){return a.toolId==selectedToolId_ && b.toolId!=selectedToolId_;});
     for(const auto& r:ordered) {
         QString name=r.toolId;for(const auto& t:service_.tools())if(t.id==r.toolId)name=t.name;
         lines<<name+" • "+executionStateName(r.state)+QString(" • %1 ms ").arg(r.milliseconds,0,'f',2)+(r.fitDiagnostic ? presentMeasurementDiagnostic(*r.fitDiagnostic):r.errorCode+" "+r.message);
-        if(service_.activeRecipe()->definition["editor"].toObject()["schemaVersion"]==9)for(const auto& value:r.outputs)if(value.valid){QString source=value.origin.sourceId;for(const auto& t:service_.tools())if(t.id==source)source=t.name;lines<<"  Kaynak: "+source+" | Frame "+value.frameId+" | Cycle "+value.cycleId;break;}
-        for(auto it=r.outputs.begin();it!=r.outputs.end();++it) {
-            const auto& v=it.value();
-            const auto value=ToolResultCodec::display(v,4);
-            lines<<"  "+it.key()+(v.diagnostic ? " [diagnostic]: ":": ")+value+" "+v.port.unit;
+        for(const auto& tool:service_.tools())if(tool.id==r.toolId) {
+            const auto preference=outputPreferences_.load({service_.project().id,service_.activeRecipe()->id,tool.id});
+            if(!preference.error.isEmpty())lines<<"  Görünüm tercihi: "+preference.error;
+            QMap<QString,OutputAvailabilityInfo> availability;
+            for(const auto& port:outputPorts(tool.kind)) {
+                const auto it=r.outputs.constFind(port.id);
+                availability[port.id]=it==r.outputs.cend() ? OutputAvailabilityInfo{OutputAvailability::Unavailable,"OUTPUT_NOT_PRODUCED"} : OutputAvailabilityInfo{it->valid ? OutputAvailability::Available:OutputAvailability::Unavailable,it->invalidReason};
+            }
+            const auto visibility=OutputVisibilityPolicy::resolve(tool,preference.selection,availability);
+            const auto visible=visibility.visiblePortIds();
+            for(const auto& entry:visibility.ports)if(entry.visible) {
+                if(entry.availability.state==OutputAvailability::Unavailable)lines<<"  "+entry.port.id+": kullanılamıyor · "+entry.availability.reason;
+                else {const auto& v=r.outputs[entry.port.id];lines<<"  "+entry.port.id+(v.diagnostic ? " [diagnostic]: ":": ")+ToolResultCodec::display(v,4)+" "+v.port.unit;}
+            }
+            for(auto it=visibility.invalidOutputReasons.cbegin();it!=visibility.invalidOutputReasons.cend();++it)if(!visible.contains(it.key()))lines<<"  Uyarı · "+it.key()+": kullanılamıyor · "+it.value();
+            if(visible.isEmpty())lines<<"  Sonuç çıkışları gizli (görüntü/overlay viewer'da korunur).";
         }
         if(r.toolId==selectedToolId_ && (editorSession_.sourceFrames.isEmpty() || (editorSession_.frame && editorSession_.sourceForTool(context,r.toolId)==editorSession_.frame->metadata().sourceId))) {
             if(r.state==ExecutionState::Done)edgeProfile_->setDiagnostics(r.edgeDiagnostics);
@@ -243,7 +254,7 @@ void MainWindow::runExecution(const QString& targetTool) {
     if(!multi || targetTool.isEmpty())++editorSession_.generation;
 
     if(multi && !targetTool.isEmpty())editorSession_.invalidateTool(editorContext(),targetTool);
-    editorSession_.references.clear();invalidateMatch();editorSession_.cycle.reset();editorSession_.frame.reset();imageViewer_->clearImage("BUSY — görüntü ediniliyor…");imageInfo_->setText("Yeni çevrim görüntüsü bekleniyor.");auto* watcher=editorSession_.watch<CycleResult>(this,SessionJob::Execution);
+    editorSession_.references.clear();invalidateMatch();editorSession_.cycle.reset();editorSession_.frame.reset();imageViewer_->clearImage("BUSY — görüntü ediniliyor…",true);imageInfo_->setText("Yeni çevrim görüntüsü bekleniyor.");auto* watcher=editorSession_.watch<CycleResult>(this,SessionJob::Execution);
     refreshFlow();matchInfo_->setText("BUSY — acquisition ve DAG çalışıyor…");
     findChild<QTabWidget*>("editorTabs")->setCurrentWidget(findChild<QScrollArea*>("resultsScroll"));
     const auto signature=flowSignature();const auto id=service_.activeRecipe()->id;const auto directory=QFileInfo(service_.path()).absolutePath();const auto cancel=editorSession_.token(SessionJob::Execution);
@@ -256,7 +267,7 @@ void MainWindow::runExecution(const QString& targetTool) {
                 if(service_.activeRecipe()->definition["editor"].toObject()["schemaVersion"]==9){for(const auto& t:service_.tools())if(t.enabled && ToolRegistry::get(t.kind).acquisitionSource)measurementWorkspace_->observeAcquisition(SystemCalibration::branch(*service_.activeRecipe(),t.id),*editorSession_.cycle);}else measurementWorkspace_->observeAcquisition(*service_.activeRecipe(),*editorSession_.cycle);
             }
             if(service_.activeRecipe() && service_.activeRecipe()->definition["editor"].toObject()["schemaVersion"]==9 && !selectedToolId_.isEmpty())editorSession_.selectSource(editorSession_.sourceForTool(editorContext(),selectedToolId_));
-            if(editorSession_.frame) {const auto& frame=*editorSession_.frame;imageViewer_->setImage(frame.preview());imageInfo_->setText(QString("%1×%2 px | Frame %3").arg(frame.size().width()).arg(frame.size().height()).arg(editorSession_.cycle->frameId));}
+            if(editorSession_.frame) {const auto& frame=*editorSession_.frame;imageViewer_->setImage(frame.preview(),editorRecipeId_+"|"+frame.metadata().sourceId);imageInfo_->setText(QString("%1×%2 px | Frame %3").arg(frame.size().width()).arg(frame.size().height()).arg(editorSession_.cycle->frameId));}
             if(!targetTool.isEmpty() && editorSession_.cycle->state!=ExecutionState::Skipped)for(const auto& r:editorSession_.cycle->tools)if(r.toolId==targetTool && r.state==ExecutionState::Done) {
                 const auto region=r.outputs.value("region"),score=r.outputs.value("score"),found=r.outputs.value("found");
                 if(std::holds_alternative<QRect>(region.data) && score.valid && found.valid) {
@@ -282,7 +293,7 @@ void MainWindow::loadImageAsync(const QString& path,bool commit) {
             if(commit){const bool multi=service_.activeRecipe()->definition["editor"].toObject()["schemaVersion"]==9;const auto source=multi ? editorSession_.sourceForTool(editorContext(),selectedToolId_):QString{};if(multi && source.isEmpty())throw std::runtime_error("Önce dosya kaynağını seçin.");selectedToolId_=service_.setImageFile(result.frame->path(),source);}
             auto loaded=*result.frame;if(service_.activeRecipe()->definition["editor"].toObject()["schemaVersion"]==9){auto m=loaded.metadata();m.sourceId=selectedToolId_;loaded=loaded.withMetadata(m);}
             editorSession_.frame=loaded;invalidateMatch();editorSession_.cycle.reset();editorSession_.adoptFrame(editorContext());
-            imageBinding_=editorRecipeId_+"|"+service_.imageFilePath();imageViewer_->setImage(editorSession_.frame->preview());
+            imageBinding_=editorRecipeId_+"|"+service_.imageFilePath();imageViewer_->setImage(editorSession_.frame->preview(),editorRecipeId_+"|"+editorSession_.frame->metadata().sourceId);
             imageInfo_->setText(QString("%1 × %2 px | %3 | %4").arg(editorSession_.frame->size().width()).arg(editorSession_.frame->size().height()).arg(editorSession_.frame->pixelFormat(),QFileInfo(editorSession_.frame->path()).fileName()));refreshWorkspace();
         }catch(const std::exception& e){displayError(QString::fromUtf8(e.what()));}
         else displayError(result.error);

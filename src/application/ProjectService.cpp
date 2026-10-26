@@ -147,7 +147,13 @@ void ProjectService::enableMultiSource() {
     dirty_=true;changedRecipes_.insert(activeId_);
 }
 QString ProjectService::addTool(const QString& kind) {
-    auto list=tools(); const auto params=defaultParameters(kind);
+    auto list=tools(); auto params=defaultParameters(kind);
+    // Creation policy only; registry defaults remain compatible with pixel records.
+    if(kind=="circle_fit") {
+        params["mode"]="calibrated";
+        for(const auto* key:{"scanWidth","inlierDistance","maxResidual","unitsPerSample"})params[key]=.1;
+        params["maxRms"]=.035;
+    }
     if (kind=="image_file" && activeRecipe()->definition["editor"].toObject()["schemaVersion"].toInt()!=9) for (const auto& t : list) if (t.kind==kind) { return t.id; }
     int suffix=1; QString name;
     do {

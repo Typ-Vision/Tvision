@@ -1,4 +1,5 @@
 #pragma once
+#include "presentation/OutputVisibilityPreferences.hpp"
 #include "domain/ToolRoi.hpp"
 #include <QMainWindow>
 #include <QStringList>
@@ -39,6 +40,8 @@ public:
     ~MainWindow() override;
     bool verifyMultiSource(const QString& artifacts);
     bool verifyMultiSourceRuntime(const QString& artifacts);
+    bool verifyRuntimeOverlays(const QString& artifacts);
+    bool verifyRuntimeVisibility(const QString& artifacts);
     bool verifyShell();
     bool verifyEditorResponsiveness(const QString& artifacts);
     bool verifyEditorPropertyCommits(const QString& artifacts);
@@ -62,6 +65,8 @@ public:
     bool verifyCamera(const QString& artifacts);
     bool verifyWebcam(const QString& artifacts);
     bool verifyMeasurement(const QString& artifacts);
+    bool verifyRestartRuntime(const QString& artifacts);
+    bool verifyRuntimeFailures(const QString& artifacts);
     bool verifyRuntime(const QString& artifacts);
     bool verifyCommunication(const QString& artifacts);
     bool verifySystemCalibration(const QString& artifacts);
@@ -87,6 +92,7 @@ private:
     Qt::WindowStates operatorWindowState_{};
     void runtimeAction(const QString&);
     void showRuntimeResult();
+    void completeRuntimeResult(CycleResult,const std::shared_ptr<std::atomic_bool>&);
     void refreshLogs();
     void exportLogCsv(const QString& path);
     void ensureRuntime();
@@ -115,6 +121,7 @@ private:
     quint64 editorRefreshEpoch_=0; // Supersedes an outer reentrant display operation.
     void selectTool(const QString& id);
     void showToolProperties();
+    void refreshOutputVisibilityControls();
     void showToolPropertiesView(const EditorContext&,const std::optional<MeasurementEnvironment>&);
     void addSelectedTool();
     enum class PropertyCommit { Unchanged, Changed, Failed };
@@ -157,6 +164,8 @@ private:
     void restoreLayout();
     void restoreSession();
     QString settingsFile_;
+    OutputVisibilityPreferences outputPreferences_;
+    QString runtimeProjectId_;
     QListWidget* navigation_{};
     WorkspacePanel* workspacePanel_{};
     QStackedWidget* pages_{};
@@ -228,6 +237,10 @@ private:
     QComboBox* plcMapping_{};
     QLabel* plcStatus_{};
     QLabel* hardwareStatus_{};
+    bool runtimeSourcesReady(QString* reason=nullptr) const;
+    QString runtimeVerificationError_,runtimeWorkspaceKey_;
+    IndependentCaptureBackend runtimeVerificationBackend_;
+    ExecutionService::SourceAdapterFactory runtimeSourceFactory_;
     QString runtimePath_;
     ProductionCycle runtimeCycle_;
     std::optional<CycleResult> runtimeResult_,runtimePending_;

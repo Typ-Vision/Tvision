@@ -1,4 +1,5 @@
 #include "FramedModelFixture.hpp"
+#include "application/RuntimeCoordinator.hpp"
 #include "OecsExperimentalFixture.hpp"
 #include "application/MeasurementWorkspace.hpp"
 #include <QCryptographicHash>
@@ -29,6 +30,13 @@ int main(int argc,char** argv){QCoreApplication app(argc,argv);try{
         IndependentCalibrationSession probe;const auto captured=IndependentCalibrationSession::run(probe.begin(request),backend);if(!captured.error().isEmpty())throw std::runtime_error(captured.error().toStdString());check(probe.accept(captured),"independent experimental fixture capture");
         auto& math=probe.math();check(math.accept(CalibrationWizardSession::run(math.scanPair("pair",{{"image"},ScanSegment{{20,100},{620,100},4}}))),"fixture caliper");math.setKnownMillimetres(sources.isEmpty()?10:20);const auto record=test::framedModel(math.calculate(),*math.frame(),sources.isEmpty()?10:20).named(sources.isEmpty()?"Framed fixture A":"Framed fixture B");
         const auto saved=active.saveAndUse({ref,active.environment().revision,probe.evidence()->generation,CalibrationCapturePolicy::ExperimentalOecs},record,probe,[]{return true;});check(saved.state==CalibrationSaveUseState::Activated,"fixture experimental activation");
+        {
+            ScopedActiveCalibrationService cold(MeasurementEnvironmentRepository(project.path(),project.project().id),[]{return true;});
+            const auto persisted=workspace.exportDependencies();const auto remembered=cold.environment().selections.last();
+            check(cold.configuration(ref,true).record.encode()==record.encode(),"experimental remembered framed model is statically readable");rejects([&]{cold.configuration(ref);});rejects([&]{cold.snapshots({ref});});
+            IndependentCalibrationSession fresh;check(fresh.accept(IndependentCalibrationSession::run(fresh.begin(request),backend)),"fresh experimental reauthorization probe");
+            cold.reauthorizeRemembered(remembered,fresh);check(cold.experimentalSnapshots({ref}).size()==1 && workspace.exportDependencies()==persisted,"experimental reauthorization preserves persisted model/selection");rejects([&]{cold.snapshots({ref});});rejects([&]{cold.reauthorizeRemembered(remembered,fresh);});
+        }
         const auto image=*probe.math().frame();const auto metadata=image.metadata();const auto path=dir.filePath(r.camera.id.value+".pgm");ExperimentalOecsAcquisition::save({image,metadata.sourceId,metadata.cycleId,metadata.frameId,metadata.completedAtUtc},path);
         const auto source=project.addTool("image_file");project.setImageFile(path,source);project.enableMultiSource();project.bindCameraSource(source,active.environment(),ref.camera);sources<<source;replayPaths[source]=path;
         const auto a=project.addTool("edge_point"),b=project.addTool("edge_point"),m=project.addTool("measurement");metrics<<m;
@@ -37,6 +45,17 @@ int main(int argc,char** argv){QCoreApplication app(argc,argv);try{
     }
     QImage raw(2448,2048,QImage::Format_Grayscale8);raw.fill(20);const auto rawPath=dir.filePath("raw.png");check(raw.save(rawPath),"raw raster");const auto rawSource=project.addTool("image_file");project.setImageFile(rawPath,rawSource);project.bindCameraSource(rawSource,active.environment(),first.camera.id);const auto rawBlob=project.addTool("blob");for(auto t:project.tools())if(t.id==rawBlob){t.parameters["threshold"]=128;project.updateTool(t);}auto mixedLinks=editorConnections(project.activeRecipe()->definition);mixedLinks<<ToolConnection{rawSource,"image",rawBlob,"image"};project.setConnections(mixedLinks);project.save();
     const auto recipe=*project.activeRecipe();const auto graph=validateSourceGraph(editorTools(recipe.definition),editorConnections(recipe.definition));if(!graph.valid())throw std::runtime_error(graph.errors.join("; ").toStdString());int tamper=0;auto provider=[&](const Recipe& current){auto d=workspace.productionSources(current,{},true);if(tamper==1)d.experimentalCalibrations.remove(sources[0]);if(tamper==2)d.experimentalCalibrations[sources[0]]=d.experimentalCalibrations[sources[1]];if(tamper==3){auto typed=std::make_shared<ExperimentalScopedCalibrationSnapshot>(*d.experimentalCalibrations[sources[0]]);typed->snapshot.calibration.selection.version++;d.experimentalCalibrations[sources[0]]=typed;}return d;};
+    {
+        MeasurementWorkspace cold(project.path(),project.project().id,[]{return true;});
+        RuntimeService offline(dir.filePath("offline"),{},RuntimeIdentity::localEngineer());offline.setAutomaticAcquisition([&](const Recipe& r){return cold.productionSources(r,{},true);});
+        offline.setConfigurationProviders({}, {},[&](const Recipe& r){return cold.configurationSources(r,{},true);});
+        const auto persisted=cold.exportDependencies();offline.checkConfiguration(recipe,dir.path());
+        check(!offline.active() && cold.exportDependencies()==persisted,"experimental replay Load resolves framed models without new math/permission/writes");
+        rejects([&]{offline.prepare(recipe,dir.path());});rejects([&]{offline.begin();});
+        rejects([&]{cold.configurationSources(recipe);});
+        offline.setAutomaticAcquisition([&](const Recipe& r){return cold.configurationSources(r,{},true);});rejects([&]{offline.prepare(recipe,dir.path());});
+        const auto path=replayPaths[sources[0]];check(QFile::rename(path,path+".held"),"hide replay configuration raster");rejects([&]{offline.checkConfiguration(recipe,dir.path());});check(QFile::rename(path+".held",path),"restore replay configuration raster");
+    }
     MultiSourceRuntimeService trusted(RuntimeIdentity::localEngineer(),provider);rejects([&]{trusted.prepare(recipe,dir.path());});
     const auto archive=dir.filePath("archive");RuntimeService runtime(archive,{},RuntimeIdentity::localEngineer());runtime.setAutomaticAcquisition(provider);
     for(tamper=1;tamper<=3;++tamper)rejects([&]{runtime.prepare(recipe,dir.path());});tamper=0;runtime.prepare(recipe,dir.path());tamper=3;rejects([&]{runtime.begin();});tamper=0;
@@ -47,6 +66,8 @@ int main(int argc,char** argv){QCoreApplication app(argc,argv);try{
     auto changed=result;changed.tools.back().message="changed completion";rejects([&]{runtime.finish(lease.ticket,changed);});
     QDir().mkpath(archive);QLockFile lock(archive+"/archive.lock");check(lock.tryLock(0),"archive lock");rejects([&]{runtime.finish(lease.ticket,result);});tamper=1;lock.unlock();runtime.finish(lease.ticket,result);tamper=0;check(!runtime.busy() && result.acquisitions==3,"frozen payload retry without execution");
     const auto record=ProductionStore(archive).recent("experimental_cycles").first();check(record["schema"]=="visionflow.experimental-runtime2","versioned metric codec");if(argc>1){QFile evidence(QString::fromLocal8Bit(argv[1]));check(evidence.open(QIODevice::WriteOnly|QIODevice::Truncate),"write fixture evidence");evidence.write(QJsonDocument(record).toJson(QJsonDocument::Indented));}ExperimentalRuntime::validateRecord(record);rejects([&]{ProductionResultCodec::validate(record);});
+    const auto encodedBefore=QJsonDocument(record).toJson(QJsonDocument::Compact);
+    check(!ExperimentalRuntime::summary(record).contains("Bağımsız fiziksel kabul yapılmadı") && QJsonDocument(record).toJson(QJsonDocument::Compact)==encodedBefore,"presentation removes routine notice without rewriting historical evidence");
     const auto csv=ExperimentalRuntime::csv({record});const auto summary=ExperimentalRuntime::summary(record);
     check(csv.startsWith("schema,cycleId,recipeId,executionState,productionAdmission,triggerAssociationVerified,communicationState,sourceModels,results,evidence") && csv.contains("mm") && csv.contains("px2") && csv.contains("calibrationId") && summary.contains("10 mm") && summary.contains("20 mm") && summary.contains(sources[0]) && summary.contains(sources[1]) && summary.contains("Değerlendirilmedi") && summary.contains("Kullanılamıyor") && !summary.contains("Deneysel") && !summary.contains("PASS"),"metric Logs/CSV preserve real units, source, exact model and experimental decision");
     for(const auto& id:sources){const auto selection=record["dependencies"].toObject()["sourceSet"].toObject()[id].toObject()["experimentalCalibration"].toObject()["selection"].toObject();check(csv.contains(selection["id"].toString().toUtf8()) && csv.contains(selection["contentId"].toString().toUtf8()),"CSV exact model identity and content");}
@@ -67,6 +88,20 @@ int main(int argc,char** argv){QCoreApplication app(argc,argv);try{
     for(const auto& historical:ProductionStore(archive).recent("experimental_cycles"))if(historical["state"]!="DONE"){const auto text=ExperimentalRuntime::summary(historical);check(!text.contains(": 10 mm") && !text.contains(": 20 mm"),"Stop/error historical summary has no numeric result");check(ExperimentalRuntime::csv({historical}).contains("\"[]\""),"Stop/error CSV results empty");}
     // A new raw-only record is projected onto the original v1 field set to exercise historical decoding.
     ProjectService rawProject;rawProject.createProject("old raw","",dir.filePath("raw.vfproject"),"file");rawProject.createRecipe("raw","",ApplicationType::Measurement,"file");rawProject.setImageFile(rawPath);rawProject.enableMultiSource();RuntimeService old(dir.filePath("old"),{},RuntimeIdentity::localEngineer());MeasurementWorkspace rawWorkspace(rawProject.path(),rawProject.project().id,[]{return true;});old.setExperimental(true,[&](const Recipe& r){return rawWorkspace.productionSources(r,{},true);});old.prepare(*rawProject.activeRecipe(),dir.path());auto rawLease=old.begin();auto rawResult=RuntimeService::execute(rawLease,{},{});old.finish(rawLease.ticket,rawResult);auto legacy=ProductionStore(dir.filePath("old")).recent("experimental_cycles").first();legacy["schema"]="visionflow.experimental-runtime1";legacy["schemaVersion"]=1;auto deps=legacy["dependencies"].toObject();deps["scope"]="experimental_runtime/1";auto entries=deps["sourceSet"].toObject();for(auto i=entries.begin();i!=entries.end();++i){auto e=i->toObject();e.remove("imageInfo");i.value()=e;}deps["sourceSet"]=entries;legacy["dependencies"]=deps;legacy["dependencyId"]=QString::fromLatin1(hash(deps));auto tools=legacy["tools"].toArray();for(int n=0;n<tools.size();++n){auto t=tools[n].toObject();t.remove("calibration");tools[n]=t;}legacy["tools"]=tools;ExperimentalRuntime::validateRecord(legacy);rejects([&]{ProductionResultCodec::validate(legacy);});
+    {const auto recoveryArchive=dir.filePath("coordinator-recovery");RuntimeService recovery(recoveryArchive,{},RuntimeIdentity::localEngineer());
+        recovery.setExperimental(true,[&](const Recipe& r){return rawWorkspace.productionSources(r,{},true);});
+        RuntimeCoordinator c(recovery);c.load(*rawProject.activeRecipe(),dir.path());c.start();const auto cycle=c.begin(RuntimeTrigger::Manual);
+        const auto completed=RuntimeService::execute(cycle,{},c.cancellation());check(completed.state==ExecutionState::Done,"Experimental coordinator replay result");
+        check(QDir().mkpath(recoveryArchive),"Experimental recovery archive fixture");QLockFile disk(recoveryArchive+"/archive.lock");check(disk.tryLock(0),"Experimental coordinator disk lock");rejects([&]{c.finish(cycle.ticket,completed);});
+        check(c.recordingPending() && c.failure()==RuntimeFailure::Persistence,"Experimental typed persistence retry");
+        auto changed=completed;changed.milliseconds+=1;rejects([&]{c.finish(cycle.ticket,changed);});rejects([&]{c.begin(RuntimeTrigger::Manual);});
+        const QJsonValue firstFailure=recovery.diagnostics()->snapshot()["firstFailure"];c.stop();disk.unlock();check(QFile::rename(rawPath,rawPath+".held"),"Hide experimental retry raster");
+        c.retryRecording();check(QFile::rename(rawPath+".held",rawPath),"Restore experimental retry raster");
+        const auto records=ProductionStore(recoveryArchive).recent("experimental_cycles");
+        check(records.size()==1 && records.first()["cycleId"]==completed.cycleId && !recovery.busy() && c.state()==RuntimeState::LoadedStopped && recovery.records().isEmpty(),"Experimental frozen retry records once without executing or trusted promotion");
+        int admissions=0,completions=0;for(const auto& v:recovery.diagnostics()->snapshot()["events"].toArray()){const auto e=v.toObject();admissions+=e["action"]=="admission" && e["outcome"]=="accepted";completions+=e["action"]=="completion";}
+        check(admissions==1 && completions==1 && recovery.diagnostics()->snapshot()["firstFailure"]==firstFailure,"Experimental retry preserves ticket/completion count and first failure");
+    }
     if(argc>2)ProductionStore(archive).append("experimental_cycles",legacy["recordId"].toString(),legacy);
     check(ExperimentalRuntime::summary(legacy).contains("Raw / px") && ExperimentalRuntime::csv({legacy,record}).contains("visionflow.experimental-runtime1"),"mixed legacy/new CSV remains experimental");
     QTextStream(stdout)<<"PASS: two exact experimental models, mixed raw/mm, negative model/geometry/sidecar/ports, frozen retry, Stop, restart and legacy v1; fixture only: "<<typeKey(applicationType)<<'\n';}

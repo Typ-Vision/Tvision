@@ -5,9 +5,11 @@
 #include "IndustrialExecution.hpp"
 #include "ExperimentalRuntime.hpp"
 #include "RuntimeCameraSessions.hpp"
+#include "SourceVerificationService.hpp"
 #include <QDir>
 #include <QFileInfo>
 #include <QUuid>
+#include <QElapsedTimer>
 #ifdef Q_OS_WIN
 #ifndef NOMINMAX
 #define NOMINMAX
@@ -39,6 +41,7 @@ MultiSourceDependencies RuntimeService::cameraComposition(const Recipe& r,const 
     return cameraSessions_?cameraSessions_->compose(std::move(set)):set;
 }
 void RuntimeService::requestCameraPreparation(const Recipe& recipe,const QString& directory){
+    requireVerificationIdle();requireVerified(recipe,directory);
     bool industrial=false;for(const auto& t:editorTools(recipe.definition))if(t.enabled && t.kind=="industrial_camera")industrial=true;
     if(!industrial){cameraSessions_.reset();return;}
     if(identity_.principal.isEmpty() || !identity_.authorize || !identity_.authorize(identity_.principal,ProductionAction::Run) ||
@@ -47,7 +50,8 @@ void RuntimeService::requestCameraPreparation(const Recipe& recipe,const QString
     const bool experimental=requiresManualCycles(recipe,directory);const auto& provider=experimental?automaticProvider_:multiProvider_;
     if(!provider)throw ProductionException(ProductionError::InvalidConfiguration,"Runtime source-set provider required");
     if(!cameraSessions_)cameraSessions_=std::make_unique<RuntimeCameraSessions>();
-    cameraSessions_->start(recipe,provider(recipe),experimental);
+    auto set=provider(recipe);if(set.configurationOnly)throw ProductionException(ProductionError::DependencyChanged,"Configuration source set cannot prepare cameras");
+    cameraSessions_->start(recipe,std::move(set),experimental);
 }
 bool RuntimeService::pollCameras(){return cameraSessions_ && cameraSessions_->poll();}
 void RuntimeService::stopCameras(){if(cameraSessions_)cameraSessions_->stop();}
@@ -55,7 +59,26 @@ bool RuntimeService::camerasPending() const{return cameraSessions_ && cameraSess
 bool RuntimeService::camerasDraining() const{return cameraSessions_ && cameraSessions_->draining();}
 QString RuntimeService::cameraError() const{return cameraSessions_?cameraSessions_->error():QString{};}
 bool RuntimeService::cameraCloseFailed() const{return cameraSessions_ && cameraSessions_->closeFailed();}
+void RuntimeService::setSourceVerification(std::shared_ptr<SourceVerificationService> verification){verification_=std::move(verification);}
+bool RuntimeService::sourceVerificationBusy() const {return verification_ && verification_->busy();}
+void RuntimeService::cancelSourceVerification(){if(verification_ && verification_->busy())verification_->cancel();}
+bool RuntimeService::pollSourceVerification(){if(!verification_ || !verification_->busy())return false;return verification_->poll();}
+void RuntimeService::requireVerificationIdle() const {if(sourceVerificationBusy())throw ProductionException(ProductionError::Busy,"Source verification worker owns acquisition");}
+void RuntimeService::requireVerified(const Recipe& recipe,const QString& directory) const {if(verification_ && !verification_->admissionAllowedFor(recipe,directory))throw ProductionException(ProductionError::DependencyChanged,"Whole source verification set is not ready for this recipe");}
+void RuntimeService::rememberVerificationIdentity(const Recipe& recipe,const QString& directory){
+    if(const auto snapshot=active())verificationRecipeIdentities_[snapshot->validation().id]=ProductionRecipeService::recipeContent(recipe,directory);
+}
+void RuntimeService::requireActiveVerified() const {
+    if(!verification_)return;
+    const auto snapshot=active();
+    const auto identity=snapshot ? verificationRecipeIdentities_.value(snapshot->validation().id,ProductionRecipeService::recipeContent(snapshot->recipe(),snapshot->projectDirectory())):QByteArray{};
+    if(!verification_->admissionAllowedForIdentity(identity))throw ProductionException(ProductionError::DependencyChanged,"Whole source verification set is not ready for the active recipe");
+}
 bool RuntimeService::busy() const {return production_.busy() || (multi_ && multi_->busy()) || (experimental_ && experimental_->busy());}
+void RuntimeService::setConfigurationProviders(ScopedProvider scoped,MultiProvider multi,MultiProvider experimental){
+    if(busy())throw ProductionException(ProductionError::Busy,"Runtime cycle/recording pending");
+    configurationScoped_=std::move(scoped);configurationMulti_=std::move(multi);configurationExperimental_=std::move(experimental);
+}
 void RuntimeService::setAutomaticAcquisition(MultiProvider provider){
     if(busy())throw ProductionException(ProductionError::Busy,"Runtime cycle/recording pending");
     stopCameras();automaticAcquisition_=true;automaticProvider_=std::move(provider);
@@ -69,9 +92,9 @@ void RuntimeService::setExperimental(bool enabled,MultiProvider provider){
     multi_.reset();multiMode_=false;validation_.reset();policyReset_=true;
 }
 std::shared_ptr<const ProductionSnapshot> RuntimeService::active() const {return policyReset_ ? nullptr:experimental_ ? experimental_->active():multiMode_ ? multi_->active():production_.active();}
-void RuntimeService::requireReady() const {if(policyReset_)throw ProductionException(ProductionError::UnknownValidation,"Run required after Runtime policy change");if(experimental_)experimental_->requireReady();else if(multiMode_)multi_->requireReady();else production_.requireReady(identity_.principal);}
+void RuntimeService::requireReady() const {requireVerificationIdle();requireActiveVerified();if(policyReset_)throw ProductionException(ProductionError::UnknownValidation,"Run required after Runtime policy change");if(experimental_)experimental_->requireReady();else if(multiMode_)multi_->requireReady();else production_.requireReady(identity_.principal);}
 std::optional<ActiveCalibrationSnapshot> RuntimeService::systemSnapshot(const Recipe& r) const {
-    if(r.definition.contains("sourceSetup") || r.definition.contains("calibrationPolicy")){if(!scoped_)throw std::runtime_error("Scoped Runtime provider required");auto s=scoped_(r);if(!s || s->scope.isEmpty())throw std::runtime_error("Required setup is not active");return s;}
+    if(r.definition.contains("sourceSetup") || r.definition.contains("calibrationPolicy")){if(!scoped_)throw std::runtime_error("Scoped Runtime provider required");auto s=scoped_(r);if(!s || s->scope.isEmpty())throw std::runtime_error("Required setup is not active");if(s->configurationOnly)throw std::runtime_error("Configuration model cannot grant Runtime admission");return s;}
     return system_ ? system_():std::optional<ActiveCalibrationSnapshot>{};
 }
 QJsonObject RuntimeService::sourceDependencies(const Recipe& r) const {
@@ -141,29 +164,37 @@ bool RuntimeService::requiresManualCycles(const Recipe& r,const QString& directo
     catch(const std::exception& e){throw ProductionException(ProductionError::InvalidConfiguration,e.what());}
 }
 void RuntimeService::checkConfiguration(const Recipe& r,const QString& directory) const {
-    if(automaticAcquisition_ && requiresManualCycles(r,directory)){ExperimentalRuntime checker(identity_,automaticProvider_,{});checker.prepare(r,directory);return;}
-    if(experimental_ && !automaticAcquisition_){validateEditorDefinition(r.definition);return;}
-    if(r.definition["editor"].toObject()["schemaVersion"]==9){
-        if(!multiProvider_)throw ProductionException(ProductionError::InvalidConfiguration,"Whole source-set provider required");
-        const auto tools=editorTools(r.definition);bool industrial=false;for(const auto& t:tools)if(t.enabled && t.kind=="industrial_camera")industrial=true;
-        if(industrial){
-            // Load is a read-only declaration. Run/prepare and begin retain full
-            // immutable admission; offline presentation grants no backend authority.
-            validateEditorDefinition(r.definition);const auto graph=validateSourceGraph(tools,editorConnections(r.definition));
-            if(!graph.valid() || graph.requiredSources.isEmpty())throw ProductionException(ProductionError::InvalidConfiguration,"Invalid required source graph");
-            for(const auto& t:tools)if(t.enabled && t.kind=="industrial_camera")IndustrialSourceReference::fromJson(t.parameters["sourceReference"].toObject());
-            return;
-        }
-        MultiSourceRuntimeService checker(identity_,multiProvider_);checker.prepare(r,directory);return;
+    if((automaticAcquisition_ && requiresManualCycles(r,directory)) || (experimental_ && !automaticAcquisition_)){
+        ExperimentalRuntime checker(identity_,configurationExperimental_ ? configurationExperimental_:automaticProvider_,{});checker.checkConfiguration(r,directory);return;
     }
-    ProductionRecipeService checker(identity_.authorize,[this](const Recipe& recipe){return declaredDependencies(recipe);});
-    checker.validate(identity_.principal,systemRecipe(r,directory),directory);
+    if(r.definition["editor"].toObject()["schemaVersion"]==9){
+        const auto provider=configurationMulti_ ? configurationMulti_:multiProvider_;
+        if(!provider)throw ProductionException(ProductionError::InvalidConfiguration,"Whole source-set configuration provider required");
+        MultiSourceRuntimeService checker(identity_,provider);checker.checkConfiguration(r,directory);return;
+    }
+    const bool scoped=r.definition.contains("sourceSetup") || r.definition.contains("calibrationPolicy");
+    auto effective=r;
+    auto declared=[&](const Recipe& recipe){
+        if(!scoped || !configurationScoped_)return declaredDependencies(recipe);
+        ProductionDependencies d;d.measurementSource=sourceDependencies(recipe);
+        if(SystemCalibration::requestsCalibration(recipe,false)){
+            const auto model=configurationScoped_(recipe);if(!model)throw std::runtime_error("Remembered exact model required");
+            const auto source=SystemCalibration::source(recipe);d.calibration=SystemCalibration::binding(*model,source.id,source.id+"/image");d.systemCalibration=SystemCalibration::evidence(*model,source.id,source.id+"/image");
+        }return d;
+    };
+    if(scoped && configurationScoped_){
+        effective.calibrationBinding.reset();effective.calibrationReference.clear();
+        if(SystemCalibration::requestsCalibration(r,false)){const auto model=configurationScoped_(r);if(!model)throw std::runtime_error("Remembered exact model required");effective=SystemCalibration::prepareRecipe(*model,r,directory);}
+    }else effective=systemRecipe(r,directory);
+    ProductionRecipeService checker(identity_.authorize,declared);
+    checker.validate(identity_.principal,effective,directory);
     for(const auto& tool:editorTools(r.definition))if(tool.enabled && tool.kind=="image_file") {
         const QFileInfo file(QDir(directory).absoluteFilePath(tool.parameters["path"].toString()));
         if(!file.isFile() || !file.isReadable())throw ProductionException(ProductionError::InvalidConfiguration,tool.name+": Kaynak görüntü dosyası bulunamadı veya okunamıyor.");
     }
 }
 void RuntimeService::prepare(const Recipe& r,const QString& directory) {
+    requireVerificationIdle();requireVerified(r,directory);
     if(busy())throw ProductionException(ProductionError::Busy,"Runtime cycle/recording pending.");
     if(automaticAcquisition_){
         const bool selected=requiresManualCycles(r,directory);
@@ -185,7 +216,7 @@ void RuntimeService::prepare(const Recipe& r,const QString& directory) {
     try {
         observeInstallation(r);declaredPreparation_=true;
         const auto effective=systemRecipe(r,directory);const auto validation=production_.validate(identity_.principal,effective,directory);
-        production_.activate(identity_.principal,validation.id,effective,directory);validation_=validation;multiMode_=false;policyReset_=false;
+        production_.activate(identity_.principal,validation.id,effective,directory);validation_=validation;multiMode_=false;policyReset_=false;rememberVerificationIdentity(r,directory);
     }catch(...){declaredInstallations_=previousDeclarations;validation_=previousValidation;declaredPreparation_=previousMode;throw;}
 }
 RecipeValidation RuntimeService::validate(const Recipe& r,const QString& directory,const ImageFrame& frame) {
@@ -203,16 +234,37 @@ void RuntimeService::observeInstallation(const Recipe& r) {
     for(const auto& t:editorTools(r.definition))if(t.kind=="image_file" || t.kind=="webcam")declaredInstallations_[t.id]=QJsonObject{{"kind",t.kind},{"parameters",t.parameters},{"enabled",t.enabled},{"planarSetup",r.definition.value("planarSetup")}};
 }
 void RuntimeService::activate(const Recipe& r,const QString& directory) {
+    requireVerificationIdle();requireVerified(r,directory);
     if(experimental_)throw ProductionException(ProductionError::InvalidConfiguration,"Experimental Runtime uses separate preparation");
     if(busy())throw ProductionException(ProductionError::Busy,"Runtime cycle/recording pending.");
     if(!validation_)throw ProductionException(ProductionError::UnknownValidation,"Validate the current draft first.");
-    production_.activate(identity_.principal,validation_->id,systemRecipe(r,directory),directory);multiMode_=false;
+    production_.activate(identity_.principal,validation_->id,systemRecipe(r,directory),directory);multiMode_=false;rememberVerificationIdentity(r,directory);
 }
-void RuntimeService::rollback(const QString& id){if(experimental_)throw ProductionException(ProductionError::InvalidConfiguration,"Experimental Runtime cannot activate production history");if(busy())throw ProductionException(ProductionError::Busy,"Cycle pending");production_.rollback(identity_.principal,id);multiMode_=false;}
-ProductionCycle RuntimeService::begin(const QJsonObject& communication){if(policyReset_)requireReady();return experimental_ ? experimental_->begin(communication):multiMode_ ? multi_->begin(communication):production_.beginCycle(identity_.principal,communication);}
+void RuntimeService::rollback(const QString& id){requireVerificationIdle();if(experimental_)throw ProductionException(ProductionError::InvalidConfiguration,"Experimental Runtime cannot activate production history");if(busy())throw ProductionException(ProductionError::Busy,"Cycle pending");production_.rollback(identity_.principal,id);multiMode_=false;}
+ProductionCycle RuntimeService::begin(const QJsonObject& communication){
+    QElapsedTimer timer;timer.start();
+    QJsonObject event{{"action","admission"},{"phase","begin"},{"plcRequest",!communication.isEmpty()}};
+    if(const auto s=active())event.insert("recipe",RuntimeDiagnostics::recipeContext(s->recipe()));
+    try {
+        requireVerificationIdle();requireActiveVerified();
+        if(policyReset_)requireReady();
+        auto cycle=experimental_ ? experimental_->begin(communication):multiMode_ ? multi_->begin(communication):production_.beginCycle(identity_.principal,communication);
+        cycle.diagnostics=diagnostics_;event["ticket"]=QString::number(cycle.ticket);event["elapsedMs"]=timer.elapsed();
+        event["outcome"]="accepted";diagnostics_->append(event);return cycle;
+    }catch(const ProductionException& e){event["reason"]=QString::fromUtf8(e.what());event["errorCode"]=int(e.code());event["elapsedMs"]=timer.elapsed();diagnostics_->append(event,e.code()!=ProductionError::Busy);throw;}
+    catch(const std::exception& e){event["reason"]=QString::fromUtf8(e.what());diagnostics_->append(event,true);throw;}
+}
+bool RuntimeService::presentationMatches(const CycleResult& result,const std::shared_ptr<const ProductionSnapshot>& snapshot){return snapshot && (result.completionSnapshot_==snapshot || result.experimentalSnapshot_==snapshot);}
+bool RuntimeService::sameCompletion(const CycleResult& a,const CycleResult& b){return ProductionRecipeService::completionDigest(a)==ProductionRecipeService::completionDigest(b);}
 void RuntimeService::finish(quint64 ticket,const CycleResult& r){
-    if(experimental_){experimental_->finish(ticket,r);return;}
-    if(r.partial)throw std::runtime_error("Editor partial evaluation cannot be recorded as a Runtime cycle.");if(multiMode_)multi_->finish(ticket,r);else production_.finishCycle(ticket,r);}
+    QElapsedTimer timer;timer.start();QJsonObject event{{"action","record"},{"ticket",QString::number(ticket)},{"cycleId",r.cycleId},{"recipeId",r.recipeId},{"executionState",executionStateName(r.state)}};
+    try {
+        if(r.partial)throw ProductionException(ProductionError::InvalidCompletion,"Editor partial evaluation cannot be recorded as a Runtime cycle.");
+        if(experimental_)experimental_->finish(ticket,r);else if(multiMode_)multi_->finish(ticket,r);else production_.finishCycle(ticket,r);
+        event["outcome"]="committed";event["elapsedMs"]=timer.elapsed();diagnostics_->append(event);
+    }catch(const ProductionException& e){event["reason"]=QString::fromUtf8(e.what());event["errorCode"]=int(e.code());event["recordPending"]=e.code()==ProductionError::PersistenceFailure;event["elapsedMs"]=timer.elapsed();diagnostics_->append(event,true);throw;}
+    catch(const std::exception& e){event["reason"]=QString::fromUtf8(e.what());diagnostics_->append(event,true);throw;}
+}
 ImageFrame RuntimeService::probe(const Recipe& recipe,const QString& directory,const std::shared_ptr<std::atomic_bool>& cancel) {
     QString source;int count=0;for(const auto& t:editorTools(recipe.definition))if(t.enabled && (t.kind=="image_file" || t.kind=="webcam")){source=t.id;++count;}
     if(count!=1)throw std::runtime_error("Tek enabled edinim kaynağı gerekir.");
@@ -230,7 +282,25 @@ void RuntimeService::suppressCancelled(const ProductionCycle& cycle,CycleResult&
     result.completionDigest_=ProductionRecipeService::completionDigest(result);
 }
 CycleResult RuntimeService::execute(const ProductionCycle& cycle,const QString& catalogPath,const std::shared_ptr<std::atomic_bool>& cancel,ExecutionService::SourceAdapterFactory factory) {
-    if(ExperimentalRuntime::accepts(cycle)){if(factory)throw std::runtime_error("Experimental Runtime does not accept injected source adapters");return ExperimentalRuntime::execute(cycle,cancel);}
+    const auto report=[&](const CycleResult& result) noexcept {try{
+        const auto recipe=cycle.snapshot->recipe();
+    if(cycle.diagnostics){
+        const QJsonObject context{{"ticket",QString::number(cycle.ticket)},{"cycleId",result.cycleId},{"recipeId",recipe.id}};
+        QMap<QString,QString> sources;for(const auto& tool:editorTools(recipe.definition))if(tool.enabled && (tool.kind=="image_file" || tool.kind=="webcam" || tool.kind=="industrial_camera"))sources[tool.id]=tool.kind;
+        if(result.state==ExecutionState::Error && sources.contains(result.acquisitionFailureSourceId_)){
+            auto event=context;event["action"]="acquisition";event["phase"]="policyPreflight";event["attempted"]=false;
+            event["sourceId"]=result.acquisitionFailureSourceId_;event["sourceKind"]=sources[result.acquisitionFailureSourceId_];
+            event["executionState"]="ERROR";event["reason"]=result.error;cycle.diagnostics->append(event,true);
+        }
+        for(const auto& t:result.tools)if(sources.contains(t.toolId)){
+            auto event=context;event["action"]="acquisition";event["sourceId"]=t.toolId;event["sourceKind"]=sources[t.toolId];event["executionState"]=executionStateName(t.state);event["reason"]=t.message;event["errorCode"]=t.errorCode;event["elapsedMs"]=t.milliseconds;
+            for(const auto& frame:result.frames)if(frame.sourceId==t.toolId)event["frameId"]=frame.frameId;
+            cycle.diagnostics->append(event,t.state==ExecutionState::Error);
+        }
+        auto event=context;event["action"]="completion";event["executionState"]=executionStateName(result.state);event["reason"]=result.error;event["elapsedMs"]=result.milliseconds;cycle.diagnostics->append(event,result.state==ExecutionState::Error);
+    }
+    }catch(...){} };
+    if(ExperimentalRuntime::accepts(cycle)){if(factory)throw std::runtime_error("Experimental Runtime does not accept injected source adapters");auto result=ExperimentalRuntime::execute(cycle,cancel);report(result);return result;}
     if(!cycle.snapshot || !cycle.ticket)throw std::runtime_error("Runtime execution requires a production lease");
     const auto s=cycle.snapshot;const auto recipe=s->recipe();
     QJsonObject acquisition=s->dependencies()["measurementSource"].toObject()["acquisition"].toObject();
@@ -242,6 +312,7 @@ CycleResult RuntimeService::execute(const ProductionCycle& cycle,const QString& 
     catch(const std::exception& e){result.recipeId=recipe.id;result.configId=s->validation().contentId;result.cycleId=QUuid::createUuid().toString(QUuid::WithoutBraces);result.state=ExecutionState::Error;result.error=QString::fromUtf8(e.what());}
     result.completionDigest_=ProductionRecipeService::completionDigest(result);
     result.completionTicket_=cycle.ticket;result.completionSnapshot_=s;
+    report(result);
     return result;
 }
 }

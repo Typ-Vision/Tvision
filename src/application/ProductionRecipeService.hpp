@@ -28,6 +28,7 @@ struct ProductionDependencies {
 };
 struct ExperimentalScopedCalibrationSnapshot;
 struct MultiSourceDependencies {
+    bool configurationOnly=false; // In-memory inspection provenance; never serialized.
     QMap<QString,ProductionDependencies> sources;
     std::shared_ptr<const IndustrialExecutionInputs> industrial;
     // Separate experimental policy; trusted Runtime rejects this map.
@@ -56,9 +57,11 @@ private:
     QJsonObject dependencies_;
     std::shared_ptr<const IndustrialExecutionInputs> industrial_;
 };
+class RuntimeDiagnostics;
 struct ProductionCycle {
     quint64 ticket=0;
     std::shared_ptr<const ProductionSnapshot> snapshot;
+    std::shared_ptr<RuntimeDiagnostics> diagnostics; // evidence only, no production authority
 };
 // Owner thread controller; snapshots may be captured by immutable worker jobs.
 // Archive hooks persist evidence; restart never restores authorization as VALID.
@@ -80,12 +83,15 @@ public:
     void abandonCycle(quint64 ticket,const QString& reason);
     QVector<QJsonObject> cycleRecords() const;
     bool busy() const;
+    // Read-only canonical identity, also used to verify presentation invariants.
+    static QByteArray recipeContent(const Recipe&,const QString& directory);
 private:
     friend class RuntimeService;
     friend class MultiSourceRuntimeService;
     friend class ExperimentalRuntime;
+    friend class SourceVerificationService; // recipe identity only, never production admission
+    friend class MeasurementWorkspace;
     static QJsonObject validateMultiSourceCompletion(const ProductionCycle&,const CycleResult&,const QMap<QString,std::shared_ptr<const ProductionSnapshot>>&);
-    static QByteArray recipeContent(const Recipe&,const QString& directory);
     static QByteArray completionDigest(const CycleResult&);
     void owner() const;
     void permission(const QString&,ProductionAction) const;

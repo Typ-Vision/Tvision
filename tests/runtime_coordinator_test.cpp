@@ -38,12 +38,18 @@ int main(int argc,char** argv){QCoreApplication app(argc,argv);try{
     rejects([&]{coordinator.begin(RuntimeTrigger::Manual);},ProductionError::Busy);
     const auto result=RuntimeService::execute(cycle,project.path()+".calibrations.json",coordinator.cancellation());
     check(result.state==ExecutionState::Done,"real file cycle");
+    auto partial=result;partial.partial=true;rejects([&]{runtime.finish(cycle.ticket,partial);},ProductionError::InvalidCompletion);
+    check(!coordinator.recordingPending(),"Editor partial rejection is typed invalid completion, not record retry");
     QLockFile lock(archive+"/archive.lock");check(lock.tryLock(),"lock");
     rejects([&]{coordinator.finish(cycle.ticket,result);},ProductionError::PersistenceFailure);
     check(coordinator.recordingPending() && runtime.busy(),"recording pending retains lease");
+    check(coordinator.failure()==RuntimeFailure::Persistence && !coordinator.error().isEmpty(),"typed persistence recovery");
+    const auto firstCause=coordinator.error();auto altered=result;altered.milliseconds+=1;
+    rejects([&]{coordinator.finish(cycle.ticket,altered);},ProductionError::InvalidCompletion);
+    check(coordinator.recordingPending() && coordinator.error()==firstCause,"changed retry rejected without losing frozen record/first cause");
     coordinator.setDeliveryPending(true);coordinator.stop();
     check(coordinator.state()==RuntimeState::Stopping && coordinator.deliveryPending(),"Stop preserves pending work");
-    rejects([&]{coordinator.start();},ProductionError::Busy);lock.unlock();coordinator.finish(cycle.ticket,result);
+    rejects([&]{coordinator.start();},ProductionError::Busy);lock.unlock();coordinator.retryRecording();
     check(!coordinator.recordingPending() && coordinator.state()==RuntimeState::LoadedStopped && coordinator.deliveryPending(),"record retry completes Stop without losing delivery");
     rejects([&]{coordinator.load(saved,dir.path());},ProductionError::Busy);
     coordinator.setDeliveryPending(false);coordinator.start();
@@ -53,6 +59,8 @@ int main(int argc,char** argv){QCoreApplication app(argc,argv);try{
     const auto skipped=RuntimeService::execute(stopped,project.path()+".calibrations.json",cancel);coordinator.finish(stopped.ticket,skipped);
     check(skipped.state==ExecutionState::Skipped && coordinator.state()==RuntimeState::LoadedStopped,"cooperative Stop terminal persisted");
     rejects([&]{coordinator.finish(stopped.ticket,skipped);},ProductionError::InvalidCompletion);
+    check(!coordinator.recordingPending() && coordinator.failure()==RuntimeFailure::InvalidCompletion,"invalid completion is not persistence retry");
+    rejects([&]{coordinator.retryRecording();},ProductionError::InvalidCompletion);
     const auto failing=coordinator.requestStart();rejects([&]{coordinator.completeStart(failing,"Device preparation failed");},ProductionError::InvalidConfiguration);
     check(coordinator.state()==RuntimeState::Fault && coordinator.error()=="Device preparation failed","startup failure closes admission");
     coordinator.start();auto changed=*coordinator.loaded();auto tools=editorTools(changed.definition);tools.first().parameters["path"]=dir.path()+"/other.png";changed.definition=withEditorTools(changed.definition,tools);runtime.observeInstallation(changed);

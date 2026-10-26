@@ -1,0 +1,1220 @@
+[
+  {
+    "path": "CMakeLists.txt",
+    "decision": "uyarlanacak",
+    "card": "INT-03/05/06/07",
+    "reason": "Tanı define/library, yeni service/presentation testleri ve smoke hedeflerini mevcut session/plate/responsiveness hedeflerini koruyarak ekle.",
+    "snapshotBlob": "ba6a2f485310679bcd6307c0491171ad36fc911a",
+    "targetBlob": "047d3c24cc6694fcebe08698b78e796d6db38efa",
+    "identical": false,
+    "hunks": [
+      "@@ -38,0 +39,5 @@ target_link_libraries(visionflow_projects PUBLIC Qt6::Core)",
+      "@@ -83 +88,5 @@ target_sources(visionflow_acquisition PRIVATE src/application/ProductionStore.cp",
+      "@@ -105,2 +114,3 @@ if(VISIONFLOW_BUILD_UI)",
+      "@@ -114,0 +125,6 @@ if(BUILD_TESTING)",
+      "@@ -135,0 +152,3 @@ if(BUILD_TESTING)",
+      "@@ -277,0 +297,3 @@ if(BUILD_TESTING)",
+      "@@ -359,0 +382,6 @@ if(BUILD_TESTING)"
+    ],
+    "namedSymbols": []
+  },
+  {
+    "path": "README.md",
+    "decision": "tarihsel kayıt",
+    "card": "INT-09",
+    "reason": "Snapshot geçmiş teslim/kanıt bağlamıdır; eski kabul sayıları yeni hedefe taşınmaz. Planın güncel INT sürümü ve kısa hedef giriş belgeleri korunur.",
+    "snapshotBlob": "89d97586efafaaf29961588314db89135353eea9",
+    "targetBlob": "47261ae5ebe770cb6ec6f5f7bda6dd5558566b3d",
+    "identical": false,
+    "hunks": [
+      "@@ -2,0 +3,16 @@",
+      "@@ -27,2 +43,6 @@ kaynak koddan derlenen OpenCV 5.0.0 kurulumu için",
+      "@@ -43 +63 @@ kanıt vermişti; o dört UI testi KMC-0'da kapandı ve tek tam UI koşumu 70/70",
+      "@@ -258 +278 @@ Manuel dosyadan test candidate/deneme/doğrulama bellektedir; CSV kabul edilmiş",
+      "@@ -262 +282 @@ Worker değişmez aktif snapshot'ı çalıştırır; taslak tolerans değişimi"
+    ],
+    "namedSymbols": []
+  },
+  {
+    "path": "VisionFlow.cmd",
+    "decision": "eşdeğer mevcut",
+    "card": "INT-09",
+    "reason": "INT-01 ile snapshot blob aynen korundu; final launcher/binary eşleştirmesi INT-09.",
+    "snapshotBlob": "47816ac654174c800852c35b12f8a7e8c338fba1",
+    "targetBlob": "47816ac654174c800852c35b12f8a7e8c338fba1",
+    "identical": true,
+    "hunks": [
+      "@@ -0,0 +1,10 @@"
+    ],
+    "namedSymbols": []
+  },
+  {
+    "path": "docs/architecture/architecture.md",
+    "decision": "uyarlanacak",
+    "card": "INT-09",
+    "reason": "İlgili A1/B/C/D ürün sözleşme farkı final davranışa göre hedef belgeye işlenir; eski kamera/native sınırlamaları ve hedef CCUX sözleşmeleri korunur.",
+    "snapshotBlob": "ad6e250d6ab39e4bc4518a57e34e15fd1f9316e9",
+    "targetBlob": "943a10d0553685e7dc13586d442b1f14521a587f",
+    "identical": false,
+    "hunks": [
+      "@@ -2,0 +3,2 @@"
+    ],
+    "namedSymbols": []
+  },
+  {
+    "path": "docs/architecture/camera-integration-a0-e2-plan.md",
+    "decision": "tarihsel kayıt",
+    "card": "INT-09",
+    "reason": "Snapshot geçmiş teslim/kanıt bağlamıdır; eski kabul sayıları yeni hedefe taşınmaz. Planın güncel INT sürümü ve kısa hedef giriş belgeleri korunur.",
+    "snapshotBlob": "17a381ae5f410a31ddbad84359bb9f0c890070bc",
+    "targetBlob": "800e09c8bb5f5998c6a1e8204c65318fc001528a",
+    "identical": false,
+    "hunks": [
+      "@@ -0,0 +1,276 @@"
+    ],
+    "namedSymbols": []
+  },
+  {
+    "path": "docs/architecture/output-visibility.md",
+    "decision": "uyarlanacak",
+    "card": "INT-09",
+    "reason": "İlgili A1/B/C/D ürün sözleşme farkı final davranışa göre hedef belgeye işlenir; eski kamera/native sınırlamaları ve hedef CCUX sözleşmeleri korunur.",
+    "snapshotBlob": "201e34735f16df192379b5f1c2ce7f4330dd46eb",
+    "targetBlob": null,
+    "identical": false,
+    "hunks": [
+      "@@ -0,0 +1,271 @@"
+    ],
+    "namedSymbols": [
+      "ProductionSnapshot::recipe"
+    ]
+  },
+  {
+    "path": "docs/architecture/runtime-calibration-output-acceptance.md",
+    "decision": "tarihsel kayıt",
+    "card": "INT-09",
+    "reason": "Snapshot geçmiş teslim/kanıt bağlamıdır; eski kabul sayıları yeni hedefe taşınmaz. Planın güncel INT sürümü ve kısa hedef giriş belgeleri korunur.",
+    "snapshotBlob": "ab9e0207ccd4f0d9a9e01d5ec514d8c1847e0750",
+    "targetBlob": null,
+    "identical": false,
+    "hunks": [
+      "@@ -0,0 +1,130 @@"
+    ],
+    "namedSymbols": []
+  },
+  {
+    "path": "docs/architecture/runtime-calibration-output-fix-plan.md",
+    "decision": "tarihsel kayıt",
+    "card": "INT-09",
+    "reason": "Snapshot geçmiş teslim/kanıt bağlamıdır; eski kabul sayıları yeni hedefe taşınmaz. Planın güncel INT sürümü ve kısa hedef giriş belgeleri korunur.",
+    "snapshotBlob": "b31679451348e6569897104b6a17fa0960eaba9d",
+    "targetBlob": null,
+    "identical": false,
+    "hunks": [
+      "@@ -0,0 +1,335 @@"
+    ],
+    "namedSymbols": []
+  },
+  {
+    "path": "docs/architecture/runtime-calibration-output-handover.md",
+    "decision": "tarihsel kayıt",
+    "card": "INT-09",
+    "reason": "Snapshot geçmiş teslim/kanıt bağlamıdır; eski kabul sayıları yeni hedefe taşınmaz. Planın güncel INT sürümü ve kısa hedef giriş belgeleri korunur.",
+    "snapshotBlob": "2418111932b9bd0d647b9c76084f3a83b293c772",
+    "targetBlob": null,
+    "identical": false,
+    "hunks": [
+      "@@ -0,0 +1,125 @@"
+    ],
+    "namedSymbols": []
+  },
+  {
+    "path": "docs/architecture/runtime-diagnostics.md",
+    "decision": "uyarlanacak",
+    "card": "INT-09",
+    "reason": "İlgili A1/B/C/D ürün sözleşme farkı final davranışa göre hedef belgeye işlenir; eski kamera/native sınırlamaları ve hedef CCUX sözleşmeleri korunur.",
+    "snapshotBlob": "570edf7101ce95fb4b1cc46f897b6d0cb024d92c",
+    "targetBlob": null,
+    "identical": false,
+    "hunks": [
+      "@@ -0,0 +1,40 @@"
+    ],
+    "namedSymbols": []
+  },
+  {
+    "path": "docs/architecture/runtime-editor-workflow-plan.md",
+    "decision": "uyarlanacak",
+    "card": "INT-09",
+    "reason": "İlgili A1/B/C/D ürün sözleşme farkı final davranışa göre hedef belgeye işlenir; eski kamera/native sınırlamaları ve hedef CCUX sözleşmeleri korunur.",
+    "snapshotBlob": "464c31849158eb1cdff0990bc18f1d00d7e6e71f",
+    "targetBlob": "025058cf7c73e93f75c621bab4e8284b3db669ad",
+    "identical": false,
+    "hunks": [
+      "@@ -63,0 +64,2 @@ Run başarısızsa yeni tetik kabul edilmez; hata kodu ve düzeltilecek ayar gö"
+    ],
+    "namedSymbols": []
+  },
+  {
+    "path": "docs/architecture/runtime-error-recovery.md",
+    "decision": "uyarlanacak",
+    "card": "INT-09",
+    "reason": "İlgili A1/B/C/D ürün sözleşme farkı final davranışa göre hedef belgeye işlenir; eski kamera/native sınırlamaları ve hedef CCUX sözleşmeleri korunur.",
+    "snapshotBlob": "daf0e95fddec1dc8fe18ccfedf11ea35486dd34a",
+    "targetBlob": null,
+    "identical": false,
+    "hunks": [
+      "@@ -0,0 +1,21 @@"
+    ],
+    "namedSymbols": [
+      "RuntimeCoordinator::failure"
+    ]
+  },
+  {
+    "path": "docs/architecture/scoped-active-calibration.md",
+    "decision": "uyarlanacak",
+    "card": "INT-09",
+    "reason": "İlgili A1/B/C/D ürün sözleşme farkı final davranışa göre hedef belgeye işlenir; eski kamera/native sınırlamaları ve hedef CCUX sözleşmeleri korunur.",
+    "snapshotBlob": "459a91e0c537a83b074b68f2f6690e454f7cadd7",
+    "targetBlob": "4de08f5644039eae6755a135fd5b825744f138d0",
+    "identical": false,
+    "hunks": [
+      "@@ -26,0 +27,17 @@ donanım yerine adapter fixture kullanır. Fiziksel kimlik sürekliliği kabulü"
+    ],
+    "namedSymbols": []
+  },
+  {
+    "path": "docs/architecture/scoped-calibration-integration.md",
+    "decision": "uyarlanacak",
+    "card": "INT-09",
+    "reason": "İlgili A1/B/C/D ürün sözleşme farkı final davranışa göre hedef belgeye işlenir; eski kamera/native sınırlamaları ve hedef CCUX sözleşmeleri korunur.",
+    "snapshotBlob": "c72302bf7f67061cdcf76f05cae031cf253a15dd",
+    "targetBlob": "91105be97ff29d355774fe4f3710f430b34a7102",
+    "identical": false,
+    "hunks": [
+      "@@ -11,0 +12,3 @@ Runtime KMC-7b ile bağlıdır: ScopedProvider yüklenen reçeteyi alır; Produc"
+    ],
+    "namedSymbols": []
+  },
+  {
+    "path": "docs/architecture/source-verification.md",
+    "decision": "uyarlanacak",
+    "card": "INT-09",
+    "reason": "İlgili A1/B/C/D ürün sözleşme farkı final davranışa göre hedef belgeye işlenir; eski kamera/native sınırlamaları ve hedef CCUX sözleşmeleri korunur.",
+    "snapshotBlob": "a121901c48a6ca78774aaba7639275ce18c74803",
+    "targetBlob": null,
+    "identical": false,
+    "hunks": [
+      "@@ -0,0 +1,85 @@"
+    ],
+    "namedSymbols": [
+      "MeasurementWorkspace::verifySources",
+      "SourceVerificationService::run"
+    ]
+  },
+  {
+    "path": "docs/progress.md",
+    "decision": "tarihsel kayıt",
+    "card": "INT-09",
+    "reason": "Snapshot geçmiş teslim/kanıt bağlamıdır; eski kabul sayıları yeni hedefe taşınmaz. Planın güncel INT sürümü ve kısa hedef giriş belgeleri korunur.",
+    "snapshotBlob": "3f474fea7a1d02d77dd5b2a83511fa45797d0bac",
+    "targetBlob": "192815097db4e8cb4f0aa07aed24cff775177d07",
+    "identical": false,
+    "hunks": [
+      "@@ -2,0 +3,190 @@",
+      "@@ -1523,0 +1714,9 @@ Sonraki: GenApi özellik erişimi/runtime veya vendor C API uyum seçimi; trigge"
+    ],
+    "namedSymbols": [
+      "ScopedActiveCalibrationService::reauthorizeRemembered"
+    ]
+  },
+  {
+    "path": "docs/requirements/01_machine_vision_yazilim_tanimi.md",
+    "decision": "uyarlanacak",
+    "card": "INT-09",
+    "reason": "İlgili A1/B/C/D ürün sözleşme farkı final davranışa göre hedef belgeye işlenir; eski kamera/native sınırlamaları ve hedef CCUX sözleşmeleri korunur.",
+    "snapshotBlob": "c4996411c8f20609dcac209d5e6f965d609c6259",
+    "targetBlob": "5fe41891edcb026f73784e855972698b3dd55abb",
+    "identical": false,
+    "hunks": [
+      "@@ -2,0 +3,2 @@"
+    ],
+    "namedSymbols": []
+  },
+  {
+    "path": "docs/requirements/02_machine_vision_ui_gereksinimleri.md",
+    "decision": "uyarlanacak",
+    "card": "INT-09",
+    "reason": "İlgili A1/B/C/D ürün sözleşme farkı final davranışa göre hedef belgeye işlenir; eski kamera/native sınırlamaları ve hedef CCUX sözleşmeleri korunur.",
+    "snapshotBlob": "cf1bcefc9b16d94974edb0b4c0039c52802976d0",
+    "targetBlob": "dd7b4e6da2c2e6d61c4f018b7cac2a72b94767c3",
+    "identical": false,
+    "hunks": [
+      "@@ -2,0 +3,2 @@"
+    ],
+    "namedSymbols": []
+  },
+  {
+    "path": "docs/requirements/03_cpp_qt_opencv_gereksinimleri.md",
+    "decision": "uyarlanacak",
+    "card": "INT-09",
+    "reason": "İlgili A1/B/C/D ürün sözleşme farkı final davranışa göre hedef belgeye işlenir; eski kamera/native sınırlamaları ve hedef CCUX sözleşmeleri korunur.",
+    "snapshotBlob": "e4899c701c1eb3400f8de8fff9d9409c834f2b75",
+    "targetBlob": "477bea4e76f2c148d345f6abd3fd0fb64bca6e2f",
+    "identical": false,
+    "hunks": [
+      "@@ -2,0 +3,2 @@"
+    ],
+    "namedSymbols": []
+  },
+  {
+    "path": "docs/windows-workstation.md",
+    "decision": "uyarlanacak",
+    "card": "INT-09",
+    "reason": "İlgili A1/B/C/D ürün sözleşme farkı final davranışa göre hedef belgeye işlenir; eski kamera/native sınırlamaları ve hedef CCUX sözleşmeleri korunur.",
+    "snapshotBlob": "2e85363b701a1885b1e85a479d8d743931dfd10b",
+    "targetBlob": "f8207e1e47358190c71c05f3c55d87f0810b7d81",
+    "identical": false,
+    "hunks": [
+      "@@ -39 +39 @@ ctest --test-dir build/reference-ui --output-on-failure",
+      "@@ -49,0 +50,10 @@ normalizasyonuyla ele alınır; arşiv hash kontrolü ve metnin diğer bütün k",
+      "@@ -56,0 +67,2 @@ tek başına kopyalamak dağıtım değildir; Qt/OpenCV/runtime paketleme ayrı"
+    ],
+    "namedSymbols": []
+  },
+  {
+    "path": "scripts/run-local.ps1",
+    "decision": "uyarlanacak",
+    "card": "INT-09",
+    "reason": "Eksik EXE mesajını gerekirse taşı; hedefteki launcher ve DLL ortamını koru.",
+    "snapshotBlob": "4b90edbd678a69230333aaf504f26fe0aaaed391",
+    "targetBlob": "2a683304b419110f8a77f38a2d1560327313d4c9",
+    "identical": false,
+    "hunks": [
+      "@@ -12 +12 @@ $executable = Join-Path $buildPath 'visionflow.exe'"
+    ],
+    "namedSymbols": []
+  },
+  {
+    "path": "src/app/EditorUsabilitySmoke.cpp",
+    "decision": "uyarlanacak",
+    "card": "INT-07",
+    "reason": "verifyEditorUsability görünürlük/default/empty/cache kontrollerini yeni property commit ve display context sayaçlarıyla birleştir.",
+    "snapshotBlob": "4d137b8cc8bb9695f461eff054ed775465ee36ce",
+    "targetBlob": "105aaa886d0ba4fa303b7597b474cea0fc672004",
+    "identical": false,
+    "hunks": [
+      "@@ -2,0 +3,2 @@",
+      "@@ -4,0 +7,5 @@",
+      "@@ -30,0 +38,4 @@ bool MainWindow::verifyEditorUsability(const QString& artifacts) {",
+      "@@ -48,0 +60,7 @@ bool MainWindow::verifyEditorUsability(const QString& artifacts) {",
+      "@@ -69,0 +88,25 @@ bool MainWindow::verifyEditorUsability(const QString& artifacts) {",
+      "@@ -99 +142,11 @@ bool MainWindow::verifyEditorUsability(const QString& artifacts) {"
+    ],
+    "namedSymbols": [
+      "MainWindow::verifyEditorUsability",
+      "QApplication::processEvents",
+      "QApplication::sendEvent",
+      "QCoreApplication::applicationFilePath",
+      "QFile::rename",
+      "QProcessEnvironment::systemEnvironment",
+      "ToolResultCodec::display"
+    ]
+  },
+  {
+    "path": "src/app/MainWindow.cpp",
+    "decision": "uyarlanacak",
+    "card": "INT-06/07",
+    "reason": "Constructor outputPreferences ve yeni smokeMode bayraklarını hedefin lazy refresh/session çıkış sahipliğine ekle.",
+    "snapshotBlob": "e5ba79d4ab1ec5626bb8b3b038c0cf3f1c8325b8",
+    "targetBlob": "8fd854f3e31ce3b2c4a400374d356f4f24ee37d9",
+    "identical": false,
+    "hunks": [
+      "@@ -33 +33 @@ QFrame* card(const QString& title, const QString& text) {",
+      "@@ -35,0 +36 @@ MainWindow::MainWindow(const QString& settingsFile) : settingsFile_(settingsFile"
+    ],
+    "namedSymbols": [
+      "MainWindow::MainWindow",
+      "QCoreApplication::arguments"
+    ]
+  },
+  {
+    "path": "src/app/MainWindow.hpp",
+    "decision": "uyarlanacak",
+    "card": "INT-06/07",
+    "reason": "completeRuntimeResult/runtimeSourcesReady, verification ve Output preferences üyeleri; hedef session/cache üyeleri kalır.",
+    "snapshotBlob": "e7ae0c79c65b89d8fef4567364ade044f268a543",
+    "targetBlob": "e66856240a4bab838b919ec985571a3d7a8a8908",
+    "identical": false,
+    "hunks": [
+      "@@ -16,0 +17 @@",
+      "@@ -38,0 +40 @@ public:",
+      "@@ -61,0 +64,2 @@ public:",
+      "@@ -77,0 +82 @@ private:",
+      "@@ -85,0 +91,4 @@ private:",
+      "@@ -114,0 +124 @@ private:",
+      "@@ -148,0 +159 @@ private:",
+      "@@ -229,0 +241,3 @@ private:"
+    ],
+    "namedSymbols": []
+  },
+  {
+    "path": "src/app/MainWindowCalibration.cpp",
+    "decision": "uyarlanacak",
+    "card": "INT-06",
+    "reason": "measurementWorkspace girişinde verification cancel/ömür koruması; eski makeCalibration gezinmesi kopyalanmaz.",
+    "snapshotBlob": "e9f0f63995b4d8f25ff6202cc3a026de189ef3ed",
+    "targetBlob": "23b215283b921d5ae1ec13215d9f070a320c72dc",
+    "identical": false,
+    "hunks": [
+      "@@ -113 +113 @@ QWidget* MainWindow::makeCalibration() {"
+    ],
+    "namedSymbols": [
+      "MainWindow::makeCalibration"
+    ]
+  },
+  {
+    "path": "src/app/MainWindowEditor.cpp",
+    "decision": "uyarlanacak",
+    "card": "INT-07",
+    "reason": "refreshOutputVisibilityControls/showToolProperties/applyToolProperties; toggle yalnız sunum, hedef no-op commit ve display cache korunur.",
+    "snapshotBlob": "0ca493e9c8820ab54e512fd06404017fd372cf97",
+    "targetBlob": "7be6081b65eabced9b724dcbf949aceeae11e191",
+    "identical": false,
+    "hunks": [
+      "@@ -195,0 +196,12 @@ void MainWindow::selectTool(const QString& id) {",
+      "@@ -393 +405,28 @@ void MainWindow::showToolProperties() {",
+      "@@ -497 +536 @@ bool MainWindow::applyToolProperties() {"
+    ],
+    "namedSymbols": [
+      "MainWindow::applyToolProperties",
+      "MainWindow::refreshOutputVisibilityControls",
+      "MainWindow::selectTool",
+      "MainWindow::showToolProperties",
+      "OutputVisibilityPolicy::resolve"
+    ]
+  },
+  {
+    "path": "src/app/MainWindowExecution.cpp",
+    "decision": "uyarlanacak",
+    "card": "INT-07",
+    "reason": "showExecutionResult gerçek availability/hidden invalid sunumu; kaynak/frame kimliği ve display context korunur.",
+    "snapshotBlob": "4b1d9313f24b2d4b176b607f71a133d40ee25c3b",
+    "targetBlob": "cd70c3f4f62f1cf7d28589c6cb783a8cc3c9bf01",
+    "identical": false,
+    "hunks": [
+      "@@ -115,4 +115,15 @@ void MainWindow::showExecutionResult() {"
+    ],
+    "namedSymbols": [
+      "MainWindow::showExecutionResult",
+      "OutputVisibilityPolicy::resolve",
+      "ToolResultCodec::display"
+    ]
+  },
+  {
+    "path": "src/app/MainWindowRuntime.cpp",
+    "decision": "uyarlanacak",
+    "card": "INT-03/06/07",
+    "reason": "ensureRuntime sağlayıcı ayrımı, verify action/readiness, completeRuntimeResult typed retry ve sonuç filtresi; Starting/poll/Stop/drain ve experimental scalar özeti korunarak uyarlanır.",
+    "snapshotBlob": "0ad3a040a60244d8648c287ab44dfd3028d24912",
+    "targetBlob": "6c2e4932d77001133b52b5d4a3743b8afccb2c6e",
+    "identical": false,
+    "hunks": [
+      "@@ -35 +35 @@ QWidget* MainWindow::makeRuntime() {",
+      "@@ -40,0 +41,2 @@ QWidget* MainWindow::makeRuntime() {",
+      "@@ -70 +72 @@ void MainWindow::ensureRuntime() {",
+      "@@ -73 +75,6 @@ void MainWindow::ensureRuntime() {",
+      "@@ -75,0 +83 @@ void MainWindow::ensureRuntime() {",
+      "@@ -96 +104 @@ void MainWindow::refreshRuntime() {",
+      "@@ -101 +109,2 @@ void MainWindow::refreshRuntime() {",
+      "@@ -105 +114 @@ void MainWindow::refreshRuntime() {",
+      "@@ -107,2 +116,2 @@ void MainWindow::refreshRuntime() {",
+      "@@ -114 +123,5 @@ void MainWindow::refreshRuntime() {",
+      "@@ -119 +132,2 @@ void MainWindow::refreshRuntime() {",
+      "@@ -121 +135 @@ void MainWindow::refreshRuntime() {",
+      "@@ -124,0 +139,21 @@ void MainWindow::refreshRuntime() {",
+      "@@ -134 +169 @@ void MainWindow::runtimeAction(const QString& action) {",
+      "@@ -138 +173 @@ void MainWindow::runtimeAction(const QString& action) {",
+      "@@ -140,0 +176,22 @@ void MainWindow::runtimeAction(const QString& action) {",
+      "@@ -148,5 +205 @@ void MainWindow::runtimeAction(const QString& action) {",
+      "@@ -154 +207 @@ void MainWindow::runtimeAction(const QString& action) {",
+      "@@ -157 +210,14 @@ void MainWindow::runtimeAction(const QString& action) {",
+      "@@ -162 +228 @@ void MainWindow::refreshRuntimeSources(){",
+      "@@ -172,0 +239,6 @@ void MainWindow::refreshRuntimeSources(){",
+      "@@ -173,0 +246 @@ void MainWindow::refreshRuntimeSources(){",
+      "@@ -187,0 +261 @@ void MainWindow::showRuntimeResult() {",
+      "@@ -200 +274 @@ void MainWindow::showRuntimeResult() {",
+      "@@ -202,3 +276,23 @@ void MainWindow::showRuntimeResult() {",
+      "@@ -206 +299,0 @@ void MainWindow::showRuntimeResult() {"
+    ],
+    "namedSymbols": [
+      "MainWindow::completeRuntimeResult",
+      "MainWindow::ensureRuntime",
+      "MainWindow::makeRuntime",
+      "MainWindow::refreshRuntime",
+      "MainWindow::refreshRuntimeSources",
+      "MainWindow::runtimeAction",
+      "MainWindow::runtimeSourcesReady",
+      "MainWindow::showRuntimeResult",
+      "OutputVisibilityPolicy::resolve",
+      "QString::fromUtf8",
+      "RuntimeIdentity::localEngineer",
+      "RuntimeService::execute",
+      "RuntimeService::suppressCancelled",
+      "SourceVerificationService::run",
+      "SystemCalibration::branch",
+      "SystemCalibration::requestsCalibration",
+      "ToolResultCodec::display",
+      "std::move",
+      "std::runtime_error"
+    ]
+  },
+  {
+    "path": "src/app/MainWindowWorkspace.cpp",
+    "decision": "uyarlanacak",
+    "card": "INT-06",
+    "reason": "loadSelectedRecipe verification hatası reseti ve resolveUnsavedChanges iptal bariyeri mevcut kamera/execution drain çıkışına eklenir.",
+    "snapshotBlob": "43ad6e9fc70da0dc2d35fd0d4baad6b88eff45ce",
+    "targetBlob": "ff1ff48356b2eba39605eb1806d2472af56c40d2",
+    "identical": false,
+    "hunks": [
+      "@@ -229,0 +230 @@ void MainWindow::loadSelectedRecipe() {",
+      "@@ -310,0 +312 @@ bool MainWindow::resolveUnsavedChanges() {"
+    ],
+    "namedSymbols": [
+      "MainWindow::loadSelectedRecipe",
+      "MainWindow::resolveUnsavedChanges"
+    ]
+  },
+  {
+    "path": "src/app/MultiSourceSmoke.cpp",
+    "decision": "uyarlanacak",
+    "card": "INT-07",
+    "reason": "verifyMultiSourceRuntime Logs/CSV/PLC payload değişmezliği; normal OECS modeli/experimental sonuçlar ayrıca sınanır.",
+    "snapshotBlob": "3a016857fec5f68e016546d1c4fb8f670202601d",
+    "targetBlob": "5aececa4e9cfddaeae7bfd44242fcbdf5e1c7d8b",
+    "identical": false,
+    "hunks": [
+      "@@ -54,0 +55 @@ bool MainWindow::verifyMultiSourceRuntime(const QString& artifacts){",
+      "@@ -63,0 +65,2 @@ bool MainWindow::verifyMultiSourceRuntime(const QString& artifacts){",
+      "@@ -66,0 +70,7 @@ bool MainWindow::verifyMultiSourceRuntime(const QString& artifacts){"
+    ],
+    "namedSymbols": [
+      "MainWindow::verifyMultiSourceRuntime",
+      "ProductionResultCodec::csv",
+      "RuntimeService::sameCompletion"
+    ]
+  },
+  {
+    "path": "src/app/RestartRuntimeSmoke.cpp",
+    "decision": "uyarlanacak",
+    "card": "INT-06",
+    "reason": "verifyRestartRuntime legacy/editor9 üç tür restart matrisi; yeni kamera merkezli GUI ve asenkron prepare ile.",
+    "snapshotBlob": "e8e0830ecf18047dc098899d18c37a8fd130108d",
+    "targetBlob": null,
+    "identical": false,
+    "hunks": [
+      "@@ -0,0 +1,69 @@"
+    ],
+    "namedSymbols": [
+      "CalibrationWizardSession::run",
+      "ImageFrame::fromBuffer",
+      "IndependentCalibrationSession::run",
+      "MainWindow::verifyRestartRuntime",
+      "QApplication::processEvents",
+      "QFile::rename",
+      "QThread::msleep",
+      "std::chrono::milliseconds",
+      "std::runtime_error",
+      "std::this_thread::sleep_for"
+    ]
+  },
+  {
+    "path": "src/app/RuntimeFailureSmoke.cpp",
+    "decision": "uyarlanacak",
+    "card": "INT-03/06",
+    "reason": "verifyRuntimeFailures disk lock/InvalidCompletion/Stop/Busy/ilk neden; kamera drain ek negatifleri gerekir.",
+    "snapshotBlob": "db8e1956ee25e3247d75c4145353838ab414c2ec",
+    "targetBlob": null,
+    "identical": false,
+    "hunks": [
+      "@@ -0,0 +1,43 @@"
+    ],
+    "namedSymbols": [
+      "MainWindow::verifyRuntimeFailures",
+      "QApplication::processEvents",
+      "QFile::rename",
+      "QThread::msleep",
+      "RuntimeService::execute",
+      "RuntimeService::sameCompletion",
+      "std::runtime_error"
+    ]
+  },
+  {
+    "path": "src/app/RuntimeVisibilitySmoke.cpp",
+    "decision": "uyarlanacak",
+    "card": "INT-07",
+    "reason": "verifyRuntimeVisibility actual digest/terminal/CSV/PLC; experimental ek scalar sızıntısı da kapatılır.",
+    "snapshotBlob": "7c90195c9663539cb3bd7d9ec23cd08f2a110f33",
+    "targetBlob": null,
+    "identical": false,
+    "hunks": [
+      "@@ -0,0 +1,87 @@"
+    ],
+    "namedSymbols": [
+      "CalibrationWorkflow::bind",
+      "CalibrationWorkflow::installation",
+      "CalibrationWorkflow::teach",
+      "MainWindow::verifyRuntimeVisibility",
+      "ProductionRecipeService::recipeContent",
+      "ProductionResultCodec::csv",
+      "QApplication::processEvents",
+      "QFile::rename",
+      "QJsonDocument::fromJson",
+      "QObject::connect",
+      "QString::fromLatin1",
+      "QThread::msleep",
+      "RuntimeService::execute",
+      "RuntimeService::probe",
+      "RuntimeService::sameCompletion",
+      "std::abs",
+      "std::runtime_error"
+    ]
+  },
+  {
+    "path": "src/app/main.cpp",
+    "decision": "uyarlanacak",
+    "card": "INT-06/07",
+    "reason": "Yeni smoke argümanları mevcut session/responsiveness dispatch yanına eklenir; üretim başlangıcı capture açmaz.",
+    "snapshotBlob": "cfbf0f0142138b5871f2037f8c60519d661c4a75",
+    "targetBlob": "848a83ed62466c8e8ce9383930e19c9e2ac01924",
+    "identical": false,
+    "hunks": [
+      "@@ -19,0 +20,3 @@ int main(int argc, char* argv[]) {",
+      "@@ -26 +29 @@ int main(int argc, char* argv[]) {",
+      "@@ -30,0 +34,3 @@ int main(int argc, char* argv[]) {"
+    ],
+    "namedSymbols": [
+      "QFontDatabase::addApplicationFont"
+    ]
+  },
+  {
+    "path": "src/application/ExecutionService.cpp",
+    "decision": "uyarlanacak",
+    "card": "INT-06",
+    "reason": "run içindeki adapter factory seam tek kaynağı da kapsar; varsayılan gerçek edinim yolu ve industrial policy korunur.",
+    "snapshotBlob": "f7267de06cba9d464f60e45edade406f6a6e7697",
+    "targetBlob": "e3c61f67e30d30a29cf15213e7a55e741a1456b8",
+    "identical": false,
+    "hunks": [
+      "@@ -184 +184 @@ CycleResult ExecutionService::run(const QJsonObject& definition,const QString& d"
+    ],
+    "namedSymbols": [
+      "ExecutionService::run",
+      "ToolRegistry::get"
+    ]
+  },
+  {
+    "path": "src/application/GeometryMeasurementService.cpp",
+    "decision": "uyarlanacak",
+    "card": "INT-06",
+    "reason": "execute resolver error bağlamını korur; eylem yeni Camera/Calibration sayfasına gider, model kapısı gevşemez.",
+    "snapshotBlob": "4e3a1cdf728e082b3b49f77b81860bc245ddc5f8",
+    "targetBlob": "1bd3bb3df492d0b814fd2bd99d736203de694c98",
+    "identical": false,
+    "hunks": [
+      "@@ -37 +37,3 @@ ToolResult GeometryMeasurementService::execute(const ToolDefinition& t,const QMa"
+    ],
+    "namedSymbols": [
+      "GeometryMeasurementService::execute",
+      "std::runtime_error"
+    ]
+  },
+  {
+    "path": "src/application/MeasurementWorkspace.hpp",
+    "decision": "uyarlanacak",
+    "card": "INT-04/05",
+    "reason": "configurationForRecipe/productionSources(configurationOnly), verifySources/sourceVerification ve gate/fingerprint; mevcut repository/catalog cache, industrial/experimental provider ve availability korunur.",
+    "snapshotBlob": "bc464dfb801afcf1ca4d1be2bba9eac347ddcca8",
+    "targetBlob": "1ee1b05a14f37b76ca0bbee75e7458b7f470878c",
+    "identical": false,
+    "hunks": [
+      "@@ -6,0 +7 @@",
+      "@@ -8,0 +10 @@",
+      "@@ -14 +16,34 @@ public:",
+      "@@ -17 +52 @@ public:",
+      "@@ -26,3 +61,3 @@ public:",
+      "@@ -30 +65,19 @@ public:",
+      "@@ -34 +87,4 @@ public:",
+      "@@ -47 +103 @@ public:",
+      "@@ -58 +114 @@ public:",
+      "@@ -61 +117 @@ public:",
+      "@@ -64 +120 @@ public:",
+      "@@ -66 +122 @@ public:",
+      "@@ -74 +130 @@ public:",
+      "@@ -87,0 +144 @@ private:"
+    ],
+    "namedSymbols": [
+      "ProductionRecipeService::recipeContent",
+      "QString::fromLatin1",
+      "QString::number",
+      "SystemCalibration::branch",
+      "SystemCalibration::requestsCalibration",
+      "SystemCalibration::setupReference",
+      "SystemCalibration::source",
+      "std::move",
+      "std::runtime_error"
+    ]
+  },
+  {
+    "path": "src/application/MultiSourceRuntimeService.cpp",
+    "decision": "uyarlanacak",
+    "card": "INT-04",
+    "reason": "checkConfiguration salt okunur aday kontrolü; capture/current trusted admission ve industrial session paylaşımı korunur.",
+    "snapshotBlob": "9d122f84bb9e60fd6e81cce825a766fbd13bc7b5",
+    "targetBlob": "46d8722572606dd48efbe2cc770cb95eed0a57c6",
+    "identical": false,
+    "hunks": [
+      "@@ -46,0 +47 @@ MultiSourceRuntimeService::Prepared MultiSourceRuntimeService::capture(const Rec"
+    ],
+    "namedSymbols": [
+      "MultiSourceRuntimeService::capture",
+      "MultiSourceRuntimeService::checkConfiguration"
+    ]
+  },
+  {
+    "path": "src/application/MultiSourceRuntimeService.hpp",
+    "decision": "uyarlanacak",
+    "card": "INT-04",
+    "reason": "checkConfiguration deklarasyonu; ayrı configuration provider için dar API.",
+    "snapshotBlob": "9e0a26a7b3e8ac0e71fe38729c890a426f89d502",
+    "targetBlob": "ce09796efcea5bbb6ce835f1ac7f1872837a7574",
+    "identical": false,
+    "hunks": [
+      "@@ -9,0 +10,2 @@ public:"
+    ],
+    "namedSymbols": []
+  },
+  {
+    "path": "src/application/PlcRuntimeSocket.cpp",
+    "decision": "uyarlanacak",
+    "card": "INT-03",
+    "reason": "state/trigger/retryRecording typed hata ayrımı; pending ACK ve durable event sırası, experimental blok korunur.",
+    "snapshotBlob": "3003bed2a118cc69aa7d8a098c453b1a5de39685",
+    "targetBlob": "bf17887dd77fc6da6a44014333f39f81deff8d05",
+    "identical": false,
+    "hunks": [
+      "@@ -54 +54 @@ QString PlcRuntimeSocket::state() const {",
+      "@@ -138 +138 @@ void PlcRuntimeSocket::trigger(const QJsonObject& o) {",
+      "@@ -168 +168 @@ void PlcRuntimeSocket::retryRecording() {",
+      "@@ -185 +185,2 @@ void PlcRuntimeSocket::retryRecording() {",
+      "@@ -189 +190,2 @@ void PlcRuntimeSocket::retryRecording() {"
+    ],
+    "namedSymbols": [
+      "PlcRuntimeSocket::retryRecording",
+      "PlcRuntimeSocket::state",
+      "PlcRuntimeSocket::trigger",
+      "QString::fromUtf8"
+    ]
+  },
+  {
+    "path": "src/application/PlcRuntimeSocket.hpp",
+    "decision": "uyarlanacak",
+    "card": "INT-03",
+    "reason": "retry/fault contract yorumları ve pending sahipliği; DONE/ACK uydurulmaz.",
+    "snapshotBlob": "836d8c2fb177b4d4348401daa5fe552b8f1b7236",
+    "targetBlob": "4f4efa844f6d52a579a9d0542914b477eb4642df",
+    "identical": false,
+    "hunks": [
+      "@@ -37 +37 @@ public:"
+    ],
+    "namedSymbols": []
+  },
+  {
+    "path": "src/application/ProductionRecipeService.hpp",
+    "decision": "uyarlanacak",
+    "card": "INT-03/05",
+    "reason": "ProductionCycle diagnostics ve recipeContent salt okunur erişimi; trusted digest/admission private sınırı korunur.",
+    "snapshotBlob": "ddd2437f84be148d258ad26139b07f9db1d97ff5",
+    "targetBlob": "22d90a225a5481209427a689a8717798da8c3f6e",
+    "identical": false,
+    "hunks": [
+      "@@ -48,0 +49 @@ private:",
+      "@@ -51,0 +53 @@ struct ProductionCycle {",
+      "@@ -72,0 +75,2 @@ public:",
+      "@@ -77 +80,0 @@ private:"
+    ],
+    "namedSymbols": []
+  },
+  {
+    "path": "src/application/RuntimeCoordinator.cpp",
+    "decision": "uyarlanacak",
+    "card": "INT-03/05",
+    "reason": "firstFailure/failure/recovery/retryRecording ve verification cancellation; requestStart/completeStart/poll/stop kamera yaşam döngüsü yerinde kalır.",
+    "snapshotBlob": "331c3a26acdcf8b2826715fc6ed3d32053b83932",
+    "targetBlob": "fa8eb460ef4b38c0e6de4bc1d9bdcbda013f132c",
+    "identical": false,
+    "hunks": [
+      "@@ -2 +2,2 @@",
+      "@@ -4,7 +5,12 @@ namespace visionflow {",
+      "@@ -11,0 +18,2 @@ void RuntimeCoordinator::replaceable() const {",
+      "@@ -13,19 +21 @@ void RuntimeCoordinator::load(const Recipe& recipe,const QString& directory,Runt",
+      "@@ -32,0 +23,7 @@ bool RuntimeCoordinator::completeStart(quint64 generation,const QString& prepara",
+      "@@ -34,17 +31,7 @@ void RuntimeCoordinator::start(){const auto ticket=requestStart();completeStart(",
+      "@@ -51,0 +39,7 @@ void RuntimeCoordinator::finish(quint64 ticket,const CycleResult& result) {",
+      "@@ -53,2 +47,10 @@ void RuntimeCoordinator::finish(quint64 ticket,const CycleResult& result) {",
+      "@@ -56,2 +58,11 @@ void RuntimeCoordinator::finish(quint64 ticket,const CycleResult& result) {"
+    ],
+    "namedSymbols": [
+      "QString::fromUtf8",
+      "QString::number",
+      "QThread::currentThread",
+      "RuntimeCoordinator::begin",
+      "RuntimeCoordinator::completeStart",
+      "RuntimeCoordinator::diagnose",
+      "RuntimeCoordinator::finish",
+      "RuntimeCoordinator::load",
+      "RuntimeCoordinator::owner",
+      "RuntimeCoordinator::recovery",
+      "RuntimeCoordinator::remember",
+      "RuntimeCoordinator::replaceable",
+      "RuntimeCoordinator::requestStart",
+      "RuntimeCoordinator::retryRecording",
+      "RuntimeCoordinator::setDeliveryPending",
+      "RuntimeCoordinator::start",
+      "RuntimeCoordinator::stop",
+      "RuntimeDiagnostics::recipeContext",
+      "RuntimeService::sameCompletion"
+    ]
+  },
+  {
+    "path": "src/application/RuntimeCoordinator.hpp",
+    "decision": "uyarlanacak",
+    "card": "INT-03",
+    "reason": "RuntimeFailure/RuntimeRecovery, frozen completion/ticket ve tanı üyeleri mevcut Starting/Stopping API yanına.",
+    "snapshotBlob": "d1b95a6ce51bf9134799ebea336e32760bbe98aa",
+    "targetBlob": "c19bdcc934cd05563887dd75369cce117d448193",
+    "identical": false,
+    "hunks": [
+      "@@ -5,0 +6 @@ enum class RuntimeState { Unloaded, LoadedStopped, Starting, Running, Stopping,",
+      "@@ -24,0 +26,3 @@ public:",
+      "@@ -28,0 +33 @@ private:",
+      "@@ -36,0 +42,4 @@ private:",
+      "@@ -37,0 +47 @@ private:"
+    ],
+    "namedSymbols": []
+  },
+  {
+    "path": "src/application/RuntimeDiagnostics.cpp",
+    "decision": "uyarlanacak",
+    "card": "INT-03",
+    "reason": "manifest/publish/append/snapshot/recipeContext; industrial source türü ve kamera prepare/drain olayları eklenir; izin vermez.",
+    "snapshotBlob": "51fc606bd3b311b584a204a70b73393d56d3b9f1",
+    "targetBlob": null,
+    "identical": false,
+    "hunks": [
+      "@@ -0,0 +1,56 @@"
+    ],
+    "namedSymbols": [
+      "QCoreApplication::applicationFilePath",
+      "QDateTime::currentDateTimeUtc",
+      "QString::fromLatin1",
+      "QString::number",
+      "QUuid::createUuid",
+      "RuntimeDiagnostics::RuntimeDiagnostics",
+      "RuntimeDiagnostics::append",
+      "RuntimeDiagnostics::publish",
+      "RuntimeDiagnostics::recipeContext",
+      "RuntimeDiagnostics::snapshot"
+    ]
+  },
+  {
+    "path": "src/application/RuntimeDiagnostics.hpp",
+    "decision": "uyarlanacak",
+    "card": "INT-03",
+    "reason": "Bounded thread-safe manifest/event/firstFailure API; immutable cycle ile paylaşım.",
+    "snapshotBlob": "cf7f8929857b3561b2eff1feec58ad7894af92d0",
+    "targetBlob": null,
+    "identical": false,
+    "hunks": [
+      "@@ -0,0 +1,24 @@"
+    ],
+    "namedSymbols": []
+  },
+  {
+    "path": "src/application/RuntimeService.cpp",
+    "decision": "uyarlanacak",
+    "card": "INT-03/04/05",
+    "reason": "diagnostics/sameCompletion, configuration sağlayıcıları, verification busy/admission; automatic/experimental dispatch ve cameraComposition korunur.",
+    "snapshotBlob": "1dd949523b23c55d8993e9aa0399b121f8f39c7f",
+    "targetBlob": "ecc89259bb80426226cce19ca0eacd0a6c411459",
+    "identical": false,
+    "hunks": [
+      "@@ -2,0 +3 @@",
+      "@@ -6,0 +8 @@",
+      "@@ -28 +30 @@ RuntimeIdentity RuntimeIdentity::localEngineer() {",
+      "@@ -31 +33 @@ RuntimeService::RuntimeService(QString directory,QString catalogPath,RuntimeIden",
+      "@@ -32,0 +35,2 @@ RuntimeService::~RuntimeService()=default;",
+      "@@ -35 +39 @@ std::shared_ptr<const ProductionSnapshot> RuntimeService::active() const {return",
+      "@@ -101,3 +105,21 @@ void RuntimeService::checkConfiguration(const Recipe& r,const QString& directory",
+      "@@ -109,0 +132,2 @@ void RuntimeService::prepare(const Recipe& r,const QString& directory) {",
+      "@@ -125,0 +150 @@ RecipeValidation RuntimeService::validate(const Recipe& r,const QString& directo",
+      "@@ -138,0 +164 @@ void RuntimeService::activate(const Recipe& r,const QString& directory) {",
+      "@@ -143,2 +169,15 @@ void RuntimeService::activate(const Recipe& r,const QString& directory) {",
+      "@@ -146 +185,8 @@ void RuntimeService::finish(quint64 ticket,const CycleResult& r){",
+      "@@ -172,0 +219,10 @@ CycleResult RuntimeService::execute(const ProductionCycle& cycle,const QString&"
+    ],
+    "namedSymbols": [
+      "ProductionRecipeService::completionDigest",
+      "QString::fromUtf8",
+      "QString::number",
+      "RuntimeDiagnostics::recipeContext",
+      "RuntimeIdentity::localEngineer",
+      "RuntimeService::RuntimeService",
+      "RuntimeService::activate",
+      "RuntimeService::active",
+      "RuntimeService::begin",
+      "RuntimeService::cancelSourceVerification",
+      "RuntimeService::checkConfiguration",
+      "RuntimeService::execute",
+      "RuntimeService::finish",
+      "RuntimeService::prepare",
+      "RuntimeService::requireReady",
+      "RuntimeService::rollback",
+      "RuntimeService::sameCompletion",
+      "RuntimeService::sourceVerificationBusy",
+      "RuntimeService::validate",
+      "SystemCalibration::binding",
+      "SystemCalibration::evidence",
+      "SystemCalibration::prepareRecipe",
+      "SystemCalibration::requestsCalibration",
+      "SystemCalibration::source",
+      "std::move",
+      "std::runtime_error"
+    ]
+  },
+  {
+    "path": "src/application/RuntimeService.hpp",
+    "decision": "uyarlanacak",
+    "card": "INT-03/04/05",
+    "reason": "Ctor configurationScoped/configurationMulti/verification ve tanı API; mevcut kamera preparation/poll/drain üyeleri korunur.",
+    "snapshotBlob": "bd0d10100403aab789d3698fc3e1dc8dc9e3228b",
+    "targetBlob": "2cd585e10c12b41b79801b1b0b7ba1f2d32d3b4a",
+    "identical": false,
+    "hunks": [
+      "@@ -5,0 +6 @@",
+      "@@ -7,0 +9 @@ class MultiSourceRuntimeService;",
+      "@@ -20 +22,3 @@ public:",
+      "@@ -23 +27,2 @@ public:",
+      "@@ -30,0 +36 @@ public:",
+      "@@ -33,0 +40 @@ public:",
+      "@@ -62,0 +70,3 @@ private:",
+      "@@ -65,0 +76,2 @@ private:"
+    ],
+    "namedSymbols": []
+  },
+  {
+    "path": "src/application/ScopedActiveCalibration.cpp",
+    "decision": "uyarlanacak",
+    "card": "INT-03/04",
+    "reason": "disconnect tanısı, exact reauthorizeRemembered ve ortak activation; hedef activateImpl, permissionEpoch/cameraEpoch/profile/device ve cache korunur.",
+    "snapshotBlob": "5fb5695123bc2aa3c714eae33b6ffad22f90219d",
+    "targetBlob": "5c9e98fcbf5effd5b033f9dc80e2c6c7eb3677c9",
+    "identical": false,
+    "hunks": [
+      "@@ -1,0 +2 @@",
+      "@@ -49 +50,9 @@ void ScopedActiveCalibrationService::activate(const SetupReference& ref,const QS",
+      "@@ -69 +78,6 @@ void ScopedActiveCalibrationService::setOperational(const CameraId& camera,const",
+      "@@ -71 +85 @@ void ScopedActiveCalibrationService::refreshAvailability(const QVector<DeviceBin"
+    ],
+    "namedSymbols": [
+      "QString::fromUtf8",
+      "RuntimeDiagnostics::publish",
+      "ScopedActiveCalibrationService::activate",
+      "ScopedActiveCalibrationService::activateSelection",
+      "ScopedActiveCalibrationService::disconnect",
+      "ScopedActiveCalibrationService::reauthorizeRemembered",
+      "ScopedActiveCalibrationService::refreshAvailability",
+      "ScopedActiveCalibrationService::setOperational"
+    ]
+  },
+  {
+    "path": "src/application/ScopedActiveCalibration.hpp",
+    "decision": "uyarlanacak",
+    "card": "INT-03/04",
+    "reason": "Exact expected-selection wrapper; prepareRemembered aynı ortak çekirdeğe delegasyon. İkinci aktivasyon uygulaması yok.",
+    "snapshotBlob": "a2025920eb20a3968d3f0cc50cdbf8e0cc5e37cb",
+    "targetBlob": "9b4d142d74f0bcdf66608401629dab3ddaffd996",
+    "identical": false,
+    "hunks": [
+      "@@ -24,0 +25,3 @@ public:",
+      "@@ -27 +30 @@ public:",
+      "@@ -32,0 +36,2 @@ private:"
+    ],
+    "namedSymbols": []
+  },
+  {
+    "path": "src/application/SourceVerificationService.hpp",
+    "decision": "uyarlanacak",
+    "card": "INT-05",
+    "reason": "begin/run/accept/cancel/state/admissionAllowedFor immutable worker/owner; duplicate kamera reddi yerine context/profile paylaşımı ve gerçek close/drain.",
+    "snapshotBlob": "a7b2c9a48077ccbaebe0b3fb1fbaaa6b5ef76eb7",
+    "targetBlob": null,
+    "identical": false,
+    "hunks": [
+      "@@ -0,0 +1,91 @@"
+    ],
+    "namedSymbols": [
+      "IndependentCalibrationSession::run",
+      "ProductionRecipeService::recipeContent",
+      "QString::fromUtf8",
+      "QThread::currentThread",
+      "QUuid::createUuid",
+      "std::move",
+      "std::runtime_error"
+    ]
+  },
+  {
+    "path": "src/presentation/OutputVisibilityPolicy.cpp",
+    "decision": "taşınacak",
+    "card": "INT-07",
+    "reason": "D1/D2 ayrı presentation resolve/defaults/allPorts veya load/save/reset/showAll; execution/recipe şeması değişmez, explicit empty ve atomik yerel INI korunur.",
+    "snapshotBlob": "776fce8296e838bc6448ed68ff23723ceeda07b8",
+    "targetBlob": null,
+    "identical": false,
+    "hunks": [
+      "@@ -0,0 +1,86 @@"
+    ],
+    "namedSymbols": [
+      "OutputVisibility::visiblePortIds",
+      "OutputVisibilityPolicy::allPorts",
+      "OutputVisibilityPolicy::defaults",
+      "OutputVisibilityPolicy::resolve",
+      "ToolRegistry::get"
+    ]
+  },
+  {
+    "path": "src/presentation/OutputVisibilityPolicy.hpp",
+    "decision": "taşınacak",
+    "card": "INT-07",
+    "reason": "D1/D2 ayrı presentation resolve/defaults/allPorts veya load/save/reset/showAll; execution/recipe şeması değişmez, explicit empty ve atomik yerel INI korunur.",
+    "snapshotBlob": "2728d5213291df1a26cc74a1aa7704bcc198694c",
+    "targetBlob": null,
+    "identical": false,
+    "hunks": [
+      "@@ -0,0 +1,42 @@"
+    ],
+    "namedSymbols": []
+  },
+  {
+    "path": "src/presentation/OutputVisibilityPreferences.cpp",
+    "decision": "taşınacak",
+    "card": "INT-07",
+    "reason": "D1/D2 ayrı presentation resolve/defaults/allPorts veya load/save/reset/showAll; execution/recipe şeması değişmez, explicit empty ve atomik yerel INI korunur.",
+    "snapshotBlob": "1b1b1451b5b47fb7534bc892963c7b0e80e5f0d9",
+    "targetBlob": null,
+    "identical": false,
+    "hunks": [
+      "@@ -0,0 +1,141 @@"
+    ],
+    "namedSymbols": [
+      "OutputVisibilityPolicy::allPorts",
+      "OutputVisibilityPreferences::OutputVisibilityPreferences",
+      "OutputVisibilityPreferences::load",
+      "OutputVisibilityPreferences::reset",
+      "OutputVisibilityPreferences::save",
+      "OutputVisibilityPreferences::showAll",
+      "QFileInfo::exists",
+      "QJsonDocument::fromJson",
+      "QString::fromLatin1",
+      "QString::fromUtf8",
+      "std::move",
+      "std::sort"
+    ]
+  },
+  {
+    "path": "src/presentation/OutputVisibilityPreferences.hpp",
+    "decision": "taşınacak",
+    "card": "INT-07",
+    "reason": "D1/D2 ayrı presentation resolve/defaults/allPorts veya load/save/reset/showAll; execution/recipe şeması değişmez, explicit empty ve atomik yerel INI korunur.",
+    "snapshotBlob": "e8d80988c0f96f8beb82e09ac30559e75d3183b3",
+    "targetBlob": null,
+    "identical": false,
+    "hunks": [
+      "@@ -0,0 +1,33 @@"
+    ],
+    "namedSymbols": []
+  },
+  {
+    "path": "tests/geometry_measurement_service_test.cpp",
+    "decision": "uyarlanacak",
+    "card": "INT-06",
+    "reason": "resolver nedeninin gerçek hata metninde korunması",
+    "snapshotBlob": "685d589396186db216888f9502cacdcf93fcb8d6",
+    "targetBlob": "4d9b69785c274d8bc4285ba07826ae873460ffcd",
+    "identical": false,
+    "hunks": [
+      "@@ -54,0 +55,2 @@ int main(int argc,char** argv){QCoreApplication app(argc,argv);try{"
+    ],
+    "namedSymbols": [
+      "QString::fromUtf8"
+    ]
+  },
+  {
+    "path": "tests/multi_source_production_test.cpp",
+    "decision": "uyarlanacak",
+    "card": "INT-04/05",
+    "reason": "restart configuration ve current permission ayrımı; baseline Missing result ayrıca izlenir",
+    "snapshotBlob": "63b6096931368d460923a9b58ed4518d2585a81f",
+    "targetBlob": "0f265a686b9f9e12529d5d5b0d77d6eafab54f11",
+    "identical": false,
+    "hunks": [
+      "@@ -4,0 +5 @@",
+      "@@ -41,0 +43,9 @@ project.setConnections(links);project.save();const auto recipe=*project.activeRe"
+    ],
+    "namedSymbols": [
+      "QString::number"
+    ]
+  },
+  {
+    "path": "tests/output_visibility_preferences_test.cpp",
+    "decision": "taşınacak",
+    "card": "INT-07",
+    "reason": "atomik INI/kimlik/restart/empty/reset",
+    "snapshotBlob": "68cffc1bfa6c139b142d381abb2894f9b22f69c1",
+    "targetBlob": null,
+    "identical": false,
+    "hunks": [
+      "@@ -0,0 +1,166 @@"
+    ],
+    "namedSymbols": [
+      "OutputVisibilityPolicy::allPorts",
+      "OutputVisibilityPolicy::defaults",
+      "OutputVisibilityPolicy::resolve",
+      "ProjectRepository::encode",
+      "QDir::tempPath",
+      "QFile::exists",
+      "QString::fromLatin1",
+      "QString::fromUtf8",
+      "QString::number",
+      "ToolResultCodec::encode",
+      "std::runtime_error"
+    ]
+  },
+  {
+    "path": "tests/output_visibility_test.cpp",
+    "decision": "taşınacak",
+    "card": "INT-07",
+    "reason": "registry/default/mode/hidden invalid matrisi",
+    "snapshotBlob": "411278cc8a5d063fd0a2bd81cc939d9cbde8eef3",
+    "targetBlob": null,
+    "identical": false,
+    "hunks": [
+      "@@ -0,0 +1,145 @@"
+    ],
+    "namedSymbols": [
+      "OutputVisibilityPolicy::allPorts",
+      "OutputVisibilityPolicy::defaults",
+      "OutputVisibilityPolicy::resolve",
+      "ToolRegistry::entries",
+      "ToolRegistry::get",
+      "ToolRegistry::registerType",
+      "ToolRegistry::validate",
+      "std::runtime_error"
+    ]
+  },
+  {
+    "path": "tests/runtime_coordinator_test.cpp",
+    "decision": "uyarlanacak",
+    "card": "INT-03",
+    "reason": "frozen completion retry/typed failure/Stop; mevcut kamera durumları da korunur",
+    "snapshotBlob": "c44dac99f41a61612745873bb5fe7778e211959a",
+    "targetBlob": "9bee640b08297a5d871723e6dcfa6fa225d8db30",
+    "identical": false,
+    "hunks": [
+      "@@ -40,0 +41,2 @@ int main(int argc,char** argv){QCoreApplication app(argc,argv);try{",
+      "@@ -43,0 +46,4 @@ int main(int argc,char** argv){QCoreApplication app(argc,argv);try{",
+      "@@ -46 +52 @@ int main(int argc,char** argv){QCoreApplication app(argc,argv);try{",
+      "@@ -55,0 +62,2 @@ int main(int argc,char** argv){QCoreApplication app(argc,argv);try{"
+    ],
+    "namedSymbols": []
+  },
+  {
+    "path": "tests/runtime_diagnostics_test.cpp",
+    "decision": "uyarlanacak",
+    "card": "INT-03",
+    "reason": "bounded manifest/first failure/thread güvenliği",
+    "snapshotBlob": "62e63cfb812a2d532d578eac4df183b6ba4dddc9",
+    "targetBlob": null,
+    "identical": false,
+    "hunks": [
+      "@@ -0,0 +1,82 @@"
+    ],
+    "namedSymbols": [
+      "QFile::remove",
+      "QLoggingCategory::setFilterRules",
+      "QString::fromLatin1",
+      "QString::number",
+      "RuntimeService::execute",
+      "std::async",
+      "std::runtime_error"
+    ]
+  },
+  {
+    "path": "tests/scoped_active_calibration_test.cpp",
+    "decision": "uyarlanacak",
+    "card": "INT-04",
+    "reason": "exact remembered/probe/selection negatifleri; industrial/experimental epoch testleriyle birleştir",
+    "snapshotBlob": "4182fde2557c9307a29880385f897fde98f1b16e",
+    "targetBlob": "5575e77401aae18886c0db03de7edaa30b7c559e",
+    "identical": false,
+    "hunks": [
+      "@@ -6,0 +7 @@",
+      "@@ -14,2 +15,4 @@ class Adapter:public AcquisitionAdapter {",
+      "@@ -32,0 +36,41 @@ ScopedActiveCalibrationService restart(repo,[]{return true;});reject([&]{restart",
+      "@@ -43 +87 @@ if(n>1){const auto prior=service.snapshots({refs[1]})[0];reject([&]{service.acti"
+    ],
+    "namedSymbols": [
+      "ImageFrame::fromBuffer",
+      "IndependentCalibrationSession::run",
+      "std::async",
+      "std::min"
+    ]
+  },
+  {
+    "path": "tests/scoped_calibration_runtime_test.cpp",
+    "decision": "uyarlanacak",
+    "card": "INT-04/05",
+    "reason": "configuration Load vs operational begin; snapshot testi hedef prepareRemembered yoluna uyarlanır",
+    "snapshotBlob": "385abde922495f7df9f3137ab09147bd65a710d2",
+    "targetBlob": "5c24a97429d61d9d33a45424cd6323b3fcbc92fb",
+    "identical": false,
+    "hunks": [
+      "@@ -25 +25 @@ coordinator.stop();auto old=w.forRecipe(recipe);teach(w,contract.cameras[0],cont"
+    ],
+    "namedSymbols": []
+  },
+  {
+    "path": "tests/source_verification_test.cpp",
+    "decision": "uyarlanacak",
+    "card": "INT-05",
+    "reason": "1/2/10 kaynak, worker/owner, iptal/fingerprint; uyumlu kamera paylaşımı ve OECS/session drain eklenir",
+    "snapshotBlob": "d3cbeda3f1534396de9a1b3f5dbb64ecef0f87aa",
+    "targetBlob": null,
+    "identical": false,
+    "hunks": [
+      "@@ -0,0 +1,72 @@"
+    ],
+    "namedSymbols": [
+      "CalibrationWizardSession::run",
+      "ImageFrame::fromBuffer",
+      "IndependentCalibrationSession::run",
+      "QDir::currentPath",
+      "QFile::rename",
+      "QString::number",
+      "RuntimeIdentity::localEngineer",
+      "SourceVerificationService::run",
+      "std::runtime_error",
+      "std::thread"
+    ]
+  }
+]

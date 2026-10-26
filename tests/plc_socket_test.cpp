@@ -60,7 +60,11 @@ int main(int argc,char** argv){QCoreApplication app(argc,argv);QStringList trace
     QLockFile lock(archive+"/archive.lock");lock.setStaleLockTime(0);server.started=[&]{check(lock.tryLock(),"lock after begin");};
     peer.messages.clear();peer.send(request("recording"));peer.take("BUSY");until([&]{return server.recordingPending();},"record failure retained");check(runtime.busy() && completions==1,"recording failure blocks delivery");
     for(const auto& o:peer.messages)check(o["type"]!="DONE","no result before durable record");
-    lock.unlock();server.started={};server.retryRecording();const auto recorded=peer.take("DONE");check(recorded["requestId"]=="recording" && completions==2 && runtime.records().size()==2,"retry commits same cycle without acquisition");
+    int admittedBeforeRetry=0;for(const auto& v:runtime.diagnostics()->snapshot()["events"].toArray()){const auto e=v.toObject();admittedBeforeRetry+=e["action"]=="admission" && e["outcome"]=="accepted";}
+    check(QFile::rename(path,path+".held"),"hide source while retrying PLC record");
+    lock.unlock();server.started={};server.retryRecording();check(QFile::rename(path+".held",path),"restore PLC retry source");
+    int admittedAfterRetry=0;for(const auto& v:runtime.diagnostics()->snapshot()["events"].toArray()){const auto e=v.toObject();admittedAfterRetry+=e["action"]=="admission" && e["outcome"]=="accepted";}
+    check(admittedAfterRetry==admittedBeforeRetry && server.blocking(),"PLC disk retry does not admit another ticket and retains ACK barrier");const auto recorded=peer.take("DONE");check(recorded["requestId"]=="recording" && completions==2 && runtime.records().size()==2,"retry commits same cycle without acquisition");
     check(lock.tryLock(),"ACK lock");peer.send({{"type","ACK"},{"requestId","recording"}});check(peer.take("ERROR")["code"]=="SERVICE_ERROR" && server.blocking(),"failed ACK journal retains lease");lock.unlock();peer.ack("recording");
     // A retry/replay for the previous request may still be queued after ACK.
     // Keep one deliberately: the cancellation assertion must inspect its own ID.

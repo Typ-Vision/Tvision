@@ -1,4 +1,5 @@
 #include "CameraManager.hpp"
+#include "CalibrationOverview.hpp"
 #include "MainWindow.hpp"
 #include "WorkspacePanel.hpp"
 #include <QAction>
@@ -34,9 +35,11 @@ QFrame* card(const QString& title, const QString& text) {
 }
 }
 MainWindow::~MainWindow(){delete cameraManager_;cameraManager_=nullptr;}
-MainWindow::MainWindow(const QString& settingsFile) : settingsFile_(settingsFile) {
+MainWindow::MainWindow(const QString& settingsFile) : settingsFile_(settingsFile), outputPreferences_(settingsFile) {
     smokeMode_=QCoreApplication::arguments().contains("--roi-smoke") || QCoreApplication::arguments().contains("--recipe-fields-smoke") || QCoreApplication::arguments().contains("--experimental-editor-smoke") || QCoreApplication::arguments().contains("--multi-source-runtime-smoke") || QCoreApplication::arguments().contains("--multi-source-smoke") || QCoreApplication::arguments().contains("--system-calibration-smoke") || QCoreApplication::arguments().contains("--usability-smoke") || QCoreApplication::arguments().contains("--smoke-test") || QCoreApplication::arguments().contains("--circle-smoke") || QCoreApplication::arguments().contains("--geometry-smoke");
+    smokeMode_=smokeMode_ || QCoreApplication::arguments().contains("--runtime-failure-smoke") || QCoreApplication::arguments().contains("--restart-runtime-smoke");
     smokeMode_=smokeMode_ || QCoreApplication::arguments().contains("--editor-camera-sessions-smoke") || QCoreApplication::arguments().contains("--runtime-camera-sessions-smoke");
+    smokeMode_=smokeMode_ || QCoreApplication::arguments().contains("--runtime-visibility-smoke") || QCoreApplication::arguments().contains("--runtime-overlays-smoke");
     setWindowTitle("VisionFlow Industrial Vision Suite"); resize(1400,900); setMinimumSize(850,600);
     auto* file = menuBar()->addMenu("File");
     auto* create=file->addAction("New Project"); create->setShortcut(QKeySequence::New);
@@ -45,6 +48,7 @@ MainWindow::MainWindow(const QString& settingsFile) : settingsFile_(settingsFile
     connect(open,&QAction::triggered,this,&MainWindow::openProjectDialog);
     saveAction_=file->addAction("Save Project / Recipes"); saveAction_->setShortcut(QKeySequence::Save);
     connect(saveAction_,&QAction::triggered,this,&MainWindow::saveProject);
+    auto* transfer=file->addAction("Kalibrasyon bağımlılıkları…");transfer->setObjectName("projectCalibrationTransfers");connect(transfer,&QAction::triggered,this,[this]{if(calibrationOverview_)calibrationOverview_->showProjectTransfers();});
     file->addSeparator(); auto* exit = file->addAction("Exit");
     exit->setShortcut(QKeySequence::Quit); connect(exit,&QAction::triggered,this,&QWidget::close);
     auto* view = menuBar()->addMenu("View");
@@ -52,7 +56,7 @@ MainWindow::MainWindow(const QString& settingsFile) : settingsFile_(settingsFile
     connect(editor,&QAction::triggered,this,[this]{if(service_.activeRecipe())openEditorRecipe(service_.activeRecipe()->id);else selectPage("editor");});
     auto* reset = view->addAction("Panel düzenini sıfırla");
     reset->setObjectName("resetPanels");
-    connect(reset,&QAction::triggered,this,[this]{workspacePanel_->setPinned(true);horizontal_->setSizes({170,780,280}); vertical_->setSizes({640,160});});
+    connect(reset,&QAction::triggered,this,[this]{workspacePanel_->setPinned(true);horizontal_->setSizes({170,780,280}); vertical_->setSizes({640,160});findChild<QSplitter*>("editorBottomV1")->setSizes({780,300});});
     auto* pinWorkspace=view->addAction("Workspace sabit");pinWorkspace->setCheckable(true);pinWorkspace->setObjectName("pinWorkspace");
     connect(pinWorkspace,&QAction::triggered,this,[this](bool pinned){workspacePanel_->setPinned(pinned);});
     auto* setup = menuBar()->addMenu("Setup");
@@ -183,6 +187,7 @@ void MainWindow::selectPage(const QString& id) {
 void MainWindow::saveLayout() {
     QDir().mkpath(QFileInfo(settingsFile_).absolutePath()); QSettings settings(settingsFile_,QSettings::IniFormat);
     settings.setValue("window/geometry",saveGeometry()); settings.setValue("editor/horizontal",horizontal_->saveState());
+    settings.setValue("editor/bottomV1",findChild<QSplitter*>("editorBottomV1")->saveState());
     settings.setValue("editor/vertical",vertical_->saveState()); settings.sync();
     if (service_.hasProject() && QFileInfo::exists(service_.path())) {
         settings.setValue("session/project",QFileInfo(service_.path()).absoluteFilePath());
@@ -226,12 +231,16 @@ bool MainWindow::verifySession() {
 void MainWindow::restoreLayout() {
     QSettings settings(settingsFile_,QSettings::IniFormat);
     horizontal_->restoreState(settings.value("editor/horizontal").toByteArray()); vertical_->restoreState(settings.value("editor/vertical").toByteArray());
+    auto* bottom=findChild<QSplitter*>("editorBottomV1");
+    if(!bottom->restoreState(settings.value("editor/bottomV1").toByteArray()) || bottom->sizes().size()!=2 || bottom->sizes()[0]<120 || bottom->sizes()[1]<200)bottom->setSizes({780,300});
+    bottom->setChildrenCollapsible(false);bottom->setOrientation(Qt::Horizontal);
 }
 void MainWindow::closeEvent(QCloseEvent* event) {
     if(plc_ && plc_->blocking()){displayError("PLC çevrim kaydı ve ACK tamamlanmadan pencere kapatılamaz.");event->ignore();return;}
     if(cameraManager_ && cameraManager_->hasPreview()){
         cameraManager_->leave([this]{close();});event->ignore();return;
     }
+    if(measurementWorkspace_ && measurementWorkspace_->sourceVerification()->busy()){if(runtimeCoordinator_)runtimeCoordinator_->stop();else measurementWorkspace_->sourceVerification()->cancel();displayError("Kaynak doğrulama worker/kamera kapanışı bekleniyor.");event->ignore();return;}
     if ((editorSession_.busy() && !editorCameras_.hasTargets()) || cameraSession_.busy() || runtimeJobs_.busy() || (runtime_ && runtime_->busy())) {displayError("Arka plan işi tamamlandıktan sonra pencereyi kapatın."); event->ignore(); return;}
     if (!editorCameraExitAccepted_ && !resolveUnsavedChanges()) { event->ignore(); return; }
     if(drainEditorCameras([this]{editorCameraExitAccepted_=true;close();editorCameraExitAccepted_=false;})){event->ignore();return;}

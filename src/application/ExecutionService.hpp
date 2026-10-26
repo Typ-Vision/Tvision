@@ -27,7 +27,8 @@ struct RegionMask {QByteArray pixels; QSize size; QPoint origin;};
 struct EdgeProfilePoint { double distance=0,raw=0; std::optional<double> smooth; };
 struct EdgeDisplayCandidate { QPointF point; double distance=0,strength=0; bool accepted=false,selected=false; QString reason,refinement; };
 struct EdgeDiagnostics { QLineF scan; double width=0,length=0; int sampleCount=0,derivativeCount=0,candidateCount=0; QVector<EdgeProfilePoint> profile; QVector<QPointF> derivative; QVector<EdgeDisplayCandidate> candidates; };
-struct ToolResult {std::optional<FitDiagnostic> fitDiagnostic;std::optional<EdgeDiagnostics> edgeDiagnostics;RegionMask mask;QString toolId; ExecutionState state=ExecutionState::Ready; QString message; QMap<QString,PortValue> outputs; QVector<QRect> regions; QVector<QPointF> points,rejectedPoints; QVector<QLineF> lines; QRect searchRegion; double milliseconds=0; PartDecision decision=PartDecision::NotEvaluated; QString errorCode; std::optional<CalibrationDependency> calibration;};
+struct ToolOverlayGeometry { FrameMetadata origin; QSize rawSize; QVector<QVector<QPointF>> outlines; QVector<QLineF> guides,resultLines; QString reason; };
+struct ToolResult {std::optional<ToolOverlayGeometry> overlayGeometry;std::optional<FitDiagnostic> fitDiagnostic;std::optional<EdgeDiagnostics> edgeDiagnostics;RegionMask mask;QString toolId; ExecutionState state=ExecutionState::Ready; QString message; QMap<QString,PortValue> outputs; QVector<QRect> regions; QVector<QPointF> points,rejectedPoints; QVector<QLineF> lines; QRect searchRegion; double milliseconds=0; PartDecision decision=PartDecision::NotEvaluated; QString errorCode; std::optional<CalibrationDependency> calibration;};
 class PlanarCalibration;
 struct MeasurementExecutionContext {
     std::shared_ptr<const PlanarCalibration> calibration;
@@ -46,6 +47,9 @@ struct CycleResult {QString cycleId,frameId,recipeId,evaluationId,targetToolId; 
     // Editor diagnostics only; this does not issue Runtime completion authority.
     QMap<QString,std::shared_ptr<const IndustrialExecutionEvidence>> industrialEvidence;
 private:
+    friend class ExecutionService;
+    friend class RuntimeCoordinator;
+    QString acquisitionFailureSourceId_; // diagnostic policy preflight context; no completion authority
     friend class RuntimeService;
     friend class ProductionRecipeService;
     friend class MultiSourceRuntimeService;
@@ -73,7 +77,7 @@ public:
     // Never persisted and never issues production completion authority.
     ExecutionService withExperimentalEditorReplay(bool enabled=true) const {auto service=*this;service.experimentalEditorReplay_=enabled;service.automaticAcquisition_=false;return service;}
     // Bump when execution semantics change; validation records bind this identity.
-    static QString version() { return QStringLiteral("visionflow.execution/29"); }
+    static QString version() { return QStringLiteral("visionflow.execution/30"); }
     static QByteArray toolSignature(const QJsonObject&,const QString& directory,const QString& tool,const QByteArray& scope);
     CycleResult runTool(const QJsonObject& definition,const QString& directory,const QString& recipeId,const QByteArray& configId,
         const std::shared_ptr<std::atomic_bool>& cancel,const QString& target,const TargetEvaluation& evaluation,const CalibrationResolver& resolver={}) const;

@@ -247,7 +247,7 @@ void MainWindow::loadSelectedRecipe() {
         const auto options=saved.activeRecipe()->definition["runtime"].toObject();
         runtimeCoordinator_->load(*saved.activeRecipe(),QFileInfo(service_.path()).absolutePath(),options["trigger"]=="SoftwareTrigger" ? RuntimeTrigger::SoftwareTrigger : RuntimeTrigger::Manual);
         if(plc_)plc_->setMapping(options["measurementToolId"].toString());
-        runtimeResult_.reset();showRuntimeResult();refreshRecipes();refreshRuntime();
+        runtimeVerificationError_.clear();runtimeResult_.reset();showRuntimeResult();refreshRecipes();refreshRuntime();
         auto leave=[this]{QScopedValueRollback<bool> accepted(editorCameraExitAccepted_,true);selectPage("runtime");};
         if(!drainEditorCameras(leave))leave();
     } catch(const std::exception& e) {
@@ -350,6 +350,10 @@ void MainWindow::displayError(const QString& message) {
     workspaceError_->setText(message); workspaceError_->show(); statusBar()->showMessage(message);
 }
 bool MainWindow::resolveUnsavedChanges() {
+    if(measurementWorkspace_ && measurementWorkspace_->sourceVerification()->busy()){
+        if(runtimeCoordinator_)runtimeCoordinator_->stop();else measurementWorkspace_->sourceVerification()->cancel();
+        displayError("Kaynak doğrulama iptal ediliyor; worker ve kamera kapanışından sonra tekrar deneyin.");return false;
+    }
     if(runtimeCoordinator_ && (runtimeCoordinator_->state()==RuntimeState::Running || runtimeCoordinator_->state()==RuntimeState::Starting || runtimeCoordinator_->state()==RuntimeState::Stopping)){displayError("Proje değiştirmeden/kapatmadan önce Runtime Stop ve kamera kapanışını tamamlayın.");return false;}
     if(plc_ && plc_->blocking()){displayError("Önce PLC kayıt/ACK tamamlanmalı.");return false;}
     if (!applyToolProperties()) return false;

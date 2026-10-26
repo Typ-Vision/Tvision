@@ -1,3 +1,4 @@
+#include "PrecisionInput.hpp"
 #include "application/EditorObservation.hpp"
 #include "application/CalibrationWorkflow.hpp"
 #include "application/ExperimentalOecsAcquisition.hpp"
@@ -33,6 +34,7 @@
 #include <QMenu>
 #include <QPushButton>
 #include <QScrollArea>
+#include <QScrollBar>
 #include <QSignalBlocker>
 #include <QScopedValueRollback>
 #include <QSpinBox>
@@ -133,17 +135,20 @@ QWidget* MainWindow::makeEditor() {
     auto* scroll=new QScrollArea; scroll->setObjectName("propertiesScroll"); scroll->setWidgetResizable(true); scroll->setMinimumWidth(210);
     propertiesBody_=new QWidget; new QVBoxLayout(propertiesBody_); scroll->setWidget(propertiesBody_); horizontal_->addWidget(scroll);
     horizontal_->setStretchFactor(1,1);
-    auto* tabs=new QTabWidget; tabs->setObjectName("editorTabs"); tabs->setMinimumHeight(100);
+    auto* tabs=new QTabWidget; tabs->setObjectName("editorTabs"); tabs->setMinimumHeight(100);tabs->setMinimumWidth(120);
     auto* flowPage=new QWidget; auto* flowLayout=new QHBoxLayout(flowPage); flowLayout->setContentsMargins(4,4,4,4);
     auto* graphPanel=new QWidget;auto* graphLayout=new QVBoxLayout(graphPanel);graphLayout->setContentsMargins(0,0,0,0);flowLayout->addWidget(graphPanel,1);
     graphInfo_=note("READY");auto* graphScroll=new QScrollArea;graphScroll->setWidgetResizable(true);graphScroll->setWidget(graphInfo_);graphLayout->addWidget(graphScroll,1);
     auto* validate=new QPushButton("Validate DAG");validate->setObjectName("validateGraph");graphLayout->addWidget(validate);connect(validate,&QPushButton::clicked,this,&MainWindow::refreshFlow);
-    flowTools_=new QListWidget; flowTools_->setObjectName("flowTools"); flowTools_->setAccessibleName("Reçete tool listesi"); flowLayout->addWidget(flowTools_,1);
+    flowTools_=new QListWidget; flowTools_->setObjectName("flowTools"); flowTools_->setAccessibleName("Reçete tool listesi"); flowTools_->setMinimumWidth(200);
     flowTools_->setToolTip("Sağ tık: bir sıra yukarı/aşağı. Yürütme sırasını DAG bağlantıları belirler.");
     flowTools_->setContextMenuPolicy(Qt::CustomContextMenu);
     connect(flowTools_,&QListWidget::customContextMenuRequested,this,&MainWindow::showFlowMenu);
     connect(flowTools_,&QListWidget::currentItemChanged,this,[this](QListWidgetItem* item){selectTool(item ? item->data(Qt::UserRole).toString() : "");});
-    tabs->addTab(flowPage,"Flow");
+    tabs->addTab(flowPage,"Bağlantılar");
+    auto* bottom=new QSplitter(Qt::Horizontal);bottom->setObjectName("editorBottomV1");bottom->setChildrenCollapsible(false);
+    auto* flowPanel=new QWidget;auto* persistentFlow=new QVBoxLayout(flowPanel);persistentFlow->setContentsMargins(4,4,4,4);persistentFlow->setSpacing(2);persistentFlow->addWidget(note("Flow"));persistentFlow->addWidget(flowTools_,1);
+    bottom->addWidget(tabs);bottom->addWidget(flowPanel);bottom->setStretchFactor(0,1);bottom->setSizes({780,300});
     matchInfo_=note("Eşleştirme sonucu yok.");matchInfo_->setAlignment(Qt::AlignTop | Qt::AlignLeft);auto* results=new QScrollArea;results->setObjectName("resultsScroll");results->setWidgetResizable(true);results->setWidget(matchInfo_);tabs->addTab(results,"Results");
     edgeProfile_=new EdgeProfileView;edgeProfile_->setObjectName("edgeProfile");auto* profileScroll=new QScrollArea;profileScroll->setWidgetResizable(true);profileScroll->setWidget(edgeProfile_);tabs->addTab(profileScroll,"Kenar profili");
     imageViewer_->onRegion=[this](QRect roi){commitRoi(roi);};
@@ -151,7 +156,7 @@ QWidget* MainWindow::makeEditor() {
     imageViewer_->onSearchRegionActivityChanged=[this]{findChild<QPushButton*>("stopFlow")->setEnabled(editorSession_.busy() || !pendingDrawTool_.isEmpty() || imageViewer_->drawingActive());};
     for (const auto name : {"Log","Variables","Communication","Diagnostics"}) tabs->addTab(note(QString(name)+" — henüz veri yok."),name);
     vertical_=new QSplitter(Qt::Vertical); vertical_->setObjectName("editorVertical"); vertical_->setChildrenCollapsible(false);
-    vertical_->addWidget(horizontal_); vertical_->addWidget(tabs); vertical_->setStretchFactor(0,1); layout->addWidget(vertical_,1);
+    vertical_->addWidget(horizontal_); vertical_->addWidget(bottom); vertical_->setStretchFactor(0,1); layout->addWidget(vertical_,1);
     horizontal_->setSizes({170,780,280}); vertical_->setSizes({640,160});
     auto* escape=new QShortcut(QKeySequence(Qt::Key_Escape),page); escape->setContext(Qt::WidgetWithChildrenShortcut);
     connect(escape,&QShortcut::activated,this,[this]{pendingDrawTool_.clear();if(imageViewer_->roiGestureActive()){imageViewer_->cancelRoi();return;}imageViewer_->drawRegion(false);}); return page;
@@ -187,6 +192,8 @@ void MainWindow::refreshEditor() {
     if (recipeId!=editorRecipeId_) {editorSession_.sourceFrames.clear();editorSession_.frame.reset();editorSession_.invalidateResults();matchInfo_->clear();imageInfo_->setText("Görüntü yok.");pendingDrawTool_.clear();imageViewer_->cancelRoi();selectedToolId_.clear(); editorRecipeId_=recipeId; imageBinding_.clear();}
     const auto tools=recipe ? service_.tools() : QVector<ToolDefinition>{};
     const QSignalBlocker blocker(flowTools_);
+    const int flowScroll=flowTools_->verticalScrollBar()->value();
+    const bool retainFlowScroll=flowTools_->currentItem() && flowTools_->currentItem()->data(Qt::UserRole).toString()==selectedToolId_;
     if (!propertiesEditing_) flowTools_->clear();
     bool found=false;
     for (const auto& t : tools) {
@@ -196,6 +203,9 @@ void MainWindow::refreshEditor() {
         if (!item) item=new QListWidgetItem(flowTools_); item->setText(caption); item->setData(Qt::UserRole,t.id);
         if (t.id==selectedToolId_) { flowTools_->setCurrentItem(item); found=true; }
     }
+    flowTools_->doItemsLayout();
+    if(retainFlowScroll)flowTools_->verticalScrollBar()->setValue(flowScroll);
+    else if(flowTools_->currentItem())flowTools_->scrollToItem(flowTools_->currentItem());
     if (!found) selectedToolId_.clear();
     const QString path=service_.imageFilePath(); QString binding=recipeId+"|"+path;
     bool webcamSource=false;
@@ -246,6 +256,18 @@ void MainWindow::selectTool(const QString& id) {
     imageViewer_->setSourceSelected(source);
     refreshMatchOverlay();
     refreshFlow();
+}
+void MainWindow::refreshOutputVisibilityControls() {
+    if(!service_.activeRecipe())return;
+    for(const auto& tool:service_.tools())if(tool.id==selectedToolId_) {
+        const auto preference=outputPreferences_.load({service_.project().id,service_.activeRecipe()->id,tool.id});
+        const auto selected=OutputVisibilityPolicy::resolve(tool,preference.selection).visiblePortIds();
+        if(auto* outputs=propertiesBody_->findChild<QWidget*>(tool.kind+"/outputs"))for(auto* box:outputs->findChildren<QCheckBox*>()) {
+            const QSignalBlocker block(box);box->setChecked(selected.contains(box->objectName().mid(QString("outputVisible_").size())));
+        }
+        if(!preference.error.isEmpty())if(auto* error=propertiesBody_->findChild<QLabel*>("outputPreferenceError")){error->setText(preference.error);error->show();}
+        break;
+    }
 }
 void MainWindow::showToolProperties() {
     const auto environment=editorDisplayEnvironment();
@@ -360,7 +382,7 @@ void MainWindow::showToolPropertiesView(const EditorContext& context,const std::
         auto* fitPanel=new QWidget;auto* fitForm=new QFormLayout(fitPanel);fitForm->setContentsMargins(0,0,0,0);fitForm->setRowWrapPolicy(QFormLayout::WrapAllRows);fitPanel->hide();
         auto* fitButton=new QPushButton("Refit ayarları…");form->addRow(fitButton);connect(fitButton,&QPushButton::clicked,fitPanel,[fitPanel]{fitPanel->setVisible(!fitPanel->isVisible());});
         for(auto i=defaults.begin();i!=defaults.end();++i)if(i->isDouble()){
-            auto* n=new QDoubleSpinBox;n->setObjectName("gm_"+i.key());n->setDecimals(i.key()=="fitMinPoints" ? 0:9);n->setRange(-1e9,1e12);n->setValue(tool.parameters.value(i.key()).toDouble(i->toDouble()));
+            auto* n=new QDoubleSpinBox;n->setObjectName("gm_"+i.key());n->setDecimals(i.key()=="fitMinPoints" ? 0:9);n->setRange(-1e9,1e12);const bool length=(QStringList{"lower","upper","nominal"}.contains(i.key()) && tool.parameters["operation"]!="line_angle") || QStringList{"fitInlierDistance","fitMaxRms","fitMaxResidual","lineMinSpan"}.contains(i.key());loadPrecisionInput(n,tool.parameters.value(i.key()).toDouble(i->toDouble()),length,length && (i.key().startsWith("fit") || i.key()=="lineMinSpan"));
             const bool limit=i.key()=="lower" || i.key()=="upper" || i.key()=="nominal";
             (limit ? form:fitForm)->addRow(i.key()+(limit ? (tool.parameters["operation"]=="line_angle" ? " (deg)":tool.parameters["mode"]=="pixel" ? " (px)":" (mm)"):""),n);connect(n,&QDoubleSpinBox::editingFinished,this,[this]{applyToolProperties();});
         }
@@ -376,8 +398,6 @@ void MainWindow::showToolPropertiesView(const EditorContext& context,const std::
             }
         };
         settings->onRoi=[this,id=tool.id,kind=tool.kind](const ToolRoi& value){try{if(selectedToolId_!=id)return;auto roi=value;for(const auto& t:service_.tools())if(t.id==selectedToolId_ && (t.parameters.contains("referenceBinding") || t.parameters.contains("poseTracking")))return;if(editorSession_.busy() || !applyToolProperties())return;if(kind=="circle_fit")for(const auto& t:service_.tools())if(t.id==selectedToolId_ && t.parameters["mode"]=="calibrated"){auto ctx=calibrationResolver(*service_.activeRecipe())(*editorSession_.frame);if(!ctx.calibration || !ctx.current)throw std::runtime_error("Circle teaching requires current calibration");roi.frame=ctx.calibration->dependency().target;}if(!editorSession_.frame || (roi.frame.unit==LengthUnit::Pixel && !roi.inside(editorSession_.frame->size())))throw std::runtime_error("ROI görüntü sınırı dışında");imageViewer_->setRoi(roi);}catch(const std::exception& e){displayError(QString::fromUtf8(e.what()));}};
-        form->addRow("Kalibrasyon",note(calibrationSummary(&context)));
-        auto* calibration=new QPushButton("Calibration aç");form->addRow(calibration);connect(calibration,&QPushButton::clicked,this,[this]{selectPage("calibration");});
     } else if(tool.kind=="edge_point") {
         auto* settings=new EdgePointEditor(tool.parameters);form->addRow(settings);settings->onChanged=[this]{applyToolProperties();};
         const auto frame=editorSession_.frame;const auto frameId=frame ? frame->metadata().coordinateSystemId:QString{};
@@ -385,9 +405,9 @@ void MainWindow::showToolPropertiesView(const EditorContext& context,const std::
         const auto saved=tool.parameters["scanRoi"].toObject();if(!saved.isEmpty())scan=std::get<ScanSegment>(ToolRoi::fromJson(saved).geometry);
         auto* draw=new QPushButton("Ok çiz (A → B)");draw->setObjectName("edgeDraw");draw->setEnabled(frame.has_value() && !editorSession_.busy());form->addRow(draw);
         connect(draw,&QPushButton::clicked,this,[this]{if(auto* dialog=findChild<QDialog*>("roiGeometryDialog"))dialog->close();refreshMatchOverlay();if(!editorSession_.busy() && applyToolProperties() && setDrawingImage())imageViewer_->beginRoi(0);});
-        for(const auto& entry:QVector<QPair<QString,double>>{{"ax",scan.start.x()},{"ay",scan.start.y()},{"bx",scan.end.x()},{"by",scan.end.y()},{"width",scan.width}}){auto* spin=new QDoubleSpinBox;spin->setObjectName("scan_"+entry.first);spin->setDecimals(9);spin->setRange(entry.first=="width" ? .000000001:-1e8,entry.first=="width" ? 1024:1e8);spin->setValue(entry.second);form->addRow(entry.first+(isWorldPoseTracking(tool) ? " (nominal world mm)":" (raw px)"),spin);}
+        for(const auto& entry:QVector<QPair<QString,double>>{{"ax",scan.start.x()},{"ay",scan.start.y()},{"bx",scan.end.x()},{"by",scan.end.y()},{"width",scan.width}}){auto* spin=new QDoubleSpinBox;spin->setObjectName("scan_"+entry.first);spin->setDecimals(9);spin->setRange(entry.first=="width" ? .000000001:-1e8,entry.first=="width" ? 1024:1e8);loadPrecisionInput(spin,entry.second,true,entry.first=="width");form->addRow(entry.first+(isWorldPoseTracking(tool) ? " (nominal world mm)":" (raw px)"),spin);}
         auto* apply=new QPushButton("Koordinatları uygula");apply->setObjectName("edgeApplyScan");apply->setEnabled(frame.has_value() && !editorSession_.busy());form->addRow(apply);
-        connect(apply,&QPushButton::clicked,this,[this,frameId]{if(auto* dialog=findChild<QDialog*>("roiGeometryDialog"))dialog->close();refreshMatchOverlay();if(editorSession_.busy() || !applyToolProperties())return;auto value=[this](const char* key){return propertiesBody_->findChild<QDoubleSpinBox*>(QString("scan_")+key)->value();};try{ToolRoi roi{{frameId},ScanSegment{{value("ax"),value("ay")},{value("bx"),value("by")},value("width")}};if(!editorSession_.frame || (roi.frame.unit==LengthUnit::Pixel && !roi.inside(editorSession_.frame->size())))throw std::runtime_error("Ok şeridi görüntü sınırları dışında.");imageViewer_->setRoi(roi);}catch(const std::exception& e){displayError(QString::fromUtf8(e.what()));}});
+        connect(apply,&QPushButton::clicked,this,[this,frameId]{if(auto* dialog=findChild<QDialog*>("roiGeometryDialog"))dialog->close();refreshMatchOverlay();if(editorSession_.busy() || !applyToolProperties())return;auto value=[this](const char* key){return precisionValue(propertiesBody_->findChild<QDoubleSpinBox*>(QString("scan_")+key));};try{ToolRoi roi{{frameId},ScanSegment{{value("ax"),value("ay")},{value("bx"),value("by")},value("width")}};if(!editorSession_.frame || (roi.frame.unit==LengthUnit::Pixel && !roi.inside(editorSession_.frame->size())))throw std::runtime_error("Ok şeridi görüntü sınırları dışında.");imageViewer_->setRoi(roi);}catch(const std::exception& e){displayError(QString::fromUtf8(e.what()));}});
         auto* reverse=new QPushButton("Yönü ters çevir");reverse->setObjectName("edgeReverse");reverse->setEnabled(!saved.isEmpty() && frame.has_value() && !editorSession_.busy());form->addRow(reverse);
         connect(reverse,&QPushButton::clicked,this,[this]{if(auto* dialog=findChild<QDialog*>("roiGeometryDialog"))dialog->close();refreshMatchOverlay();if(editorSession_.busy() || !applyToolProperties())return;try{for(auto t:service_.tools())if(t.id==selectedToolId_){auto roi=ToolRoi::fromJson(t.parameters["scanRoi"].toObject());auto& g=std::get<ScanSegment>(roi.geometry);std::swap(g.start,g.end);imageViewer_->setRoi(roi);break;}}catch(const std::exception& e){displayError(QString::fromUtf8(e.what()));}});
         form->addRow(note(saved.isEmpty() ? "Ok öğretilmedi; çizim veya koordinatları uygula gerekir.":"Ok reçeteye bağlıdır; tutamaçları sürükleyin. Ctrl+Z geometriyi geri alır. Escape çizimi iptal eder."));
@@ -428,11 +448,9 @@ void MainWindow::showToolPropertiesView(const EditorContext& context,const std::
     } else if(tool.kind=="measurement") {
         form->addRow("Operation",note("Distance (mm) / inclusive tolerance"));
         for(const auto key:{"lowerMm","upperMm"}) {
-            auto* value=new QDoubleSpinBox;value->setObjectName(key);value->setDecimals(6);value->setRange(0,1000000000);value->setSuffix(" mm");value->setValue(tool.parameters[key].toDouble());form->addRow(QString(key)=="lowerMm" ? "Alt tolerans" : "Üst tolerans",value);
+            auto* value=new QDoubleSpinBox;value->setObjectName(key);value->setDecimals(6);value->setRange(0,1000000000);value->setSuffix(" mm");loadPrecisionInput(value,tool.parameters[key].toDouble(),true);form->addRow(QString(key)=="lowerMm" ? "Alt tolerans" : "Üst tolerans",value);
             connect(value,&QDoubleSpinBox::editingFinished,this,[this]{applyToolProperties();});
         }
-        form->addRow("Kalibrasyon",note(calibrationSummary(&context)));
-        auto* calibration=new QPushButton("Calibration aç");form->addRow(calibration);connect(calibration,&QPushButton::clicked,this,[this]{selectPage("calibration");});
     } else form->addRow("Operation",note("Euclidean Distance (px)"));
     if(tool.kind=="edge") {
         auto* contrast=new QDoubleSpinBox;contrast->setObjectName("minContrast");contrast->setRange(1,255);contrast->setValue(tool.parameters["minContrast"].toDouble());form->addRow("Min Contrast",contrast);connect(contrast,&QDoubleSpinBox::valueChanged,this,[this]{applyToolProperties();});
@@ -500,7 +518,34 @@ void MainWindow::showToolPropertiesView(const EditorContext& context,const std::
     }
     auto* outputs=propertySection(form,"Çıkışlar",tool.kind+"/outputs",settingsFile_);
     auto* outputForm=static_cast<QFormLayout*>(outputs->layout());
-    for(const auto& output:outputPorts(tool.kind))outputForm->addRow(output.id,note(portTypeName(output.type)+" · "+output.unit+" · "+output.frame));
+    const OutputVisibilityIdentity outputIdentity{service_.project().id,service_.activeRecipe()->id,tool.id};
+    const auto preference=outputPreferences_.load(outputIdentity);
+    auto* outputError=note(preference.error);outputError->setObjectName("outputPreferenceError");outputError->setVisible(!preference.error.isEmpty());outputForm->addRow(outputError);
+    auto* outputHint=note("Yalnız Results listesini değiştirir. Görüntü ve overlay viewer'da kalır.");outputForm->addRow(outputHint);
+    const auto visibility=OutputVisibilityPolicy::resolve(tool,preference.selection);
+    for(const auto& entry:visibility.ports) {
+        const auto& output=entry.port;
+        auto* checkbox=new QCheckBox(output.id,outputs);checkbox->setObjectName("outputVisible_"+output.id);checkbox->setChecked(entry.visible);
+        const QString description=output.type==PortType::Image ? "Güncel görüntü; viewer erişimi seçimden bağımsızdır." : output.type==PortType::Point ? "Hesaplanan nokta koordinatı." : output.type==PortType::Number ? "Hesaplanan sayısal sonuç." : output.type==PortType::Boolean ? "Gerçek sonuçtan gelen doğru/yanlış durumu." : "Aracın hesaplanan "+portTypeName(output.type)+" çıktısı.";
+        checkbox->setAccessibleDescription(description);checkbox->setToolTip(output.id+" · "+portTypeName(output.type)+" · "+output.unit+" · "+output.frame+"\n"+description+"\nResults listesinde göster/gizle.");
+        outputForm->addRow(checkbox,note(portTypeName(output.type)+" · "+output.unit));
+        connect(checkbox,&QCheckBox::toggled,this,[this,outputs,outputIdentity,outputError](bool){
+            QSet<QString> selected;for(auto* box:outputs->findChildren<QCheckBox*>())if(box->isChecked())selected.insert(box->objectName().mid(QString("outputVisible_").size()));
+            const auto saved=outputPreferences_.save(outputIdentity,selected);
+            outputError->setText(saved.error);outputError->setVisible(!saved.ok());
+            refreshOutputVisibilityControls();
+            showExecutionResult();
+        });
+    }
+    for(const bool reset:{true,false}) {
+        auto* button=new QPushButton(reset ? "Varsayılana dön":"Tümünü göster");button->setObjectName(reset ? "outputDefaults":"outputShowAll");outputForm->addRow(button);
+        connect(button,&QPushButton::clicked,this,[this,outputs,outputIdentity,outputError,tool,reset]{
+            const auto saved=reset ? outputPreferences_.reset(outputIdentity):outputPreferences_.showAll(outputIdentity,tool.kind);
+            outputError->setText(saved.error);outputError->setVisible(!saved.ok());
+            refreshOutputVisibilityControls();
+            showExecutionResult();
+        });
+    }
     if(tool.kind=="edge_point" || tool.kind=="edge_pair" || tool.kind=="line_fit" || tool.kind=="circle_fit") {
         auto* editor=tool.kind=="edge_point" ? panel:panel->findChild<QWidget*>("metrologySettings");
         auto* rows=static_cast<QFormLayout*>(editor->layout());
@@ -614,13 +659,13 @@ ToolDefinition MainWindow::readToolProperties(ToolDefinition tool) const {
     if(auto* contrast=propertiesBody_->findChild<QDoubleSpinBox*>("minContrast"))tool.parameters["minContrast"]=contrast->value();
     if(auto* index=propertiesBody_->findChild<QSpinBox*>("webcamIndex"))tool.parameters["deviceIndex"]=index->value();
     if(auto* timeout=propertiesBody_->findChild<QSpinBox*>("webcamTimeout"))tool.parameters["timeoutMs"]=timeout->value();
-    for(const auto key:{"lowerMm","upperMm"})if(auto* value=propertiesBody_->findChild<QDoubleSpinBox*>(key))tool.parameters[key]=value->value();
+    for(const auto key:{"lowerMm","upperMm"})if(auto* value=propertiesBody_->findChild<QDoubleSpinBox*>(key))tool.parameters[key]=precisionValue(value);
     if(tool.kind=="geometry_measurement"){
         auto p=tool.parameters;const auto defaults=geometryMeasurementDefaults();
         for(auto i=defaults.begin();i!=defaults.end();++i){const auto id="gm_"+i.key();
             if(auto* c=propertiesBody_->findChild<QComboBox*>(id))p[i.key()]=c->currentText();
             else if(auto* c=propertiesBody_->findChild<QCheckBox*>(id))p[i.key()]=c->isChecked();
-            else if(auto* n=propertiesBody_->findChild<QDoubleSpinBox*>(id))p[i.key()]=n->value();
+            else if(auto* n=propertiesBody_->findChild<QDoubleSpinBox*>(id))p[i.key()]=precisionValue(n);
         }
         if(p["operation"]=="line_intersection")p["toleranceEnabled"]=false;
         if(!tool.parameters.contains("toleranceEnabled") && p["toleranceEnabled"]==defaults["toleranceEnabled"] && p["nominal"]==defaults["nominal"] && p["lower"]==defaults["lower"] && p["upper"]==defaults["upper"])
@@ -675,6 +720,7 @@ bool MainWindow::applyToolProperties() {
     if(result==PropertyCommit::Changed) {
         const QScopedValueRollback<bool> guard(propertiesEditing_,true);
         refreshWorkspace();
+        refreshOutputVisibilityControls();
     }
     return result!=PropertyCommit::Failed;
 }
@@ -684,7 +730,7 @@ void MainWindow::addSelectedTool() {
     const auto commit=commitToolProperties();
     if(commit==PropertyCommit::Failed)return;
     try {const auto previous=service_.tools();selectedToolId_=service_.addTool(toolbox_->currentItem()->data(Qt::UserRole).toString());
-        if(std::none_of(previous.begin(),previous.end(),[this](const auto& t){return t.id==selectedToolId_;}))for(auto tool:service_.tools())if(tool.id==selectedToolId_ && QStringList{"edge_pair","line_fit","geometry_measurement"}.contains(tool.kind)){tool.parameters["mode"]="calibrated";if(tool.kind=="circle_fit"){tool.parameters["unitsPerSample"]=.1;tool.parameters["scanWidth"]=.1;tool.parameters["inlierDistance"]=.1;tool.parameters["maxRms"]=.035;tool.parameters["maxResidual"]=.1;}service_.updateTool(tool);break;}
+        if(std::none_of(previous.begin(),previous.end(),[this](const auto& t){return t.id==selectedToolId_;}))for(auto tool:service_.tools())if(tool.id==selectedToolId_ && QStringList{"edge_pair","line_fit","geometry_measurement"}.contains(tool.kind)){tool.parameters["mode"]="calibrated";service_.updateTool(tool);break;}
         imageViewer_->cancelRoi();pendingDrawTool_.clear();
         if(std::none_of(previous.begin(),previous.end(),[this](const auto& t){return t.id==selectedToolId_;})){pendingDrawTool_=selectedToolId_;pendingDrawRecipe_=service_.project().id+"/"+service_.activeRecipe()->id;}
         refreshWorkspace();}
@@ -699,7 +745,7 @@ void MainWindow::openImageDialog() {
 bool MainWindow::setDrawingImage() {
     try {
         const auto image=editorSession_.toolImage(editorContext(),selectedToolId_);
-        drawingImage_=image;imageViewer_->setPreviewPixels(image.preview());
+        drawingImage_=image;imageViewer_->setPreviewPixels(image.preview(),editorRecipeId_+"|"+image.metadata().sourceId);
         findChild<QPushButton*>("stopFlow")->setEnabled(true);
         imageInfo_->setText(image.processing().isEmpty() ? "Ham görüntü · bağlı kaynak" : "İşlenmiş görüntü · bağlı Preprocess");
         return true;

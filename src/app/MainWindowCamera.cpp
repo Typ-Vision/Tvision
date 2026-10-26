@@ -20,6 +20,7 @@ QWidget* MainWindow::makeCameraManager(){
     },cameraSession_,settingsFile_);
     cameraManager_->onProject=[this]{selectPage("projects");};
     cameraManager_->onChanged=[this]{calibrationRefresh_.invalidate("camera change");refreshCalibration();};
+    cameraManager_->onLegacyManagement=[this]{if(calibrationOverview_)calibrationOverview_->showCameraManagement();};
     return cameraManager_;
 }
 void MainWindow::discoverCameras(){cameraManager_->scan();}
@@ -32,7 +33,7 @@ bool MainWindow::verifyCamera(const QString& artifacts){
     producer->setText(QDir(artifacts).filePath("missing-producer.cti"));cameraManager_->scan();
     check(cameraSession_.busy(),"camera scan background");check(!close(),"camera close guard");wait();
     check(cameraManager_->inventory().industrial.devices.isEmpty() && status->text().contains(".cti"),"missing producer error");workspaceError_->hide();statusBar()->clearMessage();
-    producer->setText(QDir(artifacts).filePath("gentl_test_producer.cti"));cameraManager_->scan();wait();
+    producer->setText(QDir(QCoreApplication::applicationDirPath()).filePath("gentl_test_producer.cti"));cameraManager_->scan();wait();
     check(cameraManager_->inventory().industrial.devices.size()==1,"UI synthetic discovery");
     auto* table=cameraManager_->findChild<QTableWidget*>("cameraDevices");
     const auto device=cameraManager_->inventory().industrial.devices.front();

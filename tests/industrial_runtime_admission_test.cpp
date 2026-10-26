@@ -74,6 +74,7 @@ int main(int argc,char** argv){QCoreApplication app(argc,argv);try{
         check(!restarted.active() && restarted.records().size()==3 && ProductionResultCodec::csv(restarted.records()).contains("NOT_ACQUIRED") && state->hardware->commands==captureCount,"restart history has no SDK/registry/capture dependency or active permission");
         auto normal=inputs;normal.factory={};MultiSourceRuntimeService unavailable(engineer,[&](const Recipe& current){return workspace.productionSources(current,normal);});reject([&]{unavailable.prepare(recipe,dir.path());});
         RuntimeService offline(dir.filePath("offline"+QString::number(int(type))+QString::number(mixed)),dir.filePath("absent.json"),engineer,{},{},{},[&](const Recipe& current){return workspace.productionSources(current);});
+        offline.setConfigurationProviders({},[&](const Recipe& current){return workspace.configurationSources(current,inputs);});
         const auto declaredCount=state->hardware->commands;offline.checkConfiguration(recipe,dir.path());reject([&]{offline.prepare(recipe,dir.path());});check(!offline.active() && !offline.busy() && state->hardware->commands==declaredCount,"Offline Load declaration grants no Run/admission/capture authority");
         reject([&]{workspace.productionSources(recipe);});
         const auto duplicate=project.addTool("industrial_camera");project.bindIndustrialSource(duplicate,workspace.environment().current,r.profile.id,1000);reject([&]{runtime.prepare(*project.activeRecipe(),dir.path());});

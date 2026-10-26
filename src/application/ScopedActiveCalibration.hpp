@@ -54,9 +54,21 @@ public:
                   MeasurementEnvironmentRepository::Fault=MeasurementEnvironmentRepository::Fault::None);
     void deactivate(const SetupId&);
     void setOperational(const CameraId&,const SetupId&);
-    void disconnect(const CameraId&);
+    void disconnect(const CameraId&,QJsonObject context={});
+    // Owner-side invalidation identity, captured before an asynchronous probe.
+    // This is never a permission or persisted activation bit.
+    struct InvalidationToken {
+        int policyEpoch=0,cameraEpoch=0;
+        bool operator==(const InvalidationToken&) const = default;
+    };
+    InvalidationToken invalidationToken(const CameraId& camera) const {
+        owner();return {permissionEpoch_,cameraEpochs_.value(camera.value)};
+    }
     CalibrationAvailabilityStatus status(const SetupReference&) const;
     // Explicit recheck of the remembered choice, not a new fit or production start.
+    void reauthorizeRemembered(const RememberedCalibration&,const IndependentCalibrationSession&);
+    // Static exact selection inspection; never grants session permission.
+    ActiveCalibrationSnapshot configuration(const SetupReference&,bool experimental=false) const;
     void prepareRemembered(const SetupReference&,const IndependentCalibrationSession&);
     void notifyOpticalChange(const CameraId&,int expectedRevision);
     void refreshAvailability(const QVector<DeviceBinding>&,const IndustrialDiscoverySnapshot& = {});

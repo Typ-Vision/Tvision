@@ -6,6 +6,7 @@
 #include <QWidget>
 class QCheckBox;class QTableWidget;class QLabel;class QLineEdit;class QPushButton;class QComboBox;class QSpinBox;class QTimer;
 namespace visionflow {
+class ImageViewer;
 class CameraManager final:public QWidget {
 public:
     using Scanner=std::function<CameraInventory(const QStringList&,const std::shared_ptr<std::atomic_bool>&)>;
@@ -22,12 +23,12 @@ public:
     void leave(std::function<void()>);
     bool hasPreview() const {return previewActive_ || lastFrame_.has_value();}
     const CameraInventory& inventory() const {return inventory_;}
-    std::function<void()> onChanged, onProject;
+    std::function<void()> onChanged, onProject, onLegacyManagement;
 private:
     void attempt(std::function<void()>);
     void select();
     void registerSelected();
-    void editProfile();
+    void editProfile(bool add=false);
     void settings(bool apply);
     void settingsReadback();
     void start(bool live);
@@ -49,7 +50,8 @@ private:
     struct Row {std::optional<MeasurementCamera> camera;std::optional<CameraDiscoveryEntry> discovery;};
     QVector<Row> rows_;
     QTableWidget* table_;
-    QLabel *status_,*detail_,*image_,*readback_,*previewStatus_;
+    QLabel *status_,*detail_,*setupStatus_,*readback_,*previewStatus_;
+    ImageViewer* image_;
     QLineEdit *producer_,*shortId_,*name_,*exposure_,*gain_;
     QWidget *advancedBody_;
     QPushButton *settingsRead_;

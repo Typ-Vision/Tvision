@@ -1,5 +1,11 @@
 # Windows geliştirme ortamı — 15 Ekim 2026
 
+Günlük giriş repo kökündeki `VisionFlow.cmd`; varsayılan hedef
+`build/reference-ui/visionflow.exe` olur. `VisionFlow.cmd -SmokeTest` offscreen
+smoke çalıştırır; normal kullanımda parametresiz açılır. Kaynak/EXE eşleşmesi ve
+birleşik kabul [INT devir kaydındadır](architecture/camera-integration-handoff.md).
+Aşağıdaki tarihli kurulum/test sayıları tarihsel kanıttır; yeni ürün kabulü değildir.
+
 Bu bilgisayarın çalışma kopyası `C:/Projects/Tvision`. Qt araçları `C:/Qt`
 altındadır. Aşağıdaki yollar geliştirme kurulumudur; taşınabilir ürün paketi değildir.
 

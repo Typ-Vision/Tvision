@@ -1,5 +1,11 @@
 # Endüstriyel Machine Vision Yazılımı — Genel Tanım
 
+Kamera/kalibrasyon, kaynak doğrulama, Runtime kayıt kurtarma ve çıktı seçimi
+birlikte [kullanım akışına](../camera-runtime-usage.md) uyar. Restart kalıcı
+seçimi korur; süreç iznini veya üretimi başlatmaz. Kaynak doğrulama sonuç/fit
+üretmez; çıktı gizleme yalnız sunumdur. Native üretim ve bağımsız fiziksel
+ölçüm kabulü edinim yapılabilmesinden ayrı kalır.
+
 Güncel uygulama durumu ve görev sırası [devir özetindedir](../progress.md). Bu belge gereksinimleri taşır; aşağıdaki tarihli planlar tek başına uygulama kabulü değildir. Üç belgede birebir tekrarlanan teslim paragrafları [taşıma öncesi tam kayıtta](../archive/2026-10-17/01_machine_vision_yazilim_tanimi.md) korunmuştur. Yalnız görevle ilgili bölümleri okuyun; yeni teslim günlüğü eklemeyin.
 
 22 Ekim kamera kullanım hedefi: eldeki COE-U USB3/OECS kamera, kalibrasyon,

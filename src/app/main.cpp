@@ -29,12 +29,20 @@ int main(int argc, char* argv[]) {
     const bool editorCamerasOnly=app.arguments().contains("--editor-camera-sessions-smoke");
     const bool runtimeCamerasOnly=app.arguments().contains("--runtime-camera-sessions-smoke");
     const bool responsivenessOnly=app.arguments().contains("--editor-responsiveness-probe");
-    const bool smoke = responsivenessOnly || runtimeCamerasOnly || editorCamerasOnly || roiOnly || app.arguments().contains("--smoke-test") || circleOnly || geometryOnly || poseOnly || usabilityOnly || systemOnly || multiOnly || multiRuntimeOnly || experimentalOnly || recipeFieldsOnly;
+    const bool restartOnly=app.arguments().contains("--restart-runtime-smoke");
+    const bool failureOnly=app.arguments().contains("--runtime-failure-smoke");
+    const bool visibilityOnly=app.arguments().contains("--runtime-visibility-smoke");
+    const bool overlaysOnly=app.arguments().contains("--runtime-overlays-smoke");
+    const bool smoke = overlaysOnly || visibilityOnly || restartOnly || failureOnly || responsivenessOnly || runtimeCamerasOnly || editorCamerasOnly || roiOnly || app.arguments().contains("--smoke-test") || circleOnly || geometryOnly || poseOnly || usabilityOnly || systemOnly || multiOnly || multiRuntimeOnly || experimentalOnly || recipeFieldsOnly;
     const QDir buildDir(smoke ? qEnvironmentVariable("VISIONFLOW_TEST_ARTIFACTS",QCoreApplication::applicationDirPath()):QCoreApplication::applicationDirPath());
     if(smoke)QDir().mkpath(buildDir.absolutePath());
     visionflow::MainWindow window(buildDir.filePath(smoke ? "ui-smoke.ini" : "../config/local.ui.ini"));
     window.show();
     if (smoke) QTimer::singleShot(100, &app, [&]{
+        if(overlaysOnly){bool valid=false;try{valid=window.verifyRuntimeOverlays(buildDir.absolutePath());}catch(const std::exception& e){QTextStream(stderr)<<e.what()<<'\n';}window.close();app.exit(valid?0:1);return;}
+        if(visibilityOnly){QFontDatabase::addApplicationFont(QDir(qEnvironmentVariable("WINDIR", "C:/Windows")).filePath("Fonts/segoeui.ttf"));bool valid=false;try{valid=window.verifyRuntimeVisibility(buildDir.absolutePath());}catch(const std::exception& e){QTextStream(stderr)<<e.what()<<'\n';}window.close();app.exit(valid ? 0:1);return;}
+        if(restartOnly){bool valid=false;try{valid=window.verifyRestartRuntime(buildDir.absolutePath());}catch(const std::exception& e){QTextStream(stderr)<<e.what()<<'\n';}window.close();app.exit(valid?0:1);return;}
+        if(failureOnly){bool valid=false;try{valid=window.verifyRuntimeFailures(buildDir.absolutePath());}catch(const std::exception& e){QTextStream(stderr)<<e.what()<<'\n';}window.close();app.exit(valid?0:1);return;}
         if(responsivenessOnly){bool valid=false;try{valid=window.verifyEditorResponsiveness(buildDir.absolutePath());}catch(const std::exception& e){QTextStream(stderr)<<e.what()<<'\n';}window.close();app.exit(valid?0:1);return;}
         if(runtimeCamerasOnly){bool valid=false;try{valid=window.verifyRuntimeCameraSessions(buildDir.absolutePath());}catch(const std::exception& e){QTextStream(stderr)<<e.what()<<'\n';}window.close();app.exit(valid?0:1);return;}
         if(editorCamerasOnly){bool valid=false;try{valid=window.verifyEditorCameraSessions(buildDir.absolutePath());}catch(const std::exception& e){QTextStream(stderr)<<e.what()<<'\n';}window.close();app.exit(valid?0:1);return;}

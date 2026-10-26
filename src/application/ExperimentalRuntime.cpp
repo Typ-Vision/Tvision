@@ -64,20 +64,22 @@ void ExperimentalRuntime::permission() const {
     if(QThread::currentThread()!=thread_)throw ProductionException(ProductionError::WrongThread,"Experimental Runtime owner thread required");
     if(identity_.principal.isEmpty() || !identity_.authorize || !identity_.authorize(identity_.principal,ProductionAction::Run))throw ProductionException(ProductionError::Unauthorized,"Experimental Runtime Run denied");
 }
-std::shared_ptr<const ProductionSnapshot> ExperimentalRuntime::capture(const Recipe& recipe,const QString& directory) const {
+std::shared_ptr<const ProductionSnapshot> ExperimentalRuntime::capture(const Recipe& recipe,const QString& directory,bool configurationOnly) const {
     require(recipe.definition["editor"].toObject()["schemaVersion"]==9,"Experimental Runtime requires editor9");validateEditorDefinition(recipe.definition);
     const auto tools=editorTools(recipe.definition);const auto graph=validateSourceGraph(tools,editorConnections(recipe.definition));require(graph.valid() && !graph.requiredSources.isEmpty(),"Experimental source graph invalid");
     auto s=std::make_shared<ProductionSnapshot>();s->recipe_=recipe;s->directory_=QDir(directory).absolutePath();
     bool industrial=false;for(const auto& t:tools)if(graph.requiredSources.contains(t.id) && t.kind=="industrial_camera")industrial=true;
-    MultiSourceDependencies supplied;if(provider_)supplied=provider_(recipe);if(industrial){require(bool(provider_),"Experimental source provider required");require(bool(supplied.industrial),"Experimental industrial composition required");require(supplied.industrial->leaseUse==CameraLeaseUse::Editor && supplied.industrial->admittedDevices.isEmpty(),"Experimental composition cannot contain production admission");s->industrial_=supplied.industrial;}
-    QJsonObject sources;QSet<QString> cameras;for(auto i=supplied.experimentalCalibrations.begin();i!=supplied.experimentalCalibrations.end();++i)require(graph.requiredSources.contains(i.key()),"Foreign experimental model source");
+    MultiSourceDependencies supplied;if(provider_)supplied=provider_(recipe);require(configurationOnly || !supplied.configurationOnly,"Configuration source set cannot grant experimental admission");if(industrial){require(bool(provider_),"Experimental source provider required");require(bool(supplied.industrial),"Experimental industrial composition required");require(supplied.industrial->leaseUse==CameraLeaseUse::Editor && supplied.industrial->admittedDevices.isEmpty(),"Experimental composition cannot contain production admission");s->industrial_=supplied.industrial;}
+    QJsonObject sources;QSet<QString> cameras;QMap<QString,QJsonObject> cameraConfigurations;for(auto i=supplied.experimentalCalibrations.begin();i!=supplied.experimentalCalibrations.end();++i)require(graph.requiredSources.contains(i.key()),"Foreign experimental model source");
     for(const auto& source:graph.requiredSources){const auto branch=SystemCalibration::branch(recipe,source);const bool metric=SystemCalibration::requestsCalibration(branch,false);require(!branch.calibrationBinding && branch.calibrationReference.isEmpty(),"Experimental Runtime forbids legacy/global model fallback");
         const auto t=SystemCalibration::source(branch);QJsonObject entry;
         if(t.kind=="industrial_camera"){
-            const auto request=industrialExecutionRequest(*s->industrial_,t);require(!cameras.contains(request.camera.id.value) || s->industrial_->sessions,"Repeated physical experimental source");cameras.insert(request.camera.id.value);
+            const auto request=industrialExecutionRequest(*s->industrial_,t);
+            if(configurationOnly){const QJsonObject configuration{{"setup",request.setup.toJson()},{"profile",request.profile.toJson()}};require(!cameraConfigurations.contains(request.camera.id.value) || cameraConfigurations[request.camera.id.value]==configuration,"Conflicting experimental shared camera profiles");cameraConfigurations[request.camera.id.value]=configuration;}
+            require(!cameras.contains(request.camera.id.value) || configurationOnly || s->industrial_->sessions,"Repeated physical experimental source");cameras.insert(request.camera.id.value);
             require(request.profile.requested.trigger==TriggerSettings{true,"FrameBurstStart","Software"},"Explicit FrameBurstStart profile required");
             require(request.camera.physical && request.camera.physical->vendor=="Opto Engineering Srl" && request.camera.physical->model=="COE-050-M-USB-050-IR-C" && !request.camera.physical->serial.isEmpty(),"Experimental camera identity unsupported");
-            const auto physical=QString::fromLatin1(hash(request.camera.physical->toJson()));require(!cameras.contains(physical) || s->industrial_->sessions,"Repeated physical experimental device");cameras.insert(physical);
+            const auto physical=QString::fromLatin1(hash(request.camera.physical->toJson()));require(!cameras.contains(physical) || configurationOnly || s->industrial_->sessions,"Repeated physical experimental device");cameras.insert(physical);
             entry={{"camera",request.camera.toJson()},{"setup",request.setup.toJson()},{"profile",request.profile.toJson()}};
         }else if(t.kind=="image_file"){
             const auto image=ImageFileService{}.load(QDir(directory).absoluteFilePath(t.parameters["path"].toString()),true);entry={{"contentId",QString::fromLatin1(image.contentId().toHex())},{"experimentalAcquisition",image.metadata().experimentalAcquisition},{"imageInfo",imageInfo(image)}};
@@ -85,6 +87,15 @@ std::shared_ptr<const ProductionSnapshot> ExperimentalRuntime::capture(const Rec
         if(metric){
             const auto typed=supplied.experimentalCalibrations.value(source);require(bool(typed),"Metric source requires typed experimental model");
             const auto ref=SystemCalibration::setupReference(branch);require(ref && *ref==typed->snapshot.target,"Experimental model belongs to another source installation");
+            if(configurationOnly){
+                const auto& m=typed->snapshot.calibration;const auto& dep=m.record.model().dependency();
+                require(m.record.experimentallyActivatable() && m.selection.id==dep.calibrationId && m.selection.version==dep.version && m.selection.contentId==m.record.contentId(),"Invalid remembered experimental model");
+                const auto& expected=*m.record.image().experimental;
+                require(m.record.setup()==IndependentCaptureRequest::installation(expected.camera,expected.setup),"Experimental model installation changed");
+                if(t.kind=="image_file"){const auto image=ImageFileService{}.load(QDir(directory).absoluteFilePath(t.parameters["path"].toString()),true);ExperimentalCalibrationEvidence{SourceOrigin::SetupFile,expected.camera,expected.setup,expected.profile,image.metadata().experimentalAcquisition}.verify(image);}
+                else {const auto request=industrialExecutionRequest(*s->industrial_,t);require(expected.camera.physical==request.camera.physical && expected.camera.id==request.camera.id && expected.setup.geometry==request.setup.geometry && expected.setup.id==request.setup.id && expected.setup.revision==request.setup.revision,"Experimental model/source installation differs");}
+                continue;
+            }
             entry["experimentalCalibration"]=modelEvidence(*typed,source);
             if(t.kind=="image_file"){const auto image=ImageFileService{}.load(QDir(directory).absoluteFilePath(t.parameters["path"].toString()),true);const auto proof=MeasurementSourceEvidence::fromJson(typed->snapshot.calibration.acquisition["probe"].toObject());const auto& expected=*proof.experimental;ExperimentalCalibrationEvidence{SourceOrigin::SetupFile,expected.camera,expected.setup,expected.profile,image.metadata().experimentalAcquisition}.verify(image);}
             else {const auto request=industrialExecutionRequest(*s->industrial_,t);const auto proof=MeasurementSourceEvidence::fromJson(typed->snapshot.calibration.acquisition["probe"].toObject());
@@ -93,9 +104,15 @@ std::shared_ptr<const ProductionSnapshot> ExperimentalRuntime::capture(const Rec
         if(t.kind=="image_file" && supplied.sources.contains(source) && !supplied.sources[source].measurementSource.isEmpty())entry["measurementSource"]=supplied.sources[source].measurementSource;
         sources[source]=entry;
     }
+    if(configurationOnly)return {}; // Static inspection never publishes an execution capability.
     s->dependencies_={{"scope",scope},{"engine",ExecutionService::version()},{"sourceSet",sources}};
     require(QJsonDocument(s->dependencies_).toJson(QJsonDocument::Compact).size()<=ProductionResultCodec::maxRecordBytes,"Experimental snapshot exceeds budget");
     s->validation_={QUuid::createUuid().toString(QUuid::WithoutBraces),identity_.principal,hash(configuration(recipe,directory)),hash(s->dependencies_),QDateTime::currentDateTimeUtc(),scope};return s;
+}
+void ExperimentalRuntime::checkConfiguration(const Recipe& r,const QString& d) const {
+    if(QThread::currentThread()!=thread_)throw ProductionException(ProductionError::WrongThread,"Experimental owner thread required");
+    if(identity_.principal.isEmpty() || !identity_.authorize || !identity_.authorize(identity_.principal,ProductionAction::Validate))throw ProductionException(ProductionError::Unauthorized,"Configuration inspection denied");
+    if(busy())throw ProductionException(ProductionError::Busy,"Cycle pending");(void)capture(r,d,true);
 }
 void ExperimentalRuntime::prepare(const Recipe& r,const QString& directory){permission();if(!identity_.authorize(identity_.principal,ProductionAction::Validate) || !identity_.authorize(identity_.principal,ProductionAction::Activate))throw ProductionException(ProductionError::Unauthorized,"Experimental Runtime preparation denied");require(!busy(),"Experimental recording/cycle pending");auto candidate=capture(r,directory);snapshot_=std::move(candidate);faulted_=false;}
 void ExperimentalRuntime::requireReady() const {permission();if(busy())throw ProductionException(ProductionError::Busy,"Experimental cycle/recording pending");require(snapshot_ && !faulted_,"Experimental Runtime not ready / busy / manual Run required after fault or cancellation");const auto next=capture(snapshot_->recipe(),snapshot_->projectDirectory());require(next->validation().contentId==snapshot_->validation().contentId && next->validation().dependencyId==snapshot_->validation().dependencyId,"Experimental source/profile/model changed; Run again");}
@@ -206,7 +223,7 @@ QString ExperimentalRuntime::sourceSummary(const QJsonObject& entry,const QStrin
     else if(!camera.isEmpty())text+=" • Kamera: "+camera["id"].toString()+" / "+camera["name"].toString();
     if(model.isEmpty())return text+" • Raw / px • metrik model kullanılmıyor";
     const auto typed=decodeModel(model,source);const auto& active=typed.snapshot.calibration;
-    return text+QString(" • mm • %1 v%2 • Model: %3 • Content: %4 • Bağımsız fiziksel kabul yapılmadı")
+    return text+QString(" • mm • %1 v%2 • Model: %3 • Content: %4")
         .arg(active.record.name()).arg(active.selection.version).arg(active.selection.id,active.selection.contentId);
 }
 namespace {

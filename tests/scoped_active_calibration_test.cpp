@@ -44,6 +44,16 @@ auto all=service.snapshots(refs);check(all.size()==n,"all immutable snapshots");
     check(service.snapshots(refs).size()==n,"restored admission revalidates same immutable models");
 }
 ScopedActiveCalibrationService restart(repo,[]{return true;});reject([&]{restart.snapshots({refs[0]});});check(restart.environment().selections.size()==n,"restart remembers only");
+const auto remembered=restart.environment().selections.first();
+const auto beforeRestart=repo.exportBundle();
+check(restart.configuration(refs[0]).record.contentId()==contents[0] && restart.configuration(refs[0]).configurationOnly,"static remembered model without session permission");
+reject([&]{restart.configuration(refs[0],true);});
+IndependentCalibrationSession fresh;capture(fresh,c,0);
+for(int mode=0;mode<3;++mode){auto wrong=remembered;if(mode==0)wrong.contentId=QString(64,'a');if(mode==1)++wrong.version;if(mode==2)wrong.id="another-model";reject([&]{restart.reauthorizeRemembered(wrong,fresh);});}
+if(n>1){IndependentCalibrationSession foreign;capture(foreign,c,1);reject([&]{restart.reauthorizeRemembered(remembered,foreign);});}
+restart.reauthorizeRemembered(remembered,fresh);check(restart.snapshots({refs[0]}).size()==1 && repo.exportBundle()==beforeRestart,"exact reauthorization leaves persisted environment/catalog unchanged");
+reject([&]{restart.reauthorizeRemembered(remembered,fresh);});
+restart.disconnect(refs[0].camera);reject([&]{restart.snapshots({refs[0]});});check(restart.configuration(refs[0]).record.contentId()==contents[0],"disconnect preserves static math");
 IndependentCalibrationSession probe;capture(probe,c,0);ready=false;reject([&]{service.activate(refs[0],contents[0],probe);});reject([&]{service.deactivate(refs[0].setup);});ready=true;
 ready=false;reject([&]{service.prepareRemembered(refs[0],probe);});reject([&]{service.notifyOpticalChange(refs[0].camera,service.environment().revision);});ready=true;
 service.activate(refs[0],contents[0],probe,MeasurementEnvironmentRepository::Fault::None);

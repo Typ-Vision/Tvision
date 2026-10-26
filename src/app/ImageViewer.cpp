@@ -6,6 +6,7 @@
 #include <QMouseEvent>
 #include <QWheelEvent>
 #include <QPainter>
+#include <QPainterPath>
 #include <QScrollBar>
 #include <cmath>
 #include <algorithm>
@@ -15,17 +16,20 @@ QRect pixelRectangle(QPoint a,QPoint b) {return QRect(QPoint(std::min(a.x(),b.x(
 }
 ImageViewer::ImageViewer(QWidget* parent) : QGraphicsView(parent),scene_(new QGraphicsScene(this)) {
     setScene(scene_); setBackgroundBrush(QColor("#101923")); setDragMode(ScrollHandDrag);
-    setTransformationAnchor(AnchorUnderMouse); setResizeAnchor(AnchorViewCenter);
+    setTransformationAnchor(NoAnchor); setResizeAnchor(NoAnchor);
     setMouseTracking(true); setAccessibleName("Image Viewer"); setMinimumSize(200,180);
     setRenderHint(QPainter::SmoothPixmapTransform,false);
 }
-void ImageViewer::setPreviewPixels(const QImage& image) {
-    if(!imageItem_ || imageItem_->pixmap().size()!=image.size()){setImage(image);return;}
+void ImageViewer::setPreviewPixels(const QImage& image,const QString& source) {
+    if(!imageItem_ || imageItem_->pixmap().size()!=image.size() || (!source.isEmpty() && source!=imageSource_)){setImage(image,source);return;}
     if(previewCacheKey_==image.cacheKey())return;
     imageItem_->setPixmap(QPixmap::fromImage(image));
     previewCacheKey_=image.cacheKey();
 }
-void ImageViewer::setImage(const QImage& image) {
+void ImageViewer::setImage(const QImage& image,const QString& source) {
+    const bool preserve=!image.isNull() && imageSize_==image.size() && imageSource_==source;
+    const auto center=imageItem_ ? mapToScene(viewport()->rect().center()):savedCenter_;
+    imageSource_=source;imageSize_=image.size();
     AcquisitionTimingSpan timing("ui.set-image");
     if(!paintTiming_.request.isEmpty())AcquisitionTiming::record(paintTiming_,"ui.set-image-to-first-paint",imageAssignedAt_,"superseded");
     paintTiming_=AcquisitionTiming::current();imageAssignedAt_=AcquisitionTiming::Clock::now();
@@ -42,27 +46,41 @@ void ImageViewer::setImage(const QImage& image) {
     selection_=scene_->addRect(rect,pen); selection_->setVisible(false);
     auto region=[this](const QColor& color){QPen p(color); p.setWidth(2); p.setCosmetic(true); auto* item=scene_->addRect({},p); item->hide(); return item;};
     modelRegion_=region(QColor("#ffd166")); searchRegion_=region(QColor("#56b4ff")); resultRegion_=region(QColor("#66e3c4")); draftRegion_=region(Qt::white);
-    fitImage();if(onRoiChanged)onRoiChanged();
+    if(preserve){centerOn(center);updateResultAnnotations();renderRoi();}
+    else fitImage();
+    if(onRoiChanged)onRoiChanged();
 }
-void ImageViewer::clearImage(const QString& message) {
+void ImageViewer::clearImage(const QString& message,bool preserveView) {
+    if(preserveView && imageItem_)savedCenter_=mapToScene(viewport()->rect().center());
+    if(!preserveView){imageSource_.clear();imageSize_={};fitMode_=true;}
     if(!paintTiming_.request.isEmpty())AcquisitionTiming::record(paintTiming_,"ui.set-image-to-first-paint",imageAssignedAt_,"cancelled");paintTiming_={};
     previewCacheKey_=0;
     searchHandles_.clear();searchIdentity_.clear();searchUndo_.clear();searchEditable_=searchDragging_=middlePanning_=false;searchValue_={};
     roiItems_.clear();roi_.reset();roiDraft_.reset();roiBeforeDrag_.reset();roiStatus_="Geometri yok.";roiUndo_.clear();roiVertices_.clear();validDomain_.clear();roiDrawing_=-1;roiHandle_=-1;roiDragging_=roiEditing_=false;
     resultAnnotations_.clear();toolOverlay_.clear();
     scene_->clear(); scene_->setSceneRect({}); imageItem_=nullptr; selection_=nullptr;
-    emptyMessage_=message; resetTransform(); viewport()->update();
+    emptyMessage_=message; if(!preserveView)resetTransform(); viewport()->update();
     modelRegion_=searchRegion_=resultRegion_=draftRegion_=nullptr; drawRegion(false);
-    if (onZoom) onZoom(1.0); if (onPixel) onPixel({-1,-1});if(onRoiChanged)onRoiChanged();
+    if (onZoom) onZoom(zoomFactor()); if (onPixel) onPixel({-1,-1});if(onRoiChanged)onRoiChanged();
 }
 void ImageViewer::fitImage() {
     if (!imageItem_) return;
     fitMode_=true; fitInView(imageItem_->boundingRect(),Qt::KeepAspectRatio); updateResultAnnotations(); renderRoi(); if (onZoom) onZoom(zoomFactor());
 }
-void ImageViewer::zoomBy(double factor) {
+void ImageViewer::zoomBy(double factor) {zoomAt(factor,QPointF(viewport()->rect().center()));}
+void ImageViewer::zoomAt(double factor,const QPointF& position) {
     if (!imageItem_ || !std::isfinite(factor) || factor<=0) return;
-    fitMode_=false; const double target=std::clamp(zoomFactor()*factor,0.001,32.0);
-    scale(target/zoomFactor(),target/zoomFactor()); updateResultAnnotations(); renderRoi(); if (onZoom) onZoom(zoomFactor());
+    const double current=zoomFactor(),target=std::clamp(current*factor,0.001,32.0);
+    if(target==current)return;
+    const QPointF anchor=viewportTransform().inverted().map(position);
+    fitMode_=false;
+    scale(target/current,target/current);
+    // Only scroll within Qt's legal ranges. A centred, smaller scene cannot
+    // anchor arbitrary corners until that axis becomes scrollable.
+    const QPointF delta=viewportTransform().map(anchor)-position;
+    horizontalScrollBar()->setValue(horizontalScrollBar()->value()+qRound(delta.x()));
+    verticalScrollBar()->setValue(verticalScrollBar()->value()+qRound(delta.y()));
+    updateResultAnnotations();renderRoi();if(onZoom)onZoom(zoomFactor());
 }
 void ImageViewer::actualSize() {
     if (!imageItem_) return;
@@ -142,6 +160,30 @@ void ImageViewer::addResultLabel(const QString& text,QPointF at,const QColor& co
     }
     toolOverlay_<<label;resultAnnotations_<<label;updateResultAnnotations();
 }
+void ImageViewer::setRuntimeOverlays(const RuntimeOverlayCollection& collection) {
+    resultAnnotations_.clear();for(auto* item:toolOverlay_){scene_->removeItem(item);delete item;}toolOverlay_.clear();
+    if(!imageItem_ || imageSize_!=collection.rawSize)return;
+    for(const auto& layer:collection.layers){
+        const auto first=toolOverlay_.size();QPen pen(layer.color,2);pen.setCosmetic(true);
+        auto path=[&](const QVector<QPointF>& points,const QPen& p){if(points.isEmpty())return;QPainterPath v;v.moveTo(points.first());for(int i=1;i<points.size();++i)v.lineTo(points[i]);toolOverlay_<<scene_->addPath(v,p);};
+        QPen scanPen(layer.color,1,Qt::DashLine);scanPen.setCosmetic(true);
+        for(const auto& scan:layer.scans)path(scan,scanPen);
+        for(const auto& guide:layer.guides){toolOverlay_<<scene_->addLine(guide,scanPen);const auto d=guide.p2()-guide.p1();const double length=guide.length();if(length>0){const auto u=d/length;const auto n=QPointF(-u.y(),u.x());path({guide.p2()-u*4+n*3,guide.p2(),guide.p2()-u*4-n*3},scanPen);}}
+        if(!layer.mask.pixels.isEmpty() && layer.mask.size.width()>0 && layer.mask.size.height()>0 && qint64(layer.mask.size.width())*layer.mask.size.height()==layer.mask.pixels.size()){
+            QImage mask(layer.mask.size,QImage::Format_ARGB32_Premultiplied);mask.fill(Qt::transparent);
+            auto color=layer.color;color.setAlpha(90);for(int y=0;y<mask.height();++y){auto* row=reinterpret_cast<QRgb*>(mask.scanLine(y));for(int x=0;x<mask.width();++x)if(layer.mask.pixels[y*mask.width()+x])row[x]=qPremultiply(color.rgba());}
+            auto* item=scene_->addPixmap(QPixmap::fromImage(mask));item->setPos(layer.mask.origin);toolOverlay_<<item;
+        }
+        for(const auto& r:layer.regions)toolOverlay_<<scene_->addRect(r,pen);
+        for(const auto& line:layer.lines)toolOverlay_<<scene_->addLine(line,pen);
+        for(const auto& code:layer.codes.items){auto corners=code.corners;if(!corners.isEmpty())corners<<corners.first();path(corners,pen);}
+        for(const auto& p:layer.points){auto* item=scene_->addEllipse(-3,-3,6,6,pen,QBrush(QColor("#101923")));item->setPos(p);item->setFlag(QGraphicsItem::ItemIgnoresTransformations);toolOverlay_<<item;}
+        QPen rejected(QColor("#ff6666"),2);rejected.setCosmetic(true);for(const auto& p:layer.rejected){auto* item=scene_->addEllipse(-5,-5,10,10,rejected);item->setPos(p);item->setFlag(QGraphicsItem::ItemIgnoresTransformations);toolOverlay_<<item;}
+        QPointF at;if(!layer.scans.isEmpty() && !layer.scans.first().isEmpty())at=layer.scans.first().first();else if(!layer.points.isEmpty())at=layer.points.first();else if(!layer.lines.isEmpty())at=layer.lines.first().p1();else if(!layer.regions.isEmpty())at=layer.regions.first().topLeft();
+        addResultLabel(layer.name+" • "+layer.state,at,layer.color,true);
+        for(auto i=first;i<toolOverlay_.size();++i){if(toolOverlay_[i]->zValue()<5)toolOverlay_[i]->setZValue(qgraphicsitem_cast<QGraphicsPixmapItem*>(toolOverlay_[i]) ? 1:2);toolOverlay_[i]->setData(0,"runtimeOverlay");toolOverlay_[i]->setData(1,layer.toolId);toolOverlay_[i]->setToolTip(layer.name+"\n"+layer.detail);}
+    }
+}
 void ImageViewer::setCodeOverlay(const CodeResults& codes) {
     if(!imageItem_)return;
     QPen pen(QColor("#66e3c4"));pen.setWidth(2);pen.setCosmetic(true);
@@ -151,7 +193,7 @@ void ImageViewer::setCodeOverlay(const CodeResults& codes) {
     }
 }
 void ImageViewer::wheelEvent(QWheelEvent* event) {
-    if (event->angleDelta().y()!=0) zoomBy(std::pow(1.2,event->angleDelta().y()/120.0));
+    if (event->angleDelta().y()!=0) zoomAt(std::pow(1.2,event->angleDelta().y()/120.0),event->position());
     if (onPixel) onPixel(imagePixelAt(event->position().toPoint())); event->accept();
 }
 void ImageViewer::setChessboardOverlay(const QVector<QPointF>& points,int columns) {

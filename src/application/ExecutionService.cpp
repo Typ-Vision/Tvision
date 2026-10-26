@@ -1,5 +1,6 @@
 #include "MeasurementDiagnostic.hpp"
 #include "ExecutionService.hpp"
+#include "ToolOverlayGeometry.hpp"
 #include "AcquisitionPolicy.hpp"
 #include "SourceFrameIndex.hpp"
 #include "ToolExecutors.hpp"
@@ -78,7 +79,13 @@ CycleResult ExecutionService::run(const QJsonObject& definition,const QString& d
             tools.erase(std::remove_if(tools.begin(),tools.end(),[&](const auto& t){return !required.contains(t.id);}),tools.end());
             connections.erase(std::remove_if(connections.begin(),connections.end(),[&](const auto& c){return !required.contains(c.targetTool);}),connections.end());
         }
-        if(automaticAcquisition_ && !targetOnly)experimentalEditorReplay=AcquisitionPolicy::sources(tools,directory);
+        if(automaticAcquisition_ && !targetOnly && !(cancel && cancel->load())) {
+            auto policyTools=tools;
+            // An owned snapshot replaces file acquisition. Its provenance was
+            // checked above; the original file need not still be available.
+            if(frameSnapshot)policyTools.erase(std::remove_if(policyTools.begin(),policyTools.end(),[](const auto& t){return t.kind=="image_file";}),policyTools.end());
+            experimentalEditorReplay=AcquisitionPolicy::sources(policyTools,directory) || experimentalEditorReplay;
+        }
         auto graph=multi ? validateSourceGraph(tools,connections):validateGraph(tools,connections);
         if(!graph.valid())throw std::runtime_error(graph.errors.join("\n").toUtf8().constData());
         QMap<QString,QJsonObject> industrialDevices;
@@ -206,7 +213,7 @@ CycleResult ExecutionService::run(const QJsonObject& definition,const QString& d
                         if(resolved){
                             cycle.executedTools.append(t.id);
                             if(ToolRegistry::get(t.kind).acquisitionSource)++cycle.acquisitions;
-                            auto injected=multi && t.kind!="industrial_camera" && ToolRegistry::get(t.kind).acquisitionSource && sourceAdapterFactory_ ? sourceAdapterFactory_(t):nullptr;
+                            auto injected=t.kind!="industrial_camera" && ToolRegistry::get(t.kind).acquisitionSource && sourceAdapterFactory_ ? sourceAdapterFactory_(t):nullptr;
                             if(t.kind=="industrial_camera"){
                                 if(!industrial_)throw std::runtime_error("Industrial execution requires immutable camera/setup/profile inputs");
                                 auto request=industrialExecutionRequest(*industrial_,t);
@@ -241,6 +248,8 @@ CycleResult ExecutionService::run(const QJsonObject& definition,const QString& d
                                 if(multi && t.kind=="preprocess" && inputs.contains("image")){const auto& image=std::get<ImageFrame>(inputs["image"].data);if(quint64(image.size().width())*image.size().height()*12>limits.imageBytes-retainedBytes)throw std::runtime_error("Multi-source image budget preflight rejected");}
                                 r=worldTracking ? WorldTrackingService::execute(t,std::get<ImageFrame>(inputs.value("image").data),*worldTracking,cancel)
                                 :ToolExecutors::get(t.kind,measurement,resolvedRoi)(effective,inputs,directory,toolFrameId,cycle.cycleId,cancel);}
+                            const auto overlayInput=inputs.value("image");
+                            if(r.state==ExecutionState::Done && overlayInput.valid)if(const auto* image=std::get_if<ImageFrame>(&overlayInput.data))r.overlayGeometry=toolOverlayGeometry(t,effective,*image,measurement,resolvedRoi,worldTracking,r);
                         }
                     }
                     if(ToolRegistry::get(t.kind).acquisitionSource && t.kind!="industrial_camera" && !sourceBinding.isEmpty() && r.state==ExecutionState::Done){
@@ -286,7 +295,7 @@ CycleResult ExecutionService::run(const QJsonObject& definition,const QString& d
                         catch(const std::exception& e){measurement={};measurement.error=QString::fromUtf8(e.what());}
                         if(multi)measurements[t.id]=measurement;
                     }
-                }catch(const std::exception& e) {r.fitDiagnostic.reset();r.edgeDiagnostics.reset();r.outputs.clear();r.regions.clear();r.mask={};r.searchRegion={};r.points.clear();r.rejectedPoints.clear();r.lines.clear();r.decision=PartDecision::NotEvaluated;r.calibration.reset();r.state=ExecutionState::Error;r.message=QString::fromUtf8(e.what());
+                }catch(const std::exception& e) {r.fitDiagnostic.reset();r.edgeDiagnostics.reset();r.overlayGeometry.reset();r.outputs.clear();r.regions.clear();r.mask={};r.searchRegion={};r.points.clear();r.rejectedPoints.clear();r.lines.clear();r.decision=PartDecision::NotEvaluated;r.calibration.reset();r.state=ExecutionState::Error;r.message=QString::fromUtf8(e.what());
                     if(const auto* fit=dynamic_cast<const FitDiagnosticError*>(&e)) {
                         r.fitDiagnostic=fit->evidence;r.errorCode=fit->evidence.code;
                         r.message=presentMeasurementDiagnostic(*r.fitDiagnostic);
@@ -303,8 +312,8 @@ CycleResult ExecutionService::run(const QJsonObject& definition,const QString& d
         if(multi && !targetOnly && !stopped && !error && !graph.requiredSources.isEmpty()){SourceFrameIndex index(cycle.cycleId,graph.requiredSources,cycle.frames);cycle.frameId=index.legacyFrameId();}
         cycle.state=stopped ? ExecutionState::Skipped : error ? ExecutionState::Error : ExecutionState::Done;
         if(targetOnly && !stopped && cycle.tools.size()==1)cycle.state=cycle.tools.first().state;
-        if(stopped) {cycle.industrialEvidence.clear();cycle.frames.clear();cycle.error="Çevrim iptal edildi; sonuç yayımlanmaz.";for(auto& r:cycle.tools) {r.state=ExecutionState::Skipped;r.message="İptal edildi";r.errorCode.clear();r.fitDiagnostic.reset();r.edgeDiagnostics.reset();r.outputs.clear();r.regions.clear();r.mask={};r.points.clear();r.rejectedPoints.clear();r.lines.clear();r.searchRegion={};r.decision=PartDecision::NotEvaluated;r.calibration.reset();}}
-    } catch(const std::exception& e) {cycle.state=ExecutionState::Error;cycle.error=QString::fromUtf8(e.what());if(multi){cycle.industrialEvidence.clear();cycle.frames.clear();for(auto& r:cycle.tools){r.state=ExecutionState::Skipped;r.outputs.clear();r.regions.clear();r.points.clear();r.lines.clear();r.mask={};r.fitDiagnostic.reset();r.edgeDiagnostics.reset();r.decision=PartDecision::NotEvaluated;r.calibration.reset();}}}
+        if(stopped) {cycle.industrialEvidence.clear();cycle.frames.clear();cycle.error="Çevrim iptal edildi; sonuç yayımlanmaz.";for(auto& r:cycle.tools) {r.state=ExecutionState::Skipped;r.message="İptal edildi";r.errorCode.clear();r.fitDiagnostic.reset();r.edgeDiagnostics.reset();r.overlayGeometry.reset();r.outputs.clear();r.regions.clear();r.mask={};r.points.clear();r.rejectedPoints.clear();r.lines.clear();r.searchRegion={};r.decision=PartDecision::NotEvaluated;r.calibration.reset();}}
+    } catch(const std::exception& e) {if(const auto* source=dynamic_cast<const AcquisitionPolicyError*>(&e))cycle.acquisitionFailureSourceId_=source->sourceId;cycle.state=ExecutionState::Error;cycle.error=QString::fromUtf8(e.what());if(multi){cycle.industrialEvidence.clear();cycle.frames.clear();for(auto& r:cycle.tools){r.state=ExecutionState::Skipped;r.overlayGeometry.reset();r.outputs.clear();r.regions.clear();r.points.clear();r.lines.clear();r.mask={};r.fitDiagnostic.reset();r.edgeDiagnostics.reset();r.decision=PartDecision::NotEvaluated;r.calibration.reset();}}}
     cycle.milliseconds=total.nsecsElapsed()/1e6;return cycle;
 }
 }

@@ -43,6 +43,15 @@ int main(int argc,char** argv){QApplication app(argc,argv);try{
         auto metadata=frame.metadata();metadata.frameId="new-acquisition";session.frame=frame.withMetadata(metadata);
         check(session.evaluationScope(context)!=scope,"same pixels new acquisition still invalidates scope");
         session.frame=other;check(session.evaluationScope(context)!=scope,"changed pixels invalidate scope");
+        viewer.setImage(frame.preview(),"source-a");viewer.actualSize();viewer.zoomBy(3);viewer.centerOn(size.width()*.55,size.height()*.55);
+        const auto manual=viewer.transform();const auto center=viewer.mapToScene(viewer.viewport()->rect().center());
+        viewer.setImage(changed,"source-a");check(viewer.transform()==manual && QLineF(center,viewer.mapToScene(viewer.viewport()->rect().center())).length()<1,"same source same geometry frame retains zoom and pan");
+        viewer.clearImage("BUSY",true);check(!viewer.hasImage(),"busy display cannot expose stale pixels");viewer.clearImage("BUSY refresh",true);viewer.setImage(frame.preview(),"source-a");
+        check(viewer.transform()==manual && QLineF(center,viewer.mapToScene(viewer.viewport()->rect().center())).length()<1,"acquisition gap preserves same-source view");
+        viewer.setPreviewPixels(changed,"source-a");check(viewer.transform()==manual,"processed preview preserves manual view");
+        viewer.setPreviewPixels(frame.preview(),"source-b");check(viewer.transform()!=manual,"same geometry different source fits safely");
+        viewer.actualSize();viewer.zoomBy(3);viewer.setImage(QImage(320,240,QImage::Format_Grayscale8),"source-b");check(viewer.zoomFactor()!=3,"geometry change fits safely");
+        viewer.actualSize();viewer.zoomBy(2);viewer.resize(900,650);QApplication::processEvents();check(viewer.zoomFactor()==2,"manual resize retains zoom");viewer.fitImage();const auto fit=viewer.zoomFactor();viewer.resize(700,450);QApplication::processEvents();check(!viewer.isVisible() || viewer.zoomFactor()!=fit,"Fit resize follows viewport");viewer.actualSize();check(viewer.zoomFactor()==1,"actual size remains explicit");
         viewer.clearImage();viewer.setPreviewPixels(frame.preview());check(!viewer.scene()->items().isEmpty(),"clear resets display cache");
         QTextStream(stdout)<<size.width()<<"x"<<size.height()<<" create_ms="<<creation/1e6<<" hash100_ms="<<hashing/1e6<<" refresh100_ms="<<refresh/1e6<<"\n";
     }return 0;

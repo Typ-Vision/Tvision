@@ -1,5 +1,6 @@
 #include "app/CameraFlowSmokeAudit.hpp"
 #include "app/CameraManager.hpp"
+#include "app/ImageViewer.hpp"
 #include "app/CalibrationOverview.hpp"
 #include "CameraSettingsFixture.hpp"
 #include "OecsExperimentalFixture.hpp"
@@ -121,42 +122,48 @@ int main(int argc,char** argv){QApplication app(argc,argv);try{
     view.findChild<QLineEdit*>("cameraExposure")->setText("bad");apply->click();check(!jobs.busy() && status->text().contains("Sayısal"),"invalid numeric error");
     preview->click();waitUi([&]{return !jobs.busy();});
     check(status->text().contains("Tek görüntü") && status->text().contains("1 kare") && status->text().contains("0.0 FPS"),"single frame stops cleanly with measured stats");
-    check(!view.findChild<QLabel*>("cameraPreviewImage")->pixmap().isNull(),"selected synthetic owned preview");
+    check(static_cast<ImageViewer*>(view.findChild<QGraphicsView*>("cameraPreviewImage"))->hasImage(),"selected synthetic owned preview");
     view.findChild<QScrollArea*>()->verticalScrollBar()->setValue(view.findChild<QScrollArea*>()->verticalScrollBar()->maximum());
     CameraFlowSmokeAudit::save(view,evidence+"/camera-preview.png");
-    view.stop();check(view.findChild<QLabel*>("cameraPreviewImage")->pixmap().isNull(),"Stop immediately clears stale preview");
+    auto* image=static_cast<ImageViewer*>(view.findChild<QGraphicsView*>("cameraPreviewImage"));
+    image->actualSize();image->zoomBy(2.);const auto manualZoom=image->zoomFactor();
+    preview->click();waitUi([&]{return !jobs.busy();});check(image->zoomFactor()==manualZoom,"same source single recapture preserves manual zoom");
+    check(image->sceneRect().size()==QSizeF(3,2),"preview owns full raster coordinates rather than scaled pixmap");
+    view.stop();check(!static_cast<ImageViewer*>(view.findChild<QGraphicsView*>("cameraPreviewImage"))->hasImage(),"Stop immediately clears stale preview");
     waitUi([&]{return !jobs.busy();});
     auto* live=view.findChild<QPushButton*>("cameraLive");
-    auto* image=view.findChild<QLabel*>("cameraPreviewImage");
     auto* save=view.findChild<QPushButton*>("cameraSaveFrame");
     for(int cycle=0;cycle<2;++cycle){
-        live->click();waitUi([&]{return status->text().contains("Canlı") && !image->pixmap().isNull();});
+        live->click();waitUi([&]{return status->text().contains("Canlı") && image->hasImage();});
         const auto first=status->text();waitUi([&]{return status->text()!=first;});
         check(jobs.busy() && !table->isEnabled() && !apply->isEnabled() && !preview->isEnabled() && !save->isEnabled(),"live exclusive controls and no native evidence save");
         check(status->text().contains("Sıralı tek kare") && !status->text().contains("0.0 FPS"),"live sequential label and real FPS");
         for(const auto size:{QSize(1400,900),QSize(850,600)}){
-            view.resize(size);QApplication::processEvents();auto* sc=view.findChild<QScrollArea*>();sc->ensureWidgetVisible(image);
+            view.resize(size);QApplication::processEvents();auto* sc=view.findChild<QScrollArea*>();
             CameraFlowSmokeAudit::save(view,evidence+QString("/live-%1-%2.png").arg(cycle).arg(size.width()));
             check(sc->horizontalScrollBar()->maximum()==0,"live small layout no horizontal overflow");
-            for(auto* action:{live,view.findChild<QPushButton*>("cameraStop"),preview}){sc->ensureWidgetVisible(action);QApplication::processEvents();check(sc->viewport()->rect().contains(action->mapTo(sc->viewport(),action->rect().center())),"live actions reachable");}
+            check(image->height()>size.height()/2 && image->width()>size.width()/3,"independent preview expands at normal and small sizes");
+            auto* actual=view.findChild<QPushButton*>("cameraActualSize");view.activateWindow();QApplication::processEvents();actual->setFocus(Qt::TabFocusReason);QApplication::processEvents();QTest::keyClick(actual,Qt::Key_Tab);QApplication::processEvents();check(view.findChild<QPushButton*>("cameraZoomOut")->hasFocus(),"preview keyboard tab order remains reachable");
+            const auto viewerRect=image->geometry();sc->verticalScrollBar()->setValue(sc->verticalScrollBar()->maximum());QApplication::processEvents();check(image->geometry()==viewerRect,"settings scrolling never shrinks preview");
+            for(auto* action:{live,view.findChild<QPushButton*>("cameraStop"),preview}){sc->ensureWidgetVisible(action);QApplication::processEvents();check(view.rect().contains(action->mapTo(&view,action->rect().center())),"live actions reachable");}
         }
-        view.stop();check(image->pixmap().isNull() && !save->isEnabled(),"Stop retires visible frame and evidence action");waitUi([&]{return !jobs.busy();});
+        view.stop();check(!image->hasImage() && !save->isEnabled(),"Stop retires visible frame and evidence action");waitUi([&]{return !jobs.busy();});
     }
     view.resize(1400,900);
     state->continuous=true;preview->click();waitUi([&]{return !jobs.busy();});check(status->text().contains("Continuous"),"native continuous capability labeled separately");state->continuous=false;view.stop();
     // An independently owned physical lease is rejected with a visible reason.
     {auto rival=factory.open(request(),CameraLeaseUse::Calibration,FrameQueueMode::ProductionFifo);
         preview->click();waitUi([&]{return !jobs.busy();});
-        check(image->pixmap().isNull() && status->text().contains("Görüntü alınamadı"),"busy camera clears old raster and reports failure");}
+        check(!image->hasImage() && status->text().contains("Görüntü alınamadı"),"busy camera clears old raster and reports failure");}
     // Transport failure after a visible frame must clear it and release the session.
     std::atomic_int frames=0;
     state->hardware->hook=[&](const QString& event){if(event=="preview" && ++frames>2)throw std::runtime_error("Synthetic transport disconnected");};
     live->click();waitUi([&]{return !jobs.busy();});
-    check(image->pixmap().isNull() && status->text().contains("disconnected") && !save->isEnabled(),"disconnect clears old frame and preserves reason");
+    check(!image->hasImage() && status->text().contains("disconnected") && !save->isEnabled(),"disconnect clears old frame and preserves reason");
     state->hardware->hook={};
     // Programmatic selection is guarded as well as disabled user controls.
-    live->click();waitUi([&]{return !image->pixmap().isNull();});table->selectRow(1);
-    check(image->pixmap().isNull(),"camera change immediately retires old frame");waitUi([&]{return !jobs.busy();});table->selectRow(0);
+    live->click();waitUi([&]{return image->hasImage();});table->selectRow(1);
+    check(!image->hasImage(),"camera change immediately retires old frame");waitUi([&]{return !jobs.busy();});table->selectRow(0);
     ambiguous=true;count=1;scan();check(!preview->isEnabled() && !view.findChild<QPushButton*>("cameraSettingsRead")->isEnabled(),"ambiguous physical identity cannot open");CameraFlowSmokeAudit::save(view,evidence+"/camera-ambiguous.png");ambiguous=false;
     gate=false;view.refresh();check(!apply->isEnabled(),"external Runtime busy gate");gate=true;
     count=0;scan();check(table->rowCount()==1 && table->item(0,4)->text().contains("Çevrimdışı"),"registered camera remains offline");
@@ -171,14 +178,14 @@ int main(int argc,char** argv){QApplication app(argc,argv);try{
     live->click();waitUi([&]{return entered.load();});
     bool transitioned=false;
     view.leave([&]{
-        check(!jobs.busy() && image->pixmap().isNull(),"page/project/close continuation only after joined worker");
+        check(!jobs.busy() && !image->hasImage(),"page/project/close continuation only after joined worker");
         auto calibrationLease=factory.open(request(),CameraLeaseUse::Calibration,FrameQueueMode::ProductionFifo);
         transitioned=true;
     });
     QTest::qWait(50);check(!transitioned,"pending callback keeps page transition deferred while UI processes events");
-    check(jobs.busy() && view.findChild<QLabel*>("cameraPreviewImage")->pixmap().isNull(),"blocked preview retains worker ownership after Stop");
+    check(jobs.busy() && !static_cast<ImageViewer*>(view.findChild<QGraphicsView*>("cameraPreviewImage"))->hasImage(),"blocked preview retains worker ownership after Stop");
     release.set_value();waitUi([&]{return transitioned;});
-    check(view.findChild<QLabel*>("cameraPreviewImage")->pixmap().isNull(),"late preview suppressed after joined shutdown");
+    check(!static_cast<ImageViewer*>(view.findChild<QGraphicsView*>("cameraPreviewImage"))->hasImage(),"late preview suppressed after joined shutdown");
     state->hardware->hook={};
     // Window owner can safely destroy the widget from the drained continuation.
     {CameraSession closingJobs;auto* closingView=new CameraManager([&]{return &workspace;},[]{return true;},closingJobs,dir.path()+"/closing.ini",nullptr,scanner,factory);
@@ -200,7 +207,7 @@ int main(int argc,char** argv){QApplication app(argc,argv);try{
     check(!view.findChild<QLabel*>("cameraExperimentalNotice") && !view.findChild<QPushButton*>("cameraSaveFrame")->isEnabled(),"persistent experimental notice; no raster means no save");
     check(view.findChild<QScrollArea*>()->horizontalScrollBar()->maximum()==0,"experimental controls fit small window");
 
-    auto* scroll=view.findChild<QScrollArea*>();for(auto* action:{view.findChild<QPushButton*>("cameraScan"),view.findChild<QPushButton*>("cameraRename"),view.findChild<QPushButton*>("cameraSettingsRead"),preview,live,view.findChild<QPushButton*>("cameraStop")}){scroll->ensureWidgetVisible(action);QApplication::processEvents();check(scroll->viewport()->rect().contains(action->mapTo(scroll->viewport(),action->rect().center())),"small screen main action reachable by scrolling");}
+    auto* scroll=view.findChild<QScrollArea*>();for(auto* action:{view.findChild<QPushButton*>("cameraScan"),view.findChild<QPushButton*>("cameraRename"),view.findChild<QPushButton*>("cameraSettingsRead"),preview,live,view.findChild<QPushButton*>("cameraStop")}){scroll->ensureWidgetVisible(action);QApplication::processEvents();check(view.rect().contains(action->mapTo(&view,action->rect().center())),"small screen main action reachable by scrolling");}
     scroll->verticalScrollBar()->setValue(scroll->verticalScrollBar()->maximum());CameraFlowSmokeAudit::save(view,evidence+"/camera-small-actions.png");
     {CameraSession emptyJobs;CameraManager empty([]()->MeasurementWorkspace*{return nullptr;},[]{return true;},emptyJobs,dir.path()+"/empty.ini",nullptr,scanner);
         bool guided=false;empty.onProject=[&]{guided=true;};empty.resize(850,600);empty.show();QApplication::processEvents();auto* projectAction=empty.findChild<QPushButton*>("cameraProject");check(empty.findChild<QScrollArea*>()->viewport()->rect().contains(projectAction->mapTo(empty.findChild<QScrollArea*>()->viewport(),projectAction->rect().center())),"project guidance visible without scrolling");projectAction->click();check(guided && !empty.findChild<QPushButton*>("cameraRegister")->isEnabled(),"single project guidance without recipe");CameraFlowSmokeAudit::save(empty,evidence+"/camera-no-project.png");}
@@ -208,7 +215,7 @@ int main(int argc,char** argv){QApplication app(argc,argv);try{
         MeasurementEnvironmentRegistry registry(MeasurementEnvironmentRepository(path,"legacy"));registry.replace({{r.camera},{r.setup},{r.profile,p}});
         MeasurementWorkspace legacy(path,"legacy",[]{return true;});CameraSession legacyJobs;CameraManager legacyView([&]{return &legacy;},[]{return true;},legacyJobs,dir.path()+"/legacy.ini",nullptr,scanner,factory);legacyView.resize(1400,900);legacyView.show();legacyView.scan();waitUi([&]{return !legacyJobs.busy();});
         auto* profiles=legacyView.findChild<QComboBox*>("cameraProfiles");check(profiles->currentIndex()==-1 && profiles->isVisible() && !legacyView.findChild<QPushButton*>("cameraSettingsRead")->isEnabled(),"legacy ambiguity requires explicit visible selection");CameraFlowSmokeAudit::save(legacyView,evidence+"/camera-legacy-ambiguous.png");
-        legacyView.findChild<QLineEdit*>("cameraShortId")->setText("LEGACY");profiles->setCurrentIndex(1);legacyView.findChild<QPushButton*>("cameraDefaultsSave")->click();check(legacy.environment().defaults(r.camera.id).profile==p.id && !profiles->isVisible(),"explicit legacy defaults persist then hide chooser");}
+        legacyView.findChild<QLineEdit*>("cameraShortId")->setText("LEGACY");profiles->setCurrentIndex(1);legacyView.findChild<QPushButton*>("cameraDefaultsSave")->click();check(legacy.environment().defaults(r.camera.id).profile==p.id && profiles->isVisible(),"explicit legacy defaults persist then hide chooser");}
     // Real experimental API contract through the widget, without a physical SDK.
     {namespace oe=oecs_experimental_fixture;
         const auto path=dir.path()+"/product-settings.vfproject";QFile file(path);check(file.open(QIODevice::WriteOnly),"settings project");file.write("{}");file.close();
@@ -251,22 +258,38 @@ int main(int argc,char** argv){QApplication app(argc,argv);try{
         QFile dll(dir.path()+"/fixture.dll");check(dll.open(QIODevice::WriteOnly),"fixture DLL marker");dll.write("Synthetic API only");dll.close();
         expView.findChild<QLineEdit*>("cameraExperimentalRuntime")->setText(dll.fileName());check(!expView.findChild<QCheckBox*>("cameraExperimental"),"new session has no experimental opt-in");
         expView.findChild<QSpinBox*>("cameraTimeout")->setValue(3000); // This SDK fixture asserts a 3 s stream budget.
-        auto* expSave=expView.findChild<QPushButton*>("cameraSaveFrame");auto* expImage=expView.findChild<QLabel*>("cameraPreviewImage");
+        auto* expSave=expView.findChild<QPushButton*>("cameraSaveFrame");auto* expImage=static_cast<ImageViewer*>(expView.findChild<QGraphicsView*>("cameraPreviewImage"));
         expView.findChild<QPushButton*>("cameraPreview")->click();waitUi([&]{return !expJobs.busy();});
-        check(!expImage->pixmap().isNull() && expSave->isEnabled(),qPrintable("single experimental visible frame can save after clean shutdown: "+expView.findChild<QLabel*>("cameraStatus")->text()));
+        check(expImage->hasImage() && expSave->isEnabled(),qPrintable("single experimental visible frame can save after clean shutdown: "+expView.findChild<QLabel*>("cameraStatus")->text()));
         const auto saved=evidence+"/visible-experimental.pgm";QFile::remove(saved);QFile::remove(saved+".json");
         auto choose=[&](const QString& file,bool stop){selectedPath=file;stopDuringSave=stop;};
         choose(saved,false);expSave->click();check(QFileInfo::exists(saved) && QFileInfo::exists(saved+".json"),"visible PGM and sidecar saved");
         QFile sidecar(saved+".json");check(sidecar.open(QIODevice::ReadOnly),"saved sidecar");const auto metadata=QJsonDocument::fromJson(sidecar.readAll()).object();
         check(metadata["productionAdmission"]==false && metadata["triggerAssociationVerified"]==false && metadata["profileSnapshot"].toObject()==r.profile.toJson(),"experimental provenance retained");
-        expView.findChild<QPushButton*>("cameraLive")->click();waitUi([&]{return !expImage->pixmap().isNull() && expSave->isEnabled();});
-        for(const auto size:{QSize(1400,900),QSize(850,600)}){expView.resize(size);QApplication::processEvents();expView.findChild<QScrollArea*>()->ensureWidgetVisible(expImage);CameraFlowSmokeAudit::save(expView,evidence+QString("/experimental-live-%1.png").arg(size.width()));}
+        expView.findChild<QPushButton*>("cameraLive")->click();waitUi([&]{return expImage->hasImage() && expSave->isEnabled();});
+        for(const auto size:{QSize(1400,900),QSize(850,600)}){expView.resize(size);QApplication::processEvents();CameraFlowSmokeAudit::save(expView,evidence+QString("/experimental-live-%1.png").arg(size.width()));}
         const auto stopped=evidence+"/stopped-frame.pgm";QFile::remove(stopped);QFile::remove(stopped+".json");
         choose(stopped,true);expSave->click();waitUi([&]{return !expJobs.busy();});
-        check(!QFileInfo::exists(stopped) && !QFileInfo::exists(stopped+".json") && expImage->pixmap().isNull() && !expSave->isEnabled(),"Stop while save dialog open cannot write retired frame");
+        check(!QFileInfo::exists(stopped) && !QFileInfo::exists(stopped+".json") && !expImage->hasImage() && !expSave->isEnabled(),"Stop while save dialog open cannot write retired frame");
         expView.findChild<QPushButton*>("cameraLive")->click();waitUi([&]{return expSave->isEnabled();});
         const auto liveSaved=evidence+"/visible-live.pgm";QFile::remove(liveSaved);QFile::remove(liveSaved+".json");choose(liveSaved,false);expSave->click();
         check(QFileInfo::exists(liveSaved),"save dialog holds visible live raster while acquisition continues");expView.stop();waitUi([&]{return !expJobs.busy();});
     }
-    QTextStream(stdout)<<"PASS CCUX-05: single/live/restart, measured FPS, busy lease, disconnect, camera change, deferred transition/close, late frame, normal/small UI; CCUX-03 regression\n";return 0;
+    {const auto path=dir.filePath("management.vfproject");QFile file(path);check(file.open(QIODevice::WriteOnly),"management saved project");file.write("{}");file.close();
+        const auto r=request();MeasurementEnvironmentRegistry registry(MeasurementEnvironmentRepository(path,"management"));registry.replace({{r.camera},{r.setup},{r.profile}});
+        MeasurementWorkspace ws(path,"management",[]{return true;});CameraSession managerJobs;bool allowed=true;
+        CameraManager manager([&]{return &ws;},[&]{return allowed;},managerJobs,dir.filePath("management.ini"),nullptr,scanner,factory);manager.resize(850,600);manager.show();QApplication::processEvents();
+        check(!manager.hasPreview(),"opening offline management does not acquire");
+        check(manager.findChild<QLabel*>("cameraSetupStatus")->text().contains("Tamamlandı"),"complete setup has visible state without draft label");
+        const auto before=ws.environment();allowed=false;manager.refresh();check(!manager.findChild<QPushButton*>("cameraSetupAdd")->isEnabled() && !manager.findChild<QPushButton*>("cameraOpticalChange")->isEnabled(),"mutation gate blocks all moved management commands");allowed=true;manager.refresh();
+        QTimer::singleShot(0,[&]{auto* d=qobject_cast<QDialog*>(QApplication::activeModalWidget());check(d,"new setup dialog");
+            d->findChild<QLineEdit*>("draftProfileName")->setText("Second setup");d->findChild<QLineEdit*>("draftLens")->setText("second lens");d->findChild<QLineEdit*>("draftPlane")->setText("second plane");d->findChild<QLineEdit*>("draftExposure")->setText("100");d->findChild<QLineEdit*>("draftGain")->setText("1");d->findChild<QSpinBox*>("draftWidth")->setValue(3);d->findChild<QSpinBox*>("draftHeight")->setValue(2);d->findChild<QDialogButtonBox*>()->button(QDialogButtonBox::Save)->click();});
+        manager.findChild<QPushButton*>("cameraSetupAdd")->click();auto e=ws.environment();check(e.current.setups.size()==2 && e.current.profiles.size()==2 && e.current.cameras.first().id==r.camera.id,"new setup keeps immutable camera and creates separate profile");
+        auto* profiles=manager.findChild<QComboBox*>("cameraProfiles");check(profiles->isVisible(),"multiple profiles are explicitly manageable");profiles->setCurrentIndex(1);const ProfileId chosen{profiles->currentData().toString()};SetupId chosenSetup;for(const auto& p:e.current.profiles)if(p.id==chosen)chosenSetup=p.setup;manager.findChild<QLineEdit*>("cameraShortId")->setText("MANAGED");manager.findChild<QPushButton*>("cameraDefaultsSave")->click();e=ws.environment();check(e.defaults(r.camera.id).profile==chosen,"explicit profile selection persists");
+        manager.findChild<QPushButton*>("cameraOperational")->click();check(ws.environment().operational.value(r.camera.id.value)==chosenSetup.value,"operational command targets selected setup");
+        const auto revision=ws.environment().current.setups.first().revision;manager.findChild<QPushButton*>("cameraOpticalChange")->click();const auto changed=ws.environment().current.setups.first().revision;check(changed>revision,"optical notification advances setup revision");manager.findChild<QPushButton*>("cameraOpticalChange")->click();check(ws.environment().current.setups.first().revision==changed && ws.environment().current.setups.first().pending,"repeat optical notification remains pending at retired revision");
+        manager.findChild<QPushButton*>("cameraArchiveSetup")->click();check(ws.environment().archivedSetups.contains(chosenSetup.value),"selected setup archive is accessible");
+        manager.findChild<QPushButton*>("cameraArchive")->click();check(ws.environment().archivedCameras.contains(r.camera.id.value),"camera archive is accessible");
+    }
+    QTextStream(stdout)<<"PASS CCUX-24F / CCUX-05: single/live/restart, measured FPS, busy lease, disconnect, camera change, deferred transition/close, late frame, normal/small UI; CCUX-03 regression\n";return 0;
 }catch(const std::exception& e){QTextStream(stderr)<<"FAIL: "<<e.what()<<'\n';return 1;}}

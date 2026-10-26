@@ -6,6 +6,29 @@ görev” ifadeleri yazıldıkları tarihe aittir.
 
 | Dönem / görev | Kayıt |
 | --- | --- |
+| 26 Ekim 2026 — INT-10 | [CameraIntegration çalışmalarının main üzerinde birleştirilmesi](2026-10-26-int-10.md) |
+| 26 Ekim 2026 — CCUX-24I | [Birleşik UX kabulü, iki Release, test birleşimi ve açık native/fiziksel sınırlar](2026-10-26-ccux-24i.md) |
+| 26 Ekim 2026 — CCUX-24H | [Kaynak/çevrim/snapshot bağlı çoklu Runtime overlay](2026-10-26-ccux-24h.md) |
+| 26 Ekim 2026 — CCUX-24G | [Sade Ayrıntılar, korunan sihirbazlar ve taşınan yönetim erişimi](2026-10-26-ccux-24g.md) |
+| 26 Ekim 2026 — CCUX-24F | [Geniş preview ve görünür kurulum yönetimi](2026-10-26-ccux-24f.md) |
+| 26 Ekim 2026 — CCUX-24E | [Olay konumunda zoom ve aynı kaynakta kare yenileme](2026-10-26-ccux-24e.md) |
+| 26 Ekim 2026 — CCUX-24D | [Üç basamak, kayıpsız özgün değer ve açık edit](2026-10-26-ccux-24d.md) |
+| 26 Ekim 2026 — CCUX-24C | [Ortak kontrol durumu ve yeni Circle calibrated başlangıcı](2026-10-26-ccux-24c.md) |
+| 26 Ekim 2026 — CCUX-24B kapanış | [Yarım kalan teslimin doğrulanması ve tek commit ile kapanışı](2026-10-26-ccux-24b-completion.md) |
+| 26 Ekim 2026 — CCUX-24B | [Kalıcı Flow, sade sonuçlar ve Properties; Release/test/görsel kabul](2026-10-26-ccux-24b.md) |
+| 26 Ekim 2026 — CCUX-PLAN-07 | [24B–I ayrıntılı UX kartları; Kalibre Et akışını koruyan kullanıcı düzeltmesi](2026-10-26-ccux-plan-07.md) |
+| 26 Ekim 2026 — CCUX-24A | [On UX talebinin kaynak analizi ve uygulama plan girdileri](2026-10-26-ccux-24a.md) |
+| 25 Ekim 2026 — INT-09 | [Belge/başlatıcı eşlemesi, hash/smoke ve yerel CameraIntegration kapanışı](2026-10-25-int-09.md) |
+| 25 Ekim 2026 — INT-08 | [Birleşik tam corpus, görsel/performance kabulü ve final aktarım eşlemesi](2026-10-25-int-08.md) |
+| 25 Ekim 2026 — INT-07 | [Yerel çıktı tercihleri, Editor/Runtime filtreleri ve 600 örnek responsiveness](2026-10-25-int-07.md) |
+| 25 Ekim 2026 — INT-06 | [Runtime kaynak doğrulama UI, altı süreç restart regresyonu ve Stop/drain](2026-10-25-int-06.md) |
+| 25 Ekim 2026 — INT-05 tamamlanışı | [Kaynak doğrulama entegrasyonu, inceleme düzeltmeleri ve yeni regresyonlar](2026-10-25-int-05-completion.md) |
+| 25 Ekim 2026 — INT-05 ilk uygulama | [Claude worktree uygulaması ve tarihsel test kanıtları](2026-10-25-int-05.md) |
+| 25 Ekim 2026 — INT-04-05-REVIEW | [INT-04/05 incelemesi: iki P1 ve bir P2, yeniden üretim kanıtları](2026-10-25-int-04-05-review.md) |
+| 25 Ekim 2026 — INT-04 | [Kayıtlı exact model / çalışma izni ayrımı, yeniden izin ve Release regresyonları](2026-10-25-int-04.md) |
+| 25 Ekim 2026 — INT-03 | [Runtime tanı/ilk neden, frozen kayıt retry, Starting/Stop/drain ve typed recovery](2026-10-25-int-03.md) |
+| 25 Ekim 2026 — INT-02 | [API/politika matrisi, 64 yol aktarım envanteri ve ayrı Release baseline; üç assertion açık](2026-10-25-int-02.md) |
+| 25 Ekim 2026 — INT-01 | [A0–E2 snapshot, bundle, CameraIntegration tabanı ve koruma doğrulaması](2026-10-25-int-01.md) |
 | 24 Ekim 2026 — CCUX-23b-6 | [600 örnekle birleşik performans/doğruluk kabulü; canlı kabul açık](2026-10-24-ccux-23b-6.md) |
 | 24 Ekim 2026 — CCUX-23b-5 | [İşlem başına Editor context/environment paylaşımı ve generation sınırı](2026-10-24-ccux-23b-5.md) |
 | 24 Ekim 2026 — CCUX-23b-4 | [Paylaşılan doğrulanmış katalog, içerik digest’i ve izin/cache ayrımı](2026-10-24-ccux-23b-4.md) |

@@ -1,5 +1,17 @@
 # Mimari ve klasör sorumlulukları
 
+Güncel kamera yolu: UI → application session/worker → adapter. Kamera merkezli
+kalibrasyon iki yöntem ve çerçeveli 7×7 profili sunar; Editor, Runtime ve canlı
+sihirbaz aynı edinim oturumu sözleşmesini kullanır. Load çevrimdışıdır; açık
+Verify yalnız oturum iznini yeniler, Run kamera kümesini hazırlar, Stop gerçek
+drain bekler. Normal COE-U komutları OECS edinimini seçer; native production
+Unavailable ve experimental PLC/robot engeli korunur.
+[Oturum ömrü](camera-setup/acquisition-sessions.md),
+[kaynak doğrulama](source-verification.md), [tanı](runtime-diagnostics.md),
+[kayıt kurtarma](runtime-error-recovery.md), [sunum filtresi](output-visibility.md).
+Aşağıdaki tarihli durum/sürüm/sıra ifadeleri tarihsel kapsamdır; “edinim
+uygulanmadı” güncel OECS yolunu tanımlamaz. Güncel devir [buradadır](camera-integration-handoff.md).
+
 17 Ekim — [ICM kamera entegrasyonunda](industrial-camera-plan.md) **ICM-00 kaynak/sürüm envanteri tamamlandı; acquisition uygulanmadı**. [Başlangıç kaydı](industrial-camera-baseline.md) mevcut source/codec/hash/ret kapılarını, legacy koruma alanlarını ve test adlarını sabitler; yeni tool adı industrial_camera, henüz kayıtlı değildir. Sonraki görev ICM-01a. Hedef ortak device/transport/profile ayrımı, application-owned tek kamera session/lease ve aynı adapter'ın kalibrasyon/Editor/Runtime kullanımına bağlanmasıdır. İlk donanım COE-U USB3/OECS; GenTL+GenApi veya OECS C API backend kararı ICM-02 deneyine bağlıdır. [Hedef sözleşmeler](industrial-camera-contract-plan.md) mevcut webcam-only kapıların bugün açıldığı anlamına gelmez.
 
 17 Ekim KMC-10c2/10d uygulandı: editor9 bütün-set Runtime preparation, terminal7/restart/Logs/CSV ve vf.socket2 scalar mapping; N kaynak hazırlık tablosu, seçili gerçek frame/overlay ve immutable model gösterimi. [Kalıcı Runtime sözleşmesi](multi-source-runtime-terminal.md). **KMC-10e B yazılım kabulü ve fiziksel devir dokümanı tamamlandı: tam Release UI/ZXing ON 87/87; Widgets OFF/ZXing OFF 73/73**; [B kabul ve fiziksel devir](multi-source-release-acceptance.md). Aşağıdaki tarihli teslim kayıtları kendi kapanış durumlarını anlatır; güncel durum bu paragraftır. Fiziksel/native/lens/industrial/PLC/robot/CUDA/kurulum/dağıtım kabulü açık.
