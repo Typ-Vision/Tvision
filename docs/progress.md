@@ -8,8 +8,11 @@
 fazı haberleşme verileri. [Araştırma ve önerilen kart sırası](architecture/communication-data-phase.md):
 typed değişkenler, çoklu Set Variables, Result/Publish, dış tetik, kalıcı teslim,
 Modbus/OPC UA ve robot pose. Yalnız araştırma/plan; uygulama ve saha kabulü yok.
-**Sonraki COMM-01:** kaynak incelemesi ve kesin sözleşme. Codebase-memory becerisi/
-araçları bu oturumda yoktu; indeks/kapsama önkoşulu açık. Aşağıdaki engeller korunur.
+**[COMM-DATA-01](archive/2026-10-26-comm-data-01.md):** PDF incelendi;
+[kalibrasyon için temel veri tipleri](architecture/robot-spatial-data-review.md).
+Kullanıcı kapsamı yalnız bu tipleri öğrenmeye daralttı; detaylı plan sonra.
+COMM-01 henüz başlamadı. Codebase-memory indeks/kapsama önkoşulu açık.
+Aşağıdaki engeller korunur.
 
 **[INT-10 tamam](archive/2026-10-26-int-10.md):** CameraIntegration, geçmişi
 koruyan merge ile main üzerinde birleştirildi; çalışma dalı artık main.
