@@ -4,13 +4,12 @@
 
 ## Devam noktası
 
-**[CCUX-24H tamam](archive/2026-10-26-ccux-24h.md):** kaynak/kare/snapshot bağlı
-salt okunur çoklu Runtime overlay; tüm araçlar yerel/varsayılan açık.
-Release/10 CTest/iki boyut fixture geçti; fiziksel açık.
-Sonraki [24I](architecture/camera-setup/24i-integrated-acceptance.md).
-[24G](archive/2026-10-26-ccux-24g.md): Kalibre Et korunur, Robot pasif.
-[24E](archive/2026-10-26-ccux-24e.md): native wheel açık; tercih hatası
-repo TEMP/localhost ile aşıldı; varsayılan TEMP açık.
+**[CCUX-24I yazılım/görsel tamam](archive/2026-10-26-ccux-24i.md):** iki Release;
+UI'da 39 benzersiz test ilk koşum+düzeltme tekrarlarıyla, UI OFF 19 test geçti.
+Bozuk context hata sınırı düzeltildi; iki boyut fixture incelendi.
+Native wheel/pan pencere yakalama hatasıyla açık; fiziksel kabul açık.
+Tercihler repo TEMP/localhost ile doğrulandı; varsayılan TEMP kabulü açık.
+24B–I sırası bitti; sonraki görev kullanıcı önceliğiyle seçilir.
 
 **[INT-09 tamam](archive/2026-10-25-int-09.md):** Yerel CameraIntegration ve
 başlatıcı eşleşti; push/main değişmedi. [Kullanım/restart devri](architecture/camera-integration-handoff.md).

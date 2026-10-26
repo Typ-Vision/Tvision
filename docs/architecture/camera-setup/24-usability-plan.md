@@ -1,6 +1,7 @@
 # CCUX-PLAN-07 — kullanılabilirlik uygulama planı
 
-26 Ekim 2026. Uygulayıcı: Codex. **Plan hazır; uygulama başlamadı.**
+26 Ekim 2026. Uygulayıcı: Codex. **24B–I yazılım/offscreen görsel kabulü tamamlandı.**
+[Birleşik kapanış](../../archive/2026-10-26-ccux-24i.md); native girdi ve fiziksel kabul açık.
 Girdi: [CCUX-24A analizi](24-usability-analysis.md). Kaynak bulguları o incelemeye
 aittir; aşağıdaki dosya listeleri uygulama başlangıç haritasıdır, eksiksiz etki
 analizi iddiası değildir. Her kart başında güncel kaynak/indeks doğrulanır.

@@ -1,6 +1,9 @@
 # CCUX-24I — birleşik kullanılabilirlik kabulü
 
-Durum: planlandı. Önkoşul: 24B–H uygulanmış ve kart kanıtları bağlı olmalı.
+Durum: birleşik yazılım/offscreen görsel kabul tamamlandı;
+[kapanış ve on talep matrisi](../../archive/2026-10-26-ccux-24i.md).
+Native wheel/pan, native DPI/çok monitör ve fiziksel kabul açık.
+Önkoşul: 24B–H uygulanmış ve kart kanıtları bağlı olmalı.
 [Ortak plan](24-usability-plan.md), contract ve ilgili kapanışlar okunur;
 tamamlanmış görevler yeniden uygulanmaz.
 

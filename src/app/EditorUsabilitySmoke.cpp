@@ -273,8 +273,13 @@ bool MainWindow::verifyEditorUsability(const QString& artifacts) {
     QString edge;
     for(const QString kind:{"edge_point","edge_pair","line_fit","circle_fit"}) {
         const auto id=add(kind);if(kind=="edge_point")edge=id;
-        if(kind=="circle_fit")check(propertiesBody_->findChild<QComboBox*>("mt_mode")->currentText()=="pixel","new Circle uses pixel profile and immediate drawing");
-        check(imageViewer_->roiGestureActive() && pendingDrawTool_.isEmpty(),"new tool immediately armed on current source");
+        if(kind=="circle_fit"){
+            auto* circleMode=propertiesBody_->findChild<QComboBox*>("mt_mode");check(circleMode->currentText()=="calibrated","new Circle defaults calibrated");
+            check(!imageViewer_->roiGestureActive() && workspaceError_->text().contains("current calibration"),"new calibrated Circle rejects drawing without its source model");
+            // The generic drawing fixture below explicitly exercises the raw branch.
+            circleMode->setCurrentText("pixel");QApplication::processEvents();propertiesBody_->findChild<QPushButton*>("metrologyDraw")->click();
+        }
+        check(imageViewer_->roiGestureActive() && pendingDrawTool_.isEmpty(),"raw tool drawing armed on current source");
         check(propertiesBody_->findChild<QComboBox*>("input_image")->currentData()==source+"/image","visible persisted default");
         findChild<QPushButton*>("stopFlow")->click();check(!imageViewer_->roiGestureActive() && selectedToolId_==id,"Stop preserves selection and cancels drawing");
         auto* mode=propertiesBody_->findChild<QComboBox*>("propertyDetailMode");auto* manual=propertiesBody_->findChild<QWidget*>(kind+"/manual");auto* outputs=propertiesBody_->findChild<QWidget*>(kind+"/outputs");

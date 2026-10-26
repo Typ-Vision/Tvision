@@ -1,4 +1,5 @@
 #include "MainWindow.hpp"
+#include "CameraFlowSmokeAudit.hpp"
 #include "ImageViewer.hpp"
 #include "PoseMatchEditor.hpp"
 #include "domain/PoseTrackingConfig.hpp"
@@ -156,10 +157,10 @@ bool MainWindow::verifyPoseTracking(const QString& artifacts) {
             findChild<QPushButton*>("runtime_cycle")->click();wait();
             if(!runtimeResult_)QTextStream(stderr)<<runtimeSummary_->text()<<"\n";
             check(runtimeResult_ && runtimeResult_->state==ExecutionState::Done,"Reference UI actual Runtime persisted");
-            runtimeTools_->setCurrentIndex(runtimeTools_->findData(edgeId));showRuntimeResult();check(runtimeViewer_->roi().has_value(),"Runtime current resolved reference ROI");
+            runtimeTools_->setCurrentIndex(runtimeTools_->findData(edgeId));showRuntimeResult();const auto runtimeScan=CameraFlowSmokeAudit::runtimeScan(*runtimeViewer_,edgeId);check(!runtimeScan.isEmpty(),"Runtime current resolved reference scan layer");
             const auto edgeResult=std::find_if(runtimeResult_->tools.cbegin(),runtimeResult_->tools.cend(),[&](const auto& r){return r.toolId==edgeId;});
             check(edgeResult!=runtimeResult_->tools.cend() && edgeResult->outputs["point"].valid && QLineF(std::get<QPointF>(edgeResult->outputs["point"].data),{140,155}).length()<.3,"Runtime actual rotated edge oracle");
-            if(label=="raw")check(QLineF(std::get<ScanSegment>(runtimeViewer_->roi()->geometry).start,{150,155}).length()<.3,"Runtime ROI current position independent oracle");
+            if(label=="raw")check(QLineF((runtimeScan[0]+runtimeScan[3])/2,{150,155}).length()<.3,"Runtime scan current position independent oracle");
             setWindowState(Qt::WindowNoState);
             for(int w:{1400,850}){resize(w,w==1400 ? 900:600);QApplication::processEvents();runtimeViewer_->fitImage();QApplication::processEvents();grab().save(QDir(artifacts).filePath("r7-"+kind+"-"+label+"-runtime-"+QString::number(w)+".png"));}
             const auto records=ProductionStore(service_.path()+".production").recent("cycles");

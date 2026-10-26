@@ -88,8 +88,11 @@ for(int n=0;n<4;++n){
     auto displayed=CalibrationModelRecord::create(model,controlSetup,record.image(),evidenceControl).named(QString("Kontrol durumu %1").arg(n));
     controlsWorkspace.calibrations().save(controlRef,displayed);
 }
-CalibrationOverview controlsView([&]{return &controlsWorkspace;});controlsView.show();controlsView.findChild<QPushButton*>("overviewCamera_c9")->click();controlsView.findChild<QGroupBox*>("overviewDetails")->setChecked(true);app.processEvents();
+bool contextFault=false;CalibrationOverview controlsView([&]()->MeasurementWorkspace*{if(contextFault)throw std::runtime_error("Broken environment fixture");return &controlsWorkspace;});controlsView.show();controlsView.findChild<QPushButton*>("overviewCamera_c9")->click();controlsView.findChild<QGroupBox*>("overviewDetails")->setChecked(true);app.processEvents();
 auto* controlRows=controlsView.findChild<QTableWidget*>("overviewRecords");check(controlRows->rowCount()==4,"four actual control states listed");
 for(const auto size:{QSize(1400,900),QSize(850,600)}){controlsView.resize(size);app.processEvents();auto* controlScroll=controlsView.findChild<QScrollArea*>();if(controlScroll)controlScroll->ensureWidgetVisible(controlRows);app.processEvents();check(CameraFlowSmokeAudit::save(controlsView,evidence+QString("/control-four-states-%1.png").arg(size.width())),"four-state visual evidence");}
+contextFault=true;controlsView.refresh();controlsView.refresh();check(controlsView.findChild<QLabel*>("overviewStatus")->text()=="Broken environment fixture" && controlRows->rowCount()==0 && controlsView.findChild<QComboBox*>("managementCameras")->count()==0 && controlsView.findChild<QComboBox*>("managementSetups")->count()==0,"broken context remains visible and clears stale management selectors");
+for(const auto size:{QSize(1400,900),QSize(850,600)}){controlsView.resize(size);app.processEvents();check(CameraFlowSmokeAudit::save(controlsView,evidence+QString("/context-error-%1.png").arg(size.width())),"context error visual evidence");}
+contextFault=false;controlsView.refresh();check(controlsView.findChild<QComboBox*>("managementCameras")->count()==10 && controlsView.findChild<QLabel*>("overviewStatus")->text().isEmpty(),"context recovery refreshes after fault");
 QTextStream(stdout)<<checks<<" overview checks passed; zero recipes; discovery fixture, no camera opens\n";return 0;
 }catch(const std::exception& e){QTextStream(stderr)<<e.what()<<" after "<<checks<<" checks\n";return 1;}}

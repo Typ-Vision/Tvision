@@ -6,6 +6,7 @@ görev” ifadeleri yazıldıkları tarihe aittir.
 
 | Dönem / görev | Kayıt |
 | --- | --- |
+| 26 Ekim 2026 — CCUX-24I | [Birleşik UX kabulü, iki Release, test birleşimi ve açık native/fiziksel sınırlar](2026-10-26-ccux-24i.md) |
 | 26 Ekim 2026 — CCUX-24H | [Kaynak/çevrim/snapshot bağlı çoklu Runtime overlay](2026-10-26-ccux-24h.md) |
 | 26 Ekim 2026 — CCUX-24G | [Sade Ayrıntılar, korunan sihirbazlar ve taşınan yönetim erişimi](2026-10-26-ccux-24g.md) |
 | 26 Ekim 2026 — CCUX-24F | [Geniş preview ve görünür kurulum yönetimi](2026-10-26-ccux-24f.md) |

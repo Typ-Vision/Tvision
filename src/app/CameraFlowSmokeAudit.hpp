@@ -11,9 +11,21 @@
 #include <QLabel>
 #include <QTableWidget>
 #include <QWidget>
+#include <QGraphicsPathItem>
+#include <QGraphicsScene>
 #include <stdexcept>
 namespace visionflow {
 struct CameraFlowSmokeAudit {
+    // Runtime uses the read-only layer collection, never the editable ROI slot.
+    // Return rendered raw scan vertices so fixtures retain independent oracles.
+    static QVector<QPointF> runtimeScan(const ImageViewer& viewer,const QString& tool) {
+        if(!viewer.hasImage() || viewer.roi() || viewer.roiGestureActive())return {};
+        for(const auto* item:viewer.scene()->items())if(item->data(0)=="runtimeOverlay" && item->data(1)==tool)
+            if(const auto* scan=qgraphicsitem_cast<const QGraphicsPathItem*>(item))if(scan->pen().style()==Qt::DashLine){
+                QVector<QPointF> points;const auto path=scan->path();for(int i=0;i<path.elementCount();++i){const auto p=path.elementAt(i);points<<QPointF(p.x,p.y);}if(points.size()>=5)return points;
+            }
+        return {};
+    }
     static bool wheel(ImageViewer& viewer,QWidget& root,const QString& path) {
         if(!viewer.hasImage())throw std::runtime_error("Wheel acceptance needs a real fixture frame");
         viewer.actualSize();viewer.zoomBy(4);viewer.centerOn(viewer.sceneRect().center());QApplication::processEvents();

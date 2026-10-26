@@ -113,10 +113,10 @@ try{for(const auto& r:c->calibrations().historyRecords(s.id)){int row=records_->
 QString control=r.controlSummary();
 QStringList cells{r.name()+QString(" • v%1").arg(r.model().dependency().version),choice,control};for(int col=0;col<3;++col){auto* item=new QTableWidgetItem(cells[col]);item->setToolTip(cells[col]);if(col==0)item->setData(Qt::UserRole,r.contentId());records_->setItem(row,col,item);}}}catch(const std::exception& ex){status_->setText(QString::fromUtf8(ex.what()));}
 }
-}catch(const std::exception& e){status_->setText(QString::fromUtf8(e.what()));summary_->clear();detail_->clear();records_->setRowCount(0);setups_->clear();profiles_->clear();cards_->hide();}
-detail_->setToolTip(detail_->text());
 auto* managementCameras=management_->findChild<QComboBox*>("managementCameras");managementCameras->clear();if(auto* workspace=context_())for(const auto& camera:workspace->environment().current.cameras)if(!workspace->environment().archivedCameras.contains(camera.id.value))managementCameras->addItem(camera.name,camera.id.value);managementCameras->setCurrentIndex(managementCameras->findData(selected_));
 auto* managementSetups=management_->findChild<QComboBox*>("managementSetups");managementSetups->clear();for(int i=0;i<setups_->count();++i)managementSetups->addItem(setups_->itemText(i),setups_->itemData(i));managementSetups->setCurrentIndex(managementSetups->findData(setups_->currentData()));
+}catch(const std::exception& e){status_->setText(QString::fromUtf8(e.what()));summary_->clear();detail_->clear();records_->setRowCount(0);setups_->clear();profiles_->clear();cards_->hide();management_->findChild<QComboBox*>("managementCameras")->clear();management_->findChild<QComboBox*>("managementSetups")->clear();}
+detail_->setToolTip(detail_->text());
 refreshing_=false;updateRecordAction();
 }
 void CalibrationOverview::configureCapture(IndependentCaptureRequest& request) const {
