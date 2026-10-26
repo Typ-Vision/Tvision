@@ -352,10 +352,9 @@ void MainWindow::showRuntimeResult() {
     runtimeViewer_->setToolOverlay({},{});
     if(!runtimeResult_){runtimeViewer_->clearImage("Yeni çevrim sonucu yok.");runtimeSummary_->setText("Yeni çevrim sonucu yok.");QSignalBlocker blocker(runtimeTools_);runtimeTools_->clear();return;}
     const auto& c=*runtimeResult_;const auto snapshot=runtime_ ? runtime_->active() : nullptr;QStringList lines;
-    if(snapshot && snapshot->dependencies().contains("systemCalibration")){const auto s=SystemCalibration::decodeEvidence(snapshot->dependencies()["systemCalibration"].toObject());lines<<QString("Sistem kalibrasyonu: %1 v%2 • etkinleştirme %3").arg(s.record.name()).arg(s.selection.version).arg(s.selection.revision)<<(s.record.residualsMillimetres().isEmpty() ? "Bağımsız kontrol yapılmadı":"Bağımsız kontrol kanıtı mevcut");if(!s.scope.isEmpty()){const auto target=SetupReference::fromJson(s.scope["target"].toObject());lines<<QString("Kamera %1 • kurulum %2 r%3").arg(target.camera.value,target.setup.value).arg(target.revision);}}
-    lines<<executionStateName(c.state)+QString(" • %1 ms").arg(c.milliseconds,0,'f',2)<<"Cycle: "+c.cycleId<<"Frame: "+c.frameId<<"Config: "+QString::fromLatin1(c.configId.left(12))<<(runtime_ && runtime_->experimental() ? "Kalıcı kayıt tamamlandı • Parça: Değerlendirilmedi • PLC / robot: Kullanılamıyor":plc_ && plc_->listening() ? "Kalıcı kayıt tamamlandı • PLC durumu Communication ekranında" : "Kalıcı kayıt tamamlandı • İletişim: NOT_REQUESTED");
+    if(snapshot && snapshot->dependencies().contains("systemCalibration")){const auto s=SystemCalibration::decodeEvidence(snapshot->dependencies()["systemCalibration"].toObject());lines<<QString("Sistem kalibrasyonu: %1 v%2 • etkinleştirme %3").arg(s.record.name()).arg(s.selection.version).arg(s.selection.revision)<<(s.record.residualsMillimetres().isEmpty() ? "Bağımsız kontrol yapılmadı":"Bağımsız kontrol kanıtı mevcut");}
+    lines<<executionStateName(c.state)+QString(" • %1 ms").arg(c.milliseconds,0,'f',2)<<(runtime_ && runtime_->experimental() ? "Kalıcı kayıt tamamlandı • Parça: Değerlendirilmedi • PLC / robot: Kullanılamıyor":plc_ && plc_->listening() ? "Kalıcı kayıt tamamlandı • PLC durumu Communication ekranında" : "Kalıcı kayıt tamamlandı • İletişim: NOT_REQUESTED");
     if(snapshot && snapshot->dependencies().contains("sourceSet")){const auto evidence=snapshot->dependencies()["sourceSet"].toObject()[runtimeSources_->currentData().toString()].toObject()["systemCalibration"].toObject();if(!evidence.isEmpty()){const auto model=SystemCalibration::decodeEvidence(evidence);lines<<QString("Seçili kaynak modeli: %1 v%2").arg(model.record.name()).arg(model.selection.version);}}
-    if(snapshot){const auto source=runtimeSources_->currentData().toString();const auto admission=snapshot->dependencies()["sourceSet"].toObject()[source].toObject()["industrialSource"].toObject();if(!admission.isEmpty()){QJsonObject acquisition;if(c.industrialEvidence.contains(source))acquisition=industrialCompletionEvidence(*c.industrialEvidence[source]);lines<<presentIndustrialSource({},admission,acquisition).detail;}}
     if(!c.error.isEmpty())lines<<c.error;
     runtimeViewer_->setRoiMapping({"viewer/raw"});std::optional<ImageFrame> rawFrame;
     const auto selectedSource=runtimeSources_->currentData().toString();
@@ -363,7 +362,6 @@ void MainWindow::showRuntimeResult() {
     bool image=false;
     for(const auto& t:c.tools)for(const auto& v:t.outputs)if(v.valid && v.origin.sourceId==selectedSource && std::holds_alternative<ImageFrame>(v.data) && std::get<ImageFrame>(v.data).processing().isEmpty()){rawFrame=std::get<ImageFrame>(v.data);runtimeViewer_->setImage(rawFrame->preview());image=true;}
     if(!image)runtimeViewer_->clearImage("Bu kaynak için geçerli çevrim görüntüsü yok.");
-    if(rawFrame)lines<<"Kaynak: "+selectedSource<<"Seçili frame: "+rawFrame->metadata().frameId;
     const auto selected=runtimeTools_->currentData().toString();
     {QSignalBlocker blocker(runtimeTools_);runtimeTools_->clear();if(snapshot)for(const auto& t:editorTools(snapshot->recipe().definition))if(graph.toolSources.value(t.id)==selectedSource)runtimeTools_->addItem(t.name,t.id);runtimeTools_->setCurrentIndex(std::max(0,runtimeTools_->findData(selected)));}
     QMap<QString,QSet<QString>> visibleOutputs;
@@ -417,10 +415,10 @@ void MainWindow::showRuntimeResult() {
     QStringList diagnoses;
     for(const auto& t:c.tools)if(t.fitDiagnostic && graph.toolSources.value(t.toolId)==selectedSource){QString name=t.toolId;if(snapshot)for(const auto& configured:editorTools(snapshot->recipe().definition))if(configured.id==t.toolId)name=configured.name;diagnoses<<name+" • "+executionStateName(t.state)<<presentMeasurementDiagnostic(*t.fitDiagnostic);}
     if(snapshot && snapshot->validation().scope.startsWith("experimental_runtime/")){
-        QStringList headline{"Kaynak: "+runtimeSources_->currentText()};
+        QStringList headline;
         if(c.state==ExecutionState::Done)for(const auto& t:c.tools)if(t.state==ExecutionState::Done && graph.toolSources.value(t.toolId)==selectedSource)for(auto i=t.outputs.begin();i!=t.outputs.end();++i)if(visibleOutputs.value(t.toolId).contains(i.key()) && i->valid && std::holds_alternative<double>(i->data) && (i->port.unit=="mm" || i->port.unit.startsWith("px")))headline<<i.key()+": "+ToolResultCodec::display(*i)+" "+i->port.unit;
         headline<<"Parça: Değerlendirilmedi • PLC / robot: Kullanılamıyor";
-        lines.prepend(headline.join('\n'));lines<<ExperimentalRuntime::sourceSummary(snapshot->dependencies()["sourceSet"].toObject()[selectedSource].toObject(),selectedSource);
+        lines.prepend(headline.join('\n'));
     }
     runtimeSummary_->setText((diagnoses+lines).join("\n"));
 }

@@ -6,6 +6,8 @@ görev” ifadeleri yazıldıkları tarihe aittir.
 
 | Dönem / görev | Kayıt |
 | --- | --- |
+| 26 Ekim 2026 — CCUX-24B kapanış | [Yarım kalan teslimin doğrulanması ve tek commit ile kapanışı](2026-10-26-ccux-24b-completion.md) |
+| 26 Ekim 2026 — CCUX-24B | [Kalıcı Flow, sade sonuçlar ve Properties; Release/test/görsel kabul](2026-10-26-ccux-24b.md) |
 | 26 Ekim 2026 — CCUX-PLAN-07 | [24B–I ayrıntılı UX kartları; Kalibre Et akışını koruyan kullanıcı düzeltmesi](2026-10-26-ccux-plan-07.md) |
 | 26 Ekim 2026 — CCUX-24A | [On UX talebinin kaynak analizi ve uygulama plan girdileri](2026-10-26-ccux-24a.md) |
 | 25 Ekim 2026 — INT-09 | [Belge/başlatıcı eşlemesi, hash/smoke ve yerel CameraIntegration kapanışı](2026-10-25-int-09.md) |

@@ -130,6 +130,24 @@ bool MainWindow::verifyEditorUsability(const QString& artifacts) {
     const auto path=QDir(artifacts).filePath("usability-source.png");check(image.save(path),"usability PNG");
     service_.createProject("Usability","",QDir(artifacts).filePath("usability-"+QUuid::createUuid().toString(QUuid::WithoutBraces)+".vfproject"),"file");service_.createRecipe("Usability","",ApplicationType::Measurement,"file");
     const auto source=service_.setImageFile(path);refreshWorkspace();selectPage("editor");wait();
+    // CCUX-24B: a single selection model survives every left tab and execution.
+    {
+        auto* tabs=findChild<QTabWidget*>("editorTabs");auto* bottom=findChild<QSplitter*>("editorBottomV1");
+        check(bottom && bottom->count()==2 && !tabs->isAncestorOf(flowTools_),"Flow is outside left tabs");
+        selectTool(source);
+        for(const auto size:{QSize(1400,900),QSize(850,600)}){
+            resize(size);QApplication::processEvents();
+            for(int tab=0;tab<3;++tab){tabs->setCurrentIndex(tab);QApplication::processEvents();check(flowTools_->isVisible() && flowTools_->width()>=200 && selectedToolId_==source,"Flow survives tab and size changes");}
+            runFlow();wait();check(flowTools_->isVisible() && selectedToolId_==source,"Run Flow preserves visible selection");
+            runExecution(source);wait();check(flowTools_->isVisible() && selectedToolId_==source,"Run Tool preserves visible selection");
+            findChild<QPushButton*>("stopFlow")->click();check(flowTools_->isVisible() && selectedToolId_==source,"Stop preserves visible selection");
+            CameraFlowSmokeAudit::save(*this,QDir(artifacts).filePath(QString("ccux24b-flow-%1.png").arg(size.width())));
+        }
+        QSettings settings(settingsFile_,QSettings::IniFormat);settings.setValue("editor/bottomV1",QByteArray("corrupt"));settings.sync();restoreLayout();
+        check(bottom->sizes()[0]>0 && bottom->sizes()[1]>=200,"corrupt splitter safely falls back");
+        bottom->setSizes({1,900});saveLayout();restoreLayout();check(bottom->sizes()[0]>=120 && bottom->sizes()[1]>=200,"narrow splitter safely falls back");
+        resize(1400,900);
+    }
     // EUI-06: input events exercise timed reveal, focus retention and Escape.
     {
         service_.save();refreshWorkspace(); // Navigation presentation uses a clean recipe; dirty exits have their own lifecycle fixture.
@@ -261,6 +279,7 @@ bool MainWindow::verifyEditorUsability(const QString& artifacts) {
         findChild<QPushButton*>("stopFlow")->click();check(!imageViewer_->roiGestureActive() && selectedToolId_==id,"Stop preserves selection and cancels drawing");
         auto* mode=propertiesBody_->findChild<QComboBox*>("propertyDetailMode");auto* manual=propertiesBody_->findChild<QWidget*>(kind+"/manual");auto* outputs=propertiesBody_->findChild<QWidget*>(kind+"/outputs");
         check(mode && mode->currentIndex()==0 && manual->isHidden() && outputs->isHidden(),"Basic and collapsed sections default");
+        if(kind=="edge_pair" || kind=="line_fit" || kind=="circle_fit")for(auto* button:propertiesBody_->findChildren<QPushButton*>())check(button->text()!="Calibration aç","CCUX24B removes duplicate calibration navigation");
         if(kind=="line_fit" || kind=="circle_fit") {
             auto* quality=propertiesBody_->findChild<QWidget*>(kind+"/measurementGroup1");
             auto* limits=propertiesBody_->findChild<QWidget*>(kind+"/measurementGroup2");
@@ -301,6 +320,14 @@ bool MainWindow::verifyEditorUsability(const QString& artifacts) {
         check(!imageViewer_->roiGestureActive(),"existing selection does not arm again");
         click({20,20});check(selectedToolId_==id,"image click preserves tool");
     }
+    {
+        flowTools_->setCurrentRow(0);flowTools_->setFocus();QKeyEvent down(QEvent::KeyPress,Qt::Key_Down,Qt::NoModifier);QApplication::sendEvent(flowTools_,&down);
+        check(selectedToolId_==flowTools_->item(1)->data(Qt::UserRole).toString(),"CCUX24B keyboard retains tool ID selection");
+        flowTools_->verticalScrollBar()->setValue(flowTools_->verticalScrollBar()->maximum());const auto scroll=flowTools_->verticalScrollBar()->value();const auto selected=selectedToolId_;
+        refreshWorkspace();check(selectedToolId_==selected && flowTools_->verticalScrollBar()->value()==scroll,"CCUX24B rebuild retains list scroll and selection");
+        runFlow();wait();check(selectedToolId_==selected && flowTools_->verticalScrollBar()->value()==scroll && flowTools_->isVisible(),"CCUX24B run retains scroll and selection");
+        editorSession_.invalidateResults();refreshFlow(); // Keep the following TargetOnly fixture independent of this full-flow run.
+    }
     selectTool(edge);resize(1400,900);QApplication::processEvents();imageViewer_->fitImage();propertiesBody_->findChild<QPushButton*>("edgeDraw")->click();drag({40,40},{180,40});wait();
     check(selectedToolId_==edge && imageViewer_->roi().has_value(),"real ROI drag commits while preserving selection");const auto roi=imageViewer_->roi();
     click({230,230});click({100,40});check(selectedToolId_==edge,"ROI inside/outside clicks preserve selection");
@@ -320,7 +347,10 @@ bool MainWindow::verifyEditorUsability(const QString& artifacts) {
     propertiesBody_->findChild<QPushButton*>("outputShowAll")->click();check(box("point")->isChecked(),"D3 show all");unchanged();
     propertiesBody_->findChild<QPushButton*>("outputDefaults")->click();check(!box("point")->isChecked() && !outputPreferences_.load({service_.project().id,service_.activeRecipe()->id,edge}).selection,"D3 reset uses defaults");unchanged();
     for(auto* output:propertiesBody_->findChildren<QCheckBox*>(QRegularExpression("^outputVisible_")))if(output->isChecked())output->click();
-    check(matchInfo_->text().contains("Sonuç çıkışları gizli") && matchInfo_->text().contains(d3Cycle) && matchInfo_->text().contains("Uyarı · pointMm") && !matchInfo_->text().contains("  found:"),"D3 empty preserves identity and hidden invalid warning");unchanged();
+    {QFile hidden(QDir(artifacts).filePath("ccux24b-hidden-results.txt"));check(hidden.open(QIODevice::WriteOnly),"hidden results evidence");hidden.write(matchInfo_->text().toUtf8());}
+    QString sourceName;for(const auto& tool:service_.tools())if(tool.id==source)sourceName=tool.name;
+    const auto selectedResultText=matchInfo_->text().section("\n"+sourceName+" •",0,0);
+    check(selectedResultText.contains("Sonuç çıkışları gizli") && !matchInfo_->text().contains(d3Cycle) && selectedResultText.contains("Uyarı · pointMm") && !selectedResultText.contains("  found:"),"CCUX24B hidden identity retains invalid warning");unchanged();
     selectTool(source);check(box("image")->isChecked(),"D3 source has real image port");box("image")->click();check(imageViewer_->hasImage(),"D3 hidden image remains accessible in viewer");selectTool(edge);check(!box("found")->isChecked() && !box("pointMm")->isChecked(),"D3 selection survives tool switch");
     QLockFile locked(settingsFile_+".lock");check(locked.tryLock(0),"D3 lock fixture");box("found")->click();check(!box("found")->isChecked() && !propertiesBody_->findChild<QLabel*>("outputPreferenceError")->isHidden(),"D3 failed save restores persisted check and presents reason");locked.unlock();box("found")->click();box("found")->click();check(propertiesBody_->findChild<QLabel*>("outputPreferenceError")->isHidden(),"D3 successful retry clears storage error");
     findChild<QTabWidget*>("editorTabs")->setCurrentWidget(findChild<QScrollArea*>("resultsScroll"));
@@ -433,8 +463,8 @@ bool MainWindow::verifyEditorUsability(const QString& artifacts) {
     annotations->setChecked(false);
     service_.save();service_.createRecipe("D3 multi-source identity","",ApplicationType::Measurement,"file");service_.enableMultiSource();
     const auto d3SourceA=service_.addTool("image_file");service_.setImageFile(path,d3SourceA);const auto d3SourceB=service_.addTool("image_file");service_.setImageFile(path,d3SourceB);service_.save();refreshWorkspace();selectTool(d3SourceA);runExecution(d3SourceA);wait();
-    check(editorSession_.cycle && matchInfo_->text().contains("Kaynak:"),"D3 editor9 actual source identity");const auto sourceCycle=editorSession_.cycle->cycleId;const auto sourceFrame=editorSession_.frame->metadata().frameId;box("image")->click();
-    check(matchInfo_->text().contains("Kaynak:") && matchInfo_->text().contains(sourceCycle) && matchInfo_->text().contains(sourceFrame) && matchInfo_->text().contains("Sonuç çıkışları gizli") && imageViewer_->hasImage() && !service_.dirty() && !editorSession_.busy(),"D3 editor9 hidden image preserves actual source/frame/cycle/viewer");
+    check(editorSession_.cycle && !matchInfo_->text().contains("Kaynak:"),"CCUX24B editor9 omits source identity");const auto sourceCycle=editorSession_.cycle->cycleId;const auto sourceFrame=editorSession_.frame->metadata().frameId;box("image")->click();
+    check(!matchInfo_->text().contains("Kaynak:") && !matchInfo_->text().contains(sourceCycle) && !matchInfo_->text().contains(sourceFrame) && matchInfo_->text().contains("Sonuç çıkışları gizli") && imageViewer_->hasImage() && !service_.dirty() && !editorSession_.busy(),"D3 editor9 hidden image preserves actual source/frame/cycle/viewer");
     service_.createRecipe("D3 Geometry defaults","",ApplicationType::Measurement,"file");const auto d3Geometry=service_.addTool("geometry_measurement");service_.save();refreshWorkspace();selectTool(d3Geometry);
     check(box("valueMm")->isChecked() && box("status")->isChecked() && !box("valuePx")->isChecked(),"D3 Geometry calibrated defaults");
     propertiesBody_->findChild<QComboBox*>("gm_mode")->setCurrentText("pixel");QApplication::processEvents();propertiesBody_->findChild<QComboBox*>("gm_operation")->setCurrentText("line_angle");QApplication::processEvents();

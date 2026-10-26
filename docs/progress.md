@@ -4,12 +4,12 @@
 
 ## Devam noktası
 
-**[CCUX-PLAN-07 hazır](archive/2026-10-26-ccux-plan-07.md):**
-[24B–I ayrıntılı kartlar](architecture/camera-setup/24-usability-plan.md).
-Kod değişmedi; sıradaki [24B](architecture/camera-setup/24b-editor-layout.md).
-Kalibrasyon'da yalnız Ayrıntılar düğmeleri sadeleşecek; Kalibre Et'in Bilinen ölçü,
-plaka ve devamındaki tüm özellikleri korunacak. Robot ana seçimde pasif kalacak.
-[24A](archive/2026-10-26-ccux-24a.md): Circle hatası yok; yeni Circle calibrated olacak.
+**[CCUX-24B tamam](archive/2026-10-26-ccux-24b-completion.md):** Kalıcı sağ Flow,
+sade sonuçlar ve metrologi Properties; Release güncel, yeni CTest 4/4,
+1400×900/850×600 görsel kontrolü. Sonraki: [24C](architecture/camera-setup/24c-calibration-status-circle.md).
+Sıra yalnız 24B→24C; 24D yapılmayacak.
+[Plan](architecture/camera-setup/24-usability-plan.md): Kalibre Et korunur; Robot pasif.
+24C: yalnız yeni Circle calibrated; kullanıcı Circle hata bildirimini geri çekti.
 
 **[INT-09 tamam](archive/2026-10-25-int-09.md):** Yerel CameraIntegration ve
 başlatıcı eşleşti; push/main değişmedi. [Kullanım/restart devri](architecture/camera-integration-handoff.md).

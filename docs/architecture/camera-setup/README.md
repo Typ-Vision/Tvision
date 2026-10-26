@@ -2,7 +2,7 @@
 
 26 Ekim 2026 — **[CCUX-PLAN-07: ayrıntılı kullanılabilirlik planı](24-usability-plan.md)**.
 [24A analizi](24-usability-analysis.md) 24B–I sıralı uygulama kartlarına ayrıldı;
-uygulama başlamadı, ilk kart [24B](24b-editor-layout.md). Kullanıcının düzeltmesi:
+[24B tamamlandı](../../archive/2026-10-26-ccux-24b.md); sıradaki [24C](24c-calibration-status-circle.md). Kullanıcının düzeltmesi:
 yalnız Kalibrasyon Ayrıntılar düğmeleri sadeleşir; Kalibre Et'in Bilinen ölçü,
 plaka ve devamındaki mevcut özellikleri korunur. Robot ana seçimde pasif kalır.
 [Plan kapanışı](../../archive/2026-10-26-ccux-plan-07.md).

@@ -47,7 +47,7 @@ bool MainWindow::verifyRuntimeVisibility(const QString& artifacts){
         runtimeCycle_=runtimeCoordinator_->begin(RuntimeTrigger::Manual);const auto actual=RuntimeService::execute(runtimeCycle_,catalog,runtimeCoordinator_->cancellation());
         check(actual.state==ExecutionState::Done,"Real calibrated execution with hidden connected ports");
         for(const auto& result:actual.tools)if(result.toolId==metric)check(result.outputs["value"].valid && std::abs(std::get<double>(result.outputs["value"].data)-9.975)<1e-9 && result.decision==PartDecision::Pass,"Hidden upstream point still yields actual downstream scalar");
-        runtimeResult_=actual;showRuntimeResult();runtimeTools_->setCurrentIndex(runtimeTools_->findData(metric));showRuntimeResult();
+        runtimeResult_=actual;showRuntimeResult();check(!runtimeSummary_->text().contains(actual.cycleId) && !runtimeSummary_->text().contains(actual.frameId),"CCUX24B routine result omits cycle/frame identities");runtimeTools_->setCurrentIndex(runtimeTools_->findData(metric));showRuntimeResult();
         check(runtimeSummary_->text().contains("Parça kararı: PASS") && !runtimeSummary_->text().contains("  value:") && !runtimeSummary_->text().contains("Ölçüm:") && runtimeViewer_->hasImage(),"Explicit empty retains decision and actual viewer, no scalar summary leak");
         const auto signature=flowSignature();const auto generation=editorSession_.generation;const auto dirty=service_.dirty();const auto content=ProductionRecipeService::recipeContent(recipe,dir.path());
         selection(metric,QSet<QString>{"value"});showRuntimeResult();check(runtimeSummary_->text().contains("9.975000 mm • PASS"),"Explicit value shown from actual result");

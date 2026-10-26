@@ -158,14 +158,13 @@ void MainWindow::showExecutionResultView(const EditorContext& context) {
             .arg(evidence->request.device.identity.model,evidence->request.device.identity.serial,evidence->request.profile.name).arg(evidence->request.profile.revision)
             .arg(evidence->actual.settings.exposureTimeUs).arg(evidence->actual.settings.gain).arg(evidence->actual.geometry.offset.x()).arg(evidence->actual.geometry.offset.y()));
     }
-    QStringList lines;if(editorSession_.cycle->partial)lines<<"Seçili araç değerlendirmesi • "+editorSession_.cycle->evaluationId;lines<<QString("%1 | Cycle %2 | Frame %3 | %4 ms").arg(executionStateName(editorSession_.cycle->state),editorSession_.cycle->cycleId,editorSession_.cycle->frameId).arg(editorSession_.cycle->milliseconds,0,'f',2);
+    QStringList lines;if(editorSession_.cycle->partial)lines<<"Seçili araç değerlendirmesi";lines<<QString("%1 | %2 ms").arg(executionStateName(editorSession_.cycle->state)).arg(editorSession_.cycle->milliseconds,0,'f',2);
     if(!editorSession_.cycle->error.isEmpty())lines<<editorSession_.cycle->error;
     auto ordered=editorSession_.cycle->tools;
     std::stable_sort(ordered.begin(),ordered.end(),[this](const auto& a,const auto& b){return a.toolId==selectedToolId_ && b.toolId!=selectedToolId_;});
     for(const auto& r:ordered) {
         QString name=r.toolId;for(const auto& t:service_.tools())if(t.id==r.toolId)name=t.name;
         lines<<name+" • "+executionStateName(r.state)+QString(" • %1 ms ").arg(r.milliseconds,0,'f',2)+(r.fitDiagnostic ? presentMeasurementDiagnostic(*r.fitDiagnostic):r.errorCode+" "+r.message);
-        if(service_.activeRecipe()->definition["editor"].toObject()["schemaVersion"]==9)for(const auto& value:r.outputs)if(value.valid){QString source=value.origin.sourceId;for(const auto& t:service_.tools())if(t.id==source)source=t.name;lines<<"  Kaynak: "+source+" | Frame "+value.frameId+" | Cycle "+value.cycleId;break;}
         for(const auto& tool:service_.tools())if(tool.id==r.toolId) {
             const auto preference=outputPreferences_.load({service_.project().id,service_.activeRecipe()->id,tool.id});
             if(!preference.error.isEmpty())lines<<"  Görünüm tercihi: "+preference.error;

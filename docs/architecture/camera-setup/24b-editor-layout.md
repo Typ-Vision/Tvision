@@ -1,6 +1,6 @@
 # CCUX-24B — kalıcı Flow ve sade sonuç alanları
 
-Durum: planlandı. Önce [ortak plan](24-usability-plan.md), contract ve
+Durum: tamamlandı — [kapanış](../../archive/2026-10-26-ccux-24b.md). Önce [ortak plan](24-usability-plan.md), contract ve
 [analiz](24-usability-analysis.md) 1, 3–5 okunur. Sonraki kart: 24C.
 
 ## Hedef ve değişiklik alanı

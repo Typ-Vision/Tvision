@@ -54,7 +54,7 @@ MainWindow::MainWindow(const QString& settingsFile) : settingsFile_(settingsFile
     connect(editor,&QAction::triggered,this,[this]{if(service_.activeRecipe())openEditorRecipe(service_.activeRecipe()->id);else selectPage("editor");});
     auto* reset = view->addAction("Panel düzenini sıfırla");
     reset->setObjectName("resetPanels");
-    connect(reset,&QAction::triggered,this,[this]{workspacePanel_->setPinned(true);horizontal_->setSizes({170,780,280}); vertical_->setSizes({640,160});});
+    connect(reset,&QAction::triggered,this,[this]{workspacePanel_->setPinned(true);horizontal_->setSizes({170,780,280}); vertical_->setSizes({640,160});findChild<QSplitter*>("editorBottomV1")->setSizes({780,300});});
     auto* pinWorkspace=view->addAction("Workspace sabit");pinWorkspace->setCheckable(true);pinWorkspace->setObjectName("pinWorkspace");
     connect(pinWorkspace,&QAction::triggered,this,[this](bool pinned){workspacePanel_->setPinned(pinned);});
     auto* setup = menuBar()->addMenu("Setup");
@@ -185,6 +185,7 @@ void MainWindow::selectPage(const QString& id) {
 void MainWindow::saveLayout() {
     QDir().mkpath(QFileInfo(settingsFile_).absolutePath()); QSettings settings(settingsFile_,QSettings::IniFormat);
     settings.setValue("window/geometry",saveGeometry()); settings.setValue("editor/horizontal",horizontal_->saveState());
+    settings.setValue("editor/bottomV1",findChild<QSplitter*>("editorBottomV1")->saveState());
     settings.setValue("editor/vertical",vertical_->saveState()); settings.sync();
     if (service_.hasProject() && QFileInfo::exists(service_.path())) {
         settings.setValue("session/project",QFileInfo(service_.path()).absoluteFilePath());
@@ -228,6 +229,9 @@ bool MainWindow::verifySession() {
 void MainWindow::restoreLayout() {
     QSettings settings(settingsFile_,QSettings::IniFormat);
     horizontal_->restoreState(settings.value("editor/horizontal").toByteArray()); vertical_->restoreState(settings.value("editor/vertical").toByteArray());
+    auto* bottom=findChild<QSplitter*>("editorBottomV1");
+    if(!bottom->restoreState(settings.value("editor/bottomV1").toByteArray()) || bottom->sizes().size()!=2 || bottom->sizes()[0]<120 || bottom->sizes()[1]<200)bottom->setSizes({780,300});
+    bottom->setChildrenCollapsible(false);bottom->setOrientation(Qt::Horizontal);
 }
 void MainWindow::closeEvent(QCloseEvent* event) {
     if(plc_ && plc_->blocking()){displayError("PLC çevrim kaydı ve ACK tamamlanmadan pencere kapatılamaz.");event->ignore();return;}

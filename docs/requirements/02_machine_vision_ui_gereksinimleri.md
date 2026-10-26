@@ -107,7 +107,7 @@ Ana arayüz modern, koyu temalı, endüstriyel kullanıma uygun ve yüksek kontr
 | Editor sol panel | Toolbox |
 | Editor orta panel | Image Viewer / isteğe bağlı genişletilmiş Flow Editor |
 | Editor sağ panel | Properties |
-| Editor alt panel | Flow, Results, Log, Variables, Communication, Diagnostics |
+| Editor alt panel | Solda Results/Kenar profili/Bağlantılar ve diğer sekmeler; sağda kalıcı tek Flow listesi |
 
 Panel genişlikleri/yükseklikleri değiştirilebilir, düzen kullanıcı bazında saklanabilir olmalıdır. Küçük ekranda paneller sekmeli veya alt alta görünmeli; toolbar ve Properties erişilebilir kalmalıdır.
 
@@ -656,3 +656,15 @@ Sonraki geliştirme önerisi (henüz uygulanmadı): önce manuel px/mm ve kalibr
 ## 8 Ekim — Manuel ölçek uygulama planı hazır
 
 [Manuel px/mm ve sade Calibration planı](../architecture/manual-scale-calibration-plan.md) önceki kısa kapsam notunun ayrıntılı devamıdır. C1 matematik/codec → C2 katalog/Measurement/Runtime → C3 sade ekran → C4 UI kabul → C5 birleşik test/belgeler. C1–C5 tamamlandı: matematik/codec, katalog/reçete/Runtime/CSV, sade üç yöntem ekranı ve birleşik yazılım kabulü mevcut. Yeni manual_planar_scale/1, record/dependency schema 3, eski hash/encode koruması, beş bölümlü üç yöntem UI ve doğrulamasız deneme/üretim ayrımı tanımlandı. Belgenin 7. bölümü GPT-6.1 Sol medium için kopyalanabilir başlangıç talimatıdır. P7 bu kapsamdan sonra; K4 ertelenmiş kalır.
+
+### CCUX-24B — sonuç sunumu ve kalıcı Flow
+
+Editor alt alanında Flow tek liste ve seçim modeliyle sağda kalır; Run Flow,
+Run Tool ve sol Results/Kenar profili/Bağlantılar sekme geçişleri listeyi gizlemez.
+Bağlantılar DAG özeti ve Validate DAG komutunu içerir. Yerel alt splitter ayarı
+sürümlüdür; eksik veya geçersiz ayar kullanılabilir başlangıca döner.
+Editor/Runtime normal sonuç paneli teknik kaynak/frame/cycle kimlik satırlarını
+sunmaz; değer/birim, süre, yürütme durumu ve gerçek hata korunur. Çok kaynaklı
+görüntü seçicisi korunur. Korelasyon metadata'sı, tanı ve kalıcı Logs/CSV verisi
+aynı kalır. Measurement ve Circle/Line/Edge Pair Properties kalibrasyon özeti
+ve aç düğmesi içermez; application katmanındaki model geçerlilik denetimi sürer.
