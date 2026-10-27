@@ -17,14 +17,14 @@ EnumDefinitions shapeEnums(const ValueEnvelope& v){EnumDefinitions e;if(v.value)
 }
 QJsonObject encodeAssignmentValue(const AssignmentValue& v){
     if(auto p=std::get_if<ValueEnvelope>(&v))return {{"kind","scalar"},{"envelope",CommunicationValues::encode(*p,shapeEnums(*p))}};
-    const auto& s=std::get<SpatialAssignmentValue>(v);require(s.unit==ScalarUnit::Millimetre && s.value.has_value(),"Spatial assignment requires mm transform");
-    ValueEnvelope m;m.type=ScalarType::Boolean;m.value=true;m.validity=s.validity;m.reason=s.reason;m.producerId=s.producerId;m.producerPort=s.producerPort;m.cycleId=s.cycleId;m.frameId=s.frameId;m.configId=s.configId;m.dependencyIds=s.dependencyIds;
-    return {{"kind","spatial"},{"metadata",CommunicationValues::encode(m)},{"transform",s.value->toJson()}};
+    const auto& s=std::get<SpatialAssignmentValue>(v);require(s.unit==ScalarUnit::Millimetre && (s.validity==ValueValidity::Valid)==s.value.has_value(),"Spatial assignment requires mm transform");
+    ValueEnvelope m;m.type=ScalarType::Boolean;if(s.value)m.value=true;m.validity=s.validity;m.reason=s.reason;m.producerId=s.producerId;m.producerPort=s.producerPort;m.cycleId=s.cycleId;m.frameId=s.frameId;m.configId=s.configId;m.dependencyIds=s.dependencyIds;
+    return {{"kind","spatial"},{"metadata",CommunicationValues::encode(m)},{"transform",s.value ? QJsonValue(s.value->toJson()):QJsonValue(QJsonValue::Null)}};
 }
 AssignmentValue decodeAssignmentValue(const QJsonObject& o){
     if(o["kind"]=="scalar"){keys(o,{"kind","envelope"});require(o["envelope"].isObject(),"Scalar envelope required");auto e=o["envelope"].toObject();return CommunicationValues::decode(e,shapeEnums(e));}
-    keys(o,{"kind","metadata","transform"});require(o["kind"]=="spatial" && o["metadata"].isObject() && o["transform"].isObject(),"Spatial assignment required");auto m=CommunicationValues::decode(o["metadata"].toObject());require(m.type==ScalarType::Boolean && m.value && std::get<bool>(*m.value),"Spatial metadata invalid");
-    return SpatialAssignmentValue{SpatialTransform::fromJson(o["transform"].toObject()),m.validity,m.reason,ScalarUnit::Millimetre,m.producerId,m.producerPort,m.cycleId,m.frameId,m.configId,m.dependencyIds};
+    keys(o,{"kind","metadata","transform"});require(o["kind"]=="spatial" && o["metadata"].isObject() && (o["transform"].isObject() || o["transform"].isNull()),"Spatial assignment required");auto m=CommunicationValues::decode(o["metadata"].toObject());require(m.type==ScalarType::Boolean && (m.validity==ValueValidity::Valid ? (m.value && std::get<bool>(*m.value) && o["transform"].isObject()):(!m.value && o["transform"].isNull())),"Spatial metadata invalid");
+    return SpatialAssignmentValue{o["transform"].isNull() ? std::optional<SpatialTransform>{}:std::optional<SpatialTransform>{SpatialTransform::fromJson(o["transform"].toObject())},m.validity,m.reason,ScalarUnit::Millimetre,m.producerId,m.producerPort,m.cycleId,m.frameId,m.configId,m.dependencyIds};
 }
 AssignmentConfig decodeAssignmentConfig(const QJsonObject& o,const QString& producer){
     keys(o,{"revision","rows"});uuid(producer);AssignmentConfig c{producer,revision(o),{}};

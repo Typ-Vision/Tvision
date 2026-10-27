@@ -1,6 +1,6 @@
 # COMM-13 — Immutable terminal bundle ve kayıt codec'i
 
-Durum: başlamadı. Önerilen düzey: **medium**. Önkoşul: **COMM-12** tamam.
+Durum: tamamlandı (27 Ekim 2026). Önerilen düzey: **medium**. Önkoşul: **COMM-12** tamam.
 Bir oturumda yalnız bu kart; paralel uygulayıcı yok.
 
 ## Oku

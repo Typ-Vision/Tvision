@@ -84,7 +84,6 @@ void MultiSourceRuntimeService::finish(quint64 ticket,const CycleResult& result)
         persist("cycles",pending_["recordId"].toString(),pending_);pending_={};pendingCompletion_.reset();last_=result;failure_.clear();cycle_={};return;
     }
     const auto branches=ProductionRecipeService::validateMultiSourceCompletion(cycle_,result,prepared_.branches);
-    require(!cycle_.snapshot->publication(),ProductionError::InvalidCompletion,"Publication terminal bundle codec required (COMM-13)");
     if(pending_.isEmpty()){
         const auto& s=*cycle_.snapshot;QJsonArray frames,tools;
         for(const auto& f:result.frames)frames.append(QJsonObject{{"frameId",f.frameId},{"cycleId",f.cycleId},{"sourceId",f.sourceId},{"coordinateSystemId",f.coordinateSystemId},{"completedAtUtc",f.completedAtUtc.toString(Qt::ISODateWithMs)}});
@@ -94,6 +93,7 @@ void MultiSourceRuntimeService::finish(quint64 ticket,const CycleResult& result)
         }
         const auto& recipe=s.recipe();const QJsonObject configuration{{"recipeId",recipe.id},{"recipeVersion",recipe.recipeVersion},{"schemaVersion",recipe.schemaVersion},{"name",recipe.name},{"description",recipe.description},{"type",typeKey(recipe.applicationType)},{"camera",recipe.cameraReference},{"calibration",recipe.calibrationReference},{"calibrationBinding",recipe.calibrationBinding ? QJsonValue(recipe.calibrationBinding->toJson()):QJsonValue(QJsonValue::Null)},{"definition",recipe.definition},{"projectDirectory",s.projectDirectory()}};
         QJsonObject candidate{{"configuration",configuration},{"schemaVersion",s.industrial() ? 9:7},{"recordId",QUuid::createUuid().toString(QUuid::WithoutBraces)},{"beginEventId",beginId_},{"ticket",QString::number(ticket)},{"principal",identity_.principal},{"recipeId",s.recipe().id},{"recipeName",s.recipe().name},{"recipeVersion",s.recipe().recipeVersion},{"applicationType",typeKey(s.recipe().applicationType)},{"validationId",s.validation().id},{"configId",QString::fromLatin1(s.validation().contentId)},{"dependencyId",QString::fromLatin1(s.validation().dependencyId)},{"dependencies",s.dependencies()},{"definition",s.recipe().definition},{"branches",branches},{"cycleId",result.cycleId},{"evaluationId",result.evaluationId},{"state",executionStateName(result.state)},{"error",result.error},{"milliseconds",result.milliseconds},{"startedAtUtc",started_.toString(Qt::ISODateWithMs)},{"completedAtUtc",QDateTime::currentDateTimeUtc().toString(Qt::ISODateWithMs)},{"frames",frames},{"tools",tools},{"communicationState",communication_.isEmpty() ? "NOT_REQUESTED":"RESULT_PENDING"},{"communication",communication_}};
+        candidate=ProductionResultCodec::withBundle(candidate,s.recipe().definition,&result);
         ProductionResultCodec::validate(candidate);pending_=std::move(candidate);pendingCompletion_=result;
     }
     persist("cycles",pending_["recordId"].toString(),pending_);pending_={};pendingCompletion_.reset();last_=result;failure_.clear();cycle_={};

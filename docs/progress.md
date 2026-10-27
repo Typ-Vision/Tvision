@@ -4,10 +4,11 @@
 
 ## Devam noktası
 
-**[COMM-12 tamam](archive/2026-10-27-comm-12.md):** Yerel profil, logical output
-group, frozen dependency ve saf cycle intent. Editor/Load ağ başlatmaz.
-Release ON 25 ilgili test tekrarlarla, OFF 6 geçti. Terminal bundle kapısı
-COMM-13'e açıktır; transport/UI yok. **Sonraki tek kart COMM-13.**
+**[COMM-13 tamam](archive/2026-10-27-comm-13.md):** Terminal10/bundle1;
+typed scalar/Pose/missing, decision, atomik kayıt/retry ve restart geçmişi.
+Network/outbox yok. **Sonraki tek kart COMM-14.**
+[COMM-12](archive/2026-10-27-comm-12.md): yerel profil/group/intent;
+Editor/Load ağ başlatmaz. Güncel doğrulama COMM-13 kapanışındadır.
 
 **[COMM-11](archive/2026-10-27-comm-11.md):** Result DAG/ALL/ANY ve ayrı summary.
 **[COMM-10](archive/2026-10-27-comm-10.md):** Missing-first karar/export koruması.

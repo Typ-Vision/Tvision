@@ -7,6 +7,7 @@
 #include "SourceFrameIndex.hpp"
 #include "domain/ToolRegistry.hpp"
 #include <QSet>
+#include <QUuid>
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QCryptographicHash>
@@ -16,6 +17,31 @@ namespace visionflow {
 namespace {
 void require(bool ok,const char* reason){if(!ok)throw std::runtime_error(reason);}
 QString cell(QString s){s.replace('"',"\"\"");return '"'+s+'"';}
+}
+namespace {
+QString bundleHash(const QJsonObject& o){return QString::fromLatin1(QCryptographicHash::hash(QJsonDocument(o).toJson(QJsonDocument::Compact),QCryptographicHash::Sha256).toHex());}
+QJsonObject legacyRecord(QJsonObject r){r["schemaVersion"]=r.take("baseSchemaVersion");r.remove("resultBundle");return r;}
+}
+QJsonObject ProductionResultCodec::withBundle(QJsonObject r,const QJsonObject& definition,const CycleResult* result){
+    if(r["schemaVersion"]==10)return r;
+    QSet<QString> active;for(const auto& t:editorTools(definition))if(t.enabled && t.kind=="publish_data")for(const auto& id:decodePublishConfig(t.parameters).groups)active.insert(id);
+    const auto configured=editorTools(definition);if(active.isEmpty() && std::none_of(configured.begin(),configured.end(),[](const auto& t){return t.enabled && t.kind=="result";}))return r;
+    QJsonArray groups;
+    for(const auto& g:recipeOutputGroups(definition))if(active.contains(g.id)){
+        QJsonObject fields;bool valid=false;QString intentId,profileDependencyId;
+        if(result)for(const auto& intent:result->publicationIntents)if(intent.groupId==g.id){
+            require(intent.cycleId==r["cycleId"].toString() && intent.configId==QString::fromLatin1(r["configId"].toString().toLatin1().toHex()),"Bundle intent identity differs");
+            intentId=intent.id;profileDependencyId=QString::fromLatin1(intent.profileDependencyId);valid=result->state==ExecutionState::Done;
+            for(auto f=intent.fields.begin();f!=intent.fields.end();++f){fields[f.key()]=encodeAssignmentValue(f.value());std::visit([&](const auto& v){valid=valid && v.validity==ValueValidity::Valid;},f.value());}
+        }
+        if(fields.isEmpty())for(const auto& field:g.fields)for(const auto& variable:recipeVariables(definition))if(variable.id==field.fieldId){
+            if(variable.type==VariableType::SpatialTransform){SpatialAssignmentValue v;v.reason="PUBLICATION_UNAVAILABLE";v.producerId=g.producerId;v.producerPort=field.fieldId;v.cycleId=r["cycleId"].toString();v.configId=QString::fromLatin1(r["configId"].toString().toLatin1().toHex());fields[field.name]=encodeAssignmentValue(v);}
+            else {ValueEnvelope v;v.type=static_cast<ScalarType>(variable.type);v.unit=variable.unit;v.reason="PUBLICATION_UNAVAILABLE";v.producerId=g.producerId;v.producerPort=field.fieldId;v.cycleId=r["cycleId"].toString();v.configId=QString::fromLatin1(r["configId"].toString().toLatin1().toHex());fields[field.name]=encodeAssignmentValue(v);}
+        }
+        groups.append(QJsonObject{{"groupId",g.id},{"profileId",g.profileId},{"contractRevision",g.contractRevision},{"required",g.required},{"payloadSchema",g.payloadSchema},{"intentId",intentId},{"profileDependencyId",profileDependencyId},{"resultValid",valid},{"reason",valid ? "":"PUBLICATION_UNAVAILABLE"},{"fields",fields}});
+    }
+    QJsonObject b{{"schemaVersion",1},{"cycleId",r["cycleId"]},{"configHash",r["configId"]},{"dependencyId",r["dependencyId"]},{"decision",result ? resultDecisionKey(result->decision()):QString("NOT_EVALUATED")},{"groups",groups}};
+    b["bundleId"]=bundleHash(b);r["baseSchemaVersion"]=r["schemaVersion"].toInt();r["schemaVersion"]=10;r["resultBundle"]=b;return r;
 }
 QJsonObject ProductionResultCodec::output(const PortValue& v) {
     QJsonObject o{{"type",portTypeName(v.port.type)},{"unit",v.port.unit},{"coordinateFrame",v.port.frame},{"frameId",v.frameId},{"cycleId",v.cycleId},{"sourceId",v.origin.sourceId}};
@@ -27,7 +53,7 @@ namespace {
 void validateMulti(const QJsonObject& r){
     const auto deps=r["dependencies"].toObject(),set=deps["sourceSet"].toObject(),branches=r["branches"].toObject();
     require(!r.contains("systemCalibration") && !r.contains("measurementSource") && !r.contains("referenceBindings"),"Multi-source evidence must stay scoped");
-    require(deps.size()==3 && (deps["scope"]=="multi_source_in_memory/1" || deps["scope"]=="multi_source_runtime/1") && deps["engine"].isString(),"Invalid source-set envelope");
+    require((deps.size()==3 || (deps.size()==4 && deps.contains("publication"))) && (deps["scope"]=="multi_source_in_memory/1" || deps["scope"]=="multi_source_runtime/1") && deps["engine"].isString(),"Invalid source-set envelope");
     require(r["dependencyId"].toString()==QString::fromLatin1(QCryptographicHash::hash(QJsonDocument(deps).toJson(QJsonDocument::Compact),QCryptographicHash::Sha256).toHex()),"Source-set dependency hash differs");
     const auto config=r["configuration"].toObject();require(r["configId"].toString()==QString::fromLatin1(QCryptographicHash::hash(QJsonDocument(config).toJson(QJsonDocument::Compact),QCryptographicHash::Sha256).toHex()) && config["recipeId"]==r["recipeId"] && config["definition"]==r["definition"] && config["recipeVersion"]==r["recipeVersion"] && config["name"]==r["recipeName"] && config["type"]==r["applicationType"],"Multi-source configuration hash differs");
     require(!r["validationId"].toString().isEmpty() && !r["cycleId"].toString().isEmpty(),"Missing multi-source terminal identity");
@@ -45,7 +71,7 @@ void validateMulti(const QJsonObject& r){
             if(r["state"]=="SKIPPED" || t["state"]!="DONE")require(t["outputs"].toObject().isEmpty(),"Failed/cancelled assignment carried output");
         }
         validateMeasurementDiagnostic(t,r);if(t.contains("measurementDiagnostic"))require(t["measurementDiagnostic"].toObject()["sourceId"]==graph.toolSources.value(id),"Diagnostic graph source differs");
-        if(!graph.requiredSources.contains(graph.toolSources.value(id)) && !(configured->enabled && (configured->kind=="set_variables" || configured->kind=="result")))require(t["state"]=="SKIPPED" && t["outputs"].toObject().isEmpty() && t["decision"]=="NOT_EVALUATED" && t["calibration"].isNull(),"Disabled branch carried evidence");
+        if(!graph.requiredSources.contains(graph.toolSources.value(id)) && !(configured->enabled && (configured->kind=="set_variables" || configured->kind=="result" || configured->kind=="publish_data")))require(t["state"]=="SKIPPED" && t["outputs"].toObject().isEmpty() && t["decision"]=="NOT_EVALUATED" && t["calibration"].isNull(),"Disabled branch carried evidence");
         const auto outputs=t["outputs"].toObject();for(auto p=outputs.begin();p!=outputs.end();++p){const auto o=p->toObject();if(o.contains("typedPort")){auto value=ToolResultCodec::decode(o["typedPort"].toObject());if(value.valid){const auto ports=outputPorts(configured->kind);const auto port=std::find_if(ports.cbegin(),ports.cend(),[&](const auto& x){return x.id==p.key();});require(port!=ports.cend(),"Undeclared terminal port");if(value.port.type==PortType::AssignmentBundle){require(configured->kind=="set_variables" && value.cycleId==r["cycleId"].toString() && value.evaluationId==r["evaluationId"].toString(),"Assignment terminal identity differs");const auto& b=std::get<AssignmentBundle>(value.data);const auto c=decodeAssignmentConfig(configured->parameters,id);require(b.producerId==id && b.revision==c.revision && b.configId==QString::fromLatin1(r["configId"].toString().toLatin1().toHex()),"Assignment terminal configuration differs");require(b.fields.size()==c.rows.size(),"Assignment terminal field count differs");for(const auto& row:c.rows)require(b.fields.contains(row.targetId),"Assignment terminal target differs");}else if(value.port.frame=="cycle" && configured->kind=="result") {require(value.cycleId==r["cycleId"].toString() && value.evaluationId==r["evaluationId"].toString(),"Result terminal identity differs");}else {require(index.has_value(),"Output without frame");index->validatePort(graph.toolSources.value(id),value,*port);}}}else{require(o["type"]=="Image" && o["imageInfo"].isObject() && index.has_value(),"Missing image evidence");const auto& f=index->frame(graph.toolSources.value(id));require(o["sourceId"]==f.sourceId && o["frameId"]==f.frameId && o["cycleId"]==f.cycleId,"Terminal image source/frame swap");}}
     }
     if(r["state"]=="DONE")require(byTool.size()==tools.size(),"DONE terminal missing tool");
@@ -62,6 +88,33 @@ void validateMulti(const QJsonObject& r){
 }
 void ProductionResultCodec::validate(const QJsonObject& record) {
     require(QJsonDocument(record).toJson(QJsonDocument::Compact).size()<=maxRecordBytes,"Terminal result exceeds 16 MiB");
+    if(record["schemaVersion"]==10){
+        const int base=record["baseSchemaVersion"].toInt();require(base>=3 && base<=9 && record["baseSchemaVersion"]==base,"Invalid terminal10 base");
+        const auto b=record["resultBundle"].toObject();auto content=b;content.remove("bundleId");
+        require(b.size()==7 && b["schemaVersion"]==1 && b["bundleId"]==bundleHash(content) && b["cycleId"]==record["cycleId"] && b["configHash"]==record["configId"] && b["dependencyId"]==record["dependencyId"],"Terminal bundle identity/hash differs");
+        require(QStringList{"OK","NOK","NOT_EVALUATED"}.contains(b["decision"].toString()) && (record["state"]=="DONE" || b["decision"]=="NOT_EVALUATED"),"Invalid bundle decision");
+        CycleResult decisionEvidence;decisionEvidence.cycleId=record["cycleId"].toString();decisionEvidence.state=record["state"]=="DONE" ? ExecutionState::Done:ExecutionState::Error;
+        for(const auto& item:record["tools"].toArray()){const auto t=item.toObject();ToolResult tool;tool.state=t["state"]=="DONE" ? ExecutionState::Done:ExecutionState::Error;const auto outputs=t["outputs"].toObject();for(auto o=outputs.begin();o!=outputs.end();++o)if(o->toObject().contains("typedPort"))tool.outputs[o.key()]=ToolResultCodec::decode(o->toObject()["typedPort"].toObject());decisionEvidence.tools.append(tool);}
+        require(b["decision"]==resultDecisionKey(decisionEvidence.decision()),"Bundle decision differs from terminal evidence");
+        require(b["groups"].isArray() && b["groups"].toArray().size()<=maxOutputGroups,"Invalid bundle groups");QSet<QString> seen;
+        for(const auto& item:b["groups"].toArray()){
+            const auto g=item.toObject();const auto id=g["groupId"].toString();require(g.size()==10 && !id.isEmpty() && !seen.contains(id) && g["required"].isBool() && g["resultValid"].isBool() && g["fields"].isObject() && g["fields"].toObject().size()<=maxPublicationFields,"Invalid bundle group");seen.insert(id);
+            const QSet<QString> keys{"groupId","profileId","contractRevision","required","payloadSchema","intentId","profileDependencyId","resultValid","reason","fields"};for(auto i=g.begin();i!=g.end();++i)require(keys.contains(i.key()),"Unknown bundle group field");
+            require(!QUuid(g["profileId"].toString()).isNull() && g["contractRevision"].toInt()>0 && !g["payloadSchema"].toString().isEmpty(),"Invalid group profile contract");
+            if(!g["intentId"].toString().isEmpty())require(g["profileDependencyId"].toString().size()==64 && g["intentId"]==bundleHash({{"cycleId",record["cycleId"]},{"configId",QString::fromLatin1(record["configId"].toString().toLatin1().toHex())},{"groupId",id},{"dependencyId",g["profileDependencyId"]}}),"Intent dependency identity differs");
+            if(record["definition"].isObject()){
+                const auto definitions=recipeOutputGroups(record["definition"].toObject());const auto expected=std::find_if(definitions.begin(),definitions.end(),[&](const auto& d){return d.id==id;});require(expected!=definitions.end() && expected->profileId==g["profileId"].toString() && expected->contractRevision==g["contractRevision"].toInt() && expected->required==g["required"].toBool() && expected->payloadSchema==g["payloadSchema"].toString(),"Bundle group differs from recipe");
+                require(g["fields"].toObject().size()==expected->fields.size(),"Bundle field set differs");for(const auto& field:expected->fields){require(g["fields"].toObject().contains(field.name),"Bundle field missing");const auto value=decodeAssignmentValue(g["fields"].toObject()[field.name].toObject());std::visit([&](const auto& v){require(v.producerId==expected->producerId && v.producerPort==field.fieldId,"Bundle producer differs");},value);}
+            }
+            bool valid=record["state"]=="DONE" && !g["intentId"].toString().isEmpty() && !g["fields"].toObject().isEmpty();
+            const auto fields=g["fields"].toObject();for(auto f=fields.begin();f!=fields.end();++f){const auto value=decodeAssignmentValue(f->toObject());std::visit([&](const auto& v){require(v.cycleId==record["cycleId"].toString() && v.configId==QString::fromLatin1(record["configId"].toString().toLatin1().toHex()) && !v.producerId.isEmpty() && !v.producerPort.isEmpty(),"Terminal field origin differs");valid=valid && v.validity==ValueValidity::Valid;},value);}
+            require(g["resultValid"].toBool()==valid && (valid ? g["reason"].toString().isEmpty():!g["reason"].toString().isEmpty()),"Invalid group cannot be normal payload");
+            require(QJsonDocument(g).toJson(QJsonDocument::Compact).size()<=maxPublicationBytes,"Bundle group exceeds 64 KiB");
+        }
+        if(record["definition"].isObject()){QSet<QString> expected;for(const auto& t:editorTools(record["definition"].toObject()))if(t.enabled && t.kind=="publish_data")for(const auto& id:decodePublishConfig(t.parameters).groups)expected.insert(id);require(seen==expected,"Terminal bundle group set differs");}
+        validate(legacyRecord(record));return;
+    }
+    require(!record.contains("resultBundle") && !record.contains("baseSchemaVersion"),"Bundle requires terminal10");
     const auto schema=record["schemaVersion"];
     if(schema==7 || schema==9){
         bool industrial=false;const auto set=record["dependencies"].toObject()["sourceSet"].toObject();for(const auto& v:set)industrial=industrial || v.toObject().contains("industrialSource");
@@ -135,7 +188,7 @@ void ProductionResultCodec::validate(const QJsonObject& record) {
     }
 }
 QString ProductionResultCodec::summary(const QJsonObject& record) {
-    validate(record);QStringList lines;
+    validate(record);if(record["schemaVersion"]==10)return "Bundle "+record["resultBundle"].toObject()["bundleId"].toString()+" / "+record["resultBundle"].toObject()["decision"].toString()+"\n"+summary(legacyRecord(record));QStringList lines;
     if((record["schemaVersion"]==7 || record["schemaVersion"]==9)){lines<<"Çok kaynaklı tarihsel kanıt • çalışma izni değildir";const auto branches=record["branches"].toObject();for(auto i=branches.begin();i!=branches.end();++i)lines<<"Kaynak: "+i.key()+"\n"+summary(i->toObject());return lines.join('\n');}
     if(record["schemaVersion"]==8){const auto a=record["industrialAcquisition"].toObject();lines<<acquisitionStatus(a["status"]=="ACQUIRED" ? "DONE":record["state"].toString(),a["reason"].toString()+" "+a["errorCode"].toString());lines<<presentIndustrialSource({},record["industrialSource"].toObject(),record["industrialAcquisition"].toObject()).detail;lines<<(record.contains("systemCalibration") ? "Kaynağa bağlı ölçüm modeli • karar araç bazında":"Raw / px • ölçüm doğrulanmadı");}
     for(const auto& item:record["tools"].toArray()) {
@@ -159,6 +212,7 @@ QString ProductionResultCodec::summary(const QJsonObject& record) {
 }
 QByteArray ProductionResultCodec::csv(const QVector<QJsonObject>& records) {
     require(records.size()<=256,"CSV record limit");
+    if(std::any_of(records.begin(),records.end(),[](const auto& r){return r["schemaVersion"]==10;})){QVector<QJsonObject> legacy;for(const auto& r:records){validate(r);legacy.append(r["schemaVersion"]==10 ? legacyRecord(r):r);}return csv(legacy);}
     const bool system=std::any_of(records.cbegin(),records.cend(),[](const auto& r){return r.contains("systemCalibration");});
     const bool physical=std::any_of(records.cbegin(),records.cend(),[](const auto& r){return r["schemaVersion"]==6;});
     const bool multi=std::any_of(records.cbegin(),records.cend(),[](const auto& r){return (r["schemaVersion"]==7 || r["schemaVersion"]==9);});

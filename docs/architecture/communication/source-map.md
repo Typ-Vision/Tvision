@@ -92,7 +92,7 @@ OECS yolu ve test injection native production kabulü oluşturmaz.
 | Editor | okuyucu 1–9; `requiredEditorSchema` explicit edit tabanı 6, dependency 7, reference/world 8; explicit multi-source 9 | Yeni alan/type için desteklenen üst sınır ve strict keys birlikte; bu kart bump yapmadı |
 | Execution identity | `visionflow.execution/30` (`ExecutionService.hpp::version`) | Yürütme semantiği değişirse bump; eski engine28 metinleri güncel değildir |
 | Typed payload / port | `ToolValues` 1 / `ToolResultCodec` 1 | Number=double ve Boolean=bool mevcut PortData'da; yeni Int64/Float64/envelope anlamı eski veri gibi okunmaz |
-| Terminal | `ProductionResultCodec::validate` 1–9; yeni single-source 3/4/5/6/8, whole-set 7 veya industrial 9 | Legacy okuyucu korunur; yeni bundle alanı schema9 exact alan setine sessiz eklenemez |
+| Terminal | `ProductionResultCodec::validate` 1–10; legacy single-source 3/4/5/6/8, whole-set 7 veya industrial 9; optional bundle terminal10 | Legacy okuyucu korunur; terminal10 baseSchemaVersion ve versioned resultBundle taşır |
 | Production archive envelope / event | `visionflow.production` 1; CYCLE_BEGIN ve PLC event 1 | Terminal immutable; ACK/delivery ayrı olay. Store kind whitelist genişletmesi gerekiyorsa açık yapılır |
 | Wire | `vf.socket/2`, `v=2`; strict STATUS/TRIGGER/ACK | Yeni TCP v3 ayrı endpoint; v2 PASS/FAIL anlamı korunur |
 
@@ -252,3 +252,19 @@ bilgisayarının tarihsel kanıtıdır. Her makinede gerçek checkout ve indeks 
 - `tests/publication_test.cpp` / `publication_contract`: local store, iki grup,
   alan/grup/payload limitleri, profile/contract/dependency hataları, Editor preview,
   cycle/validity ve Runtime trusted completion sınırları. Yeni transport fake'ı yok.
+
+
+## COMM-13 — terminal bundle (27 Ekim 2026)
+
+- Current terminal maximum **10**. Optional `resultBundle` schema1 and
+  `baseSchemaVersion` preserve existing single/whole-set/industrial evidence.
+  Enabled Result or Publish Data creates the extension; legacy paths stay 1–9.
+- `ProductionResultCodec::withBundle/validate/summary/csv` persists typed fields,
+  origins, decision, group validity, profile dependency, cycle/config/dependency
+  and canonical SHA256 bundleId. Missing scalar/spatial values remain null.
+- `ProductionRecipeService::record` and `MultiSourceRuntimeService::finish`
+  replace COMM-12's temporary gate. Terminal and bundle share one existing
+  `ProductionStore` atomic QSaveFile/hash envelope; retry reuses pending bytes.
+- `publication_contract` now covers recording failure/retry, restart/read,
+  idempotent append, Pose/missing fields, tamper and unchanged scalar CSV.
+  Network writes remain zero; delivery ledger/outbox is COMM-14.

@@ -355,7 +355,6 @@ void ProductionRecipeService::abandonCycle(quint64 ticket,const QString& reason)
 }
 void ProductionRecipeService::record(const CycleResult* r,const QString& error) {
     const auto& s=*cycle_.snapshot;
-    if(s.publication())fail(ProductionError::InvalidCompletion,"Publication terminal bundle codec required (COMM-13)");
     QJsonArray frames,tools;
     if(r) {
         for(const auto& f:r->frames)frames.append(QJsonObject{{"frameId",f.frameId},{"cycleId",f.cycleId},{"sourceId",f.sourceId},{"coordinateSystemId",f.coordinateSystemId},{"completedAtUtc",f.completedAtUtc.toString(Qt::ISODateWithMs)}});
@@ -386,6 +385,7 @@ void ProductionRecipeService::record(const CycleResult* r,const QString& error) 
         QString reason=r ? r->error:error,code; if(r)for(const auto& t:r->tools)if(t.toolId==source){if(!t.message.isEmpty())reason=t.message;code=t.errorCode;}
         pendingRecord_["industrialAcquisition"]=r && r->industrialEvidence.contains(source) && r->industrialEvidence[source] ? industrialCompletionEvidence(*r->industrialEvidence[source]):QJsonObject{{"schemaVersion",1},{"sourceToolId",source},{"status","NOT_ACQUIRED"},{"reason",reason},{"errorCode",code}};
     }
+    pendingRecord_=ProductionResultCodec::withBundle(pendingRecord_,s.recipe().definition,r);
     ProductionResultCodec::validate(pendingRecord_);
     persist("cycles",pendingRecord_["recordId"].toString(),pendingRecord_);
     records_.append(pendingRecord_);pendingRecord_={};

@@ -96,3 +96,25 @@ diagnostic=true ve reason içinde JSON özetiyle ayrı satır ekler. Whole-set C
 sourceId/frameId bağını korur. Özgün scalar satırlar ve genel karar semantiği
 aynıdır. Bu ek açıklama replay'i algoritmanın raster olmadan yeniden çalıştırılması
 veya fiziksel kabul değildir; mevcut archive hash'i dijital imza değildir.
+
+
+## Terminal10 / ResultBundle — COMM-13
+
+Enabled Result or Publish Data writes terminal10 with `baseSchemaVersion` and
+optional versioned `resultBundle` schema1. Other records retain their legacy
+schema and bytes. Base evidence remains schema3–9, validated recursively;
+whole-set publication dependency joins its frozen dependency hash.
+
+Bundle stores cycleId, configHash, dependencyId, OK/NOK/NOT_EVALUATED decision,
+groups and SHA256 bundleId over canonical compact content without bundleId.
+Each group carries logical/profile contract, intent/profile dependency identity,
+required/resultValid/reason and typed fields with origin. Missing scalar/Pose
+fields have null values, never false/identity defaults. Invalid groups cannot
+claim normal payload. Spatial assignment codec now accepts null transforms only
+with non-valid metadata; existing valid encodings remain unchanged.
+
+Terminal and bundle are one ProductionStore payload committed using the existing
+QSaveFile path. Recording failure freezes the same ID/content; retry acquires no
+new frame. Restart reads history only. Summary includes bundle identity/decision;
+CSV continues to export the exact base scalar columns. No delivery or ACK state
+is written into this immutable payload; outbox begins at COMM-14.
