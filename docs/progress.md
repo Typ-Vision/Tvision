@@ -4,6 +4,9 @@
 
 ## Devam noktası
 
+**[DOC-VAR-01](archive/2026-10-28-doc-var-01.md):**
+[Değişken rehberi](variables-usage.md).
+
 **[COMM-37 tamam](archive/2026-10-28-comm-37.md):** UI 164/core 127 geçti;
 her birinde dış plaka skipped. Temel faz kapandı; cihaz varsa COMM-38.
 [36](archive/2026-10-28-comm-36.md), [23](archive/2026-10-28-comm-23.md),
@@ -20,15 +23,13 @@ Editor/Load ağ açmaz; tombstone silinmez; fiziksel kabul açık.
 **[COMM-10](archive/2026-10-27-comm-10.md):** Missing-first karar/export.
 **[COMM-09](archive/2026-10-27-comm-09.md):** Frozen cycle variable context/digest.
 
-**COMM-02–08 tamam:** scalar/spatial, variable katalog/komutları,
-atomik evaluator/DAG/cache ve çok satırlı Editor UI.
-[Kabul](archive/2026-10-26-comm-08.md); UUID/type/unit/frame/enum/no-op/hash korunur.
-Editor dışarı yazmaz; değerler tanımda tutulmaz.
-Circle regresyonu COMM-37’de kapandı.
+**[COMM-02–08 tamam](archive/2026-10-26-comm-08.md):** scalar/spatial,
+katalog, atomik atama/DAG/cache/UI; UUID/type/unit/frame/enum/no-op/hash korunur.
+Editor dışarı yazmaz; değerler tanımda tutulmaz. Circle: COMM-37’de kapandı.
 
-[COMM-01 kaynak haritası](architecture/communication/source-map.md),
-[Plan](architecture/communication/README.md):
-COMM-01–23 → 36 → 37 tamam; opsiyonel Modbus 24–28, OPC UA 29–33, sample 34, FANUC 35.
+[Kaynak haritası](architecture/communication/source-map.md),
+[Plan](architecture/communication/README.md): 01–23 → 36 → 37 tamam;
+opsiyonel Modbus 24–28, OPC UA 29–33, sample 34, FANUC 35.
 Çevrim sonunda gönderim; akış ortası gönder/bekle ayrı kapsam. Fiziksel COMM-38,
 Hand-eye/robot hareketi ayrı; araştırma notları plan indeksindedir.
 
