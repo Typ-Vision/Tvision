@@ -1,6 +1,7 @@
 # COMM-19 — Retry, kapasite ve namespace politikası
 
-Durum: başlamadı. Önerilen düzey: **medium**. Önkoşul: **COMM-18** tamam.
+Durum: yazılım kabulü tamamlandı ([kapanış](../../archive/2026-10-27-comm-19.md)).
+Önerilen düzey: **medium**. Önkoşul: **COMM-18** tamam.
 Bir oturumda yalnız bu kart; paralel uygulayıcı yok.
 
 ## Oku

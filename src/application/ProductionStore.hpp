@@ -11,6 +11,7 @@ public:
     QVector<QJsonObject> recent(const QString& kind,int limit=128) const;
     QJsonObject get(const QString& kind,const QString& id) const;
     QVector<QJsonObject> all(const QString& kind) const;
+    void requireCapacity(int records,qint64 bytes) const;
 private:
     QString directory_;
 };

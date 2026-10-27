@@ -40,7 +40,9 @@ int main(int argc,char** argv){QCoreApplication app(argc,argv);try{
  RuntimeService runtime(archive,catalog,RuntimeIdentity::localEngineer(),{},{},{},[&](const Recipe& r){MultiSourceDependencies d;for(const auto& t:editorTools(r.definition))if(t.enabled && t.kind=="image_file")d.sources[t.id]={};d.publication=PublicationService::capture(r.definition,profiles);return d;});
  RuntimeCoordinator coordinator(runtime);InputSnapshotStore inputs;QString fail;DeliveryStore ledger(archive,[&](const QString& boundary){if(boundary==fail)throw std::runtime_error("injected disk boundary");});TriggerRouter router(coordinator,runtime,inputs,ledger,[]{return QString{};});
  CommunicationTcpEndpoint server(runtime,coordinator,router,inputs,ledger,archive,catalog);check(!server.listening(),"no constructor/Load network");
- CommunicationTcpOptions options;options.workcell="cell";options.project=p.project().id;options.endpoint=profileId;options.peer="configured-peer";options.outputGroupId=group.id;ValueEnvelope input;input.value=false;input.validity=ValueValidity::Valid;options.inputs={{"ready",{input,60000}}};server.listen(options);profile.port=server.port();profile.revision=2;profiles.save({{profileId,profile}});
+ const bool retryCapacity=app.arguments().contains("--retry-capacity");
+ const bool optionalBacklog=app.arguments().contains("--optional-backlog");
+ CommunicationTcpOptions options;options.workcell="cell";options.project=p.project().id;options.endpoint=profileId;options.peer="configured-peer";options.outputGroupId=group.id;if(retryCapacity){options.ackTimeoutMs=100;options.retryCount=1;}if(optionalBacklog){options.required=false;options.ackTimeoutMs=100;options.retryCount=0;}ValueEnvelope input;input.value=false;input.validity=ValueValidity::Valid;options.inputs={{"ready",{input,retryCapacity?3600000:60000}}};server.listen(options);profile.port=server.port();profile.revision=2;profiles.save({{profileId,profile}});
  PlcRuntimeSocket v2;PlcSocketOptions old;old.port=server.port();bool collision=false;try{v2.listen(old);}catch(...){collision=true;}check(collision && !v2.listening(),"v2/v3 profile port collision explicit");old.port=0;v2.listen(old);
  coordinator.load(*p.activeRecipe(),dir.path(),RuntimeTrigger::SoftwareTrigger);coordinator.start();
  // Separate v2 endpoint keeps its legacy HELLO schema.
@@ -48,6 +50,38 @@ int main(int argc,char** argv){QCoreApplication app(argc,argv);try{
  Peer peer;peer.connectTo(server.port());const auto config=QString::fromLatin1(runtime.active()->validation().contentId);
  auto put=[&](QString id="snapshot"){peer.send({{"type","INPUT"},{"snapshotId",id},{"revision","1"},{"recipeId",p.activeRecipe()->id},{"configId",config},{"fields",QJsonArray{CommunicationWireCodec::encodeField("ready",input)}},{"sourceTime","remote"},{"clockId","peer-clock"}});peer.take("STATUS");};put();
  auto request=[&](QString id){return QJsonObject{{"type","TRIGGER"},{"requestId",id},{"sequence","1"},{"recipeId",p.activeRecipe()->id},{"configId",config},{"inputSnapshotId","snapshot"},{"inputRevision","1"}};};
+ if(optionalBacklog){
+  int cycles=0;server.completed=[&](const CycleResult&){++cycles;};
+  peer.send(request("a"));peer.take("ACCEPTED");const auto first=peer.take("RESULT","a");
+  peer.send(request("b"));peer.take("ACCEPTED");until([&]{return cycles==2;},"optional second cycle without ACK");
+  check(!coordinator.deliveryPending(),"optional pending does not block execution");
+  for(const auto& message:peer.messages)check(message["type"]!="RESULT","only one result in-flight");
+  server.started=[&]{peer.ack(first);};peer.send(request("c"));peer.take("ACCEPTED");peer.take("ACKED","a");until([&]{return cycles==3;},"ACK during next optional cycle");
+  check(server.state()!="RECOVERY_REQUIRED","active begin is not crash recovery");
+  auto second=peer.take("RESULT","b");peer.ack(second);peer.take("ACKED","b");auto third=peer.take("RESULT","c");peer.ack(third);peer.take("ACKED","c");
+  check(cycles==3 && server.state()=="READY","optional backlog drains one at a time");
+  server.stop();v2.stop();QTextStream(stdout)<<checks<<" optional backlog checks passed\n";return 0;
+ }
+ if(retryCapacity){
+  int cycles=0,acquisitions=0;server.completed=[&](const CycleResult& r){++cycles;acquisitions+=r.acquisitions;};
+  peer.send(request("lost-ack"));peer.take("ACCEPTED");const auto initial=peer.take("RESULT");const auto retry=peer.take("RESULT");check(initial==retry,"automatic retry exact result");
+  until([&]{return server.state()=="ACK_TIMEOUT";},"bounded retry exhaustion");check(cycles==1 && acquisitions==1,"retry never executes twice");
+  peer.send(request("blocked"));check(peer.take("INVALID")["reason"]=="DELIVERY_PENDING","required pending blocks cycle");
+  QElapsedTimer silence;silence.start();while(silence.elapsed()<250){QCoreApplication::processEvents();QThread::msleep(1);}check(peer.messages.isEmpty(),"no automatic retries after budget");
+  peer.disconnect();peer.connectTo(server.port());const auto reconnected=peer.take("RESULT");check(CommunicationWireCodec::resultPayload(reconnected)==CommunicationWireCodec::resultPayload(initial),"reconnect rearms same durable payload");
+  // Late ACK after exhaustion/reconnect is still authoritative.
+  peer.ack(reconnected);peer.take("ACKED");check(cycles==1,"late ACK no new cycle");
+  for(int n=0;n<129;++n){const auto id="continuous-"+QString::number(n);peer.send(request(id));peer.take("ACCEPTED");const auto result=peer.take("RESULT",id);peer.ack(result);peer.take("ACKED",id);}
+  check(cycles==130 && acquisitions==130 && server.state()=="READY","more than 128 ACKed v3 requests have no RAM session limit");
+  peer.send(request("lost-ack"));const auto old=peer.take("RESULT","lost-ack");check(CommunicationWireCodec::resultPayload(old)==CommunicationWireCodec::resultPayload(initial) && cycles==130,"old tombstone cannot reuse request key");
+  server.stop();v2.stop();
+  auto from=TriggerRouter::deliveryRequest({options.workcell,options.project,options.endpoint,options.peer,"lost-ack",p.activeRecipe()->id,config,"snapshot",1,1});auto to=from;to.peer="peer-generation-2";
+  ledger.rolloverNamespace(from,to,"operator and peer explicitly agreed generation 2");
+  bool retired=false;try{ledger.inspect(from);}catch(...){retired=true;}check(retired,"drained namespace rejects old replay");
+  retired=false;try{server.listen(options);}catch(...){retired=true;}check(retired && !server.listening(),"retired namespace cannot listen/re-arm");
+  check(ledger.inspect(to).state=="ABSENT","new peer generation explicitly permits fresh key");
+  QTextStream(stdout)<<checks<<" retry/capacity checks passed\n";return 0;
+ }
  // Exact snapshot revision, input profile authority and current config precede acquisition.
  auto wrong=request("wrong-revision");wrong["inputRevision"]="2";peer.send(wrong);check(peer.take("INVALID")["reason"]=="INPUT_MISMATCH" && !runtime.busy(),"exact input revision before acquisition");
  auto unknown=CommunicationWireCodec::encodeField("unconfigured",input);peer.send({{"type","INPUT"},{"snapshotId","unknown"},{"revision","1"},{"recipeId",p.activeRecipe()->id},{"configId",config},{"fields",QJsonArray{unknown}},{"sourceTime","remote"},{"clockId","clock"}});peer.take("ERROR");

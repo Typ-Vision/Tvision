@@ -23,6 +23,7 @@ QJsonObject terminal(){
 }
 QByteArray payload(const QJsonObject& t){return CommunicationWireCodec::resultPayload(CommunicationWireCodec::sealResult({{"v",3},{"type","RESULT"},{"sessionId","old-session"},{"requestId","request"},{"sequence","1"},{"recipeId","recipe"},{"configId","config"},{"inputSnapshotId","snapshot"},{"inputRevision","1"},{"resultId",t["resultBundle"].toObject()["bundleId"]},{"cycleId",t["cycleId"]},{"execution","ERROR"},{"decision","NOT_EVALUATED"},{"resultValid",false},{"fields",QJsonArray{}},{"error","fixture failure"}}));}
 QJsonObject receive(QTcpSocket& peer){QElapsedTimer timer;timer.start();while(!peer.canReadLine() && timer.elapsed()<5000){QCoreApplication::processEvents();QThread::msleep(1);}check(peer.canReadLine(),"wire response");auto b=peer.readLine();b.chop(1);return CommunicationWireCodec::decode(b);}
+void receiveAcknowledged(QTcpSocket& peer,const QByteArray& expected){for(int n=0;n<20;++n){const auto o=receive(peer);if(o["type"]=="ACKED")return;check(o["type"]=="RESULT" && CommunicationWireCodec::resultPayload(o)==expected,"only exact in-flight retry may precede ACKED");}throw std::runtime_error("ACKED missing after retries");}
 }
 int main(int argc,char** argv){QCoreApplication app(argc,argv);try{
  const auto args=app.arguments();
@@ -52,7 +53,7 @@ int main(int argc,char** argv){QCoreApplication app(argc,argv);try{
     QJsonObject trigger{{"v",3},{"type","TRIGGER"},{"sessionId",hello["sessionId"]},{"requestId",r.requestId},{"sequence","1"},{"recipeId",r.recipeId},{"configId",r.configId},{"inputSnapshotId",r.inputSnapshotId},{"inputRevision","1"}};
     peer.write(CommunicationWireCodec::encode(trigger));const auto duplicate=receive(peer);check(CommunicationWireCodec::resultPayload(duplicate)==before.payload,"wire duplicate across process exact replay without INPUT or Run");
     if(boundary=="ACK_COMMITTED"){
-     peer.write(CommunicationWireCodec::encode(QJsonObject{{"v",3},{"type","ACK"},{"sessionId",hello["sessionId"]},{"requestId",r.requestId},{"resultId",duplicate["resultId"]},{"payloadHash",duplicate["payloadHash"]}}));check(receive(peer)["type"]=="ACKED","ack tombstone duplicate remains idempotent");
+     peer.write(CommunicationWireCodec::encode(QJsonObject{{"v",3},{"type","ACK"},{"sessionId",hello["sessionId"]},{"requestId",r.requestId},{"resultId",duplicate["resultId"]},{"payloadHash",duplicate["payloadHash"]}}));receiveAcknowledged(peer,before.payload);
     }
    }
    endpoint.resumeDelivery(r);const auto after=store.inspect(d);
@@ -64,7 +65,7 @@ int main(int argc,char** argv){QCoreApplication app(argc,argv);try{
     if(boundary=="PENDING")check(before.payload==after.payload,"pending restart byte identity");
     const auto t=store.recoveryTerminal(d);check(payload(t)==after.payload,"terminal gap reconstruction canonical bytes");
     if(boundary=="PENDING"){auto unresolved=d;unresolved.requestId="unfinished-other";store.request(unresolved);}
-    QJsonObject ack{{"v",3},{"type","ACK"},{"sessionId",hello["sessionId"]},{"requestId",r.requestId},{"resultId",wire["resultId"]},{"payloadHash",wire["payloadHash"]}};peer.write(CommunicationWireCodec::encode(ack));check(receive(peer)["type"]=="ACKED","restart exact ACK commit");check(coordinator.deliveryPending()==(boundary=="PENDING"),"ACK preserves other unresolved request barrier");if(boundary=="PENDING")check(endpoint.state()=="RECOVERY_REQUIRED","ACK cannot clear unrelated recovery");
+    QJsonObject ack{{"v",3},{"type","ACK"},{"sessionId",hello["sessionId"]},{"requestId",r.requestId},{"resultId",wire["resultId"]},{"payloadHash",wire["payloadHash"]}};peer.write(CommunicationWireCodec::encode(ack));receiveAcknowledged(peer,after.payload);check(coordinator.deliveryPending()==(boundary=="PENDING"),"ACK preserves other unresolved request barrier");if(boundary=="PENDING")check(endpoint.state()=="RECOVERY_REQUIRED","ACK cannot clear unrelated recovery");
    }
   }
   check(!runtime.busy() && coordinator.state()!=RuntimeState::Running,"recovery never starts execution");endpoint.stop();

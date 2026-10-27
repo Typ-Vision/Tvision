@@ -4,14 +4,12 @@
 
 ## Devam noktası
 
-**[COMM-18](archive/2026-10-27-comm-18.md):** V3 restart/dedup/explicit recovery.
-**Sonraki COMM-19.** Dev; retry açık.
-[17](archive/2026-10-27-comm-17.md): Runtime/outbox/ACK;
-[16](archive/2026-10-27-comm-16.md): codec/LF/hash;
-[15](archive/2026-10-27-comm-15.md): input/router;
-[14](archive/2026-10-27-comm-14.md): outbox;
-[13](archive/2026-10-27-comm-13.md): bundle;
-[12](archive/2026-10-27-comm-12.md): profil/intent. Editor/Load ağ açmaz.
+**[COMM-19](archive/2026-10-27-comm-19.md):** V3 bounded retry/kapasite/namespace.
+**Sonraki COMM-20.** Explicit dev API; normal UI aktivasyonu COMM-23.
+[18](archive/2026-10-27-comm-18.md): restart/dedup/recovery;
+[17](archive/2026-10-27-comm-17.md): Runtime/outbox/ACK.
+COMM-12–16: profil/intent/bundle/outbox/input-router/codec tamam.
+Editor/Load ağ açmaz; tombstone otomatik silinmez, fiziksel kabul açık.
 
 **[COMM-11](archive/2026-10-27-comm-11.md):** Result DAG/ALL/ANY.
 **[COMM-10](archive/2026-10-27-comm-10.md):** Missing-first karar/export.

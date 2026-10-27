@@ -10,7 +10,10 @@ namespace {QString uuid(){return QUuid::createUuid().toString(QUuid::WithoutBrac
 CommunicationTcpEndpoint::CommunicationTcpEndpoint(RuntimeService& r,RuntimeCoordinator& c,TriggerRouter& router,InputSnapshotStore& i,DeliveryStore& d,QString archive,QString catalog,QObject* parent)
     :QObject(parent),runtime_(r),coordinator_(c),router_(router),inputs_(i),ledger_(d),archive_(std::move(archive)),catalog_(std::move(catalog)) {
     clock_.start();connect(&server_,&QTcpServer::newConnection,this,[this]{acceptPeer();});
-    timer_.setInterval(50);connect(&timer_,&QTimer::timeout,this,[this]{try{framer_.tick(clock_.elapsed());}catch(...){disconnectPeer();}});
+    timer_.setInterval(50);connect(&timer_,&QTimer::timeout,this,[this]{
+        try{framer_.tick(clock_.elapsed());}catch(...){disconnectPeer();return;}
+        try{tickDelivery();}catch(...){fault_="DELIVERY_FAULT";disconnectPeer();}
+    });
 }
 CommunicationTcpEndpoint::~CommunicationTcpEndpoint(){server_.close();timer_.stop();disconnectPeer();if(cancel_)cancel_->store(true);if(watcher_){watcher_->disconnect(this);watcher_->waitForFinished();}}
 void CommunicationTcpEndpoint::owner() const {require(thread()==QThread::currentThread(),"TCP endpoint owner thread required");}
@@ -18,6 +21,8 @@ void CommunicationTcpEndpoint::listen(const CommunicationTcpOptions& o){
     owner();require(!listening() && !watcher_ && !pending_ && outstanding_.isEmpty(),"TCP endpoint has active work");
     for(const auto& id:{o.workcell,o.project,o.endpoint,o.peer})require(!id.isEmpty() && id.size()<=128,"Explicit endpoint/peer identity required");
     require(o.inputs.size()<=64,"Input profile too large");for(const auto& input:o.inputs)require(input.maxAgeMs>0,"Input maxAge required");
+    require(o.ackTimeoutMs>=100 && o.ackTimeoutMs<=60000 && o.retryCount>=0 && o.retryCount<=10,"Invalid retry policy");
+    ledger_.requireNamespace({o.workcell,o.project,o.endpoint,o.peer,"namespace-check","namespace-check"});
     // No auto listen during construction/Load. An occupied v2/v3 profile is an error.
     require(server_.listen(o.address,o.port),qPrintable(server_.errorString()));options_=o;restoreDelivery();timer_.start();
 }
@@ -28,8 +33,10 @@ QVector<DeliveryRecovery> CommunicationTcpEndpoint::inspectRecovery() const {
 }
 void CommunicationTcpEndpoint::restoreDelivery(){
     recoveryState_.clear();bool pending=false;
+    for(auto i=entries_.begin();i!=entries_.end();)if(ledger_.inspect(TriggerRouter::deliveryRequest(i->trigger)).state=="ACK_COMMITTED")i=entries_.erase(i);else ++i;
     try{for(const auto& item:inspectRecovery()){
         const auto& d=item.request;const auto& s=item.status;
+        if(d.requestId==outstanding_ && (watcher_ || pending_))continue;
         if(s.state!="ACK_COMMITTED"){pending=true;if(s.state=="RECOVERY_REQUIRED")recoveryState_="RECOVERY_REQUIRED";}
         if(s.payload.isEmpty())continue;
         const auto o=QJsonDocument::fromJson(s.payload).object();
@@ -38,7 +45,7 @@ void CommunicationTcpEndpoint::restoreDelivery(){
         // Tombstones remain on disk; only pending deliveries need resident state.
         if(s.state!="ACK_COMMITTED")entries_[d.requestId]={r,s.cycleId};
     }}catch(...){recoveryState_="RECOVERY_REQUIRED";pending=true;}
-    coordinator_.setDeliveryPending(pending);
+    coordinator_.setDeliveryPending((options_.required && pending)||!recoveryState_.isEmpty());
 }
 void CommunicationTcpEndpoint::resumeDelivery(const TriggerRequest& r){
     owner();require(!watcher_ && !pending_ && !runtime_.busy(),"Recovery requires idle execution");require(r.workcell==options_.workcell && r.project==options_.project && r.endpoint==options_.endpoint && r.peer==options_.peer,"Foreign recovery namespace");
@@ -59,9 +66,11 @@ QString CommunicationTcpEndpoint::state() const {
     owner();if(!listening())return "STOPPED";if(!fault_.isEmpty())return fault_;if(!recoveryState_.isEmpty())return recoveryState_;
     if(pending_ || coordinator_.recordingPending())return "RECORDING_PENDING";
     if(watcher_ || runtime_.busy())return "BUSY";
-    if(!outstanding_.isEmpty() || coordinator_.deliveryPending())return "WAIT_ACK";
+    if(retryExhausted_ && options_.required)return "ACK_TIMEOUT";
+    if((options_.required && !outstanding_.isEmpty()) || coordinator_.deliveryPending())return "WAIT_ACK";
     if(!peer_ || peer_->state()!=QAbstractSocket::ConnectedState || peer_->bytesToWrite())return "NOT_READY";
     if(entries_.size()>=128)return "QUEUE_FULL";
+    const auto capacity=ledger_.admission({options_.workcell,options_.project,options_.endpoint,options_.peer,"capacity-check","capacity-check"},options_.required,true);if(!capacity.isEmpty())return capacity;
     if(coordinator_.state()!=RuntimeState::Running || coordinator_.mode()!=RuntimeTrigger::SoftwareTrigger || runtime_.experimental())return "NOT_READY";
     try{runtime_.requireReady();}catch(...){return "NOT_READY";}return "READY";
 }
@@ -69,7 +78,7 @@ QJsonObject CommunicationTcpEndpoint::status(const QString& type)const {const au
 void CommunicationTcpEndpoint::disconnectPeer(){if(peer_){auto* p=peer_.data();peer_.clear();p->disconnect(this);p->abort();p->deleteLater();}framer_.reset();}
 void CommunicationTcpEndpoint::acceptPeer(){while(server_.hasPendingConnections()){
     auto* p=server_.nextPendingConnection();if(peer_){p->abort();p->deleteLater();continue;}
-    peer_=p;session_=uuid();framer_.reset();p->setReadBufferSize(CommunicationWireCodec::maxLineBytes+1);
+    peer_=p;session_=uuid();framer_.reset();retryRequest_.clear();retryExhausted_=false;retries_=0;p->setReadBufferSize(CommunicationWireCodec::maxLineBytes+1);
     connect(p,&QTcpSocket::readyRead,this,[this,p]{if(peer_==p)readPeer();});
     connect(p,&QTcpSocket::disconnected,this,[this,p]{if(peer_==p){peer_.clear();framer_.reset();}p->deleteLater();});
     send(status("HELLO"));
@@ -113,6 +122,8 @@ void CommunicationTcpEndpoint::trigger(const QJsonObject& o){
         if(durable.payload.isEmpty()){send({{"type","INVALID"},{"requestId",r.requestId},{"reason","RECOVERY_REQUIRED"}});return;}
         const Entry e{r,durable.cycleId};replay(e);return;
     }
+    const auto capacity=ledger_.admission(d,options_.required,peer_ && peer_->state()==QAbstractSocket::ConnectedState);
+    if(!capacity.isEmpty()){send({{"type","INVALID"},{"requestId",r.requestId},{"reason",capacity}});return;}
     if(!recoveryState_.isEmpty()){send({{"type","INVALID"},{"requestId",r.requestId},{"reason",recoveryState_}});return;}
     if(!fault_.isEmpty() || runtime_.experimental()){send({{"type","INVALID"},{"requestId",r.requestId},{"reason",runtime_.experimental()?QString("EXPERIMENTAL_OUTPUT_BLOCKED"):fault_}});return;}
     if(!options_.outputGroupId.isEmpty()) {
@@ -128,7 +139,7 @@ void CommunicationTcpEndpoint::trigger(const QJsonObject& o){
     auto admission=router_.admit(r,options_.inputs,[&]{
         // Every durable boundary precedes worker entry/acquisition. A failed
         // begin remains recovery evidence, never an automatic second execution.
-        try{journalStarted=true;ledger_.request(d);ledger_.begin(d,reserved);}catch(...){fault_="RECOVERY_REQUIRED";throw;}
+        try{journalStarted=true;ledger_.request(d,options_.required,true);ledger_.begin(d,reserved);}catch(...){fault_="RECOVERY_REQUIRED";throw;}
     },"vf.socket/3");
     if(!admission.accepted()){
         // Durable admission evidence never authorizes a second execution.
@@ -138,7 +149,7 @@ void CommunicationTcpEndpoint::trigger(const QJsonObject& o){
         send({{"type","INVALID"},{"requestId",r.requestId},{"reason",reason.startsWith("CONFLICT")?QString("REQUEST_CONFLICT"):!QRegularExpression("^[A-Za-z0-9_.:-]{1,128}$").match(reason).hasMatch()?QString("ADMISSION_FAILED"):reason}});return;
     }
     entries_.insert(r.requestId,{r,reserved});outstanding_=r.requestId;cycle_=*admission.cycle;cycle_.cycleId=reserved;
-    coordinator_.setDeliveryPending(true);cancel_=coordinator_.cancellation();
+    coordinator_.setDeliveryPending(options_.required);cancel_=coordinator_.cancellation();
     watcher_=new QFutureWatcher<CycleResult>(this);
     connect(watcher_,&QFutureWatcher<CycleResult>::finished,this,[this]{auto* done=watcher_;watcher_=nullptr;try{pending_=done->result();if(cancel_ && cancel_->load())RuntimeService::suppressCancelled(cycle_,*pending_);}catch(...){pending_.reset();fault_="EXECUTION_FAULT";}done->deleteLater();if(pending_)retryRecording();});
     const auto cycle=cycle_;const auto catalog=catalog_;const auto cancel=cancel_;
@@ -157,15 +168,33 @@ void CommunicationTcpEndpoint::retryRecording(){owner();if(!pending_)return;
         if(terminal_.isEmpty()){for(const auto& t:runtime_.records())if(t["cycleId"]==cycle_.cycleId){terminal_=t;break;}require(!terminal_.isEmpty(),"Committed terminal missing");ProductionResultCodec::validate(terminal_);}
         const auto& e=entries_[outstanding_];if(sealed_.isEmpty())sealed_=result(e,terminal_);
         ledger_.commit(TriggerRouter::deliveryRequest(e.trigger),terminal_,CommunicationWireCodec::resultPayload(sealed_));
-        const auto completedResult=*pending_;pending_.reset();terminal_={};sealed_={};fault_.clear();replay(e);if(completed)completed(completedResult);
+        const auto completedResult=*pending_;pending_.reset();terminal_={};sealed_={};fault_.clear();tickDelivery();if(completed)completed(completedResult);
     }catch(...){fault_="RECORDING_PENDING";}
 }
 void CommunicationTcpEndpoint::replay(const Entry& e){const auto d=TriggerRouter::deliveryRequest(e.trigger);const auto s=ledger_.inspect(d);
     if(s.payload.isEmpty()){send({{"type","BUSY"},{"requestId",e.trigger.requestId},{"sequence",QString::number(e.trigger.sequence)},{"cycleId",e.cycleId}});return;}
     if(s.state=="ACK_RECEIVED"){error("ACK_COMMIT_PENDING",e.trigger.requestId);return;}
-    if(s.dispatchable())ledger_.attempt(d);
+    if(s.dispatchable()){
+        if(!peer_ || peer_->state()!=QAbstractSocket::ConnectedState)return;
+        // Optional backlog has one transport in-flight, even when execution is free.
+        if(!retryRequest_.isEmpty() && retryRequest_!=e.trigger.requestId)return;
+        ledger_.attempt(d);
+        if(retryRequest_.isEmpty()){retryRequest_=e.trigger.requestId;retries_=0;retryExhausted_=false;}
+        retryDeadline_=clock_.elapsed()+options_.ackTimeoutMs;
+    }
     // Payload comes exclusively from durable bytes, including acknowledged replay.
     auto o=QJsonDocument::fromJson(s.payload).object();o["type"]="RESULT";o["payloadHash"]=s.payloadHash;send(o);
+}
+void CommunicationTcpEndpoint::tickDelivery(){
+    if(!peer_ || peer_->state()!=QAbstractSocket::ConnectedState)return;
+    if(retryRequest_.isEmpty()){
+        if(pending_ || watcher_)return;
+        for(const auto& e:entries_)if(ledger_.inspect(TriggerRouter::deliveryRequest(e.trigger)).dispatchable()){replay(e);break;}
+        return;
+    }
+    if(retryExhausted_ || clock_.elapsed()<retryDeadline_)return;
+    if(retries_>=options_.retryCount){retryExhausted_=true;return;}
+    ++retries_;replay(entries_.value(retryRequest_));
 }
 void CommunicationTcpEndpoint::acknowledge(const QJsonObject& o){const auto id=o["requestId"].toString();
     std::optional<DeliveryRequest> request;
@@ -174,6 +203,7 @@ void CommunicationTcpEndpoint::acknowledge(const QJsonObject& o){const auto id=o
     require(request.has_value(),"Unknown ACK");const auto d=*request;const auto s=ledger_.inspect(d);
     require(!s.payload.isEmpty() && QJsonDocument::fromJson(s.payload).object()["resultId"]==o["resultId"] && s.payloadHash==o["payloadHash"],"ACK exact result/hash mismatch");
     ledger_.acknowledge(d,s.payloadHash);ledger_.commitAcknowledgement(d);
+    if(retryRequest_==id){retryRequest_.clear();retryExhausted_=false;retries_=0;}
     if(outstanding_==id){outstanding_.clear();fault_.clear();}restoreDelivery();
     send({{"type","ACKED"},{"requestId",id},{"resultId",o["resultId"]},{"payloadHash",s.payloadHash}});
 }

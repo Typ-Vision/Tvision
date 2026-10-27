@@ -33,6 +33,8 @@ AdmissionResult TriggerRouter::admit(const TriggerRequest& r,const QMap<QString,
     try {
         const auto d=deliveryRequest(r);const auto k=key({d.workcell,d.project,d.endpoint,d.peer,d.requestId});
         const auto durable=ledger_.inspect(d);if(durable.state!="ABSENT")return {"DUPLICATE",durable.state};
+        // Durable v3 dedup owns completed identities; RAM remembers only legacy
+        // admissions that lack a delivery ledger.
         auto prior=admitted_.constFind(k);if(prior!=admitted_.cend())return {*prior==d.fingerprint?"DUPLICATE":"CONFLICT",*prior==d.fingerprint?"ADMITTED":""};
         if(coordinator_.state()!=RuntimeState::Running)return {"NOT_RUNNING"};
         if(coordinator_.mode()!=RuntimeTrigger::SoftwareTrigger)return {"TRIGGER_SOURCE_DISABLED"};
@@ -50,12 +52,12 @@ AdmissionResult TriggerRouter::admit(const TriggerRequest& r,const QMap<QString,
             if(!sameType(*value,i->shape))return {"INPUT_TYPE"};
             if(!inputs_.fresh(*input,i->maxAgeMs))return {"INPUT_STALE"};
         }
-        if(admitted_.size()>=128)return {"QUEUE_FULL"};
+        if(protocol!="vf.socket/3" && admitted_.size()>=128)return {"QUEUE_FULL"};
         // The existing begin path is the sole cycle/permission/recording/camera gate.
         if(beforeBegin)beforeBegin();
         const QJsonObject communication{{"protocol",protocol},{"endpoint",r.endpoint},{"peer",r.peer},{"requestId",r.requestId},{"sequence",QString::number(r.sequence)},{"inputSnapshotId",r.inputSnapshotId},{"inputRevision",QString::number(r.inputRevision)}};
         auto cycle=coordinator_.begin(RuntimeTrigger::SoftwareTrigger,communication);
-        admitted_.insert(k,d.fingerprint);return {{},{},cycle,input};
+        if(protocol!="vf.socket/3")admitted_.insert(k,d.fingerprint);return {{},{},cycle,input};
     }catch(const ProductionException& e){return {e.code()==ProductionError::Busy?"BUSY":QString::fromUtf8(e.what())};}
     catch(const std::exception& e){return {QString::fromUtf8(e.what())};}
 }

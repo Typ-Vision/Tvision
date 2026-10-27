@@ -15,6 +15,8 @@ struct CommunicationTcpOptions {
     QString workcell,project,endpoint,peer,outputGroupId;
     QMap<QString,InputRequirement> inputs;
     EnumDefinitions enums;
+    bool required=true;
+    int ackTimeoutMs=2000,retryCount=3;
 };
 // Explicit development endpoint. All methods and Qt Network objects stay on the
 // Runtime owner thread; the worker captures only an immutable production lease.
@@ -43,6 +45,8 @@ private:
     std::shared_ptr<std::atomic_bool> cancel_;
     struct Entry {TriggerRequest trigger;QString cycleId;};QMap<QString,Entry> entries_;
     QString recoveryState_;
+    QString retryRequest_;qint64 retryDeadline_=0;int retries_=0;bool retryExhausted_=false;
+    void tickDelivery();
     void restoreDelivery();
     QString outstanding_;QJsonObject terminal_,sealed_;
     void owner() const;

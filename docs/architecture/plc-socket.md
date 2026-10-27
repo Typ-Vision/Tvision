@@ -117,7 +117,7 @@ v3 typed envelope'dur. Simulator v/session/type/recipe/config'i HELLO'dan doldur
 literal değeri uyuşmazsa exit 3; gerçek Runtime sonucu üretir, sahte vision sonucu
 oluşturmaz. `--duplicate`, `--reconnect`, `--drop-ack`, `--ack-delay` kullanılabilir.
 V3 simulator `--resume` kapalıdır; uygulama servisinde explicit recovery aşağıdadır.
-Timeout/retry politikası COMM-19, normal kullanıcı aktivasyonu COMM-23 kabulündedir. Mevcut v2
+Timeout/retry politikası aşağıdaki COMM-19 sözleşmesindedir; normal kullanıcı aktivasyonu COMM-23 kabulündedir. Mevcut v2
 komutları ve wire alanları korunur. Test `communication_tcp_runtime` gerçek
 localhost Runtime/bundle/outbox/ACK ve ayrı v2 profilini sınar; fiziksel kabul değildir.
 
@@ -141,9 +141,34 @@ ACK_RECEIVED kalıntısı yalnız mevcut durable receipt üzerinden ACK_COMMITTE
 ilerletilebilir. ACK_COMMITTED replay acquisition/consumer effect yaratmaz;
 exact tekrar ACK idempotent ACKED verir. Bir ACK diğer unresolved request'in
 bariyerini kaldırmaz. Bu API normal UI'ya bağlı değildir; repair UI COMM-22,
-automatic timeout/retry COMM-19 ve fiziksel kabul COMM-38 kapsamındadır.
+automatic timeout/retry aşağıdaki COMM-19 kapsamındadır; fiziksel kabul COMM-38'dir.
 
 `delivery_recovery_contract` ayrı child process'i intent, begin, terminal/outbox
 arası, pending, ACK_RECEIVED ve ACK_COMMITTED sınırlarında gerçekten sonlandırır;
 yeni Runtime ile edinimsiz recovery ve localhost byte replay'i doğrular.
 Genel crash dayanıklılığı veya uçtan uca exactly-once garantisi değildir.
+
+## COMM-19 — Bounded v3 retry ve namespace
+
+Explicit `CommunicationTcpOptions` required/default=true, ackTimeoutMs/default=2000
+(100–60000), retryCount/default=3 (0–10) taşır. Monoton QElapsedTimer deadline'ı
+50 ms owner-thread poll ile denetlenir. İlk RESULT + en çok retryCount otomatik
+tekrar; retry aynı persisted canonical bytes/resultId/hash'i kullanır. Tükenince
+ACK_TIMEOUT/pending korunur; geç ACK commit kabul edilir. Offline attempt
+tüketmez; yeni bağlantı fresh session + yeni retry bütçesiyle pending RESULT'u
+gönderir. Yeni cycle/acquisition başlatmaz. Optional backlog bir seferde tek
+RESULT yollar; ACK commit sonrası sıradaki pending'e geçer.
+
+Required offline/unresolved admission kapalıdır; optional endpoint başına 128
+unresolved request sınırında QUEUE_FULL verir. ACK tombstone'ları RAM kotasını
+tüketmez: v3 sürekli ACK'li istekler 128 session sınırına takılmaz. V2'nin yukarıdaki
+128/session davranışı aynıdır. Shared disk 10.000 kayıt/512 MiB/20 MiB tek dosya;
+admission 32 kayıt/32 MiB + her unresolved request için 8 kayıt/1 MiB baş boşluğu
+ister. Bu preflight'tır; sonraki disk hatası veri silmez, kayıt/recovery kapısını korur.
+
+Tombstone/retirement otomatik silinmez. `DeliveryStore::rolloverNamespace` drained
+eski namespace, yeni/hiç kullanılmamış peer generation ve kayıtlı peer agreement
+ister; eski namespace restart sonrası da NAMESPACE_RETIRED olur. Yeni generation
+açık listen gerektirir. Rollover bütçeyi sıfırlamaz veya kayıt silmez; archive taşıma/
+retention operasyonu bu API'de yoktur. Normal profil UI'sı COMM-20, diagnostics
+COMM-22, birleşik TCP kabulü COMM-23 ve fiziksel kabul COMM-38'dir.

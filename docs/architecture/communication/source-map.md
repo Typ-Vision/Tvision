@@ -337,4 +337,29 @@ bilgisayarının tarihsel kanıtıdır. Her makinede gerçek checkout ve indeks 
 - `tests/delivery_recovery_test.cpp` / `delivery_recovery_contract`: altı gerçek
   killed-process sınırı, session-independent duplicate, byte/hash/resultId replay,
   idempotent ACK tombstone, unknown/conflict ve unresolved barrier/v2 izolasyonu.
-  Retry/deadline/capacity politikası sonraki COMM-19; UI bağlantısı değişmedi.
+  Retry/deadline/capacity politikası aşağıdaki COMM-19'dadır; UI bağlantısı değişmedi.
+
+## COMM-19 — Retry/kapasite/namespace (27 Ekim 2026)
+
+- `CommunicationTcpEndpoint::tickDelivery/replay/acknowledge`: QElapsedTimer
+  deadline + QTimer poll, bounded otomatik retry, offline pause, reconnect bütçesi,
+  geç ACK ve endpoint başına tek in-flight. Required bariyeri korunur; optional
+  sonraki cycle'ı engellemez, backlog ACK commit ile birer birer ilerler.
+- `DeliveryStore::admission/request/rolloverNamespace/requireNamespace`:
+  required offline/pending, optional128, shared archive headroom, kalıcı retirement
+  ve explicit yeni peer generation. ACK tombstone RAM'den çıkar, diskten silinmez.
+  `TriggerRouter` v3 durable dedup'u kullanır; eski RAM128/v2 politikası korunur.
+- `ProductionStore::requireCapacity` mevcut 10.000 kayıt/512 MiB/20 MiB sınırına
+  preflight ekler; `delivery_namespaces` immutable envelope/hash/QSaveFile yolunu
+  ve aynı toplam bütçeyi kullanır. Recovery taraması journal'ları request başına
+  tekrar doğrulamak yerine bir doğrulama geçişinde toplar. Normal inspect mevcut
+  deterministik event-ID alanından yalnız exact request zincirini okur; 10.000
+  olası ID tarandığı için ilk/orta kayıt kaybı zinciri sessiz kısaltmaz. Cache yalnız
+  bir request'in türetilmiş dosya adlarıdır; evidence/validation cache yoktur.
+  Startup/admission tüm journal ve terminal manifest'lerini doğrular.
+- `delivery_retry_contract`: optional128, required offline/pending, disk record
+  budget, no eviction, restart sonrası retirement ve eski generation reddi.
+  `delivery_retry_runtime` gerçek localhost/Runtime üzerinde kayıp/geç ACK,
+  bounded retry/reconnect, aynı bytes ve 130 ACK'li cycle/durable eski replay;
+  `delivery_optional_runtime` ACK'siz execution, tek RESULT in-flight ve aktif
+  cycle sırasında önceki ACK kabulü/drain sınar. UI değişmedi.

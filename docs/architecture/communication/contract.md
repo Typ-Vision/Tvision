@@ -135,11 +135,32 @@ aşamaz. Limitte admission kapalı ve açık QUEUE_FULL; silent eviction yok.
 Ack tombstone/dedup key'leri retention sınırına kadar kalıcı; key silme aktif
 request namespace'ini sessiz yeniden kullanılabilir yapmaz. Sürekli üretim için
 operatör kontrollü namespace rollover ve peer mutabakatı; eski namespace replay
-reddi. COMM-19 kesin bütçeyi current store sınırlarıyla belgeler.
+reddi. Tombstone'lar otomatik süre/ACK eviction olmadan mevcut archive bütçesine
+kadar saklanır: toplam 10.000 JSON kayıt / 512 MiB, tek dosya 20 MiB. Admission
+32 kayıt / 32 MiB ve endpoint'teki her unresolved request için ek 8 kayıt / 1 MiB
+baş boşluğu ister; limitte QUEUE_FULL, retention/delete yoktur. Bu preflight
+disk ayırma garantisi değildir; sonraki yazma hatası recording/recovery bariyerini korur.
+
+`DeliveryStore::admission/request(required, online)` required offline/pending ve
+optional 128 sınırını uygular. `request` preflight'ı delivery lock altında tekrar
+denetler. Peer kimliğine operatör/peer tarafından anlaşılmış generation eklenir.
+`rolloverNamespace(from,to,peerAgreement)` yalnız drained eski namespace ve hiç
+kullanılmamış yeni peer generation için kalıcı retirement yazar. Eski key/namespace
+inspect/replay/request/listen ile yeniden silahlanamaz; yeni peer generation açık
+listen ister. Retirement ve eski tombstone'lar aynı bütçede kalır; dolu archive
+yerine geçmek/taşımak ayrıca kontrollü arşiv yönetimi gerektirir, bu API silmez.
 
 Retry default 2 s, en çok 3 otomatik deneme, monoton deadline, aynı byte payload.
 Geç ACK kabul edilir; retry bitince pending/alarm kalır. Raw write/flush/OPC Write
 başarısı consumer ACK değildir. Uçtan uca exactly-once garantisi verilmez.
+V3 endpoint API aralığı 100–60000 ms / 0–10 retry'dır (default 2000/3);
+ilk gönderim retry sayılmaz. QElapsedTimer deadline'ı owner-thread QTimer ile
+poll edilir; offline iken attempt tüketilmez. Yeni bağlantı bütçeyi yeniden
+başlatır. Required ACK_TIMEOUT kabulü kapalı tutar; optional pending veri 128'e
+kadar saklanır. Endpoint başına tek RESULT in-flight, ACK commit sonrası sonraki
+pending seçilir. Persisted canonical payload/resultId/hash korunur; yalnız yeni
+bağlantının session zarfı değişir. ACK_COMMITTED satırları RAM session kotasına
+sayılmaz. V2'nin 128 accepted request oturum sınırı değişmez.
 
 ## C6 — Input snapshot ve Trigger Router
 
