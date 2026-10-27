@@ -283,3 +283,23 @@ bilgisayarının tarihsel kanıtıdır. Her makinede gerçek checkout ve indeks 
   retry/reopen, fake transport, ACK commit kapısı, partial JSON/eksik terminal/zincir,
   eski PLC event ayrımı. `publication_contract` gerçek terminal10 bundle'ını ek olarak
   aynı store/dispatch yolunda dener. Network transport ve otomatik recovery yoktur.
+
+
+## COMM-15 — input snapshot / trigger admission (27 Ekim 2026)
+
+- `TriggerRouter.hpp/.cpp`: `InputSnapshotStore::put/get/fresh`,
+  `TriggerRouter::deliveryRequest/admit`, `TriggerRequest/AdmissionResult`.
+- 128 immutable exact input revision; 64 typed fields, 64 KiB snapshot sınırı.
+  Scalar/SpatialAssignmentValue codec kullanılır; yerel monoton receipt age ve
+  required profil type/unit/frame/quality/maxAge kontrolü. Aynı revision retry
+  receipt zamanını yenilemez; farklı içerik CONFLICT. Otomatik eviction yoktur.
+- Owner-thread tek router yeni adapter sınırıdır; coordinator.begin tek cycle
+  kapısıdır. Mevcut Manual/v2 begin ve session/dedup/terminal davranışı korunur.
+  Shared Editor/camera unavailable callback zorunludur; yeni transport bunu bağlar.
+- Ledger inspect kalıcı duplicate/CONFLICT/RECOVERY_REQUIRED durumunu edinimsiz
+  döndürür. Geçerli yeni kabulün proses dedup'u 128 request tutar; lease yalnız
+  ilk kabulde döner. Journal write/terminal/outbox entegrasyonu COMM-17'dir.
+  Router tek başına restart-safe yeni remote effect veya wire endpoint sunmaz.
+- `trigger_router_contract`: typed false, partial/bad/stale, exact revision/config,
+  tam spatial/frame kontrolü, iki endpoint BUSY, duplicate/conflict, immutable
+  input, Editor guard, recording/delivery/Stop/manual ve owner-thread sınırı.

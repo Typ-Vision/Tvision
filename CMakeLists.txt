@@ -116,7 +116,7 @@ target_include_directories(visionflow_acquisition PUBLIC src ${OpenCV_INCLUDE_DI
 target_sources(visionflow_acquisition PRIVATE src/application/ProductionRecipeService.cpp)
 target_sources(visionflow_acquisition PRIVATE src/application/ProductionStore.cpp src/application/DeliveryStore.cpp src/application/RuntimeService.cpp)
 target_sources(visionflow_acquisition PRIVATE src/application/ExperimentalRuntime.cpp)
-target_sources(visionflow_acquisition PRIVATE src/application/RuntimeCoordinator.cpp src/application/RuntimeDiagnostics.cpp)
+target_sources(visionflow_acquisition PRIVATE src/application/RuntimeCoordinator.cpp src/application/RuntimeDiagnostics.cpp src/application/TriggerRouter.cpp)
 target_compile_definitions(visionflow_acquisition PRIVATE
   VISIONFLOW_DIAGNOSTIC_BUILD_TYPE="$<CONFIG>"
   VISIONFLOW_DIAGNOSTIC_UI=$<BOOL:${VISIONFLOW_BUILD_UI}>
@@ -435,6 +435,10 @@ if(BUILD_TESTING)
   add_executable(coordinates_test tests/coordinates_test.cpp)
   target_link_libraries(coordinates_test PRIVATE visionflow_projects)
   add_test(NAME coordinates_contract COMMAND coordinates_test)
+  add_executable(trigger_router_test tests/trigger_router_test.cpp)
+  target_link_libraries(trigger_router_test PRIVATE visionflow_acquisition)
+  add_test(NAME trigger_router_contract COMMAND trigger_router_test)
+
   add_executable(delivery_store_test tests/delivery_store_test.cpp)
   target_link_libraries(delivery_store_test PRIVATE visionflow_acquisition)
   add_test(NAME delivery_store_contract COMMAND delivery_store_test)

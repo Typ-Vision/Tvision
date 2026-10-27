@@ -4,9 +4,8 @@
 
 ## Devam noktası
 
-**[COMM-14 tamam](archive/2026-10-27-comm-14.md):** Kalıcı request journal/outbox;
-terminal10/manifest, immutable retry ve ACK commit.
-Network yok. **Sonraki COMM-15.**
+**[COMM-15](archive/2026-10-27-comm-15.md):** Input/Trigger Router tamam; ağ yok.
+**Sonraki COMM-16.** [COMM-14](archive/2026-10-27-comm-14.md): journal/outbox.
 [COMM-13](archive/2026-10-27-comm-13.md): Terminal10/bundle1;
 [COMM-12](archive/2026-10-27-comm-12.md): yerel profil/group/intent.
 Editor/Load ağ başlatmaz.

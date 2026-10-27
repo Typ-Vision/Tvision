@@ -1,6 +1,6 @@
 # COMM-15 — Ortak input snapshot ve Trigger Router
 
-Durum: başlamadı. Önerilen düzey: **medium**. Önkoşul: **COMM-14** tamam.
+Durum: tamamlandı (27 Ekim 2026). Önerilen düzey: **medium**. Önkoşul: **COMM-14** tamam.
 Bir oturumda yalnız bu kart; paralel uygulayıcı yok.
 
 ## Oku
@@ -41,4 +41,6 @@ Gerçek komut/sonuç/kanıtları `build/comm/COMM-15/` altında tut. Koşulmayan
 fiziksel/native engelleri açık yaz. progress özetini ve arşiv indeksini güncelle;
 `docs/archive/YYYY-MM-DD-comm-15.md` kaydı oluştur, uygulayıcıyı belirt.
 Tamamlanınca `COMM-15: ...` tek yerel commit; push yok. Kabul geçmeden tamam yazma.
+Kapanış: [COMM-15](../../archive/2026-10-27-comm-15.md).
+
 Sonraki tek kart: **COMM-16**.
