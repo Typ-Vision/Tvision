@@ -47,9 +47,10 @@ birlikte kayıt edilir, uzak saat freshness yetkisi değildir. INPUT recipe/conf
 kimliği ve TRIGGER inputRevision exact snapshot bağını açık yapar.
 
 RESULT execution `DONE|ERROR|SKIPPED`, decision `OK|NOK|NOT_EVALUATED`;
-resultValid Boolean ve decision'ın evaluated olmasına eşittir. ERROR/SKIPPED
-evaluated karar taşıyamaz. DONE error boş; diğer terminal error en çok 4096 UTF-8
-byte metindir. Karar ile alan geçerliliği ayrı kalır: missing alan taşınabilir.
+resultValid Boolean, seçilen yayın grubunun alan geçerliliğidir; decision'dan
+bağımsızdır. Kararsız geçerli Pose/ölçüm grubunda true + NOT_EVALUATED mümkündür.
+ERROR/SKIPPED evaluated karar veya resultValid=true taşıyamaz. DONE error boş;
+diğer terminal error en çok 4096 UTF-8 byte metindir. Missing alan null taşınır.
 Codec gerçek çevrim/alan kökeninin otoritesini oluşturmaz.
 
 ## Typed field

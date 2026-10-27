@@ -34,6 +34,9 @@ public:
     QJsonObject diagnosticStatus() const;
     QVector<QJsonObject> diagnosticEvents() const;
     void retryDelivery(const DeliveryRequest&);
+    // Explicit fleet wiring after listen, before Run. All endpoints share the
+    // Runtime and ledger. One whole-record output group per TCP server profile.
+    void setPublicationTargets(const QVector<CommunicationTcpEndpoint*>&);
     quint16 port() const {return server_.serverPort();}
     bool listening() const {return server_.isListening();}
     QString state() const;
@@ -54,6 +57,11 @@ private:
     QVector<QJsonObject> diagnosticEvents_;
     void recordDiagnostic(const QString&,const QJsonObject&);
     QString outstanding_;QJsonObject terminal_,sealed_;
+    QVector<QPointer<CommunicationTcpEndpoint>> targets_;
+    struct PublicationDelivery {QPointer<CommunicationTcpEndpoint> endpoint;TriggerRequest request;};
+    QVector<PublicationDelivery> deliveries_;
+    QPointer<CommunicationTcpEndpoint> recordingOwner_;
+    QVector<PublicationDelivery> publicationDeliveries(const TriggerRequest&,const QString& cycleId) const;
     void owner() const;
     void acceptPeer();void disconnectPeer();void readPeer();void receive(const QJsonObject&);
     void send(QJsonObject);void error(const QString&,const QString& id={});

@@ -1,6 +1,6 @@
 # COMM-36 — Çoklu hedef ve pose paketi tutarlılığı
 
-Durum: başlamadı. Önerilen düzey: **medium**. Önkoşul: **COMM-23** tamam. Seçilmiş Modbus/OPC entegrasyonu için ayrıca COMM-28/33; sample/FANUC senaryosu seçilirse COMM-34/35 gerekir. Temel kabul bu ekleri beklemez.
+Durum: yazılım/görsel kabul tamam — [28 Ekim 2026 kapanışı](../../archive/2026-10-28-comm-36.md). Önerilen düzey: **medium**. Önkoşul: **COMM-23** tamam. Seçilmiş Modbus/OPC entegrasyonu için ayrıca COMM-28/33; sample/FANUC senaryosu seçilirse COMM-34/35 gerekir. Temel kabul bu ekleri beklemez.
 Bir oturumda yalnız bu kart; paralel uygulayıcı yok.
 
 ## Oku

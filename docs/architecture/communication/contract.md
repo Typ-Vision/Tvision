@@ -99,6 +99,14 @@ reçete kaynak UUID/port ve mapping contract kimliğine bağlanır. Aktif bağla
 ayar/dependency hash'i immutable snapshot'a katılır; edit Stop/reload ister.
 Dosya taşıma eşdeğer endpoint'i kendi kendine seçmez.
 
+COMM-36 TCP fan-out aynı terminal bundle'ı hedef başına ayrı request/ACK
+journal'ına bağlar. İlk etkin grup tetik girişidir; ikincil sunucular delivery-only
+çalışır ve requestId olarak cycle UUID kullanır. Her hedef ayrı TCP server
+profili ister; mapping whole typed record taşır. SpatialTransform → x/y/z/rx/ry/rz
+ve örtük Euler projection yoktur. Runtime teslim bariyerleri endpoint sahibine
+göre birleşir; bir ACK başka hedefin bariyerini temizlemez. Çoklu journal yazımı
+dağıtık atomik commit değildir; kısmi yazımda recording/recovery engeli korunur.
+
 Publish Data tool'u network yapmaz; cycle-bound PublicationIntent üretir.
 En çok 16 output group/cycle, 64 field/group, ilk payload sınırı 64 KiB.
 TerminalCycle + intent/bundle commit tamamlanmadan network yazımı yok.

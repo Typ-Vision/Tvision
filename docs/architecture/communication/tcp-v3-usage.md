@@ -4,18 +4,33 @@ Communication → TCP v3 profilleri: enabled `server` profili, açık adres/port
 100–60000 ms ACK timeout ve 0–10 retry kaydedin. Connect/Test yalnız bağlantı
 denemesidir; Run öncesi Disconnect seçin. V2 dinlemesini durdurun.
 
-Editor'da çoklu variable → Set Variables → Publish Data ile tek etkin output
-group hazırlayın; logical field mapping profilinde bulunmalıdır. Üç applicationType
+Editor'da çoklu variable → Set Variables → Publish Data ile output
+gruplarını hazırlayın; her grup ayrı enabled TCP server profiline bağlanır,
+logical field mapping profilinde bulunmalıdır. Üç applicationType
 aynı yolu kullanır. Communication v2 sekmesindeki reçete tetik modunu
 `SoftwareTrigger` seçip Save yapın. Load Recipe → gerekirse Kaynağı doğrula.
 Runtime'da **Run ile TCP v3 profilini aç** seçin ve peer ile mutabık kaldığınız
 benzersiz namespace generation kimliğini yazın. **Run** yüklü sürümün profilini
 açar; draft/selected recipe, Load veya Editor preview bağlantı açmaz.
 
-Bu kapı tek TCP sunucu/grup ve dış typed alan gerektirmeyen INPUT snapshot'ı
-kullanır. İstemci rolü ve çoklu hedef bu düğmeyle etkinleştirilmez; temel fazın
-çoklu hedef kartı COMM-36'dır. Peer kimliği namespace kimliğidir, authentication
-iddiası değildir. Güvenilen ve konfigüre ağda kullanın.
+Run tüm etkin grupların TCP sunucularını açar; her profile tek grup bağlanır.
+Etkin Publish Data sırasındaki ilk grup tetik girişidir; diğer bağlantılar yalnız
+RESULT/ACK teslimidir, TRIGGER için TRIGGER_SOURCE_DISABLED döner. Aynı peer
+generation metni endpoint UUID ile ayrı namespace oluşturur. Required hedeflerin
+tümü bağlı ve önceki teslimleri ACK_COMMITTED olmadan yeni çevrim başlamaz.
+Optional bağlantı kesilse de en çok 128 pending bundle tutulur; limitte QUEUE_FULL
+döner. Her hedef aynı cycle/bundle kimliğini, kendi request/hash/ACK durumunu
+taşır; ikincil requestId cycle UUID'dir. Bir hedefin ACK'i diğerini tamamlamaz.
+Restart yalnız açık Run/listen izniyle kalıcı pending veriyi tekrar yollar;
+ACK_COMMITTED hedef yeniden çevrim üretmez.
+
+UI dış typed alan gerektirmeyen INPUT snapshot'ı kullanır; istemci rolünü açmaz.
+Genel Pose tek typed SpatialTransform record'udur: translation mm,
+right-handed column vector T_target_source ve quaternion-wxyz; frame UUID ve
+revision korunur. Mapping alanın tamamını taşır; x/y/z/rx/ry/rz veya örtük Euler
+projection desteklenmez. Simulator Pose verisi yeni gerçek Runtime pose producer
+veya robot hareket izni oluşturmaz. Peer namespace kimliği authentication iddiası
+değildir. Güvenilen ve konfigüre ağda kullanın.
 
 Örnek `input.json` (HELLO recipe/config/session kimliklerini simulator ekler):
 

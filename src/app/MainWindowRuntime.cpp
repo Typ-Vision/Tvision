@@ -168,6 +168,7 @@ void MainWindow::refreshRuntime(bool notification) {
     if(runtimeCoordinator_ && runtimeCoordinator_->recordingPending() && !working)status+="\nKAYIT BEKLİYOR — yeni çevrim engelli";
     if(runtimeCoordinator_ && !runtimeCoordinator_->error().isEmpty()){if(state!=RuntimeState::Fault)status+="\n"+runtimeCoordinator_->error();status+="\n"+runtimeCoordinator_->recovery();}
     if(tcpEndpoint_)status+="\nTCP v3: "+tcpEndpoint_->state()+" • port "+QString::number(tcpEndpoint_->port());
+    for(const auto& target:tcpPublicationTargets_)status+="\nTCP v3 hedef "+target->diagnosticStatus()["endpoint"].toString().left(8)+": "+target->state()+" • port "+QString::number(target->port());
     findChild<QPushButton*>("runtime_tcp_stop")->setEnabled(tcpEndpoint_ && !pending && !runtimeCoordinator_->deliveryPending() && !tcpEndpoint_->recordingPending() && state!=RuntimeState::Running && state!=RuntimeState::Starting && state!=RuntimeState::Stopping);
     findChild<QCheckBox*>("runtimeTcpV3")->setEnabled(state==RuntimeState::LoadedStopped || state==RuntimeState::Unloaded);
     findChild<QLineEdit*>("runtimeTcpPeer")->setEnabled(state==RuntimeState::LoadedStopped || state==RuntimeState::Unloaded);

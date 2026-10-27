@@ -10,7 +10,7 @@ template<class F> auto RuntimeCoordinator::diagnose(const QString& action,F&& op
     auto report=[&](const QString& reason,bool failure,std::optional<ProductionError> code={}) noexcept {try {
         auto event=context;event["action"]=action;event["stateBefore"]=stateName(before);event["stateAfter"]=stateName(state_);
         event["generation"]=QString::number(generation_);event["lastAdmittedTicket"]=QString::number(diagnosticTicket_);
-        event["trigger"]=mode_==RuntimeTrigger::Manual ? "manual":"software";event["recordPending"]=recordingPending_;event["deliveryPending"]=deliveryPending_;event["cameraPending"]=runtime_.camerasPending();event["cameraDraining"]=runtime_.camerasDraining();event["elapsedMs"]=timer.elapsed();
+        event["trigger"]=mode_==RuntimeTrigger::Manual ? "manual":"software";event["recordPending"]=recordingPending_;event["deliveryPending"]=deliveryPending();event["cameraPending"]=runtime_.camerasPending();event["cameraDraining"]=runtime_.camerasDraining();event["elapsedMs"]=timer.elapsed();
         if(loaded_)event["recipe"]=RuntimeDiagnostics::recipeContext(*loaded_);if(!reason.isEmpty())event["reason"]=reason;if(code)event["errorCode"]=int(*code);runtime_.diagnostics()->append(event,failure);
     }catch(...){}};
     try {if constexpr(std::is_void_v<decltype(operation())>){operation();report({},false);return;}else {auto result=operation();if constexpr(std::is_same_v<decltype(result),bool>){context["accepted"]=result;if(action=="poll" && !result && before==state_)return result;}report({},false);return result;}}
@@ -23,7 +23,7 @@ void RuntimeCoordinator::owner() const {
 }
 void RuntimeCoordinator::replaceable() const {
     owner();
-    if(runtime_.busy() || runtime_.camerasPending() || runtime_.sourceVerificationBusy() || deliveryPending_ || state_==RuntimeState::Starting || state_==RuntimeState::Running || state_==RuntimeState::Stopping)
+    if(runtime_.busy() || runtime_.camerasPending() || runtime_.sourceVerificationBusy() || deliveryPending() || state_==RuntimeState::Starting || state_==RuntimeState::Running || state_==RuntimeState::Stopping)
         throw ProductionException(ProductionError::Busy,"Önce Stop ve bekleyen kayıt/teslimin tamamlanması gerekir.");
 }
 void RuntimeCoordinator::load(const Recipe& recipe,const QString& directory,RuntimeTrigger mode) {
@@ -96,7 +96,7 @@ ProductionCycle RuntimeCoordinator::begin(RuntimeTrigger source,const QJsonObjec
     owner();
     if(state_!=RuntimeState::Running)throw ProductionException(ProductionError::InvalidConfiguration,"NOT_RUNNING");
     if(source!=mode_)throw ProductionException(ProductionError::InvalidConfiguration,"TRIGGER_SOURCE_DISABLED");
-    if(deliveryPending_)throw ProductionException(ProductionError::Busy,"DELIVERY_PENDING");
+    if(deliveryPending())throw ProductionException(ProductionError::Busy,"DELIVERY_PENDING");
     // Busy is transient; dependency/authorization/persistence failures close admission.
     variables_.reset();
     try {
@@ -156,10 +156,11 @@ case RuntimeFailure::Execution:return "Yürütme hatası — reçete ve tanıyı
 case RuntimeFailure::None:return {}; }return {};}
 void RuntimeCoordinator::retryRecording(){owner();if(!recordingPending_ || !frozenCompletion_)throw ProductionException(ProductionError::InvalidCompletion,"Tekrar yazılacak dondurulmuş completion yok.");const auto result=*frozenCompletion_;finish(frozenTicket_,result);}
 void RuntimeCoordinator::setDeliveryPending(bool pending){return diagnose("setDeliveryPending",[&]{deliveryPending_=pending;});}
+void RuntimeCoordinator::setDeliveryPending(const QString& key,bool pending){return diagnose("setDeliveryPending",[&]{if(key.isEmpty())throw std::invalid_argument("Delivery owner required");if(pending)deliveryOwners_.insert(key);else deliveryOwners_.remove(key);});}
 RuntimeState RuntimeCoordinator::state() const {owner();return state_;}
 const std::optional<Recipe>& RuntimeCoordinator::loaded() const {owner();return loaded_;}
 QString RuntimeCoordinator::error() const {owner();return error_;}
 bool RuntimeCoordinator::recordingPending() const {owner();return recordingPending_;}
-bool RuntimeCoordinator::deliveryPending() const {owner();return deliveryPending_;}
+bool RuntimeCoordinator::deliveryPending() const {owner();return deliveryPending_ || !deliveryOwners_.isEmpty();}
 std::shared_ptr<std::atomic_bool> RuntimeCoordinator::cancellation() const {owner();return cancel_;}
 }

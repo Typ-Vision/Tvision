@@ -4,8 +4,9 @@
 
 ## Devam noktası
 
-**[COMM-23 TCP tamam](archive/2026-10-28-comm-23.md):** TCP 11/11, core 16/16,
-UI 3/3; iki boyut. Full hataları kayıtta. Sonraki **COMM-36**.
+**[COMM-36 tamam](archive/2026-10-28-comm-36.md):** iki TCP hedef/whole Pose;
+Release/kabuller kayıtta. Sonraki **COMM-37**.
+[COMM-23 ve açık full hataları](archive/2026-10-28-comm-23.md).
 [22](archive/2026-10-27-comm-22.md),
 [21](archive/2026-10-27-comm-21.md),
 [20](archive/2026-10-27-comm-20.md),
@@ -23,7 +24,7 @@ Editor/Load ağ açmaz; tombstone silinmez; fiziksel kabul açık.
 atomik evaluator/DAG/cache ve çok satırlı Editor UI.
 [Kabul](archive/2026-10-26-comm-08.md); UUID/type/unit/frame/enum/no-op/hash korunur.
 Editor dışarı yazmaz; değerler tanımda tutulmaz.
-COMM-03 Circle açık; COMM-09 koşmadı.
+Circle regresyonu açık.
 
 [COMM-01 kaynak haritası](architecture/communication/source-map.md),
 [Plan](architecture/communication/README.md):

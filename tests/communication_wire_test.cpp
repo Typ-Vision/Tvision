@@ -32,6 +32,10 @@ int main(int argc,char** argv){QCoreApplication app(argc,argv);try{
     check(CommunicationWireCodec::resultPayload(CommunicationWireCodec::decode(reordered))==CommunicationWireCodec::resultPayload(result),"field order canonical");
     r=result;r["error"]="tamper";reject([&]{CommunicationWireCodec::encode(r);},"hash/terminal error tamper rejected");
     r=result;r["payloadHash"]=QString(64,'0');reject([&]{CommunicationWireCodec::encode(r);},"wrong hash rejected");
+    r=result;r["decision"]="NOT_EVALUATED";r["resultValid"]=true;
+    check(CommunicationWireCodec::sealResult(r)["resultValid"].toBool(),"valid data group does not require a part decision");
+    r=result;r["resultValid"]=false;
+    check(!CommunicationWireCodec::sealResult(r)["resultValid"].toBool(),"group validity is independent of evaluated decision");
     r=result;r["execution"]="ERROR";reject([&]{CommunicationWireCodec::sealResult(r);},"ERROR cannot manufacture OK");
     r["decision"]="NOT_EVALUATED";r["resultValid"]=false;r["error"]="source missing";
     check(CommunicationWireCodec::decode(CommunicationWireCodec::encode(CommunicationWireCodec::sealResult(r)).chopped(1))["decision"]=="NOT_EVALUATED","terminal error without fabricated decision");

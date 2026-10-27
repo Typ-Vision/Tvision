@@ -28,6 +28,8 @@ QJsonObject PublicationService::dependency(const QJsonObject& d,const std::share
 }
 void PublicationService::requireCurrent(const PublicationSnapshot& s,const QJsonObject& d,const CommunicationProfileStore& store){const auto current=capture(d,store);need(s.definitionId==current->definitionId && s.dependencyId==current->dependencyId,"Publication profile changed; Stop and reload required");}
 QVector<PublicationIntent> PublicationService::evaluate(const PublishConfig& config,const QJsonObject& d,const QMap<QString,AssignmentBundle>& bundles,const QString& cycle,const QString& configId,const PublicationSnapshot& snapshot){
+    // Verify the entire frozen mapping contract, including profile revisions.
+    dependency(d,std::make_shared<const PublicationSnapshot>(snapshot));
     validatePublicationBindings(d);need(snapshot.definitionId==definitionId(d) && !cycle.isEmpty() && !configId.isEmpty(),"Publication snapshot/cycle mismatch");decodePublishConfig(encodePublishConfig(config));QVector<PublicationIntent> intents;QSet<QString> found;
     for(const auto& g:recipeOutputGroups(d))if(config.groups.contains(g.id)){
         need(snapshot.profiles.contains(g.profileId),"Publication profile unresolved");const auto& profile=snapshot.profiles[g.profileId];validateEndpointProfile(profile);need(profile.enabled && profile.contractRevision==g.contractRevision,"Publication profile disabled/contract mismatch");

@@ -79,6 +79,14 @@ bool MainWindow::verifyPublicationUi(const QString& artifacts){
     DeliveryStore delivery(dir.filePath("delivery"));DeliveryRequest request{"cell",w.service_.project().id,profile.id,"peer","request","fingerprint"};delivery.request(request);delivery.begin(request,terminal["cycleId"].toString());const auto payload=QJsonDocument(terminal["resultBundle"].toObject()).toJson(QJsonDocument::Compact);delivery.commit(request,terminal,payload);int writes=0;check(delivery.dispatch(request,[&](const QByteArray& bytes){check(bytes==payload,"persisted exact bytes");++writes;}),"terminal dispatch");check(writes==1 && terminal["resultBundle"].toObject()["groups"].toArray().size()==1,"one terminal publish");
     if(QCoreApplication::arguments().contains("--tcp-acceptance-smoke")){
         observer.close();profile=store.load()[profile.id];profile.role="server";++profile.revision;store.save({{profile.id,profile}});
+        const bool multiple=QCoreApplication::arguments().contains("--multi-endpoint-smoke");
+        if(multiple){
+            QTcpServer portProbe;check(portProbe.listen(QHostAddress::LocalHost,0),"second simulator port");
+            auto secondary=profile;secondary.id=QUuid::createUuid().toString(QUuid::WithoutBraces);secondary.port=portProbe.serverPort();secondary.revision=1;portProbe.close();
+            store.save({{profile.id,profile},{secondary.id,secondary}});
+            auto groups=recipeOutputGroups(w.service_.activeRecipe()->definition);auto second=groups.first();second.id=QUuid::createUuid().toString(QUuid::WithoutBraces);second.profileId=secondary.id;groups.append(second);
+            w.service_.setOutputGroups(groups);for(auto tool:w.service_.tools())if(tool.id==publisher){tool.parameters=encodePublishConfig({{groups[0].id,groups[1].id}});w.service_.updateTool(tool);}
+        }
         w.service_.enableMultiSource();w.service_.setRuntimeOptions("SoftwareTrigger",{});w.service_.save();w.ensureRuntime();
         w.runtimeCoordinator_->load(*w.service_.activeRecipe(),dir.path(),RuntimeTrigger::SoftwareTrigger);
         const auto loadedRecipe=w.runtimeCoordinator_->loaded()->id;
@@ -87,13 +95,26 @@ bool MainWindow::verifyPublicationUi(const QString& artifacts){
         check(!w.tcpEndpoint_,"Load creates no endpoint");w.runtimeAction("run");check(w.runtimeCoordinator_->state()==RuntimeState::Running && !w.tcpEndpoint_,"unchecked Run creates no endpoint");w.runtimeAction("stop");
         w.findChild<QCheckBox*>("runtimeTcpV3")->setChecked(true);w.findChild<QLineEdit*>("runtimeTcpPeer")->setText("fixture-generation-1");
         w.runtimeAction("run");check(w.tcpEndpoint_ && w.tcpEndpoint_->listening(),"explicit Run creates production v3 endpoint");
+        QTcpSocket secondaryPeer;QByteArray secondaryBuffer;QString secondarySession;int secondaryResults=0;
+        if(multiple){
+            check(w.tcpPublicationTargets_.size()==1,"Run opens second loaded output target");
+            QObject::connect(&secondaryPeer,&QTcpSocket::readyRead,[&]{
+                secondaryBuffer+=secondaryPeer.readAll();for(;;){auto n=secondaryBuffer.indexOf('\n');if(n<0)break;const auto message=CommunicationWireCodec::decode(secondaryBuffer.left(n));secondaryBuffer.remove(0,n+1);
+                    if(message["type"]=="HELLO")secondarySession=message["sessionId"].toString();
+                    if(message["type"]=="RESULT"){++secondaryResults;secondaryPeer.write(CommunicationWireCodec::encode({{"v",3},{"type","ACK"},{"sessionId",secondarySession},{"requestId",message["requestId"]},{"resultId",message["resultId"]},{"payloadHash",message["payloadHash"]}}));}
+                }
+            });secondaryPeer.connectToHost(QHostAddress::LocalHost,w.tcpPublicationTargets_.front()->port());
+            QElapsedTimer connected;connected.start();while(secondarySession.isEmpty() && connected.elapsed()<5000){QApplication::processEvents();QThread::msleep(1);}check(!secondarySession.isEmpty(),"second real simulator connected before trigger");
+        }
         check(w.runtime_->active()->recipe().id==loadedRecipe,"v3 Run uses loaded recipe despite selected draft");
         w.deliveryDiagnostics_->refresh();check(w.findChild<QLabel*>("deliveryStatus")->text().contains(profile.id),"diagnostics bound to production endpoint");
         auto wait=[&](auto f){QElapsedTimer timer;timer.start();while(!f() && timer.elapsed()<15000){QApplication::processEvents();QThread::msleep(1);}check(f(),"production simulator timeout");};
         QFile input(dir.filePath("empty-input.json"));check(input.open(QIODevice::WriteOnly),"input file");input.write(QJsonDocument(QJsonObject{{"snapshotId","fixture"},{"revision","1"},{"fields",QJsonArray{}},{"sourceTime","fixture"},{"clockId","fixture"}}).toJson());input.close();
         QProcess simulator;simulator.start(QCoreApplication::applicationDirPath()+"/visionflow_plc_simulator.exe",{"--v3","--port",QString::number(w.tcpEndpoint_->port()),"--input",input.fileName(),"--expect-decision","NOT_EVALUATED","--expect-field","field0","--expect-value","false"});wait([&]{return simulator.state()==QProcess::NotRunning;});
         if(simulator.exitCode()!=0)QTextStream(stderr)<<simulator.readAllStandardOutput()<<simulator.readAllStandardError();check(simulator.exitCode()==0,"production endpoint actual simulator");
+        if(multiple)wait([&]{return secondaryResults==1 && !w.runtimeCoordinator_->deliveryPending();});
         check(w.runtime_->records().size()==1 && !w.runtimeCoordinator_->deliveryPending(),"production terminal and ACK committed");
+        if(multiple){const auto deliveries=w.tcpLedger_->recovery();check(deliveries.size()==2 && deliveries[0].status.state=="ACK_COMMITTED" && deliveries[1].status.state=="ACK_COMMITTED","UI uses one committed bundle and two independent ACK journals");}
         w.runtimeAction("stop");check(w.tcpEndpoint_->state()!="READY","Stop closes admission");
         w.selectPage("runtime");for(const auto size:{QSize(1400,900),QSize(850,600)}){w.resize(size);QApplication::processEvents();check(w.grab().save(QDir(artifacts).filePath(QString("runtime-v3-%1x%2.png").arg(size.width()).arg(size.height()))),"Runtime v3 visual");}
         w.findChild<QPushButton*>("runtime_tcp_stop")->click();check(!w.tcpEndpoint_,"drained endpoint safely released");

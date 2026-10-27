@@ -20,6 +20,8 @@ public:
     ProductionCycle begin(RuntimeTrigger source,const QJsonObject& communication={});
     void finish(quint64 ticket,const CycleResult& result);
     void setDeliveryPending(bool pending);
+    // Each adapter owns its barrier; another endpoint's ACK cannot clear it.
+    void setDeliveryPending(const QString& owner,bool pending);
     RuntimeState state() const;
     const std::optional<Recipe>& loaded() const;
     RuntimeTrigger mode() const {owner();return mode_;}
@@ -48,6 +50,7 @@ private:
     quint64 generation_=0;
     std::shared_ptr<const RuntimeVariableContext> variables_;
     bool recordingPending_=false,deliveryPending_=false;
+    QSet<QString> deliveryOwners_;
     bool faultAfterDrain_=false,reloadRequired_=false;
     std::shared_ptr<std::atomic_bool> cancel_;
 };

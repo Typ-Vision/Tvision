@@ -27,7 +27,7 @@ MultiSourceDependencies MainWindow::withPublication(const Recipe& r,MultiSourceD
 }
 void MainWindow::resetRuntimeTcp(){
     if(tcpEndpoint_ && (runtime_->busy() || tcpEndpoint_->recordingPending() || runtimeCoordinator_->deliveryPending()))throw std::runtime_error("TCP v3 kayıt/ACK bekleniyor.");
-    tcpEndpoint_.reset();tcpRouter_.reset();tcpLedger_.reset();tcpInputs_.reset();
+    tcpPublicationTargets_.clear();tcpEndpoint_.reset();tcpRouter_.reset();tcpLedger_.reset();tcpInputs_.reset();
 }
 void MainWindow::startRuntimeTcp(){
     if(!findChild<QCheckBox*>("runtimeTcpV3")->isChecked())return;
@@ -35,7 +35,7 @@ void MainWindow::startRuntimeTcp(){
     if(runtime_->experimental() || runtimeCoordinator_->mode()!=RuntimeTrigger::SoftwareTrigger)throw std::runtime_error("TCP v3: kayıtlı SoftwareTrigger ve normal Runtime gerekir.");
     const auto snapshot=runtime_->active();if(!snapshot || !snapshot->publication())throw std::runtime_error("TCP v3: yüklü Publish Data profili yok.");
     QVector<OutputGroup> groups;for(const auto& t:editorTools(snapshot->recipe().definition))if(t.enabled && t.kind=="publish_data")for(const auto& id:decodePublishConfig(t.parameters).groups)for(const auto& g:recipeOutputGroups(snapshot->recipe().definition))if(g.id==id)groups.append(g);
-    if(groups.size()!=1)throw std::runtime_error("TCP v3: bu kapıda tek etkin yayın grubu gerekir; çoklu hedef COMM-36.");
+    if(groups.isEmpty())throw std::runtime_error("TCP v3: etkin yayın grubu gerekir.");
     const auto group=groups.first();const auto profile=snapshot->publication()->profiles.value(group.profileId);
     if(!profile.enabled || profile.protocol!="tcp" || profile.role!="server")throw std::runtime_error("TCP v3: enabled TCP server profili gerekir.");
     CommunicationTcpOptions options;options.address=QHostAddress(profile.address);options.port=profile.port;options.ackTimeoutMs=profile.timeoutMs;options.retryCount=profile.retries;
@@ -45,7 +45,18 @@ void MainWindow::startRuntimeTcp(){
     tcpEndpoint_=std::make_unique<CommunicationTcpEndpoint>(*runtime_,*runtimeCoordinator_,*tcpRouter_,*tcpInputs_,*tcpLedger_,runtimePath_+".production",runtimePath_+".calibrations.json");
     tcpEndpoint_->started=[this]{runtimeResult_.reset();showRuntimeResult();refreshRuntime();};
     tcpEndpoint_->completed=[this](const CycleResult& r){if(measurementWorkspace_ && runtime_->active())measurementWorkspace_->observeAcquisition(runtime_->active()->recipe(),r);if(runtimeCoordinator_->state()==RuntimeState::Running)runtimeResult_=r;else runtimeResult_.reset();showRuntimeResult();refreshRuntime();};
-    try{tcpEndpoint_->listen(options);}catch(...){tcpEndpoint_.reset();throw;}
+    try{
+        tcpEndpoint_->listen(options);
+        QVector<CommunicationTcpEndpoint*> targets{tcpEndpoint_.get()};QSet<QString> ids{group.profileId};
+        for(int index=1;index<groups.size();++index){
+            const auto& g=groups[index];const auto p=snapshot->publication()->profiles.value(g.profileId);
+            if(ids.contains(p.id) || !p.enabled || p.protocol!="tcp" || p.role!="server")throw std::runtime_error("TCP v3: her hedef için ayrı enabled TCP server profili gerekir.");
+            ids.insert(p.id);auto o=options;o.address=QHostAddress(p.address);o.port=p.port;o.endpoint=p.id;o.outputGroupId=g.id;o.required=g.required;o.ackTimeoutMs=p.timeoutMs;o.retryCount=p.retries;o.inputs.clear();
+            auto target=std::make_unique<CommunicationTcpEndpoint>(*runtime_,*runtimeCoordinator_,*tcpRouter_,*tcpInputs_,*tcpLedger_,runtimePath_+".production",runtimePath_+".calibrations.json");
+            target->listen(o);targets.append(target.get());tcpPublicationTargets_.push_back(std::move(target));
+        }
+        if(targets.size()>1)tcpEndpoint_->setPublicationTargets(targets);
+    }catch(...){tcpPublicationTargets_.clear();tcpEndpoint_.reset();throw;}
     if(deliveryDiagnostics_)deliveryDiagnostics_->bindEndpoint(tcpEndpoint_.get());
 }
 

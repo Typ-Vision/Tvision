@@ -417,3 +417,29 @@ tutmaz. COMM-22 normal üretim listener'ı oluşturmaz. Endpoint bağlı değils
 kalıcı recovery görünür, Retry disabled kalır. Recovery inspect ACK üretmez.
 `ui_delivery_diagnostics` iki boyut, secret/missing/ACK ve corrupt archive;
 `delivery_retry_runtime` gerçek TCP manual retry/trace sınırı kanıtıdır.
+
+## COMM-36 — Çoklu TCP hedef ve whole Pose (28 Ekim 2026)
+
+- `CommunicationTcpEndpoint::setPublicationTargets/publicationDeliveries` aynı
+  Runtime/ledger üzerindeki explicit server hedeflerini bağlar. Tüm etkin gruplar
+  eşlenir, profil/contract/required kimliği ve her hedefin kapasitesi edinimden önce
+  doğrulanır. İlk hedef tetik girişidir; ikincil requestId cycle UUID'dir.
+- `retryRecording` tek terminalden hedef başına immutable RESULT manifest'i yazar;
+  disk retry edinim yapmaz. Her endpoint ayrı retry/ACK durumunu korur.
+  `restoreDelivery/resumeDelivery` secondary journal ve terminal grubunu uzlaştırır.
+- `RuntimeCoordinator::setDeliveryPending(owner,bool)` endpoint engellerini OR ile
+  birleştirir; legacy v2 bool engeli ayrı korunur. ACK, diğer required hedefi veya
+  henüz bitmeyen fan-out recording'i açmaz.
+- `PublicationService::evaluate` frozen dependency hash'ini de denetler; whole
+  SpatialTransform ataması existing AssignmentEvaluator ile cycle/config/revision,
+  unit ve exact frame/revision doğrulamasından geçer. Mapping record'un tamamıdır;
+  scalar/Euler projection eklenmedi. RESULT resultValid group validity'dir,
+  decision evaluated olmasına eşitlenmez; v2 değişmez.
+- `MainWindow::startRuntimeTcp/resetRuntimeTcp` tüm etkin grupların ayrı sunucularını
+  explicit Run ile açar/kapatır; Runtime ek hedefin kimlik/state/portunu gösterir.
+  Diagnostics Retry bağlı hedefe yönlenir.
+- `multi_endpoint_delivery_contract`: iki localhost peer, required kesinti,
+  optional offline128, partial manifest/ACK sınırı, gerçek ayrı process restart,
+  nonzero quaternion/mm/frame Pose ve input→typed assignment→logical mapping.
+  Pose üretimi açık test fixture'ıdır; normal Runtime için gerçek producer yoktur.
+  `ui_multi_endpoint_acceptance`: normal MainWindow Run, iki ACK journal, iki boyut.

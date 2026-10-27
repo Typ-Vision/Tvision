@@ -253,6 +253,7 @@ private:
     std::unique_ptr<DeliveryStore> tcpLedger_;
     std::unique_ptr<TriggerRouter> tcpRouter_;
     std::unique_ptr<CommunicationTcpEndpoint> tcpEndpoint_;
+    std::vector<std::unique_ptr<CommunicationTcpEndpoint>> tcpPublicationTargets_;
     QLineEdit* plcAddress_{};
     QComboBox* plcMapping_{};
     QLabel* plcStatus_{};

@@ -1,7 +1,7 @@
 # VisionFlow Industrial Vision Suite
 
 C++20 / Qt Widgets / OpenCV endüstriyel görüntü işleme uygulaması.
-Üç applicationType aynı Recipe Editor, yürütme servisleri ve Runtime'ı kullanır.
+Üç applicationType aynı Editor, yürütme ve Runtime'ı kullanır.
 UI algoritma veya donanım SDK'sını doğrudan çağırmaz.
 
 **Güncel görev, son doğrulama ve açık engeller [devir özetindedir](docs/progress.md).**
@@ -43,7 +43,7 @@ kamera/ölçüm, PLC/robot, lens, native DPI, CUDA veya dağıtım kabulünü ka
 
 ## Yerel derleme ve test — PowerShell
 
-Yerel toolchain: Qt 6.12.0 / MinGW 13.1.0 ve MinGW OpenCV 5.0.0.
+Toolchain: Qt 6.12.0 / MinGW 13.1.0 ve MinGW OpenCV 5.0.0.
 [Toolchain/ZXing rehberi](docs/windows-workstation.md).
 
 ```powershell
@@ -98,12 +98,13 @@ OECS / GenTL probe komutları, sandbox sınırları ve kanıt bağlantıları
    Doğrulama kayıtlı metrik kaynak iznini yeni kareyle denetler; Run başlatmaz.
    Load/Run hazırlığı tek başına sonuç değildir. Stop → yeniden Load sürümü değiştirir.
 
-Publish Data Editor'da paket hazırlar. TCP v3 için kayıtlı sunucu profili ve
-SoftwareTrigger reçetesiyle Load → Runtime'da v3 seçimi + peer generation → Run.
-Restart bu izni açmaz; Stop yeni tetikleri keser, pending ACK korunur. V2 ayrıdır.
+Publish Data Editor'da paket hazırlar. SoftwareTrigger reçetesiyle Load → v3
+seçimi + peer generation → Run, grupların ayrı TCP sunucularını açar. İlk grup
+tetik girişidir; diğerleri bağımsız ACK/retry hedefidir. Required offline/pending
+çevrimi engeller; optional kuyruk 128'dir. Restart izin açmaz; Stop pending ACK'yi
+korur. V2 ayrıdır.
 [Simulator ve kısa kullanım](docs/architecture/communication/tcp-v3-usage.md).
 
-Normal kamera komutları uygun edinim yolunu seçer; ek OECS modu/onayı yoktur.
 Profil bağlama, PGM+JSON, kalibrasyon, Runtime ve panel
 kullanımı [kısa kullanım rehberinde](docs/camera-runtime-usage.md). Restart
 edinim/Run başlatmaz; PLC/robot çıkışı kapalıdır. Test INI/görselleri

@@ -1,6 +1,7 @@
 # Haberleşme verileri — uygulama planı
 
-**COMM-PLAN-03 · 27 Ekim 2026 · COMM-01–23 TCP kabulü tamam; sıradaki COMM-36.**
+**COMM-PLAN-03 · 27 Ekim 2026 · COMM-01–23 ve COMM-36 kabulü tamam; sıradaki COMM-37.**
+[COMM-36 iki hedef/pose kabulü](../../archive/2026-10-28-comm-36.md).
 [COMM-23 kanıtı ve açık full regresyon hataları](../../archive/2026-10-28-comm-23.md).
 Bu paket [ilk araştırmanın](../communication-data-phase.md) sekiz geniş kartının
 yerine geçer. [Kalibrasyon veri tipi notu](../robot-spatial-data-review.md) girdi
@@ -42,7 +43,8 @@ değildir. Agent/model ayarı otomatik değiştirilmez; paralel ajan çalıştı
 
 [COMM-01 kaynak haritası](source-map.md) actual dosya/sembol/test/şema ve Release
 baseline'ını sabitler. COMM-01 ev bilgisayarında `C:/OpenCode/TVision` ile
-alındı; güncel iş bilgisayarı checkout/indeksi `C:/Projects/Tvision` köküdür.
+alındı; güncel checkout/indeks kökü de `C:/OpenCode/TVision`'dır.
+Eski `C:/Projects/Tvision` kullanılmaz.
 Her makinede gerçek tool root/HEAD verisi doğrulanır. Seçili coverage'ın kısmi
 satırları kaynakla tamamlandı. Sonraki kartlar bu haritanın ilgili bölümünü kullanır;
 indeks erişim/kapsama hatası boş sonuç olarak yorumlanmaz.

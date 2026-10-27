@@ -116,8 +116,10 @@ void CommunicationWireCodec::validate(const QJsonObject& o){
     need(o["execution"]=="DONE" || o["execution"]=="ERROR" || o["execution"]=="SKIPPED","Invalid V3 execution");
     need(o["decision"]=="OK" || o["decision"]=="NOK" || o["decision"]=="NOT_EVALUATED","Invalid V3 decision");
     need(o["resultValid"].isBool(),"V3 resultValid Boolean required");
-    need(o["resultValid"].toBool()==(o["decision"]!="NOT_EVALUATED"),"V3 decision validity mismatch");
+    // Field validity is independent of the part decision (e.g. a Pose-only group).
+    // Required-field policy belongs to the committed group, not this wire shape.
     need(o["execution"]=="DONE" || !o["resultValid"].toBool(),"Failed execution cannot carry part decision");
+    need(o["execution"]=="DONE" || o["decision"]=="NOT_EVALUATED","Failed execution cannot carry evaluated decision");
     need(o["execution"]!="DONE" || o["error"]=="","Successful execution cannot carry terminal error");
     need(o["payloadHash"].toString()==payloadHash(payload(o)),"V3 payload hash mismatch");
 }

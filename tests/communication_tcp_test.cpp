@@ -31,6 +31,7 @@ struct Peer {
 int main(int argc,char** argv){QCoreApplication app(argc,argv);try{
  if(app.arguments().contains("--measurement"))return measurementAcceptance();
  QTemporaryDir dir(QCoreApplication::applicationDirPath()+"/tcp3-XXXXXX");check(dir.isValid(),"fixture");
+ if(qEnvironmentVariableIsSet("VISIONFLOW_KEEP_TEST_FIXTURE")){dir.setAutoRemove(false);QTextStream(stdout)<<"Fixture: "<<dir.path()<<'\n';}
  QImage image(30,30,QImage::Format_Grayscale8);image.fill(255);check(image.save(dir.filePath("part.png")),"actual image");
  ProjectService p;p.createProject("TCP3","",dir.filePath("p.vfproject"),"");p.createRecipe("Part","",ApplicationType::DefectInspection);p.setImageFile(dir.filePath("part.png"));const auto blob=p.addTool("blob"),decision=p.addTool("result");
  for(auto t:p.tools())if(t.id==decision){t.enabled=true;t.parameters=encodeResultConfig({ResultOperator::All,{{blob,"found",4}}});p.updateTool(t);}
