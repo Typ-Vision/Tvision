@@ -3,7 +3,6 @@
 #include "application/PublicationService.hpp"
 #include "domain/ToolGraph.hpp"
 #include <QVBoxLayout>
-#include <QFormLayout>
 #include <QGridLayout>
 #include <QComboBox>
 #include <QCheckBox>
@@ -20,16 +19,18 @@ namespace visionflow {
 namespace { QString uuid(){return QUuid::createUuid().toString(QUuid::WithoutBraces);} }
 PublishDataEditor::PublishDataEditor(const ToolDefinition& tool,const QJsonObject& definition,QString path)
     :tool_(tool),definition_(definition),profiles_(std::move(path)),groups_(recipeOutputGroups(definition)),selected_(decodePublishConfig(tool.parameters).groups) {
-    setObjectName("publishDataEditor");auto* layout=new QVBoxLayout(this);layout->setContentsMargins(0,0,0,0);
+    setObjectName("publishDataEditor");auto* layout=new QVBoxLayout(this);layout->setContentsMargins(0,0,0,0);layout->setSizeConstraint(QLayout::SetMinimumSize);
     auto* help=new QLabel("Publish Data • mantıksal paket\nSet Variables bundle alanlarını seçin. Önizleme ve Run Tool gönderim yapmaz. Fiziksel JSON eşlemesi Setup → Communication profilindedir.");help->setWordWrap(true);help->setSizePolicy(QSizePolicy::Ignored,QSizePolicy::Preferred);layout->addWidget(help);
-    auto* form=new QFormLayout;group_=new QComboBox;group_->setObjectName("publishGroup");form->addRow("Output group UUID",group_);
+    auto* form=new QVBoxLayout;form->setSpacing(8);
+    auto field=[&](const QString& text,QWidget* widget){auto* label=new QLabel(text);label->setMinimumHeight(20);form->addWidget(label);form->addWidget(widget);};
+    group_=new QComboBox;group_->setObjectName("publishGroup");field("Output group UUID",group_);
     producer_=new QComboBox;producer_->setObjectName("publishProducer");producer_->addItem("Bundle seçin",QString{});
     for(const auto& t:editorTools(definition))if(t.kind=="set_variables")producer_->addItem(t.name+" / r"+QString::number(decodeAssignmentConfig(t.parameters,t.id).revision)+" / "+t.id,t.id);
-    form->addRow("Kaynak bundle",producer_);endpoint_=new QComboBox;endpoint_->setObjectName("publishEndpoint");endpoint_->addItem("Endpoint seçin",QString{});
+    field("Kaynak bundle",producer_);endpoint_=new QComboBox;endpoint_->setObjectName("publishEndpoint");endpoint_->addItem("Endpoint seçin",QString{});
     try{for(const auto& p:profiles_.load()){endpoint_->addItem(p.id+" / contract r"+QString::number(p.contractRevision)+(p.enabled?"":" [disabled]"),p.id);endpoint_->setItemData(endpoint_->count()-1,p.contractRevision,Qt::UserRole+1);}}catch(...){}
-    for(auto* combo:{group_,producer_,endpoint_}){combo->setFixedHeight(30);combo->setSizeAdjustPolicy(QComboBox::AdjustToMinimumContentsLengthWithIcon);combo->setMinimumContentsLength(8);combo->setSizePolicy(QSizePolicy::Ignored,QSizePolicy::Fixed);connect(combo,&QComboBox::currentTextChanged,this,[combo]{combo->setToolTip(combo->currentText());});}
-    form->setVerticalSpacing(8);form->setRowWrapPolicy(QFormLayout::WrapAllRows);form->setFieldGrowthPolicy(QFormLayout::AllNonFixedFieldsGrow);
-    form->addRow("Endpoint UUID",endpoint_);required_=new QCheckBox("Required (ACK beklenir)");required_->setObjectName("publishRequired");form->addRow(required_);layout->addLayout(form);
+    // Leave room for the application theme's combo padding inside the scroll panel.
+    for(auto* combo:{group_,producer_,endpoint_}){combo->setMinimumHeight(40);combo->setSizeAdjustPolicy(QComboBox::AdjustToMinimumContentsLengthWithIcon);combo->setMinimumContentsLength(8);combo->setSizePolicy(QSizePolicy::Ignored,QSizePolicy::Fixed);connect(combo,&QComboBox::currentTextChanged,this,[combo]{combo->setToolTip(combo->currentText());});}
+    field("Endpoint UUID",endpoint_);required_=new QCheckBox("Required (ACK beklenir)");required_->setMinimumHeight(24);required_->setObjectName("publishRequired");form->addWidget(required_);layout->addLayout(form);
     fields_=new QTableWidget(0,2);fields_->setObjectName("publishFields");fields_->setHorizontalHeaderLabels({"Logical field","Bundle field"});fields_->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);fields_->setMinimumHeight(125);fields_->setMaximumHeight(210);layout->addWidget(fields_);
     fieldInfo_=new QLabel;fieldInfo_->setObjectName("publishFieldInfo");fieldInfo_->setWordWrap(true);fieldInfo_->setSizePolicy(QSizePolicy::Ignored,QSizePolicy::Preferred);layout->addWidget(fieldInfo_);
     connect(fields_,&QTableWidget::cellClicked,this,[this](int row,int){if(auto* picker=qobject_cast<QComboBox*>(fields_->cellWidget(row,1)))fieldInfo_->setText(picker->currentText());});

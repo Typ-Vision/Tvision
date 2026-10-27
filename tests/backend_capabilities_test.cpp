@@ -19,7 +19,8 @@ int main(int argc,char** argv) {
             actualKinds.insert(entry.kind);
         }
         auto expectedKinds=legacyKinds;expectedKinds.insert("industrial_camera");expectedKinds.insert("roi");
-        if(actualKinds!=expectedKinds)throw std::runtime_error("legacy and industrial registry mismatch");
+        for(const auto* kind:{"set_variables","result","publish_data"})expectedKinds.insert(kind);
+        if(actualKinds!=expectedKinds)throw std::runtime_error("builtin registry mismatch");
         const auto industrial=ToolRegistry::get("industrial_camera");
         if(!industrial.acquisitionSource || industrial.minimumEditorSchema!=9 || !industrial.requiredBackend.isEmpty())
             throw std::runtime_error("industrial source schema/backend boundary mismatch");

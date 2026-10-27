@@ -56,7 +56,8 @@ int main(int argc, char** argv) {
             {"edge_point", {"found", "pointMm"}}, {"code_read", {"found", "codes", "accepted"}},
             {"pattern_pose", {"found", "pose", "score"}}, {"shape_pose", {"found", "pose", "score"}},
             {"geometry_measurement", {"valueMm", "status"}}, {"edge_pair", {"found", "widthPx", "accepted"}},
-            {"line_fit", {"found", "anglePx", "accepted"}}, {"circle_fit", {"found", "diameterPx", "accepted"}}
+            {"line_fit", {"found", "anglePx", "accepted"}}, {"circle_fit", {"found", "diameterPx", "accepted"}},
+            {"set_variables", {"bundle"}}, {"result", {"decision", "validity"}}, {"publish_data", {}}
         };
         check(table.size() == ToolRegistry::entries().size(), "every builtin covered by default table");
         for (auto i = table.cbegin(); i != table.cend(); ++i) {

@@ -18,7 +18,7 @@ QString bound(const ProjectService& s,const QString& id){for(const auto& c:edito
 int main(int argc,char** argv){QCoreApplication app(argc,argv);try{
     QSet<QString> catalog;
     for(const auto& entry:ToolCatalog::entries()){check(!catalog.contains(entry.kind),"unique new catalog kind");catalog.insert(entry.kind);check(!ToolCatalog::groupForKind(entry.kind).isEmpty(),"each kind has one group");}
-    for(const auto& entry:ToolRegistry::entries())check(catalog.contains(entry.kind)==(entry.kind!="edge" && entry.kind!="publish_data"),"retired Edge and pending publication UI excluded from new catalog");
+    for(const auto& entry:ToolRegistry::entries())check(catalog.contains(entry.kind)==(entry.kind!="edge"),"only retired Edge excluded from new catalog; Publish Data available");
     check(!ToolCatalog::canAdd("edge") && !ToolCatalog::canAdd("missing") && ToolCatalog::canAdd("edge_point"),"new entry policy");
     check(ToolCatalog::groupForKind("future_extension")=="other","future extension fallback");
     auto extension=ToolRegistry::get("calculate");extension.kind="fixture_extension";extension.label="Fixture extension";ToolRegistry::registerType(extension);

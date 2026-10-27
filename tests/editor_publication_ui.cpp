@@ -1,6 +1,7 @@
 #include "app/MainWindow.hpp"
 #include "app/PublishDataEditor.hpp"
 #include "app/EndpointProfileEditor.hpp"
+#include "app/DeliveryDiagnosticsWidget.hpp"
 #include "application/PublicationService.hpp"
 #include "application/DeliveryStore.hpp"
 #include "application/ProductionResultCodec.hpp"
@@ -80,9 +81,14 @@ bool MainWindow::verifyPublicationUi(const QString& artifacts){
         observer.close();profile=store.load()[profile.id];profile.role="server";++profile.revision;store.save({{profile.id,profile}});
         w.service_.enableMultiSource();w.service_.setRuntimeOptions("SoftwareTrigger",{});w.service_.save();w.ensureRuntime();
         w.runtimeCoordinator_->load(*w.service_.activeRecipe(),dir.path(),RuntimeTrigger::SoftwareTrigger);
+        const auto loadedRecipe=w.runtimeCoordinator_->loaded()->id;
+        w.service_.createRecipe("Selected draft only","",ApplicationType::Measurement);
+        check(w.service_.activeRecipe()->id!=loadedRecipe,"selected recipe differs from loaded snapshot");
         check(!w.tcpEndpoint_,"Load creates no endpoint");w.runtimeAction("run");check(w.runtimeCoordinator_->state()==RuntimeState::Running && !w.tcpEndpoint_,"unchecked Run creates no endpoint");w.runtimeAction("stop");
         w.findChild<QCheckBox*>("runtimeTcpV3")->setChecked(true);w.findChild<QLineEdit*>("runtimeTcpPeer")->setText("fixture-generation-1");
         w.runtimeAction("run");check(w.tcpEndpoint_ && w.tcpEndpoint_->listening(),"explicit Run creates production v3 endpoint");
+        check(w.runtime_->active()->recipe().id==loadedRecipe,"v3 Run uses loaded recipe despite selected draft");
+        w.deliveryDiagnostics_->refresh();check(w.findChild<QLabel*>("deliveryStatus")->text().contains(profile.id),"diagnostics bound to production endpoint");
         auto wait=[&](auto f){QElapsedTimer timer;timer.start();while(!f() && timer.elapsed()<15000){QApplication::processEvents();QThread::msleep(1);}check(f(),"production simulator timeout");};
         QFile input(dir.filePath("empty-input.json"));check(input.open(QIODevice::WriteOnly),"input file");input.write(QJsonDocument(QJsonObject{{"snapshotId","fixture"},{"revision","1"},{"fields",QJsonArray{}},{"sourceTime","fixture"},{"clockId","fixture"}}).toJson());input.close();
         QProcess simulator;simulator.start(QCoreApplication::applicationDirPath()+"/visionflow_plc_simulator.exe",{"--v3","--port",QString::number(w.tcpEndpoint_->port()),"--input",input.fileName(),"--expect-decision","NOT_EVALUATED","--expect-field","field0","--expect-value","false"});wait([&]{return simulator.state()==QProcess::NotRunning;});
@@ -91,6 +97,7 @@ bool MainWindow::verifyPublicationUi(const QString& artifacts){
         w.runtimeAction("stop");check(w.tcpEndpoint_->state()!="READY","Stop closes admission");
         w.selectPage("runtime");for(const auto size:{QSize(1400,900),QSize(850,600)}){w.resize(size);QApplication::processEvents();check(w.grab().save(QDir(artifacts).filePath(QString("runtime-v3-%1x%2.png").arg(size.width()).arg(size.height()))),"Runtime v3 visual");}
         w.findChild<QPushButton*>("runtime_tcp_stop")->click();check(!w.tcpEndpoint_,"drained endpoint safely released");
+        w.deliveryDiagnostics_->refresh();check(w.findChild<QLabel*>("deliveryStatus")->text().contains("no bound production endpoint"),"diagnostics releases closed endpoint");
         MainWindow restarted(dir.filePath("panels.ini"));check(!restarted.tcpEndpoint_ && !restarted.findChild<QCheckBox*>("runtimeTcpV3")->isChecked(),"restart does not restore production network permission");
     }
     check(group.producerId==producer && group.fields[0].fieldId==variables[0].id,"UUID binding preserved");QTextStream(stdout)<<"PASS Publish UI: three fields, mapping errors, UUID reopen, Editor network=0, Runtime terminal dispatch=1\n";return true;

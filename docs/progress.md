@@ -4,13 +4,14 @@
 
 ## Devam noktası
 
-**[COMM-23 kısmi](archive/2026-10-27-comm-23-precheck.md):** 4 test; kabul açık.
-[COMM-22 tamam](archive/2026-10-27-comm-22.md).
-[21](archive/2026-10-27-comm-21.md): Publish;
-[20](archive/2026-10-27-comm-20.md): profil UI;
-[19](archive/2026-10-27-comm-19.md): retry/kapasite/namespace;
-[18](archive/2026-10-27-comm-18.md): restart/dedup/recovery;
-[17](archive/2026-10-27-comm-17.md): Runtime/ACK.
+**[COMM-23 TCP tamam](archive/2026-10-28-comm-23.md):** TCP 11/11, core 16/16,
+UI 3/3; iki boyut. Full hataları kayıtta. Sonraki **COMM-36**.
+[22](archive/2026-10-27-comm-22.md),
+[21](archive/2026-10-27-comm-21.md),
+[20](archive/2026-10-27-comm-20.md),
+[19](archive/2026-10-27-comm-19.md),
+[18](archive/2026-10-27-comm-18.md),
+[17](archive/2026-10-27-comm-17.md) tamam.
 COMM-12–16: profil/intent/bundle/outbox/input-router/codec.
 Editor/Load ağ açmaz; tombstone silinmez; fiziksel kabul açık.
 

@@ -1,6 +1,8 @@
 # COMM-23 — TCP yazılım ve görsel kabul kapısı
 
-Durum: başlamadı. Önerilen düzey: **medium**. Önkoşul: **COMM-22** tamam.
+Durum: **tamam (TCP yazılım/görsel)**. Genel full regresyon hataları açık.
+[Kanıt ve sınırlar](../../archive/2026-10-28-comm-23.md).
+Önerilen düzey: **medium**. Önkoşul: **COMM-22** tamam.
 Bir oturumda yalnız bu kart; paralel uygulayıcı yok.
 
 ## Oku

@@ -6,6 +6,7 @@ görev” ifadeleri yazıldıkları tarihe aittir.
 
 | Dönem / görev | Kayıt |
 | --- | --- |
+| 28 Ekim 2026 — COMM-23 | [TCP yazılım/görsel kabul, hata matrisi ve regresyon sınırları](2026-10-28-comm-23.md) |
 | 27 Ekim 2026 — COMM-23-PRECHECK | [Kısmi COMM-23 kodu, dört test ve build ortamı](2026-10-27-comm-23-precheck.md) |
 | 27 Ekim 2026 — COMM-22 | [Trigger/delivery diagnostics, kalıcı retry ve Logs ilişkisi](2026-10-27-comm-22.md) |
 | 27 Ekim 2026 — COMM-21 | [Publish Data bundle/field/grup Properties, fiziksel mapping ve bağlantısız preview](2026-10-27-comm-21.md) |

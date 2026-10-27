@@ -1,6 +1,7 @@
 # Haberleşme verileri — uygulama planı
 
-**COMM-PLAN-03 · 27 Ekim 2026 · COMM-01–22 tamamlandı; sıradaki COMM-23.**
+**COMM-PLAN-03 · 27 Ekim 2026 · COMM-01–23 TCP kabulü tamam; sıradaki COMM-36.**
+[COMM-23 kanıtı ve açık full regresyon hataları](../../archive/2026-10-28-comm-23.md).
 Bu paket [ilk araştırmanın](../communication-data-phase.md) sekiz geniş kartının
 yerine geçer. [Kalibrasyon veri tipi notu](../robot-spatial-data-review.md) girdi
 olarak korunur. Önceki COMM-01–08 kart başlıkları uygulanmış teslim değildir.
