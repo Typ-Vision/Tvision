@@ -363,3 +363,18 @@ bilgisayarının tarihsel kanıtıdır. Her makinede gerçek checkout ve indeks 
   bounded retry/reconnect, aynı bytes ve 130 ACK'li cycle/durable eski replay;
   `delivery_optional_runtime` ACK'siz execution, tek RESULT in-flight ve aktif
   cycle sırasında önceki ACK kabulü/drain sınar. UI değişmedi.
+
+## COMM-20 — Endpoint profil ekranı (27 Ekim 2026)
+
+- `src/app/EndpointProfileEditor.*`: machine-local `CommunicationProfiles` atomik
+  kaydı; UUID/revision, enabled, TCP server/client, IP/port, timeout/retry ve
+  maskeli credentialRef. Liste/add/edit/Cancel/no-op, aktif Runtime/bağlantı guard.
+- `src/application/EndpointConnectionProbe.*`: asenkron client bağlantısı veya
+  server bind denemesi; Test kapatır, Disconnect temizler. Üretim API'sine bağı
+  yoktur, mesaj/trigger/result üretmez. Gerçek v3 Runtime aktivasyonu COMM-23.
+- `MainWindowCommunication.cpp`: ayrı kaydırılabilir v3/v2 sekmeleri. V2 INI
+  ayarları korunur; v3 deposu settings dizinindeki `communication-profiles.json`.
+- `tests/endpoint_profile_ui_test.cpp`: transaction, iptal/no-op, aktif guard,
+  adres/port hatası, gerçek localhost bind/client, redaction ve Tab dolaşımı.
+  CTest `ui_endpoint_profiles`; `ui_endpoint_screen` normal MainWindow'da
+  1400×900/850×600 offscreen görüntüleri alır. Fiziksel/native kabul değildir.

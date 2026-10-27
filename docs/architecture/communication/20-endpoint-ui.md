@@ -1,6 +1,6 @@
 # COMM-20 — Endpoint bağlantı profili UI
 
-Durum: başlamadı. Önerilen düzey: **low**. Önkoşul: **COMM-19** tamam.
+Durum: yazılım/görsel kabulü tamamlandı. [Kapanış](../../archive/2026-10-27-comm-20.md). Önerilen düzey: **low**. Önkoşul: **COMM-19** tamam.
 Bir oturumda yalnız bu kart; paralel uygulayıcı yok.
 
 ## Oku

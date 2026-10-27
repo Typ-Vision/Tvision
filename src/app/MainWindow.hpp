@@ -72,6 +72,7 @@ public:
     bool verifyRuntimeFailures(const QString& artifacts);
     bool verifyRuntime(const QString& artifacts);
     bool verifyCommunication(const QString& artifacts);
+    bool verifyEndpointProfiles(const QString& artifacts);
     bool verifySystemCalibration(const QString& artifacts);
 protected:
     void closeEvent(QCloseEvent* event) override;

@@ -438,6 +438,14 @@ Kalibrasyon kamera/lens/çözünürlük ve gerekiyorsa çalışma düzlemiyle il
 
 8 Ekim 6D.1 uygulaması: birincil TCP/IP Socket, VisionFlow sunucu/PLC istemci. Mevcut Communication ekranında yerel IP/port/ACK süresi ve enabled Measurement adı seçilir; oturum içi ayarlar, asenkron dinleme/stop/cancel/kayıt retry ve gerçek trace. Runtime doğrula/etkinleştir önkoşuldur. Bu ilk sürüm JSON-LF session/request/recipe/config kimliği, tek peer/outstanding ve 128 accepted request/session sınırına sahiptir; kalıcı dedup/restart teslim kurtarma, vendor/register mapping, Modbus TCP/OPC UA ve fiziksel PLC kabulü henüz yoktur. [Sözleşme](../architecture/plc-socket.md).
 
+COMM-20: Communication ayrı TCP v3 profil sekmesi sunar. Makineye yerel profil
+UUID/revision, Enabled, server/client rolü, IPv4/IPv6, port, timeout/retry ve
+maskeli credentialRef ile atomik kaydedilir. Cancel/no-op değişiklik yapmaz.
+Aktif Runtime/bağlantıda değişiklik önce Stop/Disconnect ister; kayıt loaded
+snapshot'ı değiştirmez, kullanım yeniden Load ister. Connect/Disconnect/Test
+Connection yalnız bağlantı denemesidir; üretim aktivasyonu COMM-23 kapsamındadır.
+TCP v2 sekmesi ve ayarları korunur; Modbus/OPC UA aktif seçenek değildir.
+
 Robot/PLC sekmeleri, Protocol (TCP Socket, Modbus TCP, OPC UA), IP Address, Port ve protokole özgü parametreler bulunur. Connect, Disconnect, Test Connection ve Save komutları servis katmanına gider.
 
 Data mapping:

@@ -4,8 +4,9 @@
 
 ## Devam noktası
 
-**[COMM-19](archive/2026-10-27-comm-19.md):** V3 bounded retry/kapasite/namespace.
-**Sonraki COMM-20.** Explicit dev API; normal UI aktivasyonu COMM-23.
+**[COMM-20](archive/2026-10-27-comm-20.md):** V3 profil/bağlantı UI.
+**Sonraki COMM-21.** Üretim UI aktivasyonu COMM-23.
+[19](archive/2026-10-27-comm-19.md): retry/kapasite/namespace;
 [18](archive/2026-10-27-comm-18.md): restart/dedup/recovery;
 [17](archive/2026-10-27-comm-17.md): Runtime/outbox/ACK.
 COMM-12–16: profil/intent/bundle/outbox/input-router/codec tamam.

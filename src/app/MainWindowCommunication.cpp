@@ -15,6 +15,10 @@
 #include <QPlainTextEdit>
 #include <QTimer>
 #include <QFileInfo>
+#include <QTabWidget>
+#include <QApplication>
+#include <QDir>
+#include "EndpointProfileEditor.hpp"
 
 namespace visionflow {
 QWidget* MainWindow::makeCommunication() {
@@ -48,7 +52,25 @@ plcAddress_=new QLineEdit("127.0.0.1");plcAddress_->setObjectName("plcAddress");
     for(auto* field:page->findChildren<QLineEdit*>())field->setMinimumHeight(26);
     for(auto* field:page->findChildren<QSpinBox*>())field->setMinimumHeight(26);
     for(auto* field:page->findChildren<QComboBox*>())field->setMinimumHeight(26);
-    layout->setSizeConstraint(QLayout::SetMinimumSize);auto* scroll=new QScrollArea;scroll->setWidgetResizable(true);scroll->setWidget(page);return scroll;
+    layout->setSizeConstraint(QLayout::SetMinimumSize);
+    auto* scroll=new QScrollArea;scroll->setWidgetResizable(true);scroll->setWidget(page);
+    auto* tabs=new QTabWidget;
+    auto* v3scroll=new QScrollArea;v3scroll->setObjectName("endpointScroll");v3scroll->setWidgetResizable(true);
+    v3scroll->setWidget(new EndpointProfileEditor(QFileInfo(settingsFile_).absolutePath()+"/communication-profiles.json",[this]{
+        return runtimeCoordinator_ && runtimeCoordinator_->state()!=RuntimeState::Unloaded && runtimeCoordinator_->state()!=RuntimeState::LoadedStopped;
+    }));
+    tabs->addTab(v3scroll,"TCP v3 profilleri");tabs->addTab(scroll,"TCP v2 (mevcut)");return tabs;
+}
+bool MainWindow::verifyEndpointProfiles(const QString& artifacts) {
+    selectPage("communication");
+    for(const auto size:{QSize(1400,900),QSize(850,600)}){resize(size);QApplication::processEvents();if(!grab().save(QDir(artifacts).filePath(QString("communication-%1x%2.png").arg(size.width()).arg(size.height()))))return false;}
+    findChild<QLineEdit*>("endpointAddress")->setText("invalid address");
+    findChild<QPushButton*>("endpoint_save")->click();
+    auto* status=findChild<QLabel*>("endpointStatus");
+    findChild<QScrollArea*>("endpointScroll")->ensureWidgetVisible(status);
+    QApplication::processEvents();
+    if(!grab().save(QDir(artifacts).filePath("communication-850x600-error-scroll.png")))return false;
+    return status->text().contains("IPv4") && !plc_->listening() && !runtime_ && findChild<QComboBox*>("endpointList");
 }
 void MainWindow::refreshCommunication() {
     if(!plcStatus_)return;const bool listening=plc_ && plc_->listening();
