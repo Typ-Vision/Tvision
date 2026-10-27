@@ -26,7 +26,7 @@ const std::optional<CycleResult>& MultiSourceRuntimeService::lastCompletion() co
 MultiSourceRuntimeService::Prepared MultiSourceRuntimeService::capture(const Recipe& recipe,const QString& directory,bool configurationOnly) const {
     require(QJsonDocument(recipe.definition).toJson(QJsonDocument::Compact).size()<=16*1024*1024,ProductionError::InvalidConfiguration,"Whole recipe definition exceeds 16 MiB snapshot budget");
     require(recipe.definition["editor"].toObject()["schemaVersion"]==9,ProductionError::InvalidConfiguration,"Explicit editor9 required");validateEditorDefinition(recipe.definition);
-    const auto graph=validateSourceGraph(editorTools(recipe.definition),editorConnections(recipe.definition));require(graph.valid() && !graph.requiredSources.isEmpty(),ProductionError::InvalidConfiguration,"Invalid/empty multi-source graph");
+    const auto graph=validateSourceGraph(editorTools(recipe.definition),executionConnections(recipe.definition));require(graph.valid() && !graph.requiredSources.isEmpty(),ProductionError::InvalidConfiguration,"Invalid/empty multi-source graph");
     const auto set=provider_(recipe);require(configurationOnly || !set.configurationOnly,ProductionError::DependencyChanged,"Configuration source set cannot grant Runtime admission");require(set.experimentalCalibrations.isEmpty(),ProductionError::DependencyChanged,"Experimental models cannot enter trusted Runtime");require(set.sources.size()==graph.requiredSources.size(),ProductionError::DependencyChanged,"Missing/foreign source snapshot set");Prepared out;QJsonObject sourceSet;QSet<QString> devices;QMap<QString,QJsonObject> cameraConfigurations;
     const auto configured=editorTools(recipe.definition);bool hasIndustrial=false;
     for(const auto& t:configured)if(t.enabled && t.kind=="industrial_camera")hasIndustrial=true;
@@ -56,6 +56,8 @@ MultiSourceRuntimeService::Prepared MultiSourceRuntimeService::capture(const Rec
     }
     if(configurationOnly)return {}; // No executable snapshot escapes static inspection.
     auto snapshot=std::make_shared<ProductionSnapshot>();snapshot->recipe_=recipe;snapshot->directory_=QDir(directory).absolutePath();snapshot->dependencies_={{"engine",ExecutionService::version()},{"sourceSet",sourceSet},{"scope",(persist_ ? "multi_source_runtime/1":"multi_source_in_memory/1")}};
+    const auto pub=PublicationService::dependency(recipe.definition,set.publication);
+    if(!pub.isEmpty()){snapshot->dependencies_["publication"]=pub;snapshot->publication_=set.publication;}
     if(industrial)snapshot->industrial_=std::make_shared<const IndustrialExecutionInputs>(industrial->inputs);
     snapshot->validation_={QUuid::createUuid().toString(QUuid::WithoutBraces),identity_.principal,QByteArray{},hash(snapshot->dependencies_),QDateTime::currentDateTimeUtc(),(persist_ ? "multi_source_runtime/1":"multi_source_in_memory/1")};
     // Canonical complete recipe identity uses the same fields as legacy admission.
@@ -82,6 +84,7 @@ void MultiSourceRuntimeService::finish(quint64 ticket,const CycleResult& result)
         persist("cycles",pending_["recordId"].toString(),pending_);pending_={};pendingCompletion_.reset();last_=result;failure_.clear();cycle_={};return;
     }
     const auto branches=ProductionRecipeService::validateMultiSourceCompletion(cycle_,result,prepared_.branches);
+    require(!cycle_.snapshot->publication(),ProductionError::InvalidCompletion,"Publication terminal bundle codec required (COMM-13)");
     if(pending_.isEmpty()){
         const auto& s=*cycle_.snapshot;QJsonArray frames,tools;
         for(const auto& f:result.frames)frames.append(QJsonObject{{"frameId",f.frameId},{"cycleId",f.cycleId},{"sourceId",f.sourceId},{"coordinateSystemId",f.coordinateSystemId},{"completedAtUtc",f.completedAtUtc.toString(Qt::ISODateWithMs)}});

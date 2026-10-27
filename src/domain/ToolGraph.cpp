@@ -1,3 +1,4 @@
+#include "PublicationConfig.hpp"
 #include "ToolGraph.hpp"
 #include "AssignmentConfig.hpp"
 #include "ResultDecision.hpp"
@@ -58,10 +59,16 @@ QVector<ToolConnection> assignmentConnections(const QVector<ToolDefinition>& too
     }
     for(const auto& t:tools)if(t.kind=="result" && !(t.parameters["required"].toArray().isEmpty() && !t.enabled)) {
         int row=0;for(const auto& b:decodeResultConfig(t.parameters).required)result.append({b.toolId,b.port,t.id,QString("@result/%1").arg(row++)});
+    }
+    for(const auto& t:tools)if(t.kind=="publish_data") {
+        // Group source bindings are expanded by executionConnections below.
+        decodePublishConfig(t.parameters);
     }return result;
 }
 QVector<ToolConnection> executionConnections(const QJsonObject& definition) {
-    auto result=editorConnections(definition);for(const auto& c:assignmentConnections(editorTools(definition)))if(!result.contains(c))result.append(c);return result;
+    auto result=editorConnections(definition);const auto tools=editorTools(definition);for(const auto& c:assignmentConnections(tools))if(!result.contains(c))result.append(c);
+    const auto groups=recipeOutputGroups(definition);
+    for(const auto& t:tools)if(t.kind=="publish_data")for(const auto& id:decodePublishConfig(t.parameters).groups)for(const auto& g:groups)if(g.id==id)result.append({g.producerId,"bundle",t.id,"@publication/"+g.id});return result;
 }
 GraphValidation validateGraph(const QVector<ToolDefinition>& tools,const QVector<ToolConnection>& explicitConnections) {
     auto connections=explicitConnections;
@@ -82,6 +89,9 @@ GraphValidation validateGraph(const QVector<ToolDefinition>& tools,const QVector
                 }
             }
             if(!valid)r.errors<<"Invalid assignment UUID/port/revision binding: "+c.targetTool;
+        }
+        else if(nodes[c.targetTool].kind=="publish_data") {
+            if(nodes[c.sourceTool].kind!="set_variables" || c.sourcePort!="bundle" || !c.targetPort.startsWith("@publication/") || !decodePublishConfig(nodes[c.targetTool].parameters).groups.contains(c.targetPort.mid(13)))r.errors<<"Invalid publication bundle dependency";
         }
         else if(nodes[c.targetTool].kind=="result") {
             bool valid=false;const auto config=decodeResultConfig(nodes[c.targetTool].parameters);
@@ -157,11 +167,11 @@ GraphValidation validateGraph(const QVector<ToolDefinition>& tools,const QVector
             origins.insert(id);if(t.enabled)r.requiredSources.append(id);
         }
         for(const auto& c:connections)if(c.targetTool==id && nodes.contains(c.sourceTool)) {
-            if(nodes[c.sourceTool].kind=="set_variables" || nodes[c.sourceTool].kind=="result")continue;
+            if(nodes[c.sourceTool].kind=="set_variables" || nodes[c.sourceTool].kind=="result" || nodes[c.sourceTool].kind=="publish_data")continue;
             const auto source=r.toolSources.value(c.sourceTool);
             if(!source.isEmpty())origins.insert(source);
         }
-        if(t.kind=="set_variables" || t.kind=="result")continue;
+        if(t.kind=="set_variables" || t.kind=="result" || t.kind=="publish_data")continue;
         if(origins.size()>1)r.errors<<t.name+": cross-source inputs are not supported";
         else if(origins.size()==1) {
             const auto source=*origins.cbegin();r.toolSources[id]=source;

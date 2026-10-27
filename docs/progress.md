@@ -4,16 +4,15 @@
 
 ## Devam noktası
 
-**[COMM-11 tamam](archive/2026-10-27-comm-11.md):** Result DAG/ALL/ANY UI,
-cycle decision/validity ve ayrı Editor/Runtime summary. Missing/Stop eski OK'ı
-gizler. Release UI ON 16, OFF 6 ilgili test tekrarlarla geçti; iki boyut offscreen.
-Native/fiziksel açık. **Sonraki tek kart COMM-12.**
+**[COMM-12 tamam](archive/2026-10-27-comm-12.md):** Yerel profil, logical output
+group, frozen dependency ve saf cycle intent. Editor/Load ağ başlatmaz.
+Release ON 25 ilgili test tekrarlarla, OFF 6 geçti. Terminal bundle kapısı
+COMM-13'e açıktır; transport/UI yok. **Sonraki tek kart COMM-13.**
 
-**[COMM-10](archive/2026-10-27-comm-10.md):** Missing-first pure evaluator,
-ERROR/CANCELED export ve system write koruması.
-**[COMM-09](archive/2026-10-27-comm-09.md):** Frozen cycle-local variable context,
-private digest ve kayıt bariyeri; Begin/Stop/ERROR/stale completion eskileri gizler.
-Checkout/indeks `C:/Projects/Tvision`; ev kökü burada yok.
+**[COMM-11](archive/2026-10-27-comm-11.md):** Result DAG/ALL/ANY ve ayrı summary.
+**[COMM-10](archive/2026-10-27-comm-10.md):** Missing-first karar/export koruması.
+**[COMM-09](archive/2026-10-27-comm-09.md):** Frozen cycle variable context/digest.
+Checkout/indeks `C:/Projects/Tvision`; ev kökü burada yok. Native/fiziksel açık.
 
 **COMM-02–08 tamam:** typed scalar/spatial, variable katalog/komutları,
 atomik evaluator/DAG/cache ve çok satırlı Editor UI.

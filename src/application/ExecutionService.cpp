@@ -46,6 +46,7 @@ QByteArray ExecutionService::toolSignature(const QJsonObject& definition,const Q
     while(!pending.isEmpty()){const auto id=pending.takeFirst();for(const auto& c:connections)if(c.targetTool==id && !required.contains(c.sourceTool)){required.insert(c.sourceTool);pending.append(c.sourceTool);}}
     QCryptographicHash hash(QCryptographicHash::Sha256);hash.addData(scope);hash.addData(version().toUtf8());
     if(std::any_of(tools.begin(),tools.end(),[&](const auto& t){return required.contains(t.id) && t.kind=="set_variables";}))hash.addData(QJsonDocument(withRecipeVariables({},recipeVariables(definition))).toJson(QJsonDocument::Compact));
+    if(std::any_of(tools.begin(),tools.end(),[&](const auto& t){return required.contains(t.id) && t.kind=="publish_data";}))hash.addData(QJsonDocument(definition["publication"].toObject()).toJson(QJsonDocument::Compact));
     for(const auto& t:tools)if(required.contains(t.id)) {
         hash.addData(QJsonDocument(QJsonObject{{"id",t.id},{"kind",t.kind},{"enabled",t.enabled},{"parameters",t.parameters},{"version",ToolRegistry::get(t.kind).version}}).toJson(QJsonDocument::Compact));
         if(!t.dependencies.isEmpty() || !ToolRegistry::get(t.kind).requiredBackend.isEmpty()) {
@@ -165,7 +166,12 @@ CycleResult ExecutionService::run(const QJsonObject& definition,const QString& d
                 }
                 if(unavailable) {r.state=ExecutionState::Skipped;r.message=targetOnly ? ("Girdi güncel değil: "+missing.join(", ")+". Önce görüntü al veya bağlı üst aracı çalıştır.") : "Upstream sonucu geçersiz/ERROR/SKIPPED";}
                 else try {
-                    if(t.kind=="result") {
+                    if(t.kind=="publish_data") {
+                        if(!publication_)throw std::runtime_error("Publication profile unresolved; load a profile snapshot");
+                        QMap<QString,AssignmentBundle> bundles;for(auto i=completed.begin();i!=completed.end();++i)if(i->state==ExecutionState::Done){const auto port=i->outputs.value("bundle");if(port.valid)if(auto b=std::get_if<AssignmentBundle>(&port.data))bundles[i.key()]=*b;}
+                        auto intents=PublicationService::evaluate(decodePublishConfig(t.parameters),definition,bundles,cycle.cycleId,QString::fromLatin1(configId.toHex()),*publication_);
+                        cycle.publicationIntents.append(intents);cycle.executedTools.append(t.id);r.state=ExecutionState::Done;
+                    } else if(t.kind=="result") {
                         cycle.executedTools.append(t.id);
                         DecisionInputView view;view.cycleId=cycle.cycleId;view.configId=QString::fromLatin1(configId.toHex());view.execution=ResultExecutionState::Done;
                         const auto rule=decodeResultConfig(t.parameters);
@@ -369,6 +375,7 @@ CycleResult ExecutionService::run(const QJsonObject& definition,const QString& d
         if(stopped) {cycle.industrialEvidence.clear();cycle.frames.clear();cycle.error="Çevrim iptal edildi; sonuç yayımlanmaz.";for(auto& r:cycle.tools) {r.state=ExecutionState::Skipped;r.message="İptal edildi";r.errorCode.clear();r.fitDiagnostic.reset();r.edgeDiagnostics.reset();r.overlayGeometry.reset();r.outputs.clear();r.regions.clear();r.mask={};r.points.clear();r.rejectedPoints.clear();r.lines.clear();r.searchRegion={};r.decision=PartDecision::NotEvaluated;r.calibration.reset();}}
     } catch(const std::exception& e) {if(const auto* source=dynamic_cast<const AcquisitionPolicyError*>(&e))cycle.acquisitionFailureSourceId_=source->sourceId;cycle.state=ExecutionState::Error;cycle.error=QString::fromUtf8(e.what());if(multi){cycle.industrialEvidence.clear();cycle.frames.clear();for(auto& r:cycle.tools){r.state=ExecutionState::Skipped;r.overlayGeometry.reset();r.outputs.clear();r.regions.clear();r.points.clear();r.lines.clear();r.mask={};r.fitDiagnostic.reset();r.edgeDiagnostics.reset();r.decision=PartDecision::NotEvaluated;r.calibration.reset();}}}
     if(cycle.state!=ExecutionState::Done) {
+        cycle.publicationIntents.clear();
         for(auto& r:cycle.tools)for(auto& p:r.outputs)if(p.port.frame=="cycle" && r.message=="none") {
             if(p.port.id=="decision")p.data=QString("NOT_EVALUATED");else if(p.port.id=="validity")p.data=false;
         }

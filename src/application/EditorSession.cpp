@@ -112,6 +112,7 @@ void EditorSession::reconcile(const EditorContext& c) {
         if(frame && !sourceFrames.contains(frame->metadata().sourceId))frame.reset();
     }else {const auto e=evaluation(c);cache_=e.cache;}
     if(cycle) {
+        if(cycle->configId!=signature(c))cycle->publicationIntents.clear();
         cycle->tools.erase(std::remove_if(cycle->tools.begin(),cycle->tools.end(),[&](const auto& r){return !cache_.contains(r.toolId);}),cycle->tools.end());
         if(cycle->tools.isEmpty())cycle.reset();else cycle->configId=signature(c);
     }
@@ -120,7 +121,7 @@ void EditorSession::invalidateTool(const EditorContext& c,const QString& tool) {
     QSet<QString> removed{tool};QStringList pending{tool};const auto connections=executionConnections(c.definition);
     while(!pending.isEmpty()){const auto id=pending.takeFirst();for(const auto& link:connections)if(link.sourceTool==id && !removed.contains(link.targetTool)){removed.insert(link.targetTool);pending.append(link.targetTool);}}
     for(const auto& id:removed){cache_.remove(id);references.remove(id);}
-    if(cycle)cycle->tools.erase(std::remove_if(cycle->tools.begin(),cycle->tools.end(),[&](const auto& r){return removed.contains(r.toolId);}),cycle->tools.end());
+    if(cycle){cycle->publicationIntents.clear();cycle->tools.erase(std::remove_if(cycle->tools.begin(),cycle->tools.end(),[&](const auto& r){return removed.contains(r.toolId);}),cycle->tools.end());}
 }
 bool EditorSession::acceptTool(CycleResult result,const QByteArray& captured,const EditorContext& current) {
     if(!accepts(captured,current))return false;
@@ -236,5 +237,5 @@ QJsonObject EditorSession::taughtSearch(const EditorContext& c,const ToolDefinit
         for(const auto& source:editorTools(c.definition))if(source.id==b.sourceTool)p["referenceGeometry"]=referenceGeometry(source);
     }p["searchRoi"]=MatchService::rectangle(roi);return p;
 }
-void EditorSession::suppressCancelled(CycleResult& c) {c.industrialEvidence.clear();c.frames.clear();c.state=ExecutionState::Skipped;c.error="Çevrim iptal edildi.";for(auto& r:c.tools){r.state=ExecutionState::Skipped;r.message="İptal edildi";r.errorCode.clear();r.fitDiagnostic.reset();r.edgeDiagnostics.reset();r.overlayGeometry.reset();r.outputs.clear();r.regions.clear();r.mask={};r.points.clear();r.rejectedPoints.clear();r.lines.clear();r.searchRegion={};r.decision=PartDecision::NotEvaluated;r.calibration.reset();}}
+void EditorSession::suppressCancelled(CycleResult& c) {c.publicationIntents.clear();c.industrialEvidence.clear();c.frames.clear();c.state=ExecutionState::Skipped;c.error="Çevrim iptal edildi.";for(auto& r:c.tools){r.state=ExecutionState::Skipped;r.message="İptal edildi";r.errorCode.clear();r.fitDiagnostic.reset();r.edgeDiagnostics.reset();r.overlayGeometry.reset();r.outputs.clear();r.regions.clear();r.mask={};r.points.clear();r.rejectedPoints.clear();r.lines.clear();r.searchRegion={};r.decision=PartDecision::NotEvaluated;r.calibration.reset();}}
 }

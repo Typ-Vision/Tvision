@@ -308,7 +308,7 @@ CycleResult RuntimeService::execute(const ProductionCycle& cycle,const QString& 
     if(s->dependencies().contains("sourceSet")){QJsonObject sources;const auto set=s->dependencies()["sourceSet"].toObject();for(auto i=set.begin();i!=set.end();++i)if(i->toObject().contains("measurementSource"))sources[i.key()]=i->toObject()["measurementSource"].toObject()["acquisition"];acquisition={{"sources",sources}};}
     CycleResult result;
     const auto execution=s->industrial() ? ExecutionService(*s->industrial(),std::move(factory)):ExecutionService(std::move(factory));
-    try{result=execution.run(recipe.definition,s->projectDirectory(),recipe.id,s->validation().contentId,cancel,{}, {},
+    try{result=execution.withPublicationSnapshot(s->publication()).run(recipe.definition,s->projectDirectory(),recipe.id,s->validation().contentId,cancel,{}, {},
         [catalogPath,s](const ImageFrame& frame){return calibration(*s,frame,catalogPath);},nullptr,acquisition);}
     catch(const std::exception& e){result.recipeId=recipe.id;result.configId=s->validation().contentId;result.cycleId=QUuid::createUuid().toString(QUuid::WithoutBraces);result.state=ExecutionState::Error;result.error=QString::fromUtf8(e.what());}
     result.variables_=runtimeVariables(*s,result);

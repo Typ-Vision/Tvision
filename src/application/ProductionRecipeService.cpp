@@ -36,7 +36,7 @@ QByteArray content(const Recipe& r,const QString& directory) {
 bool sha256(const QString& s) {return s.size()==64 && std::all_of(s.begin(),s.end(),[](QChar c){return (c>='0' && c<='9') || (c>='a' && c<='f');});}
 bool trustedCompletionRequired(const QVector<ToolDefinition>& tools) {
     return std::any_of(tools.cbegin(),tools.cend(),[](const auto& t){return t.enabled &&
-        ((t.kind=="set_variables" || t.kind=="result") || t.parameters.contains("referenceBinding") || t.kind=="pattern_pose" || t.kind=="shape_pose");});
+        ((t.kind=="publish_data" || t.kind=="set_variables" || t.kind=="result") || t.parameters.contains("referenceBinding") || t.kind=="pattern_pose" || t.kind=="shape_pose");});
 }
 bool terminal(ExecutionState s) {return s==ExecutionState::Done || s==ExecutionState::Error || s==ExecutionState::Skipped;}
 }
@@ -46,20 +46,20 @@ QJsonObject ProductionRecipeService::validateMultiSourceCompletion(const Product
     auto invalid=[&](bool ok,const char* text){if(!ok)fail(ProductionError::InvalidCompletion,text);};
     invalid(lease.snapshot && lease.ticket && r.completionSnapshot_==lease.snapshot && r.completionTicket_==lease.ticket && !r.completionDigest_.isEmpty() && r.completionDigest_==completionDigest(r),"Missing/changed/foreign multi-source trusted completion");
     invalid((lease.snapshot->validation().scope=="multi_source_in_memory/1" || lease.snapshot->validation().scope=="multi_source_runtime/1") && !r.partial && r.targetToolId.isEmpty() && terminal(r.state) && r.recipeId==lease.snapshot->recipe().id && r.configId==lease.snapshot->validation().contentId && !r.cycleId.isEmpty(),"Invalid multi-source completion scope/identity");
-    const auto configured=editorTools(lease.snapshot->recipe().definition);const auto graph=validateSourceGraph(configured,editorConnections(lease.snapshot->recipe().definition));invalid(graph.valid() && branches.size()==graph.requiredSources.size(),"Snapshot graph/source set mismatch");
+    const auto configured=editorTools(lease.snapshot->recipe().definition);const auto graph=validateSourceGraph(configured,executionConnections(lease.snapshot->recipe().definition));invalid(graph.valid() && branches.size()==graph.requiredSources.size(),"Snapshot graph/source set mismatch");
     QStringList acquired;for(const auto& frame:r.frames){invalid(graph.requiredSources.contains(frame.sourceId) && !acquired.contains(frame.sourceId),"Duplicate/foreign acquired source");acquired.append(frame.sourceId);}
     if(!r.frames.isEmpty()){SourceFrameIndex index(r.cycleId,acquired,r.frames);for(const auto& tool:r.tools)for(const auto& value:tool.outputs)if(value.valid && value.port.type!=PortType::AssignmentBundle && value.port.frame!="cycle")index.validatePort(graph.toolSources.value(tool.toolId),value,value.port);}
     else for(const auto& tool:r.tools)for(const auto& value:tool.outputs)invalid(!value.valid || (value.port.type==PortType::AssignmentBundle || value.port.frame=="cycle"),"Output without acquired frame");
     if(r.state==ExecutionState::Done){invalid(acquired.size()==graph.requiredSources.size(),"DONE missing required source");SourceFrameIndex index(r.cycleId,graph.requiredSources,r.frames);invalid(r.frameId==index.legacyFrameId(),"Wrong compatibility frame ID");}
     else if(graph.requiredSources.size()>1)invalid(r.frameId.isEmpty(),"Multi-source error invented shared frame ID");
     for(auto i=r.industrialEvidence.cbegin();i!=r.industrialEvidence.cend();++i){invalid(i.value() && branches.contains(i.key()) && branches[i.key()]->dependencies().contains("industrialSource"),"Foreign industrial evidence");bool matched=false;for(const auto& t:r.tools)if(t.toolId==i.key())for(const auto& v:t.outputs)if(v.valid && std::holds_alternative<ImageFrame>(v.data)){const auto& image=std::get<ImageFrame>(v.data);invalid(image.contentId()==i.value()->pixelHash && image.metadata().frameId==i.value()->execution.frameId && image.metadata().cycleId==i.value()->execution.cycleId,"Industrial pixels/frame differ from acquisition");matched=true;}invalid(matched,"Industrial evidence without actual raster");}
-    QSet<QString> seen;for(const auto& tool:r.tools){invalid(!seen.contains(tool.toolId) && std::any_of(configured.cbegin(),configured.cend(),[&](const auto& t){return t.id==tool.toolId;}),"Duplicate/foreign completed tool");seen.insert(tool.toolId);if(!graph.requiredSources.contains(graph.toolSources.value(tool.toolId)) && std::none_of(configured.cbegin(),configured.cend(),[&](const auto& t){return t.id==tool.toolId && t.enabled && (t.kind=="set_variables" || t.kind=="result");}))invalid(tool.state==ExecutionState::Skipped && tool.outputs.isEmpty() && tool.decision==PartDecision::NotEvaluated && !tool.calibration,"Disabled branch carried output");}
+    QSet<QString> seen;for(const auto& tool:r.tools){invalid(!seen.contains(tool.toolId) && std::any_of(configured.cbegin(),configured.cend(),[&](const auto& t){return t.id==tool.toolId;}),"Duplicate/foreign completed tool");seen.insert(tool.toolId);if(!graph.requiredSources.contains(graph.toolSources.value(tool.toolId)) && std::none_of(configured.cbegin(),configured.cend(),[&](const auto& t){return t.id==tool.toolId && t.enabled && (t.kind=="publish_data" || t.kind=="set_variables" || t.kind=="result");}))invalid(tool.state==ExecutionState::Skipped && tool.outputs.isEmpty() && tool.decision==PartDecision::NotEvaluated && !tool.calibration,"Disabled branch carried output");}
     if(r.state==ExecutionState::Done)invalid(seen.size()==configured.size(),"DONE missing tool results");
     for(const auto& source:graph.requiredSources){const auto snapshot=branches.value(source);invalid(bool(snapshot) && snapshot->dependencies()==lease.snapshot->dependencies()["sourceSet"].toObject()[source].toObject(),"Branch dependency set mismatch");
         // Frozen dependency accessor, no live model resolution during completion.
         ProductionRecipeService verifier([](const QString&,ProductionAction){return true;});verifier.active_=snapshot;verifier.cycle_={lease.ticket,snapshot};verifier.cyclePrincipal_=snapshot->validation().principal;verifier.cycleBeginId_=QUuid::createUuid().toString(QUuid::WithoutBraces);verifier.cycleStarted_=QDateTime::currentDateTimeUtc();
         verifier.completionResolver_=[snapshot](const ImageFrame& image){if(snapshot->dependencies().contains("systemCalibration"))return SystemCalibration::resolve(SystemCalibration::decodeEvidence(snapshot->dependencies()["systemCalibration"].toObject()),snapshot->recipe(),snapshot->projectDirectory(),image);MeasurementExecutionContext c;c.rawSize=image.size();c.error="Raw-only immutable source";return c;};
-        auto part=r;part.industrialEvidence.clear();if(r.industrialEvidence.contains(source))part.industrialEvidence[source]=r.industrialEvidence[source];part.configId=snapshot->validation().contentId;part.frames.clear();part.tools.clear();part.executedTools.clear();part.frameId.clear();
+        auto part=r;part.publicationIntents.clear();part.industrialEvidence.clear();if(r.industrialEvidence.contains(source))part.industrialEvidence[source]=r.industrialEvidence[source];part.configId=snapshot->validation().contentId;part.frames.clear();part.tools.clear();part.executedTools.clear();part.frameId.clear();
         for(const auto& frame:r.frames)if(frame.sourceId==source){part.frames.append(frame);part.frameId=frame.frameId;}
         for(const auto& tool:r.tools)if(graph.toolSources.value(tool.toolId)==source)part.tools.append(tool);
         for(const auto& id:r.executedTools)if(graph.toolSources.value(id)==source)part.executedTools.append(id);part.acquisitions=part.executedTools.contains(source) ? 1:0;
@@ -87,6 +87,10 @@ QByteArray ProductionRecipeService::completionDigest(const CycleResult& r) {
                     if constexpr(std::is_same_v<std::decay_t<decltype(value)>,ValueEnvelope>)out<<int(value.type);}
             },i.value());
         }
+    }
+    out<<r.publicationIntents.size();for(const auto& intent:r.publicationIntents){
+        out<<intent.id<<intent.groupId<<intent.profileId<<intent.cycleId<<intent.configId<<intent.payloadSchema<<intent.contractRevision<<intent.required<<intent.profileDependencyId<<intent.fields.size();
+        for(auto i=intent.fields.begin();i!=intent.fields.end();++i)out<<i.key()<<QJsonDocument(encodeAssignmentValue(i.value())).toJson(QJsonDocument::Compact);
     }
     out<<r.industrialEvidence.size();for(auto it=r.industrialEvidence.cbegin();it!=r.industrialEvidence.cend();++it){out<<it.key()<<bool(it.value());if(it.value())out<<QJsonDocument(industrialCompletionEvidence(*it.value())).toJson(QJsonDocument::Compact);}
     out<<r.frames.size();for(const auto& f:r.frames)metadata(f);
@@ -131,7 +135,7 @@ void ProductionRecipeService::permission(const QString& principal,ProductionActi
     owner();if(principal.isEmpty() || !authorize_ || !authorize_(principal,action))fail(ProductionError::Unauthorized,"Servis yetkisi reddedildi.");
 }
 void ProductionRecipeService::idle() const {if(cycle_.ticket)fail(ProductionError::Busy,"Aktif çevrim bitmeden sürüm değiştirilemez.");}
-QJsonObject ProductionRecipeService::dependencies(const Recipe& recipe,const QString& directory) const {
+QJsonObject ProductionRecipeService::dependencies(const Recipe& recipe,const QString& directory,std::shared_ptr<const PublicationSnapshot>* publication) const {
     ProductionDependencies current;
     try {current=dependencies_ ? dependencies_(recipe) : ProductionDependencies{};}
     catch(const std::exception& e){fail(ProductionError::DependencyChanged,QString::fromUtf8(e.what()));}
@@ -184,6 +188,9 @@ QJsonObject ProductionRecipeService::dependencies(const Recipe& recipe,const QSt
         if(!current.systemCalibration.isEmpty()){const auto s=SystemCalibration::decodeEvidence(current.systemCalibration);if(s.scope["target"]!=acquisition["target"] || s.scope["device"]!=acquisition["device"] || s.scope["setup"].toObject()["geometry"]!=acquisition["geometry"])fail(ProductionError::DependencyChanged,"Calibration/acquisition physical scope differs");}
         result["measurementSource"]=source;
     }else if(!current.measurementSource.isEmpty())fail(ProductionError::DependencyChanged,"Unexpected physical source snapshot");
+    const auto publicationDependency=PublicationService::dependency(recipe.definition,current.publication);
+    if(!publicationDependency.isEmpty())result["publication"]=publicationDependency;
+    if(publication)*publication=current.publication;
     return result;
 }
 void ProductionRecipeService::requireCurrent(const ProductionSnapshot& s) const {
@@ -199,7 +206,7 @@ RecipeValidation ProductionRecipeService::validate(const QString& principal,cons
         p.createdAt=p.modifiedAt=QDateTime::currentDateTimeUtc();p.recipes={draft};validateProject(p);
         validateEditorDefinition(draft.definition);
         if(draft.definition["editor"].toObject()["schemaVersion"].toInt()==9 && !industrialAdmission_)throw std::runtime_error("Editor9 requires whole source-set Runtime preparation");
-        const auto tools=editorTools(draft.definition);const auto connections=editorConnections(draft.definition);
+        const auto tools=editorTools(draft.definition);const auto connections=executionConnections(draft.definition);
         const auto graph=validateGraph(tools,connections);
         if(!graph.valid())throw std::runtime_error(graph.errors.join("\n").toUtf8().constData());
         int sources=0;
@@ -216,7 +223,7 @@ RecipeValidation ProductionRecipeService::validate(const QString& principal,cons
                 if(acquisition==tools.cend())throw std::runtime_error("Reference acquisition identity differs from recipe");
                 if(b.world && (!draft.calibrationBinding || b.calibration!=draft.calibrationBinding))throw std::runtime_error("Reference calibration differs from recipe");
             }
-            if(!(industrialAdmission_ && tool.kind=="industrial_camera") && !QStringList{"image_file","template_match","blob","edge","calculate","webcam","measurement","roi","preprocess","code_read","edge_point","edge_pair","line_fit","circle_fit","geometry_measurement","pattern_pose","shape_pose","set_variables","result"}.contains(tool.kind))throw std::runtime_error("Üretim sözleşmesinde desteklenmeyen tool.");
+            if(!(industrialAdmission_ && tool.kind=="industrial_camera") && !QStringList{"image_file","template_match","blob","edge","calculate","webcam","measurement","roi","preprocess","code_read","edge_point","edge_pair","line_fit","circle_fit","geometry_measurement","pattern_pose","shape_pose","set_variables","result","publish_data"}.contains(tool.kind))throw std::runtime_error("Üretim sözleşmesinde desteklenmeyen tool.");
             if(tool.kind=="webcam" || (industrialAdmission_ && tool.kind=="industrial_camera"))++sources;
             if((ToolRegistry::get(tool.kind).usesCalibration || ((tool.kind=="edge_pair" || tool.kind=="line_fit" || tool.kind=="circle_fit" || tool.kind=="geometry_measurement") && tool.parameters["mode"]=="calibrated")) && !draft.calibrationBinding)throw std::runtime_error("Metric tool requires an exact calibration binding.");
             if(tool.kind=="image_file") {++sources;if(tool.parameters["path"].toString().isEmpty())throw std::runtime_error("Kaynak yolu boş.");}
@@ -229,7 +236,7 @@ RecipeValidation ProductionRecipeService::validate(const QString& principal,cons
             }
         }
         if(sources!=1)throw std::runtime_error("Tek enabled edinim kaynağı gerekir.");
-        auto s=std::make_shared<ProductionSnapshot>();s->recipe_=draft;s->directory_=QDir(directory).absolutePath();s->dependencies_=dependencies(draft,directory);
+        auto s=std::make_shared<ProductionSnapshot>();s->recipe_=draft;s->directory_=QDir(directory).absolutePath();s->dependencies_=dependencies(draft,directory,&s->publication_);
         s->validation_={QUuid::createUuid().toString(QUuid::WithoutBraces),principal,content(draft,directory),hash(s->dependencies_),QDateTime::currentDateTimeUtc()};
         Project archived;archived.id=QUuid::createUuid().toString();archived.name="Production archive";
         archived.cameraReference=draft.cameraReference;archived.createdAt=archived.modifiedAt=s->validation_.checkedAtUtc;archived.recipes={draft};
@@ -347,7 +354,9 @@ void ProductionRecipeService::abandonCycle(quint64 ticket,const QString& reason)
     record(nullptr,reason);cycle_={};
 }
 void ProductionRecipeService::record(const CycleResult* r,const QString& error) {
-    const auto& s=*cycle_.snapshot;QJsonArray frames,tools;
+    const auto& s=*cycle_.snapshot;
+    if(s.publication())fail(ProductionError::InvalidCompletion,"Publication terminal bundle codec required (COMM-13)");
+    QJsonArray frames,tools;
     if(r) {
         for(const auto& f:r->frames)frames.append(QJsonObject{{"frameId",f.frameId},{"cycleId",f.cycleId},{"sourceId",f.sourceId},{"coordinateSystemId",f.coordinateSystemId},{"completedAtUtc",f.completedAtUtc.toString(Qt::ISODateWithMs)}});
         for(const auto& t:r->tools) {

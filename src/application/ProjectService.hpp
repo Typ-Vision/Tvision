@@ -1,3 +1,4 @@
+#include "domain/PublicationConfig.hpp"
 #pragma once
 #include "persistence/ProjectRepository.hpp"
 #include "domain/ToolDefinition.hpp"
@@ -53,6 +54,8 @@ public:
     void clearCalibrationBinding();
     void setRuntimeOptions(QString trigger,QString measurementToolId);
     void setCalibrationSetup(QString lensId,QString workingPlaneId);
+    QVector<OutputGroup> outputGroups() const;
+    void setOutputGroups(const QVector<OutputGroup>&);
     QVector<VariableDefinition> variables() const;
     QString addVariable(VariableDefinition definition);
     void renameVariable(const QString& id,QString name);

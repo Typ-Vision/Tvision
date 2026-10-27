@@ -41,7 +41,7 @@ void valid(const ActiveCalibrationSnapshot& snapshot){const auto r=CalibrationMo
 QJsonObject selection(const ActiveCalibrationSelection& s){return {{"id",s.id},{"version",s.version},{"contentId",s.contentId},{"revision",s.revision}};}
 }
 Recipe SystemCalibration::branch(const Recipe& recipe,const QString& source) {
-    auto r=recipe;const auto tools=editorTools(r.definition);const auto connections=editorConnections(r.definition);const auto graph=validateGraph(tools,connections);
+    auto r=recipe;r.definition.remove("publication");const auto tools=editorTools(r.definition);const auto connections=editorConnections(r.definition);const auto graph=validateGraph(tools,connections);
     QJsonArray array;QVector<ToolConnection> links;QSet<QString> ids;
     for(const auto& t:tools)if(t.id==source || graph.toolSources.value(t.id)==source){array.append(encodeEditorTool(t,9));ids.insert(t.id);}
     for(const auto& c:connections)if(ids.contains(c.sourceTool) && ids.contains(c.targetTool))links.append(c);

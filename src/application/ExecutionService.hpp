@@ -7,6 +7,7 @@
 #include "domain/ToolValues.hpp"
 #include "domain/AssignmentConfig.hpp"
 #include "DecisionEvaluator.hpp"
+#include "PublicationService.hpp"
 #include <functional>
 #include <QMap>
 #include <QPointF>
@@ -47,6 +48,7 @@ struct IndustrialExecutionEvidence;
 // it must be empty; SourceFrameIndex/frames provide the source-specific IDs.
 // Schema9 execution keeps one frame identity per source.
 struct CycleResult {QString cycleId,frameId,recipeId,evaluationId,targetToolId; bool partial=false; QStringList executedTools; int acquisitions=0; QByteArray configId; ExecutionState state=ExecutionState::Ready; QVector<ToolResult> tools; double milliseconds=0; QString error; QVector<FrameMetadata> frames;
+    QVector<PublicationIntent> publicationIntents;
     ResultDecision decision() const;
     const std::shared_ptr<const RuntimeVariableContext>& variables() const {return variables_;}
     // Editor diagnostics only; this does not issue Runtime completion authority.
@@ -83,7 +85,8 @@ public:
     // Never persisted and never issues production completion authority.
     ExecutionService withExperimentalEditorReplay(bool enabled=true) const {auto service=*this;service.experimentalEditorReplay_=enabled;service.automaticAcquisition_=false;return service;}
     // Bump when execution semantics change; validation records bind this identity.
-    static QString version() { return QStringLiteral("visionflow.execution/33"); }
+    static QString version() { return QStringLiteral("visionflow.execution/34"); }
+    ExecutionService withPublicationSnapshot(std::shared_ptr<const PublicationSnapshot> s) const {auto copy=*this;copy.publication_=std::move(s);return copy;}
     static QByteArray toolSignature(const QJsonObject&,const QString& directory,const QString& tool,const QByteArray& scope);
     CycleResult runTool(const QJsonObject& definition,const QString& directory,const QString& recipeId,const QByteArray& configId,
         const std::shared_ptr<std::atomic_bool>& cancel,const QString& target,const TargetEvaluation& evaluation,const CalibrationResolver& resolver={}) const;
@@ -91,6 +94,7 @@ public:
                     const QByteArray& configId,const std::shared_ptr<std::atomic_bool>& cancel,
                     const QString& targetTool={},const std::optional<ImageFrame>& frameSnapshot={},const CalibrationResolver& resolver={},const TargetEvaluation* targetOnly=nullptr,const QJsonObject& acquisition={},const ExecutionLimits& limits={}) const;
 private:
+    std::shared_ptr<const PublicationSnapshot> publication_;
     SourceAdapterFactory sourceAdapterFactory_;
     std::shared_ptr<const IndustrialExecutionInputs> industrial_;
     bool experimentalEditorReplay_=false;

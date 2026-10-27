@@ -224,7 +224,7 @@ QMutex executorMutex; QMap<QString,ToolExecutor> extensions; }
 void ToolExecutors::registerExecutor(const QString& kind,ToolExecutor executor) {
     ToolRegistry::get(kind);
     QMutexLocker lock(&executorMutex);
-    if(!executor || extensions.contains(kind) || QStringList{"set_variables","shape_pose","pattern_pose","image_file","webcam","template_match","blob","edge","calculate","measurement","roi","preprocess","code_read","edge_point","edge_pair","line_fit","circle_fit","circle_fit","geometry_measurement"}.contains(kind))throw std::runtime_error("Geçersiz/tekrar yürütücü kaydı.");
+    if(!executor || extensions.contains(kind) || QStringList{"publish_data","set_variables","shape_pose","pattern_pose","image_file","webcam","template_match","blob","edge","calculate","measurement","roi","preprocess","code_read","edge_point","edge_pair","line_fit","circle_fit","circle_fit","geometry_measurement"}.contains(kind))throw std::runtime_error("Geçersiz/tekrar yürütücü kaydı.");
     extensions.insert(kind,std::move(executor));
 }
 ToolExecutor ToolExecutors::get(const QString& kind,const MeasurementExecutionContext& context,const std::optional<ToolRoi>& resolvedRoi) {

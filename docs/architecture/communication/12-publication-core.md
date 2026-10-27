@@ -1,6 +1,6 @@
 # COMM-12 — Endpoint profili, output group ve yayın intent'i
 
-Durum: başlamadı. Önerilen düzey: **medium**. Önkoşul: **COMM-11** tamam.
+Durum: tamamlandı. [Kapanış](../../archive/2026-10-27-comm-12.md). Önerilen düzey: **medium**. Önkoşul: **COMM-11** tamam.
 Bir oturumda yalnız bu kart; paralel uygulayıcı yok.
 
 ## Oku

@@ -6,6 +6,7 @@ görev” ifadeleri yazıldıkları tarihe aittir.
 
 | Dönem / görev | Kayıt |
 | --- | --- |
+| 27 Ekim 2026 — COMM-12 | [Yerel endpoint profili, logical output group ve cycle-bound yayın intent çekirdeği](2026-10-27-comm-12.md) |
 | 27 Ekim 2026 — COMM-11 | [Result registry/DAG, Boolean rule UI ve ayrı Editor/Runtime genel karar](2026-10-27-comm-11.md) |
 | 27 Ekim 2026 — COMM-10 | [Missing-first ALL/ANY Result evaluator ve bağımsız export geçerliliği](2026-10-27-comm-10.md) |
 | 27 Ekim 2026 — COMM-09 | [Immutable Runtime variable context, kayıt/Stop ve loaded snapshot izolasyonu](2026-10-27-comm-09.md) |

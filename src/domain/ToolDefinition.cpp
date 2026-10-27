@@ -1,3 +1,4 @@
+#include "PublicationConfig.hpp"
 #include "ToolDefinition.hpp"
 #include "ToolGraph.hpp"
 #include "ToolRegistry.hpp"
@@ -106,6 +107,7 @@ QJsonObject encodeEditorTool(const ToolDefinition& t,int schema) {
 }
 void validateEditorDefinition(const QJsonObject& definition) {
     const auto tools=editorTools(definition);editorConnections(definition);
+    validatePublicationBindings(definition);
     for(const auto& t:tools)if(t.kind=="industrial_camera" && t.parameters["sourceReference"].isObject()){
         const auto ref=IndustrialSourceReference::fromJson(t.parameters["sourceReference"].toObject());
         auto binding=definition["sourceSetups"].toObject()[t.id].toObject();

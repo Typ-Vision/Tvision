@@ -117,6 +117,13 @@ void ProjectService::discardChanges() {
 QVector<ToolDefinition> ProjectService::tools() const {
     const auto* recipe=activeRecipe(); if (!recipe) fail("Önce bir reçete açın."); return editorTools(recipe->definition);
 }
+QVector<OutputGroup> ProjectService::outputGroups() const {return activeRecipe() ? recipeOutputGroups(activeRecipe()->definition):QVector<OutputGroup>{};}
+void ProjectService::setOutputGroups(const QVector<OutputGroup>& groups) {
+    if(!activeRecipe())fail("Open a recipe first.");
+    const auto d=withRecipeOutputGroups(activeRecipe()->definition,groups);if(d==activeRecipe()->definition)return;
+    auto candidate=project();for(auto& r:candidate.recipes)if(r.id==activeId_){r.definition=d;r.status=RecipeStatus::Draft;}
+    validateProject(candidate);project_=candidate;dirty_=true;changedRecipes_.insert(activeId_);
+}
 QVector<VariableDefinition> ProjectService::variables() const {
     if(!activeRecipe())fail("Open a recipe first.");return recipeVariables(activeRecipe()->definition);
 }
@@ -193,7 +200,7 @@ QString ProjectService::addTool(const QString& kind) {
     do {
         name=toolLabel(kind).replace(' ','_')+"_"+QString::number(suffix++);
     } while (std::any_of(list.begin(),list.end(),[&](const auto& t){return t.name.toCaseFolded()==name.toCaseFolded();}));
-    ToolDefinition tool{newId(),kind,name,"",kind!="result",params};
+    ToolDefinition tool{newId(),kind,name,"",kind!="result" && kind!="publish_data",params};
     const auto backend=ToolRegistry::get(kind).requiredBackend;
     if(!backend.isEmpty()){const auto capability=BackendCapabilities::get(backend);if(!capability.available)fail(capability.reason);tool.dependencies.append({ToolDependencyKind::Backend,backend,capability.version,capability.contentId,{}});}
     auto connections=editorConnections(activeRecipe()->definition);

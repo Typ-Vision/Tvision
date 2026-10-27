@@ -20,6 +20,7 @@ private:
 };
 // Trusted application providers, never a role/VALID flag supplied by the UI.
 struct ProductionDependencies {
+    std::shared_ptr<const PublicationSnapshot> publication;
     QString engineVersion=ExecutionService::version();
     QMap<QString,QString> assetHashes; // SHA-256 identities from a trusted asset resolver
     std::optional<CalibrationDependency> calibration;
@@ -29,6 +30,7 @@ struct ProductionDependencies {
 };
 struct ExperimentalScopedCalibrationSnapshot;
 struct MultiSourceDependencies {
+    std::shared_ptr<const PublicationSnapshot> publication;
     bool configurationOnly=false; // In-memory inspection provenance; never serialized.
     QMap<QString,ProductionDependencies> sources;
     std::shared_ptr<const IndustrialExecutionInputs> industrial;
@@ -43,6 +45,7 @@ struct RecipeValidation {
 };
 class ProductionSnapshot {
 public:
+    const std::shared_ptr<const PublicationSnapshot>& publication() const {return publication_;}
     QByteArray variableDependencyId() const {return runtimeVariableDependencyId(recipe_.definition);}
     const Recipe& recipe() const { return recipe_; }
     const QString& projectDirectory() const { return directory_; }
@@ -53,6 +56,7 @@ private:
     friend class ProductionRecipeService;
     friend class MultiSourceRuntimeService;
     friend class ExperimentalRuntime;
+    std::shared_ptr<const PublicationSnapshot> publication_;
     Recipe recipe_;
     QString directory_;
     RecipeValidation validation_;
@@ -97,7 +101,7 @@ private:
     static QByteArray completionDigest(const CycleResult&);
     void owner() const;
     void permission(const QString&,ProductionAction) const;
-    QJsonObject dependencies(const Recipe&,const QString& directory) const;
+    QJsonObject dependencies(const Recipe&,const QString& directory,std::shared_ptr<const PublicationSnapshot>* publication=nullptr) const;
     void requireCurrent(const ProductionSnapshot&) const;
     void idle() const;
     QThread* ownerThread_=QThread::currentThread();

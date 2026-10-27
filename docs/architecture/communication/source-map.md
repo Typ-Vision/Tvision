@@ -216,3 +216,39 @@ olarak doğrular. Terminal/network schema bump veya yeni alan yoktur.
 27 Ekim 2026 iş bilgisayarı actual checkout/indeks kökü `C:/Projects/Tvision`;
 `C:/OpenCode/TVision` burada yoktur. Yukarıdaki COMM-01 baseline yolları ev
 bilgisayarının tarihsel kanıtıdır. Her makinede gerçek checkout ve indeks eşleştirilir.
+
+
+## COMM-12 yayın çekirdeği
+
+- `PublicationConfig.*`: explicit `definition.publication` schema1, en çok 16
+  logical group; group başına 1–64 alan. Grup UUID, profil UUID/contract revision,
+  required/optional, `vf.fields/1` ve Set Variables producer UUID/revision taşır.
+  Alanlar logical name → variable UUID; fiziksel adres ve credential içermez.
+- `ProjectService::setOutputGroups/outputGroups`: atomik draft/edit yolu. Eski
+  reçetelerde alan eklenmez; no-op Save korunur. Bundle alan/revision bağları
+  `validatePublicationBindings` ile doğrulanır; bozuk edit önceki tanımı değiştirmez.
+- `CommunicationProfiles.*`: açık yerel dosya yoluyla atomik machine-local store
+  portu/JSON codec. TCP client/server DTO'su; 1–256 profil, enabled, timeout/retry,
+  revision, contract revision, opaque credentialRef ve logical→physical mapping.
+  Bu kart socket oluşturmaz. Değişen profil aynı revision ile kaydedilemez.
+- `PublicationService::capture/requireCurrent/dependency/evaluate`: profile çözümü,
+  immutable kopya, SHA-256 dependency ve saf cycle-bound intent üretimi. Gizli
+  bağlantı ayarları/credentialRef yalnız local snapshot'ta; arşiv dependency'sine
+  yalnız opaque hash girer. Kaynak type/unit/frame/enum authority katalogdadır.
+  Alanların typed JSON payload sınırı 64 KiB; kısmi grup çıktısı dönmez.
+- `publish_data` registry config'i group UUID listesi; `executionConnections`
+  Set Variables bundle'dan sentetik `@publication/<group UUID>` DAG kenarı ekler.
+  Executor `CycleResult::publicationIntents` üretir; ERROR/Stop temizler.
+  `ToolCatalog` COMM-21'e kadar yeni tool'u gizler; UI veya transport teslimi yok.
+- `ProductionDependencies`/`MultiSourceDependencies::publication`,
+  `ProductionSnapshot::publication` ve `ExecutionService::withPublicationSnapshot`
+  trusted composition portlarıdır. Provider her admission kontrolünde yeniden
+  capture eder; profil değişirse dependency hash eski snapshot admission'ını
+  reddeder. Aktif recipe/content kimliği sessiz değişmez. Execution identity /34.
+- Completion digest intent kimliği/required/alanları da bağlar. Mevcut terminal
+  şemaları genişletilmedi: publication snapshot terminal kayıt yolu açıkça
+  **COMM-13 bundle codec gerekli** hatası verir; intent eski terminale düşürülmez.
+  Bu geçici kapı COMM-13'te atomik bundle kayıt yolu ile değiştirilmelidir.
+- `tests/publication_test.cpp` / `publication_contract`: local store, iki grup,
+  alan/grup/payload limitleri, profile/contract/dependency hataları, Editor preview,
+  cycle/validity ve Runtime trusted completion sınırları. Yeni transport fake'ı yok.
