@@ -36,12 +36,13 @@ struct AdmissionResult {
 };
 // All new adapters share one owner-thread instance. Legacy/manual continue through
 // coordinator.begin with their original identity/dedup and persistence contracts.
-// No wire, execution, journal writes, retry or automatic recovery in this boundary.
+// No wire, execution, retry or automatic recovery in this boundary.
+// The adapter hook persists admission evidence after validation, before begin.
 class TriggerRouter {
 public:
     TriggerRouter(RuntimeCoordinator& coordinator,RuntimeService& runtime,InputSnapshotStore& inputs,DeliveryStore& ledger,std::function<QString()> unavailable)
         :coordinator_(coordinator),runtime_(runtime),inputs_(inputs),ledger_(ledger),unavailable_(std::move(unavailable)) { if(!unavailable_)throw std::invalid_argument("Shared acquisition guard required"); }
-    AdmissionResult admit(const TriggerRequest&,const QMap<QString,InputRequirement>& required);
+    AdmissionResult admit(const TriggerRequest&,const QMap<QString,InputRequirement>& required,std::function<void()> beforeBegin={},const QString& protocol="communication/1");
     static DeliveryRequest deliveryRequest(const TriggerRequest&);
 private:
     QThread* thread_=QThread::currentThread();

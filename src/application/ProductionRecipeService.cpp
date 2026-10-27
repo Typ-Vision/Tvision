@@ -385,7 +385,7 @@ void ProductionRecipeService::record(const CycleResult* r,const QString& error) 
         QString reason=r ? r->error:error,code; if(r)for(const auto& t:r->tools)if(t.toolId==source){if(!t.message.isEmpty())reason=t.message;code=t.errorCode;}
         pendingRecord_["industrialAcquisition"]=r && r->industrialEvidence.contains(source) && r->industrialEvidence[source] ? industrialCompletionEvidence(*r->industrialEvidence[source]):QJsonObject{{"schemaVersion",1},{"sourceToolId",source},{"status","NOT_ACQUIRED"},{"reason",reason},{"errorCode",code}};
     }
-    pendingRecord_=ProductionResultCodec::withBundle(pendingRecord_,s.recipe().definition,r);
+    pendingRecord_=ProductionResultCodec::withBundle(pendingRecord_,s.recipe().definition,r,cycleCommunication_["protocol"]=="vf.socket/3");
     ProductionResultCodec::validate(pendingRecord_);
     persist("cycles",pendingRecord_["recordId"].toString(),pendingRecord_);
     records_.append(pendingRecord_);pendingRecord_={};

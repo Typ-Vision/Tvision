@@ -75,3 +75,48 @@ Port 0 seçildiğinde ekrandaki actual port kullanılır. `--status-only` acquis
 Release UI 20/20, Widgets OFF 18/18 CTest. TCP test: actual PNG → Edge → 9.975 mm PASS ve ham sınırla DONE/FAIL; duplicate/reconnect/ACK timeout, kayıt/ACK lock retry, cancel, source error, kurulum invalidation, framing/schema/session reddi. UI smoke ayrı simülatör process'iyle duplicate+reconnect+geç ACK ve tek cycle, Logs ACKED, close/manual guard ve 850×600 görüntülerini doğrular. Localhost connect sandbox tarafından engellendiği için ağ testleri yalnız yerel testler için izinli sandbox dışı çalıştırıldı. Fiziksel PLC/kamera/üretim kabulü, kurulum/dağıtım/CUDA kanıtı yoktur.
 
 P3/P4 güncel yazılım kabulü: Release UI 22/22, Widgets OFF 20/20; P3 bağımsız autoStart/Load/Run/Stop/INVALID/rebind, port collision, settings persistence, mode Save/reopen ve UUID mapping de sınandı. Önceki 6D.1 sayıları tarihsel kayıttır; fiziksel/restart teslim kurtarma kapsamı değişmedi.
+
+
+## COMM-17 — explicit TCP v3 development servisi
+
+`CommunicationTcpEndpoint` ayrı Qt Network listener'ıdır; normal Communication
+UI/v2 listener'ı v3'e geçirmez. Konstruktor/Editor/Load ağ açmaz; geliştirme
+entegrasyonu `listen(CommunicationTcpOptions)` çağırır. Runtime, coordinator,
+ortak TriggerRouter/InputSnapshotStore ve DeliveryStore aynı owner thread'de
+yaşar; yalnız immutable Runtime lease QtConcurrent worker'ına taşınır. Endpoint
+ve peer kimliği açık machine-local konfigürasyondur, authentication iddiası yoktur.
+Port çakışması hata; sessiz fallback/downgrade yoktur.
+
+INPUT yalnız konfigüre input adlarını ve yetkili enum kataloğunu kabul eder;
+exact snapshot/revision/config, type/unit/frame/quality ve local monotonic age
+kontrolü router'dadır. Geçerli admission'ın son aşamasında REQUEST_INTENT ve
+ayrılmış cycle UUID ile CYCLE_BEGIN kalıcılaşır; ardından coordinator.begin ve
+worker başlar. Terminal communication origin input kimliğini/revision'ı taşır.
+V3 kayıtları Result/Publish olmasa da boş, NOT_EVALUATED terminal10 bundle alır.
+
+RESULT, commit edilmiş terminal bundle'ın seçili logical output group'undan
+hazırlanıp canonical payload/hash olarak outbox'a bir kez kaydedilir. Terminal
+veya DELIVERY_PENDING commit'i yoksa socket RESULT yoktur. `retryRecording()`
+aynı completion/terminal/payload'ı yazar; acquisition çalıştırmaz. Duplicate ve
+reconnect, process içindeki kimlikten kayıtlı payload'ı okur. Her bağlantının
+sessionId'si yenidir; eski session reddedilir, kalıcı request anahtarı değişmez.
+ACK exact request/resultId/hash eşleşir; ACK_RECEIVED + ACK_COMMITTED olmadan
+ACKED veya teslim bariyerinin kalkması yoktur. Stop admission'ı kapatıp cooperative
+cancel ister; pending kayıt/delivery silinmez. Disconnect/queued write Ready
+oluşturmaz. Bounded read ve 50 ms framer tick codec deadline'ını uygular.
+
+Local simulator yeni seçenekleri:
+
+```powershell
+.\build\kmc9-core-off\visionflow_plc_simulator.exe --v3 --port 5001 --input snapshot.json --expect-decision OK --expect-field count --expect-value 1
+```
+
+INPUT dosyası `snapshotId,revision,fields,sourceTime,clockId` taşır; fields strict
+v3 typed envelope'dur. Simulator v/session/type/recipe/config'i HELLO'dan doldurur,
+`--sequence` (varsayılan 1) ve `--request` seçilebilir. Beklenen karar/alan/JSON
+literal değeri uyuşmazsa exit 3; gerçek Runtime sonucu üretir, sahte vision sonucu
+oluşturmaz. `--duplicate`, `--reconnect`, `--drop-ack`, `--ack-delay` kullanılabilir.
+V3 `--resume` bu kartta kapalıdır; restart/recovery COMM-18, timeout/retry
+politikası COMM-19, normal kullanıcı aktivasyonu COMM-23 kabulündedir. Mevcut v2
+komutları ve wire alanları korunur. Test `communication_tcp_runtime` gerçek
+localhost Runtime/bundle/outbox/ACK ve ayrı v2 profilini sınar; fiziksel kabul değildir.

@@ -1,8 +1,8 @@
 # vf.socket/3 — COMM-16 codec sözleşmesi
 
-V3 ayrı explicit endpoint içindir; v2 parser/listener değişmez. Bu kart yalnız
-codec/framing sağlar. Session eşleştirme, enum katalog üyeliği, exact input seçimi,
-Runtime dispatch ve kalıcı ACK yetkisi adaptör/router sorumluluğudur (COMM-17).
+V3 ayrı explicit endpoint içindir; v2 parser/listener değişmez. Codec/framing COMM-16 çekirdeğidir. COMM-17 `CommunicationTcpEndpoint`
+Session eşleştirme, enum katalog üyeliği, exact input seçimi, Runtime dispatch
+ve kalıcı ACK yetkisini adaptör/router üzerinden uygular. [Servis sınırı](../plc-socket.md#comm-17--explicit-tcp-v3-development-servisi).
 Codec enum şekli/kod aralığını denetler; untrusted değer katalog oluşturmaz.
 
 Sürümlü [v3 fixture](../../../tests/fixtures/communication/vf.socket-3.json) tüm

@@ -303,3 +303,23 @@ bilgisayarının tarihsel kanıtıdır. Her makinede gerçek checkout ve indeks 
 - `trigger_router_contract`: typed false, partial/bad/stale, exact revision/config,
   tam spatial/frame kontrolü, iki endpoint BUSY, duplicate/conflict, immutable
   input, Editor guard, recording/delivery/Stop/manual ve owner-thread sınırı.
+
+
+## COMM-17 — TCP v3 service (27 Ekim 2026)
+
+- `CommunicationTcpEndpoint.hpp/.cpp`: explicit owner-thread Qt Network listener;
+  INPUT→InputSnapshotStore, TRIGGER→ortak router, worker Runtime, committed
+  terminal→selected output group→canonical outbox RESULT, exact ACK→durable commit.
+  Profile role/address/actual port ve output group eşleşmesi admission öncesindedir.
+- `TriggerRouter::admit` optional adapter persistence hook'u tüm admission
+  doğrulamalarından sonra ve coordinator.begin'den önce çalışır. Request/cycle
+  journal worker acquisition'dan önce yazılır; communication origin exact input
+  revision ve request/sequence'ı taşır. Default origin protokolden bağımsızdır.
+- `ProductionCycle::cycleId` ve `ExecutionService::withCycleId` yalnız optional
+  önceden ayrılan kimliktir; mevcut callers boş bırakır. Runtime exception yolu da
+  aynı kimliği korur. Trusted completion snapshot/ticket/digest sınırları korunur.
+- `ProductionResultCodec::withBundle(...,force)` v3'ün Result/Publish olmayan
+  terminalini boş NOT_EVALUATED terminal10 bundle ile kaydeder; legacy değişmez.
+- `plc_simulator --v3 --input --expect-decision --expect-field --expect-value`;
+  `communication_tcp_runtime` ayrı CTest. Restart/recovery COMM-18 ve otomatik
+  timeout/retry COMM-19; normal UI activation COMM-23 kabulüne kadar kapalıdır.

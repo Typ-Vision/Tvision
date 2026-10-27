@@ -68,6 +68,7 @@ struct ProductionCycle {
     quint64 ticket=0;
     std::shared_ptr<const ProductionSnapshot> snapshot;
     std::shared_ptr<RuntimeDiagnostics> diagnostics; // evidence only, no production authority
+    QString cycleId; // Optional application-reserved identity persisted before execution.
 };
 // Owner thread controller; snapshots may be captured by immutable worker jobs.
 // Archive hooks persist evidence; restart never restores authorization as VALID.

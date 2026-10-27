@@ -22,10 +22,10 @@ namespace {
 QString bundleHash(const QJsonObject& o){return QString::fromLatin1(QCryptographicHash::hash(QJsonDocument(o).toJson(QJsonDocument::Compact),QCryptographicHash::Sha256).toHex());}
 QJsonObject legacyRecord(QJsonObject r){r["schemaVersion"]=r.take("baseSchemaVersion");r.remove("resultBundle");return r;}
 }
-QJsonObject ProductionResultCodec::withBundle(QJsonObject r,const QJsonObject& definition,const CycleResult* result){
+QJsonObject ProductionResultCodec::withBundle(QJsonObject r,const QJsonObject& definition,const CycleResult* result,bool force){
     if(r["schemaVersion"]==10)return r;
     QSet<QString> active;for(const auto& t:editorTools(definition))if(t.enabled && t.kind=="publish_data")for(const auto& id:decodePublishConfig(t.parameters).groups)active.insert(id);
-    const auto configured=editorTools(definition);if(active.isEmpty() && std::none_of(configured.begin(),configured.end(),[](const auto& t){return t.enabled && t.kind=="result";}))return r;
+    const auto configured=editorTools(definition);if(!force && active.isEmpty() && std::none_of(configured.begin(),configured.end(),[](const auto& t){return t.enabled && t.kind=="result";}))return r;
     QJsonArray groups;
     for(const auto& g:recipeOutputGroups(definition))if(active.contains(g.id)){
         QJsonObject fields;bool valid=false;QString intentId,profileDependencyId;

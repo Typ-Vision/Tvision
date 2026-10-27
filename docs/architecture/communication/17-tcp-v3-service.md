@@ -1,6 +1,7 @@
 # COMM-17 — TCP v3 servis entegrasyonu
 
-Durum: başlamadı. Önerilen düzey: **medium**. Önkoşul: **COMM-16** tamam.
+Durum: yazılım kabulü tamamlandı (27 Ekim 2026).
+[Kapanış ve kanıt](../../archive/2026-10-27-comm-17.md). Önerilen düzey: **medium**. Önkoşul: **COMM-16** tamam.
 Bir oturumda yalnız bu kart; paralel uygulayıcı yok.
 
 ## Oku

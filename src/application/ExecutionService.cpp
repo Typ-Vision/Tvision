@@ -67,7 +67,7 @@ CycleResult ExecutionService::runTool(const QJsonObject& definition,const QStrin
     result.configId=captured;return result;
 }
 CycleResult ExecutionService::run(const QJsonObject& definition,const QString& directory,const QString& recipeId,const QByteArray& configId,const std::shared_ptr<std::atomic_bool>& cancel,const QString& targetTool,const std::optional<ImageFrame>& frameSnapshot,const CalibrationResolver& resolver,const TargetEvaluation* targetOnly,const QJsonObject& acquisition,const ExecutionLimits& limits) const {
-    CycleResult cycle;cycle.cycleId=QUuid::createUuid().toString(QUuid::WithoutBraces);cycle.frameId=QUuid::createUuid().toString(QUuid::WithoutBraces);cycle.recipeId=recipeId;cycle.configId=configId;
+    CycleResult cycle;cycle.cycleId=cycleId_.isEmpty() ? QUuid::createUuid().toString(QUuid::WithoutBraces):cycleId_;cycle.frameId=QUuid::createUuid().toString(QUuid::WithoutBraces);cycle.recipeId=recipeId;cycle.configId=configId;
     cycle.targetToolId=targetTool;cycle.evaluationId=QUuid::createUuid().toString(QUuid::WithoutBraces);cycle.partial=targetOnly!=nullptr;
     if(targetOnly){cycle.frameId=targetOnly->frame.metadata().frameId;cycle.cycleId=targetOnly->frame.metadata().cycleId;}
     const bool multi=definition["editor"].toObject()["schemaVersion"].toInt()==9;

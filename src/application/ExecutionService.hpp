@@ -87,6 +87,7 @@ public:
     // Bump when execution semantics change; validation records bind this identity.
     static QString version() { return QStringLiteral("visionflow.execution/34"); }
     ExecutionService withPublicationSnapshot(std::shared_ptr<const PublicationSnapshot> s) const {auto copy=*this;copy.publication_=std::move(s);return copy;}
+    ExecutionService withCycleId(QString id) const {auto copy=*this;copy.cycleId_=std::move(id);return copy;}
     static QByteArray toolSignature(const QJsonObject&,const QString& directory,const QString& tool,const QByteArray& scope);
     CycleResult runTool(const QJsonObject& definition,const QString& directory,const QString& recipeId,const QByteArray& configId,
         const std::shared_ptr<std::atomic_bool>& cancel,const QString& target,const TargetEvaluation& evaluation,const CalibrationResolver& resolver={}) const;
@@ -94,6 +95,7 @@ public:
                     const QByteArray& configId,const std::shared_ptr<std::atomic_bool>& cancel,
                     const QString& targetTool={},const std::optional<ImageFrame>& frameSnapshot={},const CalibrationResolver& resolver={},const TargetEvaluation* targetOnly=nullptr,const QJsonObject& acquisition={},const ExecutionLimits& limits={}) const;
 private:
+    QString cycleId_;
     std::shared_ptr<const PublicationSnapshot> publication_;
     SourceAdapterFactory sourceAdapterFactory_;
     std::shared_ptr<const IndustrialExecutionInputs> industrial_;

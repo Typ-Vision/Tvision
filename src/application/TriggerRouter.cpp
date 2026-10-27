@@ -28,7 +28,7 @@ DeliveryRequest TriggerRouter::deliveryRequest(const TriggerRequest& r){
     auto bytes=key({r.recipeId,r.configId,r.inputSnapshotId,QString::number(r.inputRevision),QString::number(r.sequence)});
     return {r.workcell,r.project,r.endpoint,r.peer,r.requestId,QString::fromLatin1(QCryptographicHash::hash(bytes,QCryptographicHash::Sha256).toHex())};
 }
-AdmissionResult TriggerRouter::admit(const TriggerRequest& r,const QMap<QString,InputRequirement>& required){
+AdmissionResult TriggerRouter::admit(const TriggerRequest& r,const QMap<QString,InputRequirement>& required,std::function<void()> beforeBegin,const QString& protocol){
     if(thread_!=QThread::currentThread())throw ProductionException(ProductionError::WrongThread,"Trigger router owner thread required");
     try {
         const auto d=deliveryRequest(r);const auto k=key({d.workcell,d.project,d.endpoint,d.peer,d.requestId});
@@ -52,7 +52,9 @@ AdmissionResult TriggerRouter::admit(const TriggerRequest& r,const QMap<QString,
         }
         if(admitted_.size()>=128)return {"QUEUE_FULL"};
         // The existing begin path is the sole cycle/permission/recording/camera gate.
-        auto cycle=coordinator_.begin(RuntimeTrigger::SoftwareTrigger);
+        if(beforeBegin)beforeBegin();
+        const QJsonObject communication{{"protocol",protocol},{"endpoint",r.endpoint},{"peer",r.peer},{"requestId",r.requestId},{"sequence",QString::number(r.sequence)},{"inputSnapshotId",r.inputSnapshotId},{"inputRevision",QString::number(r.inputRevision)}};
+        auto cycle=coordinator_.begin(RuntimeTrigger::SoftwareTrigger,communication);
         admitted_.insert(k,d.fingerprint);return {{},{},cycle,input};
     }catch(const ProductionException& e){return {e.code()==ProductionError::Busy?"BUSY":QString::fromUtf8(e.what())};}
     catch(const std::exception& e){return {QString::fromUtf8(e.what())};}
