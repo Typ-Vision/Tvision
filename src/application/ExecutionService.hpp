@@ -6,6 +6,7 @@
 #include "domain/Coordinates.hpp"
 #include "domain/ToolValues.hpp"
 #include "domain/AssignmentConfig.hpp"
+#include "DecisionEvaluator.hpp"
 #include <functional>
 #include <QMap>
 #include <QPointF>
@@ -46,6 +47,7 @@ struct IndustrialExecutionEvidence;
 // it must be empty; SourceFrameIndex/frames provide the source-specific IDs.
 // Schema9 execution keeps one frame identity per source.
 struct CycleResult {QString cycleId,frameId,recipeId,evaluationId,targetToolId; bool partial=false; QStringList executedTools; int acquisitions=0; QByteArray configId; ExecutionState state=ExecutionState::Ready; QVector<ToolResult> tools; double milliseconds=0; QString error; QVector<FrameMetadata> frames;
+    ResultDecision decision() const;
     const std::shared_ptr<const RuntimeVariableContext>& variables() const {return variables_;}
     // Editor diagnostics only; this does not issue Runtime completion authority.
     QMap<QString,std::shared_ptr<const IndustrialExecutionEvidence>> industrialEvidence;
@@ -81,7 +83,7 @@ public:
     // Never persisted and never issues production completion authority.
     ExecutionService withExperimentalEditorReplay(bool enabled=true) const {auto service=*this;service.experimentalEditorReplay_=enabled;service.automaticAcquisition_=false;return service;}
     // Bump when execution semantics change; validation records bind this identity.
-    static QString version() { return QStringLiteral("visionflow.execution/32"); }
+    static QString version() { return QStringLiteral("visionflow.execution/33"); }
     static QByteArray toolSignature(const QJsonObject&,const QString& directory,const QString& tool,const QByteArray& scope);
     CycleResult runTool(const QJsonObject& definition,const QString& directory,const QString& recipeId,const QByteArray& configId,
         const std::shared_ptr<std::atomic_bool>& cancel,const QString& target,const TargetEvaluation& evaluation,const CalibrationResolver& resolver={}) const;

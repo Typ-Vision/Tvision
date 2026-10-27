@@ -74,7 +74,8 @@ immutable Runtime'ın terminal commit yolundan gelir; Editor Test publish etmez.
 
 ExecutionState, recipe status ve part decision ayrı. İlk genel decision aracı
 Result'tır: seçilmiş açık Boolean accepted portları için ALL veya ANY.
-Boş liste invalid; required girdilerden biri missing/skipped/error/stale ise
+İlk sürümde yalnız bir etkin Result bulunur; yeni araç boş ve disabled taslaktır.
+Boş etkin liste invalid; required girdilerden biri missing/skipped/error/stale ise
 **NOT_EVALUATED**, diğer girdiler kısa devreyle bunu OK/NOK'a çeviremez.
 Tüm required girdiler valid olduğunda ALL/ANY sonucu OK/NOK üretir.
 Execution ERROR/CANCELED ise export NOT_EVALUATED/resultValid=false.

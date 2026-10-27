@@ -88,6 +88,10 @@ OECS / GenTL probe komutları, sandbox sınırları ve kanıt bağlantıları
    Toolbox → Set Variables: Properties'de satır ekle/sil/taşı; hedef ve uyumlu
    port/bundle veya typed JSON sabit seç. Atamaları uygula tüm taslağı tek
    komutta kaydeder; Taslağı geri al değişiklikleri atar. Run Tool/Flow dışarı yazmaz.
+   Toolbox → Result: Boolean kaynakları açıkça seçip ALL/ANY kuralını uygula,
+   ardından Enabled aç. Tek etkin Result genel OK/NOK/NOT_EVALUATED kararını
+   üretir; execution DONE/ERROR ve eski Measurement PASS/FAIL ayrı kalır.
+   Eksik/atlanan kaynak önceki OK sonucunu korumaz. Editor dışarı göndermez.
    Properties → Çıkışlar sonuç listesinde gösterilecek portları seçer; tercih yerel
    INI’de saklanır. Viewer/overlay ve Logs/CSV/PLC verisi bu seçimden bağımsızdır.
 4. Kaydedilmiş reçete için Load Recipe → Kaynağı doğrula → Run → Tek çevrim; sonuçlar Logs/CSV'de.

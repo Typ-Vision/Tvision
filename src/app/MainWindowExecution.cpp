@@ -160,6 +160,7 @@ void MainWindow::showExecutionResultView(const EditorContext& context) {
             .arg(evidence->actual.settings.exposureTimeUs).arg(evidence->actual.settings.gain).arg(evidence->actual.geometry.offset.x()).arg(evidence->actual.geometry.offset.y()));
     }
     QStringList lines;if(editorSession_.cycle->partial)lines<<"Seçili araç değerlendirmesi";lines<<QString("%1 | %2 ms").arg(executionStateName(editorSession_.cycle->state)).arg(editorSession_.cycle->milliseconds,0,'f',2);
+    lines<<"Genel karar: "+resultDecisionKey(editorSession_.cycle->decision());
     if(!editorSession_.cycle->error.isEmpty())lines<<editorSession_.cycle->error;
     auto ordered=editorSession_.cycle->tools;
     std::stable_sort(ordered.begin(),ordered.end(),[this](const auto& a,const auto& b){return a.toolId==selectedToolId_ && b.toolId!=selectedToolId_;});

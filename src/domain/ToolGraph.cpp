@@ -1,5 +1,6 @@
 #include "ToolGraph.hpp"
 #include "AssignmentConfig.hpp"
+#include "ResultDecision.hpp"
 #include "ToolRegistry.hpp"
 #include "ReferenceConfig.hpp"
 #include "PoseTrackingConfig.hpp"
@@ -54,6 +55,9 @@ QVector<ToolConnection> assignmentConnections(const QVector<ToolDefinition>& too
             if(auto s=std::get_if<ToolOutputAssignmentSource>(&r.source))result.append({s->toolId,s->port,t.id,port});
             else if(auto s=std::get_if<BundleAssignmentSource>(&r.source))result.append({s->producerId,"bundle",t.id,port});
         }
+    }
+    for(const auto& t:tools)if(t.kind=="result" && !(t.parameters["required"].toArray().isEmpty() && !t.enabled)) {
+        int row=0;for(const auto& b:decodeResultConfig(t.parameters).required)result.append({b.toolId,b.port,t.id,QString("@result/%1").arg(row++)});
     }return result;
 }
 QVector<ToolConnection> executionConnections(const QJsonObject& definition) {
@@ -78,6 +82,13 @@ GraphValidation validateGraph(const QVector<ToolDefinition>& tools,const QVector
                 }
             }
             if(!valid)r.errors<<"Invalid assignment UUID/port/revision binding: "+c.targetTool;
+        }
+        else if(nodes[c.targetTool].kind=="result") {
+            bool valid=false;const auto config=decodeResultConfig(nodes[c.targetTool].parameters);
+            for(int i=0;i<config.required.size();++i)if(c.targetPort==QString("@result/%1").arg(i)) {
+                const auto& b=config.required[i];valid=b.toolId==c.sourceTool && b.port==c.sourcePort && b.revision==ToolRegistry::get(nodes[c.sourceTool].kind).version && out!=outputs.end() && out->type==PortType::Boolean && out->unit.isEmpty() && nodes[c.sourceTool].kind!="result";
+            }
+            if(!valid)r.errors<<"Invalid Result Boolean/UUID/port/revision binding: "+c.targetTool;
         }
         else if (out==outputs.end() || in==inputs.end()) r.errors<<"Eksik port: "+c.targetPort;
         else if (out->type!=in->type || out->unit!=in->unit || out->frame!=in->frame) r.errors<<"Port tip/birim/frame uyumsuzluğu: "+c.sourcePort+" → "+c.targetPort;
@@ -134,6 +145,7 @@ GraphValidation validateGraph(const QVector<ToolDefinition>& tools,const QVector
     QMap<QString,QStringList> writers;
     for(const auto& t:tools)if(t.enabled && t.kind=="set_variables")for(const auto& row:decodeAssignmentConfig(t.parameters,t.id).rows)writers[row.targetId].append(t.id);
     for(const auto& ids:writers)for(int i=0;i<ids.size();++i)for(int j=i+1;j<ids.size();++j)if(!reaches(ids[i],ids[j]) && !reaches(ids[j],ids[i]))r.errors<<"Ambiguous branch variable writes: "+ids[i]+" / "+ids[j];
+    if(std::count_if(tools.begin(),tools.end(),[](const auto& t){return t.enabled && t.kind=="result";})>1)r.errors<<"Only one enabled Result rule is allowed";
     QStringList ready; for (const auto& t:tools) if (indegree[t.id]==0) ready<<t.id;
     while (!ready.isEmpty()) {const auto id=ready.takeFirst(); r.order<<id; for (const auto& target:next[id]) if (--indegree[target]==0) ready<<target;}
     if (r.order.size()!=tools.size()) r.errors<<"Döngüsel bağımlılık (DAG gerekli).";
@@ -145,11 +157,11 @@ GraphValidation validateGraph(const QVector<ToolDefinition>& tools,const QVector
             origins.insert(id);if(t.enabled)r.requiredSources.append(id);
         }
         for(const auto& c:connections)if(c.targetTool==id && nodes.contains(c.sourceTool)) {
-            if(nodes[c.sourceTool].kind=="set_variables")continue;
+            if(nodes[c.sourceTool].kind=="set_variables" || nodes[c.sourceTool].kind=="result")continue;
             const auto source=r.toolSources.value(c.sourceTool);
             if(!source.isEmpty())origins.insert(source);
         }
-        if(t.kind=="set_variables")continue;
+        if(t.kind=="set_variables" || t.kind=="result")continue;
         if(origins.size()>1)r.errors<<t.name+": cross-source inputs are not supported";
         else if(origins.size()==1) {
             const auto source=*origins.cbegin();r.toolSources[id]=source;
@@ -162,7 +174,7 @@ GraphValidation validateSourceGraph(const QVector<ToolDefinition>& tools,const Q
     auto result=validateGraph(tools,connections);QMap<QString,ToolDefinition> nodes;
     for(const auto& t:tools)nodes[t.id]=t;
     auto all=connections;try{for(const auto& c:assignmentConnections(tools))if(!all.contains(c))all.append(c);}catch(const std::exception&){return result;}
-    for(const auto& c:all)if(nodes.contains(c.sourceTool) && nodes.contains(c.targetTool) && nodes[c.targetTool].enabled && !nodes[c.sourceTool].enabled)
+    for(const auto& c:all)if(nodes.contains(c.sourceTool) && nodes.contains(c.targetTool) && nodes[c.targetTool].enabled && nodes[c.targetTool].kind!="result" && !nodes[c.sourceTool].enabled)
         result.errors<<nodes[c.targetTool].name+": disabled upstream "+c.sourceTool;
     return result;
 }

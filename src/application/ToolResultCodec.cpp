@@ -35,6 +35,10 @@ void ToolResultCodec::validate(const PortValue& v,const PortDefinition& expected
         require(v.port.unit.isEmpty() && v.port.frame=="cycle" && v.frameId.isEmpty() && v.cycleId==cycleId && !cycleId.isEmpty() && std::holds_alternative<AssignmentBundle>(v.data),"Bundle port identity mismatch");
         const auto& b=std::get<AssignmentBundle>(v.data);require(b.cycleId==cycleId,"Bundle cycle mismatch");encodeAssignmentBundle(b);return;
     }
+    if(v.port.frame=="cycle" && (v.port.type==PortType::Text || v.port.type==PortType::Boolean)) {
+        require(v.port.unit.isEmpty() && v.frameId.isEmpty() && !cycleId.isEmpty() && v.cycleId==cycleId && v.origin.sourceId.isEmpty() && v.origin.frameId.isEmpty() && v.origin.coordinateSystemId.isEmpty(),"Cycle scalar identity mismatch");
+        require((v.port.type==PortType::Text && std::holds_alternative<QString>(v.data)) || (v.port.type==PortType::Boolean && std::holds_alternative<bool>(v.data)),"Cycle scalar type mismatch");return;
+    }
     require(!frameId.isEmpty() && !cycleId.isEmpty() && v.frameId==frameId && v.cycleId==cycleId && v.origin.frameId==frameId && v.origin.cycleId==cycleId && !v.origin.sourceId.isEmpty() && !v.origin.coordinateSystemId.isEmpty(),"Port frame/cycle/source mismatch");
     const auto name=portTypeName(v.port.type);
     const auto encoded=payload(v);

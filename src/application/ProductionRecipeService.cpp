@@ -36,7 +36,7 @@ QByteArray content(const Recipe& r,const QString& directory) {
 bool sha256(const QString& s) {return s.size()==64 && std::all_of(s.begin(),s.end(),[](QChar c){return (c>='0' && c<='9') || (c>='a' && c<='f');});}
 bool trustedCompletionRequired(const QVector<ToolDefinition>& tools) {
     return std::any_of(tools.cbegin(),tools.cend(),[](const auto& t){return t.enabled &&
-        (t.kind=="set_variables" || t.parameters.contains("referenceBinding") || t.kind=="pattern_pose" || t.kind=="shape_pose");});
+        ((t.kind=="set_variables" || t.kind=="result") || t.parameters.contains("referenceBinding") || t.kind=="pattern_pose" || t.kind=="shape_pose");});
 }
 bool terminal(ExecutionState s) {return s==ExecutionState::Done || s==ExecutionState::Error || s==ExecutionState::Skipped;}
 }
@@ -48,12 +48,12 @@ QJsonObject ProductionRecipeService::validateMultiSourceCompletion(const Product
     invalid((lease.snapshot->validation().scope=="multi_source_in_memory/1" || lease.snapshot->validation().scope=="multi_source_runtime/1") && !r.partial && r.targetToolId.isEmpty() && terminal(r.state) && r.recipeId==lease.snapshot->recipe().id && r.configId==lease.snapshot->validation().contentId && !r.cycleId.isEmpty(),"Invalid multi-source completion scope/identity");
     const auto configured=editorTools(lease.snapshot->recipe().definition);const auto graph=validateSourceGraph(configured,editorConnections(lease.snapshot->recipe().definition));invalid(graph.valid() && branches.size()==graph.requiredSources.size(),"Snapshot graph/source set mismatch");
     QStringList acquired;for(const auto& frame:r.frames){invalid(graph.requiredSources.contains(frame.sourceId) && !acquired.contains(frame.sourceId),"Duplicate/foreign acquired source");acquired.append(frame.sourceId);}
-    if(!r.frames.isEmpty()){SourceFrameIndex index(r.cycleId,acquired,r.frames);for(const auto& tool:r.tools)for(const auto& value:tool.outputs)if(value.valid && value.port.type!=PortType::AssignmentBundle)index.validatePort(graph.toolSources.value(tool.toolId),value,value.port);}
-    else for(const auto& tool:r.tools)for(const auto& value:tool.outputs)invalid(!value.valid || value.port.type==PortType::AssignmentBundle,"Output without acquired frame");
+    if(!r.frames.isEmpty()){SourceFrameIndex index(r.cycleId,acquired,r.frames);for(const auto& tool:r.tools)for(const auto& value:tool.outputs)if(value.valid && value.port.type!=PortType::AssignmentBundle && value.port.frame!="cycle")index.validatePort(graph.toolSources.value(tool.toolId),value,value.port);}
+    else for(const auto& tool:r.tools)for(const auto& value:tool.outputs)invalid(!value.valid || (value.port.type==PortType::AssignmentBundle || value.port.frame=="cycle"),"Output without acquired frame");
     if(r.state==ExecutionState::Done){invalid(acquired.size()==graph.requiredSources.size(),"DONE missing required source");SourceFrameIndex index(r.cycleId,graph.requiredSources,r.frames);invalid(r.frameId==index.legacyFrameId(),"Wrong compatibility frame ID");}
     else if(graph.requiredSources.size()>1)invalid(r.frameId.isEmpty(),"Multi-source error invented shared frame ID");
     for(auto i=r.industrialEvidence.cbegin();i!=r.industrialEvidence.cend();++i){invalid(i.value() && branches.contains(i.key()) && branches[i.key()]->dependencies().contains("industrialSource"),"Foreign industrial evidence");bool matched=false;for(const auto& t:r.tools)if(t.toolId==i.key())for(const auto& v:t.outputs)if(v.valid && std::holds_alternative<ImageFrame>(v.data)){const auto& image=std::get<ImageFrame>(v.data);invalid(image.contentId()==i.value()->pixelHash && image.metadata().frameId==i.value()->execution.frameId && image.metadata().cycleId==i.value()->execution.cycleId,"Industrial pixels/frame differ from acquisition");matched=true;}invalid(matched,"Industrial evidence without actual raster");}
-    QSet<QString> seen;for(const auto& tool:r.tools){invalid(!seen.contains(tool.toolId) && std::any_of(configured.cbegin(),configured.cend(),[&](const auto& t){return t.id==tool.toolId;}),"Duplicate/foreign completed tool");seen.insert(tool.toolId);if(!graph.requiredSources.contains(graph.toolSources.value(tool.toolId)) && std::none_of(configured.cbegin(),configured.cend(),[&](const auto& t){return t.id==tool.toolId && t.enabled && t.kind=="set_variables";}))invalid(tool.state==ExecutionState::Skipped && tool.outputs.isEmpty() && tool.decision==PartDecision::NotEvaluated && !tool.calibration,"Disabled branch carried output");}
+    QSet<QString> seen;for(const auto& tool:r.tools){invalid(!seen.contains(tool.toolId) && std::any_of(configured.cbegin(),configured.cend(),[&](const auto& t){return t.id==tool.toolId;}),"Duplicate/foreign completed tool");seen.insert(tool.toolId);if(!graph.requiredSources.contains(graph.toolSources.value(tool.toolId)) && std::none_of(configured.cbegin(),configured.cend(),[&](const auto& t){return t.id==tool.toolId && t.enabled && (t.kind=="set_variables" || t.kind=="result");}))invalid(tool.state==ExecutionState::Skipped && tool.outputs.isEmpty() && tool.decision==PartDecision::NotEvaluated && !tool.calibration,"Disabled branch carried output");}
     if(r.state==ExecutionState::Done)invalid(seen.size()==configured.size(),"DONE missing tool results");
     for(const auto& source:graph.requiredSources){const auto snapshot=branches.value(source);invalid(bool(snapshot) && snapshot->dependencies()==lease.snapshot->dependencies()["sourceSet"].toObject()[source].toObject(),"Branch dependency set mismatch");
         // Frozen dependency accessor, no live model resolution during completion.
@@ -71,7 +71,7 @@ QJsonObject ProductionRecipeService::validateMultiSourceCompletion(const Product
 QByteArray ProductionRecipeService::completionDigest(const CycleResult& r) {
     QByteArray bytes;QDataStream out(&bytes,QIODevice::WriteOnly);
     out<<r.cycleId<<r.frameId<<r.recipeId<<r.evaluationId<<r.targetToolId<<r.partial<<r.executedTools
-       <<r.acquisitions<<r.configId<<int(r.state)<<r.milliseconds<<r.error;
+       <<r.acquisitions<<r.configId<<int(r.state)<<r.milliseconds<<r.error<<int(r.decision());
     auto metadata=[&](const FrameMetadata& m){out<<m.sourceId<<m.frameId<<m.cycleId<<m.coordinateSystemId<<m.completedAtUtc
         <<bool(m.exposureAtUtc)<<m.exposureAtUtc.value_or(QDateTime{})<<bool(m.deviceTimestampTicks)
         <<quint64(m.deviceTimestampTicks.value_or(0))<<m.deviceClockId<<QJsonDocument(m.experimentalAcquisition).toJson(QJsonDocument::Compact);};
@@ -216,7 +216,7 @@ RecipeValidation ProductionRecipeService::validate(const QString& principal,cons
                 if(acquisition==tools.cend())throw std::runtime_error("Reference acquisition identity differs from recipe");
                 if(b.world && (!draft.calibrationBinding || b.calibration!=draft.calibrationBinding))throw std::runtime_error("Reference calibration differs from recipe");
             }
-            if(!(industrialAdmission_ && tool.kind=="industrial_camera") && !QStringList{"image_file","template_match","blob","edge","calculate","webcam","measurement","roi","preprocess","code_read","edge_point","edge_pair","line_fit","circle_fit","geometry_measurement","pattern_pose","shape_pose","set_variables"}.contains(tool.kind))throw std::runtime_error("Üretim sözleşmesinde desteklenmeyen tool.");
+            if(!(industrialAdmission_ && tool.kind=="industrial_camera") && !QStringList{"image_file","template_match","blob","edge","calculate","webcam","measurement","roi","preprocess","code_read","edge_point","edge_pair","line_fit","circle_fit","geometry_measurement","pattern_pose","shape_pose","set_variables","result"}.contains(tool.kind))throw std::runtime_error("Üretim sözleşmesinde desteklenmeyen tool.");
             if(tool.kind=="webcam" || (industrialAdmission_ && tool.kind=="industrial_camera"))++sources;
             if((ToolRegistry::get(tool.kind).usesCalibration || ((tool.kind=="edge_pair" || tool.kind=="line_fit" || tool.kind=="circle_fit" || tool.kind=="geometry_measurement") && tool.parameters["mode"]=="calibrated")) && !draft.calibrationBinding)throw std::runtime_error("Metric tool requires an exact calibration binding.");
             if(tool.kind=="image_file") {++sources;if(tool.parameters["path"].toString().isEmpty())throw std::runtime_error("Kaynak yolu boş.");}
@@ -331,11 +331,11 @@ void ProductionRecipeService::finishCycle(quint64 ticket,const CycleResult& r) {
         for(auto it=t.outputs.cbegin();it!=t.outputs.cend();++it) {
             const auto ports=outputPorts(tool->kind);const auto expected=std::find_if(ports.begin(),ports.end(),[&](const auto& p){return p.id==it.key();});
             if(expected==ports.end())fail(ProductionError::InvalidCompletion,"Undeclared completion port");
-            if(it->valid && it->port.type!=PortType::AssignmentBundle && std::none_of(r.frames.cbegin(),r.frames.cend(),[&](const auto& f){return f.frameId==it->frameId && f.cycleId==it->cycleId && f.sourceId==it->origin.sourceId && f.coordinateSystemId==it->origin.coordinateSystemId;}))fail(ProductionError::InvalidCompletion,"Output origin does not match an acquired frame.");
+            if(it->valid && it->port.type!=PortType::AssignmentBundle && it->port.frame!="cycle" && std::none_of(r.frames.cbegin(),r.frames.cend(),[&](const auto& f){return f.frameId==it->frameId && f.cycleId==it->cycleId && f.sourceId==it->origin.sourceId && f.coordinateSystemId==it->origin.coordinateSystemId;}))fail(ProductionError::InvalidCompletion,"Output origin does not match an acquired frame.");
             if(it->valid && int(it->port.type)>int(PortType::Boolean) && (r.evaluationId.isEmpty() || it->evaluationId!=r.evaluationId))fail(ProductionError::InvalidCompletion,"Output evaluation identity differs from cycle");
             try {ToolResultCodec::validate(*it,*expected,r.frameId,r.cycleId);}catch(const std::exception& e){fail(ProductionError::InvalidCompletion,QString::fromUtf8(e.what()));}
         }
-        for(const auto& value:t.outputs)if(value.valid && value.port.type!=PortType::AssignmentBundle && (value.cycleId!=r.cycleId || value.frameId!=r.frameId || value.origin.cycleId!=r.cycleId || value.origin.frameId!=r.frameId))fail(ProductionError::InvalidCompletion,"Çıktı kökeni çevrimle uyuşmuyor.");
+        for(const auto& value:t.outputs)if(value.valid && value.port.type!=PortType::AssignmentBundle && value.port.frame!="cycle" && (value.cycleId!=r.cycleId || value.frameId!=r.frameId || value.origin.cycleId!=r.cycleId || value.origin.frameId!=r.frameId))fail(ProductionError::InvalidCompletion,"Çıktı kökeni çevrimle uyuşmuyor.");
     }
     if(r.state==ExecutionState::Done && seen.size()!=configured.size())fail(ProductionError::InvalidCompletion,"Tam çevrim tool sonuçları eksik.");
     if(!pendingRecord_.isEmpty() && pendingRecord_["cycleId"].toString()!=r.cycleId)fail(ProductionError::InvalidCompletion,"Kayıt bekleyen çevrim değiştirilemez.");

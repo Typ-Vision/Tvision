@@ -4,15 +4,15 @@
 
 ## Devam noktası
 
-**[COMM-10 tamam](archive/2026-10-27-comm-10.md):** Pure ALL/ANY, missing-first
-ve ERROR/CANCELED export; kararsız geçerli ölçüm, system write koruması.
-Release UI ON 5/5, UI OFF 3/3 CTest geçti. UI/terminal bağlantısı sonraki kartta;
-**sonraki tek kart COMM-11.**
+**[COMM-11 tamam](archive/2026-10-27-comm-11.md):** Result DAG/ALL/ANY UI,
+cycle decision/validity ve ayrı Editor/Runtime summary. Missing/Stop eski OK'ı
+gizler. Release UI ON 16, OFF 6 ilgili test tekrarlarla geçti; iki boyut offscreen.
+Native/fiziksel açık. **Sonraki tek kart COMM-12.**
 
-**[COMM-09 tamam](archive/2026-10-27-comm-09.md):** Immutable cycle-local Runtime
-variable context, frozen catalog/assignment ve private digest. Değerler kayıt
-sonrası görünür; Begin/Stop/ERROR/stale completion eskileri gizler.
-22 UI CTest ve UI OFF Runtime kabulü kapanıştadır; full/görsel/fiziksel koşulmadı.
+**[COMM-10](archive/2026-10-27-comm-10.md):** Missing-first pure evaluator,
+ERROR/CANCELED export ve system write koruması.
+**[COMM-09](archive/2026-10-27-comm-09.md):** Frozen cycle-local variable context,
+private digest ve kayıt bariyeri; Begin/Stop/ERROR/stale completion eskileri gizler.
 Checkout/indeks `C:/Projects/Tvision`; ev kökü burada yok.
 
 **COMM-02–08 tamam:** typed scalar/spatial, variable katalog/komutları,

@@ -30,6 +30,15 @@
 #include <algorithm>
 #include <stdexcept>
 namespace visionflow {
+ResultDecision CycleResult::decision() const {
+    if(state!=ExecutionState::Done)return ResultDecision::NotEvaluated;
+    for(const auto& t:tools)if(t.state==ExecutionState::Done) {
+        const auto port=t.outputs.value("decision"),valid=t.outputs.value("validity");
+        if(port.method!="result-boolean" || !port.valid || port.cycleId!=cycleId || !std::holds_alternative<QString>(port.data) || !valid.valid || !std::holds_alternative<bool>(valid.data) || !std::get<bool>(valid.data))continue;
+        const auto key=std::get<QString>(port.data);if(key=="OK")return ResultDecision::Ok;if(key=="NOK")return ResultDecision::Nok;
+    }
+    return ResultDecision::NotEvaluated;
+}
 QString executionStateName(ExecutionState s) {switch(s){case ExecutionState::Ready:return "READY";case ExecutionState::Busy:return "BUSY";case ExecutionState::Done:return "DONE";case ExecutionState::Error:return "ERROR";case ExecutionState::Skipped:return "SKIPPED";}return {};}
 QByteArray ExecutionService::toolSignature(const QJsonObject& definition,const QString& directory,const QString& tool,const QByteArray& scope) {
     const auto tools=editorTools(definition);const auto connections=executionConnections(definition);
@@ -149,14 +158,37 @@ CycleResult ExecutionService::run(const QJsonObject& definition,const QString& d
                 QMap<QString,PortValue> inputs;bool unavailable=false;QStringList missing;
                 for(const auto& c:connections)if(c.targetTool==id) {
                     const auto source=completed.value(c.sourceTool);const auto value=source.outputs.value(c.sourcePort);
-                    if(source.state!=ExecutionState::Done || !value.valid || (value.port.type!=PortType::AssignmentBundle && value.frameId!=(t.kind=="set_variables" && targetOnly ? targetOnly->frame.metadata().frameId:toolFrameId) && (t.kind!="set_variables" || targetOnly)) || value.cycleId!=cycle.cycleId) {
+                    if(t.kind!="result" && (source.state!=ExecutionState::Done || !value.valid || (value.port.frame!="cycle" && value.port.type!=PortType::AssignmentBundle && value.frameId!=(t.kind=="set_variables" && targetOnly ? targetOnly->frame.metadata().frameId:toolFrameId) && (t.kind!="set_variables" || targetOnly)) || value.cycleId!=cycle.cycleId)) {
                         unavailable=true;for(const auto& upstream:tools)if(upstream.id==c.sourceTool)missing.append(upstream.name);
                     }
                     else inputs[c.targetPort]=value;
                 }
                 if(unavailable) {r.state=ExecutionState::Skipped;r.message=targetOnly ? ("Girdi güncel değil: "+missing.join(", ")+". Önce görüntü al veya bağlı üst aracı çalıştır.") : "Upstream sonucu geçersiz/ERROR/SKIPPED";}
                 else try {
-                    if(t.kind=="set_variables") {
+                    if(t.kind=="result") {
+                        cycle.executedTools.append(t.id);
+                        DecisionInputView view;view.cycleId=cycle.cycleId;view.configId=QString::fromLatin1(configId.toHex());view.execution=ResultExecutionState::Done;
+                        const auto rule=decodeResultConfig(t.parameters);
+                        for(const auto& b:rule.required) {
+                            const auto producer=completed.constFind(b.toolId);if(producer==completed.cend())continue;
+                            ValueEnvelope e;e.producerId=b.toolId;e.producerPort=b.port;e.configId=view.configId;
+                            const auto port=producer->outputs.value(b.port);e.cycleId=port.cycleId;e.frameId=port.frameId;
+                            if(producer->state==ExecutionState::Skipped)e.validity=ValueValidity::Skipped;
+                            else if(producer->state==ExecutionState::Error)e.validity=ValueValidity::Error;
+                            else if(!port.valid)e.validity=ValueValidity::Missing;
+                            else if(port.port.type!=PortType::Boolean || !std::holds_alternative<bool>(port.data))e.validity=ValueValidity::Invalid;
+                            else {e.validity=ValueValidity::Valid;e.value=std::get<bool>(port.data);}
+                            int revision=0;for(const auto& p:tools)if(p.id==b.toolId)revision=ToolRegistry::get(p.kind).version;
+                            view.toolOutputs[b.toolId][b.port]={revision,e};
+                        }
+                        const auto evaluated=DecisionEvaluator::evaluate(rule,view);
+                        r.state=ExecutionState::Done;r.message=decisionReasonKey(evaluated.reason);
+                        for(const auto& declared:outputPorts(t.kind)) {
+                            PortValue p;p.port=declared;p.valid=true;p.cycleId=cycle.cycleId;p.evaluationId=cycle.evaluationId;p.method="result-boolean";p.methodVersion=1;
+                            if(declared.id=="decision")p.data=resultDecisionKey(evaluated.decision);else p.data=evaluated.decision!=ResultDecision::NotEvaluated;
+                            ToolResultCodec::validate(p,p.port,{},cycle.cycleId);r.outputs[declared.id]=p;
+                        }
+                    } else if(t.kind=="set_variables") {
                         cycle.executedTools.append(t.id);
                         r=executeAssignments(t,definition,completed,cycle.cycleId,QString::fromLatin1(configId.toHex()));
                         for(auto& p:r.outputs){p.evaluationId=cycle.evaluationId;ToolResultCodec::validate(p,p.port,{},cycle.cycleId);}
@@ -169,12 +201,12 @@ CycleResult ExecutionService::run(const QJsonObject& definition,const QString& d
                             throw std::runtime_error("Giriş port tipi/birim/frame sözleşmesi uyumsuz.");
                         auto declared=*expected;declared.id=it->port.id; // Connection maps output ID to input ID.
                         ToolResultCodec::validate(*it,declared,toolFrameId,cycle.cycleId);
-                        if(multi && it->port.type!=PortType::AssignmentBundle){const auto raw=completed.value(source).outputs.value("image");SourceFrameIndex index(cycle.cycleId,{source},{raw.origin});index.validatePort(source,*it,declared);}
+                        if(multi && it->port.type!=PortType::AssignmentBundle && it->port.frame!="cycle"){const auto raw=completed.value(source).outputs.value("image");SourceFrameIndex index(cycle.cycleId,{source},{raw.origin});index.validatePort(source,*it,declared);}
                     }
                     QString coordinates,sourceFrame,sourceId;
                     std::optional<CoordinateFrame> geometricFrame;
                     for(const auto& value:inputs) {
-                        if(value.port.type==PortType::AssignmentBundle)continue;
+                        if(value.port.frame=="cycle")continue;
                         if(const auto frame=ToolResultCodec::coordinates(value)) {
                             if(geometricFrame && *geometricFrame!=*frame)throw std::runtime_error("Typed input geometric frames/axes differ");
                             geometricFrame=frame;
@@ -299,7 +331,7 @@ CycleResult ExecutionService::run(const QJsonObject& definition,const QString& d
                             const auto raw=r.outputs.value("image");
                             SourceFrameIndex index(cycle.cycleId,{t.id},{raw.origin});index.validatePort(t.id,raw,outputPorts(t.kind).first());
                         }
-                        for(const auto& value:r.outputs)if(value.valid && value.port.type!=PortType::AssignmentBundle) {
+                        for(const auto& value:r.outputs)if(value.valid && value.port.type!=PortType::AssignmentBundle && value.port.frame!="cycle") {
                             const auto raw=completed.value(source).outputs.value("image");
                             const auto origin=ToolRegistry::get(t.kind).acquisitionSource ? value.origin:raw.origin;
                             SourceFrameIndex index(cycle.cycleId,{source},{origin});index.validatePort(source,value,value.port);
@@ -336,6 +368,11 @@ CycleResult ExecutionService::run(const QJsonObject& definition,const QString& d
         if(targetOnly && !stopped && cycle.tools.size()==1)cycle.state=cycle.tools.first().state;
         if(stopped) {cycle.industrialEvidence.clear();cycle.frames.clear();cycle.error="Çevrim iptal edildi; sonuç yayımlanmaz.";for(auto& r:cycle.tools) {r.state=ExecutionState::Skipped;r.message="İptal edildi";r.errorCode.clear();r.fitDiagnostic.reset();r.edgeDiagnostics.reset();r.overlayGeometry.reset();r.outputs.clear();r.regions.clear();r.mask={};r.points.clear();r.rejectedPoints.clear();r.lines.clear();r.searchRegion={};r.decision=PartDecision::NotEvaluated;r.calibration.reset();}}
     } catch(const std::exception& e) {if(const auto* source=dynamic_cast<const AcquisitionPolicyError*>(&e))cycle.acquisitionFailureSourceId_=source->sourceId;cycle.state=ExecutionState::Error;cycle.error=QString::fromUtf8(e.what());if(multi){cycle.industrialEvidence.clear();cycle.frames.clear();for(auto& r:cycle.tools){r.state=ExecutionState::Skipped;r.overlayGeometry.reset();r.outputs.clear();r.regions.clear();r.points.clear();r.lines.clear();r.mask={};r.fitDiagnostic.reset();r.edgeDiagnostics.reset();r.decision=PartDecision::NotEvaluated;r.calibration.reset();}}}
+    if(cycle.state!=ExecutionState::Done) {
+        for(auto& r:cycle.tools)for(auto& p:r.outputs)if(p.port.frame=="cycle" && r.message=="none") {
+            if(p.port.id=="decision")p.data=QString("NOT_EVALUATED");else if(p.port.id=="validity")p.data=false;
+        }
+    }
     cycle.milliseconds=total.nsecsElapsed()/1e6;return cycle;
 }
 }

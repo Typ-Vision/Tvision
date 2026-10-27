@@ -1,5 +1,6 @@
 #include "PrecisionInput.hpp"
 #include "SetVariablesEditor.hpp"
+#include "ResultEditor.hpp"
 #include "application/EditorObservation.hpp"
 #include "application/CalibrationWorkflow.hpp"
 #include "application/ExperimentalOecsAcquisition.hpp"
@@ -343,6 +344,12 @@ void MainWindow::showToolPropertiesView(const EditorContext& context,const std::
         }catch(const std::exception& ex){displayError(QString::fromUtf8(ex.what()));}});
         auto* manage=new QPushButton(cameras->count()==1 ? "Kamera ekle — Setup":"Kameraları aç");manage->setObjectName("sourceCameraManage");form->addRow(manage);connect(manage,&QPushButton::clicked,this,[this]{selectPage("camera");});
         form->addRow(note("Raw/px kalibrasyonsuzdur. mm yalnız bu kameranın uygun etkin modeliyle hesaplanır. Model/optik değişimi world ROI ve referansı yeniden denetler."));
+    } else if (tool.kind=="result") {
+        form->addRow(new ResultEditor(tool,context.definition));
+        auto* apply=new QPushButton("Kararı uygula");apply->setObjectName("resultApply");form->addRow(apply);
+        connect(apply,&QPushButton::clicked,this,[this]{if(applyToolProperties())QTimer::singleShot(0,this,&MainWindow::showToolProperties);});
+        auto* reset=new QPushButton("Taslağı geri al");reset->setObjectName("resultCancel");form->addRow(reset);
+        connect(reset,&QPushButton::clicked,this,[this]{QTimer::singleShot(0,this,&MainWindow::showToolProperties);});
     } else if (tool.kind=="set_variables") {
         const auto* cycle=editorSession_.cycle && editorSession_.accepts(editorSession_.cycle->configId,context) && !editorSession_.busy() ? &*editorSession_.cycle:nullptr;
         auto* settings=new SetVariablesEditor(tool,context.definition,cycle);form->addRow(settings);
@@ -655,6 +662,7 @@ void MainWindow::showToolPropertiesView(const EditorContext& context,const std::
 ToolDefinition MainWindow::readToolProperties(ToolDefinition tool) const {
     tool.name=propertiesBody_->findChild<QLineEdit*>("toolName")->text().trimmed(); tool.description=propertiesBody_->findChild<QLineEdit*>("toolDescription")->text();
     tool.enabled=propertiesBody_->findChild<QCheckBox*>("toolEnabled")->isChecked();
+    if(tool.kind=="result")if(auto* settings=dynamic_cast<ResultEditor*>(propertiesBody_->findChild<QWidget*>("resultEditor")))tool.parameters=settings->parameters();
     if(tool.kind=="set_variables")if(auto* settings=dynamic_cast<SetVariablesEditor*>(propertiesBody_->findChild<QWidget*>("setVariablesEditor")))tool.parameters=settings->parameters();
     if (auto* score=propertiesBody_->findChild<QDoubleSpinBox*>("minScore")) tool.parameters["minScore"]=score->value()/100;
     if(tool.kind=="pattern_pose" || tool.kind=="shape_pose")if(auto* settings=dynamic_cast<PoseMatchEditor*>(propertiesBody_->findChild<QWidget*>("poseMatchSettings")))tool.parameters=settings->parameters();
@@ -704,6 +712,7 @@ MainWindow::PropertyCommit MainWindow::commitToolProperties() {
                 if(i.value()!=displayedProperties_->parameters.value(i.key()))tool.parameters[i.key()]=i.value();
             for(auto i=displayedProperties_->parameters.begin();i!=displayedProperties_->parameters.end();++i)
                 if(!displayed.parameters.contains(i.key()))tool.parameters.remove(i.key());
+            if(tool.kind=="result" && tool.enabled)if(auto* settings=dynamic_cast<ResultEditor*>(propertiesBody_->findChild<QWidget*>("resultEditor")))settings->validateDraft();
             if(tool.kind=="set_variables")if(auto* settings=dynamic_cast<SetVariablesEditor*>(propertiesBody_->findChild<QWidget*>("setVariablesEditor")))settings->validateDraft();
             if(tool.name==original.name && tool.description==original.description && tool.enabled==original.enabled && tool.parameters==original.parameters) {
                 displayedProperties_=displayed;
@@ -725,6 +734,7 @@ MainWindow::PropertyCommit MainWindow::commitToolProperties() {
             return PropertyCommit::Changed;
         }
     } catch (const std::exception& e) {
+        if(auto* settings=dynamic_cast<ResultEditor*>(propertiesBody_->findChild<QWidget*>("resultEditor")))settings->error(QString::fromUtf8(e.what()));
         if(auto* settings=dynamic_cast<SetVariablesEditor*>(propertiesBody_->findChild<QWidget*>("setVariablesEditor")))
             settings->error("Atama kaydedilmedi: "+QString::fromUtf8(e.what())+"\nTüm satırlar birlikte doğrulanır. Hedef UUID, kaynak tipi, birimi ve revision bağını kontrol edin. Taslağı düzeltin veya geri alın; önceki kayıt korunur.");
         if(auto* mode=propertiesBody_->findChild<QComboBox*>("propertyDetailMode"))mode->setCurrentIndex(1);

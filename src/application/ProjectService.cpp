@@ -193,7 +193,7 @@ QString ProjectService::addTool(const QString& kind) {
     do {
         name=toolLabel(kind).replace(' ','_')+"_"+QString::number(suffix++);
     } while (std::any_of(list.begin(),list.end(),[&](const auto& t){return t.name.toCaseFolded()==name.toCaseFolded();}));
-    ToolDefinition tool{newId(),kind,name,"",true,params};
+    ToolDefinition tool{newId(),kind,name,"",kind!="result",params};
     const auto backend=ToolRegistry::get(kind).requiredBackend;
     if(!backend.isEmpty()){const auto capability=BackendCapabilities::get(backend);if(!capability.available)fail(capability.reason);tool.dependencies.append({ToolDependencyKind::Backend,backend,capability.version,capability.contentId,{}});}
     auto connections=editorConnections(activeRecipe()->definition);
@@ -233,6 +233,11 @@ void ProjectService::updateTool(const ToolDefinition& tool) {
     auto list=tools();
     for (auto& t : list) if (t.id==tool.id) {
         if (t.kind!=tool.kind) fail("Tool türü değiştirilemez.");
+        if(tool.kind=="result") {
+            const auto before=validateGraph(list,editorConnections(activeRecipe()->definition));auto changed=list;
+            for(auto& candidate:changed)if(candidate.id==tool.id)candidate=tool;
+            for(const auto& error:validateGraph(changed,editorConnections(activeRecipe()->definition)).errors)if(!before.errors.contains(error))fail(error);
+        }
         t=tool; setTools(list); return;
     }
     fail("Tool bulunamadı.");

@@ -1,6 +1,6 @@
 # COMM-11 — Result aracı, portlar ve UI
 
-Durum: başlamadı. Önerilen düzey: **medium**. Önkoşul: **COMM-10** tamam.
+Durum: tamamlandı — [kapanış](../../archive/2026-10-27-comm-11.md). Önerilen düzey: **medium**. Önkoşul: **COMM-10** tamam.
 Bir oturumda yalnız bu kart; paralel uygulayıcı yok.
 
 ## Oku
