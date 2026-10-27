@@ -4,19 +4,21 @@
 
 ## Devam noktası
 
-**[COMM-09 tamam](archive/2026-10-27-comm-09.md):** Immutable Runtime variable
-context; cycle-local unset başlangıç, frozen catalog/assignment ve private digest.
-Editor cache kullanılmaz; değerler kayıt sonrası görünür;
-Begin/Stop/ERROR/stale completion eski değerleri gizler. Release UI, 22 benzersiz
-ilgili CTest (3 localhost testi izinli tekrar), UI OFF Runtime kabulü geçti.
-Full CTest/görsel/fiziksel kabul koşulmadı. **Sonraki tek kart COMM-10.**
+**[COMM-10 tamam](archive/2026-10-27-comm-10.md):** Pure ALL/ANY, missing-first
+ve ERROR/CANCELED export; kararsız geçerli ölçüm, system write koruması.
+Release UI ON 5/5, UI OFF 3/3 CTest geçti. UI/terminal bağlantısı sonraki kartta;
+**sonraki tek kart COMM-11.**
+
+**[COMM-09 tamam](archive/2026-10-27-comm-09.md):** Immutable cycle-local Runtime
+variable context, frozen catalog/assignment ve private digest. Değerler kayıt
+sonrası görünür; Begin/Stop/ERROR/stale completion eskileri gizler.
+22 UI CTest ve UI OFF Runtime kabulü kapanıştadır; full/görsel/fiziksel koşulmadı.
 Checkout/indeks `C:/Projects/Tvision`; ev kökü burada yok.
-Her makinede kök/HEAD eşleştirilir.
 
 **COMM-02–08 tamam:** typed scalar/spatial, variable katalog/komutları,
-Atomik evaluator/DAG/cache ve Editor katalog/çok satırlı atama UI.
-[Son kabul](archive/2026-10-26-comm-08.md); UUID/type/unit/frame/enum ve
-No-op/hash korunur. Editor dışarı yazmaz; değerler tanıma yazılmaz.
+atomik evaluator/DAG/cache ve çok satırlı Editor UI.
+[Kabul](archive/2026-10-26-comm-08.md); UUID/type/unit/frame/enum/no-op/hash korunur.
+Editor dışarı, değerler tanıma yazılmaz.
 COMM-03'teki iki eski Circle fixture hatası açık; COMM-09'da koşulmadı.
 
 **[COMM-01 tamam](archive/2026-10-26-comm-01.md):** [Kaynak haritası](architecture/communication/source-map.md),

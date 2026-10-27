@@ -1,6 +1,6 @@
 # COMM-10 — Genel parça kararı evaluator'ı
 
-Durum: başlamadı. Önerilen düzey: **medium**. Önkoşul: **COMM-09** tamam.
+Durum: tamamlandı — [kapanış](../../archive/2026-10-27-comm-10.md). Önerilen düzey: **medium**. Önkoşul: **COMM-09** tamam.
 Bir oturumda yalnız bu kart; paralel uygulayıcı yok.
 
 ## Oku
