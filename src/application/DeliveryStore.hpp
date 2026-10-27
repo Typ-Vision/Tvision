@@ -11,11 +11,14 @@ struct DeliveryStatus {
     int attempts=0;
     bool dispatchable() const {return state=="DELIVERY_PENDING" || state=="ATTEMPT";}
 };
+struct DeliveryRecovery { DeliveryRequest request; DeliveryStatus status; };
 // Durable evidence only. No execution, network, automatic recovery or Run authority.
 class DeliveryStore {
 public:
     using Fault=std::function<void(const QString& boundary)>;
     explicit DeliveryStore(QString directory,Fault fault={});
+    QVector<DeliveryRecovery> recovery() const;
+    QJsonObject recoveryTerminal(const DeliveryRequest&) const;
     DeliveryStatus inspect(const DeliveryRequest&) const;
     DeliveryStatus request(const DeliveryRequest&) const;
     void begin(const DeliveryRequest&,const QString& cycleId) const;

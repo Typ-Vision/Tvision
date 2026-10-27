@@ -98,7 +98,7 @@ RESULT, commit edilmiş terminal bundle'ın seçili logical output group'undan
 hazırlanıp canonical payload/hash olarak outbox'a bir kez kaydedilir. Terminal
 veya DELIVERY_PENDING commit'i yoksa socket RESULT yoktur. `retryRecording()`
 aynı completion/terminal/payload'ı yazar; acquisition çalıştırmaz. Duplicate ve
-reconnect, process içindeki kimlikten kayıtlı payload'ı okur. Her bağlantının
+reconnect ve restart, kalıcı request anahtarından kayıtlı payload'ı okur. Her bağlantının
 sessionId'si yenidir; eski session reddedilir, kalıcı request anahtarı değişmez.
 ACK exact request/resultId/hash eşleşir; ACK_RECEIVED + ACK_COMMITTED olmadan
 ACKED veya teslim bariyerinin kalkması yoktur. Stop admission'ı kapatıp cooperative
@@ -116,7 +116,34 @@ v3 typed envelope'dur. Simulator v/session/type/recipe/config'i HELLO'dan doldur
 `--sequence` (varsayılan 1) ve `--request` seçilebilir. Beklenen karar/alan/JSON
 literal değeri uyuşmazsa exit 3; gerçek Runtime sonucu üretir, sahte vision sonucu
 oluşturmaz. `--duplicate`, `--reconnect`, `--drop-ack`, `--ack-delay` kullanılabilir.
-V3 `--resume` bu kartta kapalıdır; restart/recovery COMM-18, timeout/retry
-politikası COMM-19, normal kullanıcı aktivasyonu COMM-23 kabulündedir. Mevcut v2
+V3 simulator `--resume` kapalıdır; uygulama servisinde explicit recovery aşağıdadır.
+Timeout/retry politikası COMM-19, normal kullanıcı aktivasyonu COMM-23 kabulündedir. Mevcut v2
 komutları ve wire alanları korunur. Test `communication_tcp_runtime` gerçek
 localhost Runtime/bundle/outbox/ACK ve ayrı v2 profilini sınar; fiziksel kabul değildir.
+
+## COMM-18 — Explicit v3 restart/recovery
+
+`CommunicationTcpEndpoint::listen()` v3 ledger/outbox'ı namespace
+(workcell/project/endpoint/peer) için tarar; constructor/Load ağ veya edinim açmaz.
+Startup Running/Ready izni oluşturmaz. Pending delivery coordinator bariyerini
+kurar; terminali olmayan intent/begin veya bozuk journal RECOVERY_REQUIRED tutar.
+Yeni session ile aynı stable request/fingerprint duplicate'i INPUT veya yeni
+cycle olmadan aynı canonical payload/resultId/hash'i döndürür. Farklı fingerprint
+REQUEST_CONFLICT; v2 geçmişi v3 ledger olarak yorumlanmaz.
+
+Owner-thread `inspectRecovery()` kayıtları salt okunur sunar.
+`resumeDelivery(exactTriggerRequest)` açık servis komutudur: terminal10 + bundle
+commit edilmiş ama DELIVERY_PENDING eksikse cycle ve communication/config/input
+kimliklerini doğrular, frozen terminalden payload'ı üretip outbox'a commit eder.
+Yeni acquisition/prepare/Run yoktur. Terminali olmayan, unknown veya foreign
+request reconciliation ister; sentetik terminal veya ACK oluşturulmaz.
+ACK_RECEIVED kalıntısı yalnız mevcut durable receipt üzerinden ACK_COMMITTED'a
+ilerletilebilir. ACK_COMMITTED replay acquisition/consumer effect yaratmaz;
+exact tekrar ACK idempotent ACKED verir. Bir ACK diğer unresolved request'in
+bariyerini kaldırmaz. Bu API normal UI'ya bağlı değildir; repair UI COMM-22,
+automatic timeout/retry COMM-19 ve fiziksel kabul COMM-38 kapsamındadır.
+
+`delivery_recovery_contract` ayrı child process'i intent, begin, terminal/outbox
+arası, pending, ACK_RECEIVED ve ACK_COMMITTED sınırlarında gerçekten sonlandırır;
+yeni Runtime ile edinimsiz recovery ve localhost byte replay'i doğrular.
+Genel crash dayanıklılığı veya uçtan uca exactly-once garantisi değildir.

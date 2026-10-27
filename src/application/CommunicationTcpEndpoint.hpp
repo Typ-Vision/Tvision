@@ -25,6 +25,10 @@ public:
     void listen(const CommunicationTcpOptions&);
     void stop();
     void retryRecording();
+    // Explicit owner-thread reconciliation. Never prepares/acquires/runs. Exact
+    // stable request identity and committed terminal evidence are required.
+    QVector<DeliveryRecovery> inspectRecovery() const;
+    void resumeDelivery(const TriggerRequest&);
     quint16 port() const {return server_.serverPort();}
     bool listening() const {return server_.isListening();}
     QString state() const;
@@ -38,6 +42,8 @@ private:
     QFutureWatcher<CycleResult>* watcher_=nullptr;std::optional<CycleResult> pending_;ProductionCycle cycle_;
     std::shared_ptr<std::atomic_bool> cancel_;
     struct Entry {TriggerRequest trigger;QString cycleId;};QMap<QString,Entry> entries_;
+    QString recoveryState_;
+    void restoreDelivery();
     QString outstanding_;QJsonObject terminal_,sealed_;
     void owner() const;
     void acceptPeer();void disconnectPeer();void readPeer();void receive(const QJsonObject&);

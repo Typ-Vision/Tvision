@@ -19,11 +19,44 @@ void CommunicationTcpEndpoint::listen(const CommunicationTcpOptions& o){
     for(const auto& id:{o.workcell,o.project,o.endpoint,o.peer})require(!id.isEmpty() && id.size()<=128,"Explicit endpoint/peer identity required");
     require(o.inputs.size()<=64,"Input profile too large");for(const auto& input:o.inputs)require(input.maxAgeMs>0,"Input maxAge required");
     // No auto listen during construction/Load. An occupied v2/v3 profile is an error.
-    require(server_.listen(o.address,o.port),qPrintable(server_.errorString()));options_=o;timer_.start();
+    require(server_.listen(o.address,o.port),qPrintable(server_.errorString()));options_=o;restoreDelivery();timer_.start();
+}
+QVector<DeliveryRecovery> CommunicationTcpEndpoint::inspectRecovery() const {
+    owner();QVector<DeliveryRecovery> found;for(const auto& item:ledger_.recovery()){
+        const auto& r=item.request;if(r.workcell==options_.workcell && r.project==options_.project && r.endpoint==options_.endpoint && r.peer==options_.peer)found.append(item);
+    }return found;
+}
+void CommunicationTcpEndpoint::restoreDelivery(){
+    recoveryState_.clear();bool pending=false;
+    try{for(const auto& item:inspectRecovery()){
+        const auto& d=item.request;const auto& s=item.status;
+        if(s.state!="ACK_COMMITTED"){pending=true;if(s.state=="RECOVERY_REQUIRED")recoveryState_="RECOVERY_REQUIRED";}
+        if(s.payload.isEmpty())continue;
+        const auto o=QJsonDocument::fromJson(s.payload).object();
+        TriggerRequest r{d.workcell,d.project,d.endpoint,d.peer,d.requestId,o["recipeId"].toString(),o["configId"].toString(),o["inputSnapshotId"].toString(),o["sequence"].toString().toULongLong(),o["inputRevision"].toString().toULongLong()};
+        require(TriggerRouter::deliveryRequest(r).fingerprint==d.fingerprint,"RECOVERY_REQUIRED: payload request mismatch");
+        // Tombstones remain on disk; only pending deliveries need resident state.
+        if(s.state!="ACK_COMMITTED")entries_[d.requestId]={r,s.cycleId};
+    }}catch(...){recoveryState_="RECOVERY_REQUIRED";pending=true;}
+    coordinator_.setDeliveryPending(pending);
+}
+void CommunicationTcpEndpoint::resumeDelivery(const TriggerRequest& r){
+    owner();require(!watcher_ && !pending_ && !runtime_.busy(),"Recovery requires idle execution");require(r.workcell==options_.workcell && r.project==options_.project && r.endpoint==options_.endpoint && r.peer==options_.peer,"Foreign recovery namespace");
+    const auto d=TriggerRouter::deliveryRequest(r);auto s=ledger_.inspect(d);require(s.state!="ABSENT","Unknown request requires reconciliation");
+    if(s.payload.isEmpty()){
+        const auto t=ledger_.recoveryTerminal(d);require(!t.isEmpty(),"RECOVERY_REQUIRED: no committed terminal/bundle");
+        const auto c=t["communication"].toObject();
+        require(t["recipeId"]==r.recipeId && t["configId"]==r.configId && c["protocol"]=="vf.socket/3" && c["endpoint"]==r.endpoint && c["peer"]==r.peer && c["requestId"]==r.requestId && c["sequence"]==QString::number(r.sequence) && c["inputSnapshotId"]==r.inputSnapshotId && c["inputRevision"]==QString::number(r.inputRevision),"RECOVERY_REQUIRED: foreign terminal identity");
+        const auto sealed=result({r,s.cycleId},t);ledger_.commit(d,t,CommunicationWireCodec::resultPayload(sealed));
+    }
+    entries_[r.requestId]={r,s.cycleId};restoreDelivery();
+    // A durable ACK receipt can finish its commit without inventing a new ACK.
+    s=ledger_.inspect(d);if(s.state=="ACK_RECEIVED"){ledger_.commitAcknowledgement(d);restoreDelivery();return;}
+    if(s.dispatchable())replay(entries_[r.requestId]);
 }
 void CommunicationTcpEndpoint::stop(){owner();server_.close();timer_.stop();disconnectPeer();coordinator_.stop();}
 QString CommunicationTcpEndpoint::state() const {
-    owner();if(!listening())return "STOPPED";if(!fault_.isEmpty())return fault_;
+    owner();if(!listening())return "STOPPED";if(!fault_.isEmpty())return fault_;if(!recoveryState_.isEmpty())return recoveryState_;
     if(pending_ || coordinator_.recordingPending())return "RECORDING_PENDING";
     if(watcher_ || runtime_.busy())return "BUSY";
     if(!outstanding_.isEmpty() || coordinator_.deliveryPending())return "WAIT_ACK";
@@ -41,8 +74,9 @@ void CommunicationTcpEndpoint::acceptPeer(){while(server_.hasPendingConnections(
     connect(p,&QTcpSocket::disconnected,this,[this,p]{if(peer_==p){peer_.clear();framer_.reset();}p->deleteLater();});
     send(status("HELLO"));
 }}
-void CommunicationTcpEndpoint::send(QJsonObject o){o["v"]=3;o["sessionId"]=session_;const auto bytes=CommunicationWireCodec::encode(o);
+void CommunicationTcpEndpoint::send(QJsonObject o){
     if(!peer_ || peer_->state()!=QAbstractSocket::ConnectedState)return;
+    o["v"]=3;o["sessionId"]=session_;const auto bytes=CommunicationWireCodec::encode(o);
     if(peer_->bytesToWrite()+bytes.size()>2*(CommunicationWireCodec::maxLineBytes+1) || peer_->write(bytes)!=bytes.size())disconnectPeer();
 }
 void CommunicationTcpEndpoint::error(const QString& code,const QString& id){send({{"type","ERROR"},{"requestId",id},{"code",code}});}
@@ -72,6 +106,14 @@ void CommunicationTcpEndpoint::trigger(const QJsonObject& o){
         const auto& e=entries_[r.requestId];if(TriggerRouter::deliveryRequest(e.trigger).fingerprint!=d.fingerprint){error("REQUEST_CONFLICT",r.requestId);return;}
         replay(e);return;
     }
+    DeliveryStatus durable;try{durable=ledger_.inspect(d);}catch(const std::exception& ex){
+        const auto reason=QString::fromUtf8(ex.what());if(reason.startsWith("CONFLICT")){error("REQUEST_CONFLICT",r.requestId);return;}throw;
+    }
+    if(durable.state!="ABSENT"){
+        if(durable.payload.isEmpty()){send({{"type","INVALID"},{"requestId",r.requestId},{"reason","RECOVERY_REQUIRED"}});return;}
+        const Entry e{r,durable.cycleId};replay(e);return;
+    }
+    if(!recoveryState_.isEmpty()){send({{"type","INVALID"},{"requestId",r.requestId},{"reason",recoveryState_}});return;}
     if(!fault_.isEmpty() || runtime_.experimental()){send({{"type","INVALID"},{"requestId",r.requestId},{"reason",runtime_.experimental()?QString("EXPERIMENTAL_OUTPUT_BLOCKED"):fault_}});return;}
     if(!options_.outputGroupId.isEmpty()) {
         const auto active=runtime_.active();bool mapped=false;
@@ -89,7 +131,7 @@ void CommunicationTcpEndpoint::trigger(const QJsonObject& o){
         try{journalStarted=true;ledger_.request(d);ledger_.begin(d,reserved);}catch(...){fault_="RECOVERY_REQUIRED";throw;}
     },"vf.socket/3");
     if(!admission.accepted()){
-        // Durable duplicate/restart policy is completed by COMM-18. Never rerun.
+        // Durable admission evidence never authorizes a second execution.
         if(journalStarted)fault_="RECOVERY_REQUIRED";
         if(admission.existingState=="RECOVERY_REQUIRED" || admission.reason.startsWith("RECOVERY_REQUIRED"))fault_="RECOVERY_REQUIRED";
         const auto reason=admission.existingState=="RECOVERY_REQUIRED" ? QString("RECOVERY_REQUIRED"):admission.reason;
@@ -107,7 +149,7 @@ QJsonObject CommunicationTcpEndpoint::result(const Entry& e,const QJsonObject& t
     const auto b=t["resultBundle"].toObject();QJsonArray fields;bool found=options_.outputGroupId.isEmpty();
     for(const auto& group:b["groups"].toArray()){const auto g=group.toObject();if(g["groupId"]!=options_.outputGroupId)continue;require(g["profileId"]==options_.endpoint && g["payloadSchema"]=="vf.fields/1","Output group profile mismatch");found=true;const auto values=g["fields"].toObject();for(auto v=values.begin();v!=values.end();++v)fields.append(CommunicationWireCodec::encodeField(v.key(),decodeAssignmentValue(v->toObject())));}
     require(found,"Output group absent from committed bundle");const auto& r=e.trigger;
-    return CommunicationWireCodec::sealResult({{"v",3},{"type","RESULT"},{"sessionId",session_},{"requestId",r.requestId},{"sequence",QString::number(r.sequence)},{"recipeId",r.recipeId},{"configId",r.configId},{"inputSnapshotId",r.inputSnapshotId},{"inputRevision",QString::number(r.inputRevision)},{"resultId",b["bundleId"]},{"cycleId",t["cycleId"]},{"execution",t["state"]},{"decision",b["decision"]},{"resultValid",b["decision"]!="NOT_EVALUATED"},{"fields",fields},{"error",t["error"]}});
+    return CommunicationWireCodec::sealResult({{"v",3},{"type","RESULT"},{"sessionId",session_.isEmpty()?QString("recovery"):session_},{"requestId",r.requestId},{"sequence",QString::number(r.sequence)},{"recipeId",r.recipeId},{"configId",r.configId},{"inputSnapshotId",r.inputSnapshotId},{"inputRevision",QString::number(r.inputRevision)},{"resultId",b["bundleId"]},{"cycleId",t["cycleId"]},{"execution",t["state"]},{"decision",b["decision"]},{"resultValid",b["decision"]!="NOT_EVALUATED"},{"fields",fields},{"error",t["error"]}});
 }
 void CommunicationTcpEndpoint::retryRecording(){owner();if(!pending_)return;
     try{
@@ -125,10 +167,14 @@ void CommunicationTcpEndpoint::replay(const Entry& e){const auto d=TriggerRouter
     // Payload comes exclusively from durable bytes, including acknowledged replay.
     auto o=QJsonDocument::fromJson(s.payload).object();o["type"]="RESULT";o["payloadHash"]=s.payloadHash;send(o);
 }
-void CommunicationTcpEndpoint::acknowledge(const QJsonObject& o){const auto id=o["requestId"].toString();require(entries_.contains(id),"Unknown ACK");const auto d=TriggerRouter::deliveryRequest(entries_[id].trigger);const auto s=ledger_.inspect(d);
+void CommunicationTcpEndpoint::acknowledge(const QJsonObject& o){const auto id=o["requestId"].toString();
+    std::optional<DeliveryRequest> request;
+    if(entries_.contains(id))request=TriggerRouter::deliveryRequest(entries_[id].trigger);
+    else for(const auto& item:inspectRecovery())if(item.request.requestId==id && !item.status.payload.isEmpty())request=item.request;
+    require(request.has_value(),"Unknown ACK");const auto d=*request;const auto s=ledger_.inspect(d);
     require(!s.payload.isEmpty() && QJsonDocument::fromJson(s.payload).object()["resultId"]==o["resultId"] && s.payloadHash==o["payloadHash"],"ACK exact result/hash mismatch");
     ledger_.acknowledge(d,s.payloadHash);ledger_.commitAcknowledgement(d);
-    if(outstanding_==id){outstanding_.clear();coordinator_.setDeliveryPending(false);fault_.clear();}
+    if(outstanding_==id){outstanding_.clear();fault_.clear();}restoreDelivery();
     send({{"type","ACKED"},{"requestId",id},{"resultId",o["resultId"]},{"payloadHash",s.payloadHash}});
 }
 }

@@ -6,6 +6,7 @@ görev” ifadeleri yazıldıkları tarihe aittir.
 
 | Dönem / görev | Kayıt |
 | --- | --- |
+| 27 Ekim 2026 — COMM-18 | [V3 restart, kalıcı dedup ve explicit recovery kabulü](2026-10-27-comm-18.md) |
 | 27 Ekim 2026 — COMM-17 | [Explicit TCP v3 Runtime, terminal/outbox ve kalıcı ACK servis kabulü](2026-10-27-comm-17.md) |
 | 27 Ekim 2026 — COMM-16 | [Strict TCP v3 codec, bounded LF framing ve canonical payload hash](2026-10-27-comm-16.md) |
 | 27 Ekim 2026 — COMM-15 | [Immutable typed input snapshot ve ortak Trigger Router](2026-10-27-comm-15.md) |

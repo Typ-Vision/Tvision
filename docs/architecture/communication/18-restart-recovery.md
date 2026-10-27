@@ -1,6 +1,6 @@
 # COMM-18 — Restart, dedup ve reconciliation
 
-Durum: başlamadı. Önerilen düzey: **medium**. Önkoşul: **COMM-17** tamam.
+Durum: yazılım kabulü tamamlandı (27 Ekim 2026). Önerilen düzey: **medium**. Önkoşul: **COMM-17** tamam.
 Bir oturumda yalnız bu kart; paralel uygulayıcı yok.
 
 ## Oku
@@ -42,3 +42,5 @@ fiziksel/native engelleri açık yaz. progress özetini ve arşiv indeksini gün
 `docs/archive/YYYY-MM-DD-comm-18.md` kaydı oluştur, uygulayıcıyı belirt.
 Tamamlanınca `COMM-18: ...` tek yerel commit; push yok. Kabul geçmeden tamam yazma.
 Sonraki tek kart: **COMM-19**.
+
+Kapanış ve güncel kanıt: [COMM-18](../../archive/2026-10-27-comm-18.md).

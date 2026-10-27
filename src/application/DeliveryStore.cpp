@@ -47,6 +47,20 @@ void DeliveryStore::append(const DeliveryRequest& r,QJsonObject o,const QString&
     o["format"]="visionflow.delivery/1";o["key"]=key(r);o["identity"]=identity(r);o["fingerprint"]=r.fingerprint;o["sequence"]=n;o["previous"]=hash(QJsonDocument(previous).toJson(QJsonDocument::Compact));o["state"]=state;
     if(fault_)fault_(state);ProductionStore(directory_).append("delivery",eventId(identity(r),n),o);
 }
+QVector<DeliveryRecovery> DeliveryStore::recovery() const {
+    Guard g(directory_);QMap<QString,DeliveryRequest> requests;
+    for(const auto& o:ProductionStore(directory_).all("delivery")){
+        const auto k=o["key"].toObject();DeliveryRequest r{k["workcell"].toString(),k["project"].toString(),k["endpoint"].toString(),k["peer"].toString(),k["requestId"].toString(),o["fingerprint"].toString()};
+        const auto id=identity(r);if(requests.contains(id))require(requests[id].fingerprint==r.fingerprint,"RECOVERY_REQUIRED: conflicting fingerprints");requests[id]=r;
+    }
+    QVector<DeliveryRecovery> result;for(const auto& r:requests)result.append({r,status(load(r))});return result;
+}
+QJsonObject DeliveryStore::recoveryTerminal(const DeliveryRequest& r) const {
+    Guard g(directory_);const auto o=load(r);require(!o.isEmpty(),"Unknown request requires reconciliation");
+    QJsonObject found;for(const auto& t:ProductionStore(directory_).all("cycles"))if(t["cycleId"]==o["cycleId"] && !o["cycleId"].toString().isEmpty()){
+        require(found.isEmpty() && t["schemaVersion"]==10,"RECOVERY_REQUIRED: ambiguous/missing terminal bundle");found=t;
+    }return found;
+}
 DeliveryStatus DeliveryStore::inspect(const DeliveryRequest& r) const {Guard g(directory_);return status(load(r));}
 DeliveryStatus DeliveryStore::request(const DeliveryRequest& r) const {Guard g(directory_);auto o=load(r);if(o.isEmpty()){append(r,{},"REQUEST_INTENT");o=load(r);}return status(o);}
 void DeliveryStore::begin(const DeliveryRequest& r,const QString& cycle) const {Guard g(directory_);auto o=load(r);require(!QUuid(cycle).isNull(),"Cycle UUID required");if(o["state"]!="REQUEST_INTENT"){require(o["cycleId"]==cycle,"Delivery cycle conflict");return;}o["cycleId"]=cycle;append(r,o,"CYCLE_BEGIN");}

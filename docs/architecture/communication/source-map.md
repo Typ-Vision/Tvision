@@ -323,3 +323,18 @@ bilgisayarının tarihsel kanıtıdır. Her makinede gerçek checkout ve indeks 
 - `plc_simulator --v3 --input --expect-decision --expect-field --expect-value`;
   `communication_tcp_runtime` ayrı CTest. Restart/recovery COMM-18 ve otomatik
   timeout/retry COMM-19; normal UI activation COMM-23 kabulüne kadar kapalıdır.
+
+## COMM-18 — Restart/recovery (27 Ekim 2026)
+
+- `DeliveryStore::recovery()` stable request anahtarlarını mevcut hash/sequence/
+  transition/terminal manifest doğrulamasından geçirir; v2 event'lerini okumaz.
+  `recoveryTerminal()` yalnız kayıtlı cycle'ın tek terminal10 bundle'ını bulur.
+- `CommunicationTcpEndpoint::restoreDelivery()` listen/ACK sonrası namespace
+  bariyerlerini kurar. `inspectRecovery()` ve `resumeDelivery()` owner-thread,
+  explicit reconciliation komutlarıdır; edinim/Run çağırmaz. Terminal/outbox gap
+  exact request + terminal communication kimliklerinden kapatılır; unknown veya
+  terminalsiz kayıt operator reconciliation gerektirir.
+- `tests/delivery_recovery_test.cpp` / `delivery_recovery_contract`: altı gerçek
+  killed-process sınırı, session-independent duplicate, byte/hash/resultId replay,
+  idempotent ACK tombstone, unknown/conflict ve unresolved barrier/v2 izolasyonu.
+  Retry/deadline/capacity politikası sonraki COMM-19; UI bağlantısı değişmedi.
