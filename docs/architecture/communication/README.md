@@ -1,6 +1,6 @@
 # Haberleşme verileri — uygulama planı
 
-**COMM-PLAN-03 · 27 Ekim 2026 · COMM-01–13 tamamlandı; sıradaki COMM-14.**
+**COMM-PLAN-03 · 27 Ekim 2026 · COMM-01–14 tamamlandı; sıradaki COMM-15.**
 Bu paket [ilk araştırmanın](../communication-data-phase.md) sekiz geniş kartının
 yerine geçer. [Kalibrasyon veri tipi notu](../robot-spatial-data-review.md) girdi
 olarak korunur. Önceki COMM-01–08 kart başlıkları uygulanmış teslim değildir.

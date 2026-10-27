@@ -268,3 +268,18 @@ bilgisayarının tarihsel kanıtıdır. Her makinede gerçek checkout ve indeks 
 - `publication_contract` now covers recording failure/retry, restart/read,
   idempotent append, Pose/missing fields, tamper and unchanged scalar CSV.
   Network writes remain zero; delivery ledger/outbox is COMM-14.
+
+## COMM-14 — delivery journal (27 Ekim 2026)
+
+- `DeliveryStore.hpp/.cpp`: `request/begin/commit/attempt/acknowledge/commitAcknowledgement`,
+  `inspect/dispatch`. Workcell/project/endpoint/peer/requestId namespace ve fingerprint.
+- `ProductionStore`: yeni `delivery` kind, `get/all`; mevcut QSaveFile/hash/idempotent
+  append ve ortak 512 MiB/10000 kayıt bütçesi. Legacy events ayrı kalır.
+- Terminal10 mevcut `cycles` kaydına yazılır; sonraki immutable delivery manifest'i
+  terminal recordId/hash, bundleId ve base64 payload/hash taşır. Manifest olmadan
+  dispatch yok; terminal dosyası yok/bozuksa reader hata verir. Journal hash zinciri
+  ve ardışık sequence eksik/bozuk ara kayıtları açıkça reddeder.
+- `delivery_store_contract`: disk boundary injection, conflict/duplicate, exact bytes
+  retry/reopen, fake transport, ACK commit kapısı, partial JSON/eksik terminal/zincir,
+  eski PLC event ayrımı. `publication_contract` gerçek terminal10 bundle'ını ek olarak
+  aynı store/dispatch yolunda dener. Network transport ve otomatik recovery yoktur.

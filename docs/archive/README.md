@@ -6,6 +6,7 @@ görev” ifadeleri yazıldıkları tarihe aittir.
 
 | Dönem / görev | Kayıt |
 | --- | --- |
+| 27 Ekim 2026 — COMM-14 | [Kalıcı request journal/outbox, immutable dispatch ve ACK commit](2026-10-27-comm-14.md) |
 | 27 Ekim 2026 — COMM-13 | [Immutable terminal bundle ve atomik kayıt/retry codec](2026-10-27-comm-13.md) |
 | 27 Ekim 2026 — COMM-12 | [Yerel endpoint profili, logical output group ve cycle-bound yayın intent çekirdeği](2026-10-27-comm-12.md) |
 | 27 Ekim 2026 — COMM-11 | [Result registry/DAG, Boolean rule UI ve ayrı Editor/Runtime genel karar](2026-10-27-comm-11.md) |

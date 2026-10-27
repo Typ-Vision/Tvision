@@ -14,7 +14,7 @@ namespace {
 constexpr qint64 maxFile=20*1024*1024,maxTotal=512LL*1024*1024;
 void require(bool ok,const char* message){if(!ok)throw std::runtime_error(message);}
 QString digest(const QJsonObject& o){return QString::fromLatin1(QCryptographicHash::hash(QJsonDocument(o).toJson(QJsonDocument::Compact),QCryptographicHash::Sha256).toHex());}
-void kindCheck(const QString& kind){require(QStringList{"snapshots","events","cycles","experimental_cycles"}.contains(kind),"Production archive kind invalid.");}
+void kindCheck(const QString& kind){require(QStringList{"snapshots","events","cycles","experimental_cycles","delivery"}.contains(kind),"Production archive kind invalid.");}
 QJsonObject read(const QString& path,const QString& kind,const QString& id){
     QFile file(path);require(!QFileInfo(path).isSymLink() && file.open(QIODevice::ReadOnly) && file.size()<=maxFile,"Production archive cannot be read / limit exceeded.");
     QJsonParseError error;const auto doc=QJsonDocument::fromJson(file.readAll(),&error);const auto o=doc.object();
@@ -30,7 +30,7 @@ void ProductionStore::append(const QString& kind,const QString& id,const QJsonOb
     require(!QFileInfo(directory_).isSymLink() && QDir().mkpath(directory_),"Production archive directory unavailable.");
     QLockFile lock(directory_+"/archive.lock");lock.setStaleLockTime(0);require(lock.tryLock(0),"Production archive locked; retry recording.");
     const QDir root(directory_);qint64 bytes=0;int count=0;
-    for(const QString group:{"snapshots","events","cycles","experimental_cycles"}) {
+    for(const QString group:{"snapshots","events","cycles","experimental_cycles","delivery"}) {
         const auto dir=root.filePath(group);require(!QFileInfo(dir).isSymLink(),"Production archive symlink refused.");
         for(const auto& f:QDir(dir).entryInfoList({"*.json"},QDir::Files)) {require(!f.isSymLink(),"Production archive symlink refused.");bytes+=f.size();++count;}
     }
@@ -50,4 +50,16 @@ QVector<QJsonObject> ProductionStore::recent(const QString& kind,int limit) cons
     QVector<QJsonObject> result;qint64 bytes=0;
     for(int i=0;i<std::min(limit,int(files.size()));++i){bytes+=files[i].size();require(bytes<=64*1024*1024,"Production archive read byte limit exceeded.");result.append(read(files[i].absoluteFilePath(),kind,files[i].completeBaseName()));}return result;
 }
+QJsonObject ProductionStore::get(const QString& kind,const QString& id) const {
+    kindCheck(kind);require(!QUuid(id).isNull() && QUuid(id).toString(QUuid::WithoutBraces)==id,"Production archive ID invalid.");
+    require(!QFileInfo(directory_).isSymLink() && !QFileInfo(QDir(directory_).filePath(kind)).isSymLink(),"Production archive symlink refused.");
+    return read(QDir(directory_).filePath(kind+"/"+id+".json"),kind,id);
+}
+QVector<QJsonObject> ProductionStore::all(const QString& kind) const {
+    kindCheck(kind);require(!QFileInfo(directory_).isSymLink() && !QFileInfo(QDir(directory_).filePath(kind)).isSymLink(),"Production archive symlink refused.");
+    const auto files=QDir(QDir(directory_).filePath(kind)).entryInfoList({"*.json"},QDir::Files);
+    require(files.size()<=10000,"Production archive record limit exceeded.");QVector<QJsonObject> result;qint64 bytes=0;
+    for(const auto& f:files){bytes+=f.size();require(bytes<=maxTotal,"Production archive read limit exceeded.");result.append(get(kind,f.completeBaseName()));}return result;
+}
+
 }

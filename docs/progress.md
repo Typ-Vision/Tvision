@@ -4,11 +4,12 @@
 
 ## Devam noktası
 
-**[COMM-13 tamam](archive/2026-10-27-comm-13.md):** Terminal10/bundle1;
-typed scalar/Pose/missing, decision, atomik kayıt/retry ve restart geçmişi.
-Network/outbox yok. **Sonraki tek kart COMM-14.**
-[COMM-12](archive/2026-10-27-comm-12.md): yerel profil/group/intent;
-Editor/Load ağ başlatmaz. Güncel doğrulama COMM-13 kapanışındadır.
+**[COMM-14 tamam](archive/2026-10-27-comm-14.md):** Kalıcı request journal/outbox;
+terminal10/manifest, immutable retry ve ACK commit.
+Network yok. **Sonraki COMM-15.**
+[COMM-13](archive/2026-10-27-comm-13.md): Terminal10/bundle1;
+[COMM-12](archive/2026-10-27-comm-12.md): yerel profil/group/intent.
+Editor/Load ağ başlatmaz.
 
 **[COMM-11](archive/2026-10-27-comm-11.md):** Result DAG/ALL/ANY ve ayrı summary.
 **[COMM-10](archive/2026-10-27-comm-10.md):** Missing-first karar/export koruması.

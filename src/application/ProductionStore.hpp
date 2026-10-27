@@ -9,6 +9,8 @@ public:
     explicit ProductionStore(QString directory);
     void append(const QString& kind,const QString& id,const QJsonObject& payload) const;
     QVector<QJsonObject> recent(const QString& kind,int limit=128) const;
+    QJsonObject get(const QString& kind,const QString& id) const;
+    QVector<QJsonObject> all(const QString& kind) const;
 private:
     QString directory_;
 };

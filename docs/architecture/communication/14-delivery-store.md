@@ -1,6 +1,6 @@
 # COMM-14 — Kalıcı request ledger/outbox
 
-Durum: başlamadı. Önerilen düzey: **medium**. Önkoşul: **COMM-13** tamam.
+Durum: tamamlandı ([kapanış](../../archive/2026-10-27-comm-14.md)). Önerilen düzey: **medium**. Önkoşul: **COMM-13** tamam.
 Bir oturumda yalnız bu kart; paralel uygulayıcı yok.
 
 ## Oku
