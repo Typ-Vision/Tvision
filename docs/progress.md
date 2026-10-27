@@ -4,37 +4,29 @@
 
 ## Devam noktası
 
-**[COMM-08 tamam](archive/2026-10-26-comm-08.md):** Set Variables Toolbox ve
-çok satırlı Properties; typed constant/uyumlu port/bundle, atomik draft commit.
-Release UI; 9 ilgili CTest, 1400×900/850×600 offscreen. **Sonraki COMM-09**;
-bu oturumda başlatılmadı. Editor preview dışarı yazmaz.
+**[COMM-09 tamam](archive/2026-10-27-comm-09.md):** Immutable Runtime variable
+context; cycle-local unset başlangıç, frozen catalog/assignment ve private digest.
+Editor cache kullanılmaz; değerler kayıt sonrası görünür;
+Begin/Stop/ERROR/stale completion eski değerleri gizler. Release UI, 22 benzersiz
+ilgili CTest (3 localhost testi izinli tekrar), UI OFF Runtime kabulü geçti.
+Full CTest/görsel/fiziksel kabul koşulmadı. **Sonraki tek kart COMM-10.**
+Checkout/indeks `C:/Projects/Tvision`; ev kökü burada yok.
+Her makinede kök/HEAD eşleştirilir.
 
-**[COMM-07](archive/2026-10-26-comm-07.md):** Editor Variable Catalog,
-readonly system ve çevrim değerleri.
+**COMM-02–08 tamam:** typed scalar/spatial, variable katalog/komutları,
+Atomik evaluator/DAG/cache ve Editor katalog/çok satırlı atama UI.
+[Son kabul](archive/2026-10-26-comm-08.md); UUID/type/unit/frame/enum ve
+No-op/hash korunur. Editor dışarı yazmaz; değerler tanıma yazılmaz.
+COMM-03'teki iki eski Circle fixture hatası açık; COMM-09'da koşulmadı.
 
-**[COMM-06](archive/2026-10-26-comm-06.md):** Assignment DAG/executor/cache.
-
-**[COMM-05 tamam](archive/2026-10-26-comm-05.md):** Atomik evaluator.
-
-**[COMM-04 tamam](archive/2026-10-26-comm-04.md):** UUID/type/unit/frame/enum
-variable kataloğu ve atomik proje komutları.
-
-**[COMM-03 tamam](archive/2026-10-26-comm-03.md):** FrameRef UUID/revision,
-mm/wxyz SpatialTransform ve inverse/compose. İki eski Circle fixture hatası
-açık; bu kartta koşulmadı.
-
-**[COMM-02 tamam](archive/2026-10-26-comm-02.md):** Qt Core typed scalar,
-strict codec, kayıpsız Int64 ve validity/unit/köken; legacy no-op/hash korunur.
 **[COMM-01 tamam](archive/2026-10-26-comm-01.md):** [Kaynak haritası](architecture/communication/source-map.md),
-actual kök/indeks ve Release baseline sabit. [Plan](architecture/communication/README.md):
+[Plan](architecture/communication/README.md):
 COMM-01–23 → 36 → 37; opsiyonel Modbus 24–28, OPC UA 29–33, sample 34, FANUC 35.
 Çevrim sonunda gönderim; akış ortası gönder/bekle ayrı kapsam. Fiziksel COMM-38,
-hand-eye/robot hareketi ayrı. [Araştırma](architecture/communication-data-phase.md)
-ve [veri tipi notu](architecture/robot-spatial-data-review.md) korunur.
+Hand-eye/robot hareketi ayrı; araştırma notları plan indeksindedir.
 
-**[INT-10 tamam](archive/2026-10-26-int-10.md):** CameraIntegration, geçmişi
-koruyan merge ile main üzerinde birleştirildi; çalışma dalı artık main.
-Açık fiziksel/native engeller korunur.
+**[INT-10 tamam](archive/2026-10-26-int-10.md):** CameraIntegration geçmişiyle
+main'e birleşti. Güncel dal `Variables`; fiziksel/native engeller açık.
 
 **[CCUX-24I yazılım/görsel tamam](archive/2026-10-26-ccux-24i.md):** iki Release;
 UI'da 39 benzersiz test ilk koşum+düzeltme tekrarlarıyla, UI OFF 19 test geçti.

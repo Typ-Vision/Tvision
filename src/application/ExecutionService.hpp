@@ -39,12 +39,14 @@ struct MeasurementExecutionContext {
 };
 using CalibrationResolver=std::function<MeasurementExecutionContext(const ImageFrame&)>;
 class ProductionSnapshot;
+struct RuntimeVariableContext;
 struct IndustrialExecutionInputs;
 struct IndustrialExecutionEvidence;
 // Legacy frameId denotes the sole acquired source. In the multi-source contract
 // it must be empty; SourceFrameIndex/frames provide the source-specific IDs.
 // Schema9 execution keeps one frame identity per source.
 struct CycleResult {QString cycleId,frameId,recipeId,evaluationId,targetToolId; bool partial=false; QStringList executedTools; int acquisitions=0; QByteArray configId; ExecutionState state=ExecutionState::Ready; QVector<ToolResult> tools; double milliseconds=0; QString error; QVector<FrameMetadata> frames;
+    const std::shared_ptr<const RuntimeVariableContext>& variables() const {return variables_;}
     // Editor diagnostics only; this does not issue Runtime completion authority.
     QMap<QString,std::shared_ptr<const IndustrialExecutionEvidence>> industrialEvidence;
 private:
@@ -55,6 +57,7 @@ private:
     friend class ProductionRecipeService;
     friend class MultiSourceRuntimeService;
     friend class ExperimentalRuntime;
+    std::shared_ptr<const RuntimeVariableContext> variables_;
     QByteArray experimentalDigest_;
     quint64 experimentalTicket_=0;
     std::shared_ptr<const ProductionSnapshot> experimentalSnapshot_;
@@ -78,7 +81,7 @@ public:
     // Never persisted and never issues production completion authority.
     ExecutionService withExperimentalEditorReplay(bool enabled=true) const {auto service=*this;service.experimentalEditorReplay_=enabled;service.automaticAcquisition_=false;return service;}
     // Bump when execution semantics change; validation records bind this identity.
-    static QString version() { return QStringLiteral("visionflow.execution/31"); }
+    static QString version() { return QStringLiteral("visionflow.execution/32"); }
     static QByteArray toolSignature(const QJsonObject&,const QString& directory,const QString& tool,const QByteArray& scope);
     CycleResult runTool(const QJsonObject& definition,const QString& directory,const QString& recipeId,const QByteArray& configId,
         const std::shared_ptr<std::atomic_bool>& cancel,const QString& target,const TargetEvaluation& evaluation,const CalibrationResolver& resolver={}) const;

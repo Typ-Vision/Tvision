@@ -1,6 +1,6 @@
 # COMM-09 — Immutable Runtime variable context
 
-Durum: başlamadı. Önerilen düzey: **medium**. Önkoşul: **COMM-08** tamam.
+Durum: **tamamlandı** — [27 Ekim 2026 kapanışı](../../archive/2026-10-27-comm-09.md). Önerilen düzey: **medium**. Önkoşul: **COMM-08** tamam.
 Bir oturumda yalnız bu kart; paralel uygulayıcı yok.
 
 ## Oku

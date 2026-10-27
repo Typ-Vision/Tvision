@@ -24,6 +24,7 @@ public:
     const std::optional<Recipe>& loaded() const;
     RuntimeTrigger mode() const {owner();return mode_;}
     QString error() const;
+    std::shared_ptr<const RuntimeVariableContext> variables() const;
     RuntimeFailure failure() const {owner();return failure_;}
     QString recovery() const;
     void retryRecording();
@@ -45,6 +46,7 @@ private:
     std::optional<CycleResult> frozenCompletion_;
     quint64 frozenTicket_=0,diagnosticTicket_=0;
     quint64 generation_=0;
+    std::shared_ptr<const RuntimeVariableContext> variables_;
     bool recordingPending_=false,deliveryPending_=false;
     bool faultAfterDrain_=false,reloadRequired_=false;
     std::shared_ptr<std::atomic_bool> cancel_;

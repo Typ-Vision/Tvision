@@ -6,6 +6,7 @@ görev” ifadeleri yazıldıkları tarihe aittir.
 
 | Dönem / görev | Kayıt |
 | --- | --- |
+| 27 Ekim 2026 — COMM-09 | [Immutable Runtime variable context, kayıt/Stop ve loaded snapshot izolasyonu](2026-10-27-comm-09.md) |
 | 26 Ekim 2026 — COMM-08 | [Çok satırlı Set Variables Properties ve Editor preview kabulü](2026-10-26-comm-08.md) |
 | 26 Ekim 2026 — COMM-07 | [Editor Variable Catalog, UUID/servis komutları ve çevrim görünümü](2026-10-26-comm-07.md) |
 | 26 Ekim 2026 — COMM-06 | [Set Variables registry, typed bundle DAG ve Editor executor/cache](2026-10-26-comm-06.md) |

@@ -203,6 +203,32 @@ korunur; stale upstream full-flow fallback oluşturmaz. Mevcut tek raw-frame
 TargetEvaluation sınırı korunur: birden çok acquisition kaynağını gerektiren
 TargetOnly isteği reddedilir; çok kaynak join full-flow'da çalışır.
 
-Execution identity `visionflow.execution/31`; Toolbox aracı henüz açmaz.
-COMM-07/08 UI, COMM-09 immutable Runtime variable context ayrı kartlardır.
-Editor hesaplaması yayın veya transport çağrısı üretmez.
+Execution identity `visionflow.execution/32`; Set Variables Toolbox/Properties
+COMM-08'den beri açıktır. Editor hesaplaması yayın veya transport çağrısı üretmez.
+
+## COMM-09 — Runtime variable context
+
+ProductionSnapshot'ın `variableDependencyId()` kimliği frozen catalog, assignment
+parametreleri, editor dependency grafı ve engine sürümünü bağlar; mevcut contentId
+reçetenin bütün definition'ını da içerir. Draft rename/binding değişikliği loaded
+snapshot'ı değiştirmez; yeni tanım Stop → Load → Run ile seçilir.
+
+Runtime worker aynı ExecutionService/AssignmentEvaluator yolunu çalıştırır.
+`RuntimeVariableContext` her worker çevriminde unset tanımlardan kurulur; yalnız
+aynı immutable girdilerle yeniden doğrulanan atomik bundle'lar DAG sırasıyla
+birleştirilir. CycleResult içindeki context shared-const'tur ve private completion
+digest'ine dahildir. Editor Run Tool/Flow bu context'i veya completion yetkisini
+oluşturmaz. Bundle/context configId, mevcut executor sözleşmesindeki gibi
+`CycleResult::configId.toHex()` metnidir; snapshot contentId QByteArray'inin
+kendisi değiştirilmez. Cycle-scoped bundle'a görüntü frame'i uydurulmaz.
+
+Coordinator `variables()` yalnız Running, worker idle ve terminal kayıt başarılı
+olduğunda son context'i verir. Begin, Load/Run, Stop, ERROR, geçersiz/eski completion
+sunumu temizler. Kayıt hatası context'i gizler; retry aynı frozen completion'ı
+kullanır ve edinim yapmaz. Stop sonrası gelen trusted başarı, dondurulmuş kayıt
+retry'si değilse, SKIPPED'a bastırılır. Restart context/Run yetkisi yüklemez.
+
+Tek-source, whole-set ve ayrı experimental worker yolları aynı cycle veri modelini
+kullanır; experimental context production admission oluşturmaz. Mevcut typed
+bundle terminal doğrulamasında cycle verisi olarak denetlenir; terminal/network
+şemalarına yeni context alanı eklenmez (COMM-13 ayrı karttır).

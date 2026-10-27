@@ -1,5 +1,6 @@
 #pragma once
 #include "ExecutionService.hpp"
+#include "RuntimeVariables.hpp"
 #include "domain/Project.hpp"
 #include "domain/Coordinates.hpp"
 #include <QThread>
@@ -42,6 +43,7 @@ struct RecipeValidation {
 };
 class ProductionSnapshot {
 public:
+    QByteArray variableDependencyId() const {return runtimeVariableDependencyId(recipe_.definition);}
     const Recipe& recipe() const { return recipe_; }
     const QString& projectDirectory() const { return directory_; }
     const RecipeValidation& validation() const { return validation_; }

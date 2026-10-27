@@ -279,6 +279,7 @@ void RuntimeService::suppressCancelled(const ProductionCycle& cycle,CycleResult&
        result.completionDigest_.isEmpty() || result.completionDigest_!=ProductionRecipeService::completionDigest(result))
         throw std::runtime_error("Cannot suppress changed or foreign Runtime completion");
     EditorSession::suppressCancelled(result);
+    result.variables_=runtimeVariables(*cycle.snapshot,result);
     result.completionDigest_=ProductionRecipeService::completionDigest(result);
 }
 CycleResult RuntimeService::execute(const ProductionCycle& cycle,const QString& catalogPath,const std::shared_ptr<std::atomic_bool>& cancel,ExecutionService::SourceAdapterFactory factory) {
@@ -310,6 +311,7 @@ CycleResult RuntimeService::execute(const ProductionCycle& cycle,const QString& 
     try{result=execution.run(recipe.definition,s->projectDirectory(),recipe.id,s->validation().contentId,cancel,{}, {},
         [catalogPath,s](const ImageFrame& frame){return calibration(*s,frame,catalogPath);},nullptr,acquisition);}
     catch(const std::exception& e){result.recipeId=recipe.id;result.configId=s->validation().contentId;result.cycleId=QUuid::createUuid().toString(QUuid::WithoutBraces);result.state=ExecutionState::Error;result.error=QString::fromUtf8(e.what());}
+    result.variables_=runtimeVariables(*s,result);
     result.completionDigest_=ProductionRecipeService::completionDigest(result);
     result.completionTicket_=cycle.ticket;result.completionSnapshot_=s;
     report(result);

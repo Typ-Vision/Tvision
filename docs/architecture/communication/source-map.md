@@ -197,3 +197,22 @@ klavye/scroll ve 1400×900/850×600 görünür satır alanı. Mevcut
 `tests/editor_property_commits.cpp` değişmedi; `ui_editor_usability` regresyonunda
 çalıştı. Şema/execution sürümü değişmedi; Set Variables tool UI COMM-08'e kadar
 kapalıdır. [Kapanış](../../archive/2026-10-26-comm-07.md).
+
+## COMM-09 güncel Runtime genişletmesi
+
+`RuntimeVariables.*`: shared-const cycle context, başlangıçta unset typed değerler,
+DAG sıralı atomik bundle toplama ve immutable input replay kontrolü.
+`ProductionSnapshot::variableDependencyId`, `CycleResult::variables`,
+`RuntimeCoordinator::variables` ayrı frozen identity/worker/kayıt sunum kapılarıdır.
+Execution identity **visionflow.execution/32**. Completion digest context'i de
+bağlar; unset spatial için transform uydurulmaz. Runtime/experimental Stop
+suppression yeni boş context üretir; frozen kayıt retry'si korunur.
+
+`ProductionRecipeService` Set Variables'ı mevcut trusted worker kabulüne alır;
+`ProductionResultCodec`/`ExperimentalRuntime` mevcut typed bundle'ı cycle scoped
+olarak doğrular. Terminal/network schema bump veya yeni alan yoktur.
+`runtime_coordinator` yeni kabul matrisini taşır; test target adı değişmedi.
+
+27 Ekim 2026 iş bilgisayarı actual checkout/indeks kökü `C:/Projects/Tvision`;
+`C:/OpenCode/TVision` burada yoktur. Yukarıdaki COMM-01 baseline yolları ev
+bilgisayarının tarihsel kanıtıdır. Her makinede gerçek checkout ve indeks eşleştirilir.

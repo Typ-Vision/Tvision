@@ -33,7 +33,7 @@ void RuntimeCoordinator::load(const Recipe& recipe,const QString& directory,Runt
     runtime_.checkConfiguration(recipe,directory); // failure preserves previous load
     if(runtime_.requiresManualCycles(recipe,directory) && mode!=RuntimeTrigger::Manual)throw ProductionException(ProductionError::InvalidConfiguration,"Bu kamera akışı yalnız manuel çevrimleri destekler");
     loaded_=recipe;directory_=directory;mode_=mode;
-    ++generation_;error_.clear();failure_=RuntimeFailure::None;reloadRequired_=false;state_=RuntimeState::LoadedStopped;
+    variables_.reset();++generation_;error_.clear();failure_=RuntimeFailure::None;reloadRequired_=false;state_=RuntimeState::LoadedStopped;
 
     });
 }
@@ -42,7 +42,7 @@ quint64 RuntimeCoordinator::requestStart() {
     replaceable();
     if(!loaded_)throw ProductionException(ProductionError::UnknownValidation,"NO_RECIPE_LOADED");
     if(reloadRequired_)throw ProductionException(ProductionError::DependencyChanged,"Bağımlılık değişti; Stop sonrası yeniden Load gerekir.");
-    error_.clear();failure_=RuntimeFailure::None;faultAfterDrain_=false;state_=RuntimeState::Starting;++generation_;
+    variables_.reset();error_.clear();failure_=RuntimeFailure::None;faultAfterDrain_=false;state_=RuntimeState::Starting;++generation_;
     try{runtime_.requestCameraPreparation(*loaded_,directory_);}
     catch(const ProductionException& e){remember(e.code()==ProductionError::PersistenceFailure?RuntimeFailure::Persistence:RuntimeFailure::Dependency,QString::fromUtf8(e.what()));faultAfterDrain_=true;runtime_.stopCameras();state_=runtime_.camerasPending()?RuntimeState::Stopping:RuntimeState::Fault;throw;}
     catch(const std::exception& e){remember(RuntimeFailure::Dependency,QString::fromUtf8(e.what()));faultAfterDrain_=true;runtime_.stopCameras();state_=runtime_.camerasPending()?RuntimeState::Stopping:RuntimeState::Fault;throw;}
@@ -85,7 +85,7 @@ void RuntimeCoordinator::stop() {
     return diagnose("stop",[&]{
     AcquisitionTimingSpan timing("runtime.stop-command");
     owner();++generation_;runtime_.cancelSourceVerification();
-    if(cancel_)cancel_->store(true);
+    variables_.reset();if(cancel_)cancel_->store(true);
     faultAfterDrain_=false;runtime_.stopCameras();
     state_=runtime_.busy() || runtime_.camerasPending() || runtime_.sourceVerificationBusy() ? RuntimeState::Stopping : loaded_ ? RuntimeState::LoadedStopped : RuntimeState::Unloaded;
 
@@ -98,6 +98,7 @@ ProductionCycle RuntimeCoordinator::begin(RuntimeTrigger source,const QJsonObjec
     if(source!=mode_)throw ProductionException(ProductionError::InvalidConfiguration,"TRIGGER_SOURCE_DISABLED");
     if(deliveryPending_)throw ProductionException(ProductionError::Busy,"DELIVERY_PENDING");
     // Busy is transient; dependency/authorization/persistence failures close admission.
+    variables_.reset();
     try {
         const auto cycle=runtime_.begin(communication);
         diagnosticTicket_=cycle.ticket;cancel_=std::make_shared<std::atomic_bool>(false);return cycle;
@@ -106,7 +107,8 @@ ProductionCycle RuntimeCoordinator::begin(RuntimeTrigger source,const QJsonObjec
 
     });
 }
-void RuntimeCoordinator::finish(quint64 ticket,const CycleResult& result){return diagnose("finish",[&]{
+void RuntimeCoordinator::finish(quint64 ticket,const CycleResult& completion){return diagnose("finish",[&]{
+    auto result=completion;
     AcquisitionTimingSpan timing("runtime.finish-persist");
     owner();
     if(frozenCompletion_ && (ticket!=frozenTicket_ || !RuntimeService::sameCompletion(result,*frozenCompletion_)))throw ProductionException(ProductionError::InvalidCompletion,"Kayıt retry sonucu değiştirilemez.");
@@ -121,7 +123,13 @@ void RuntimeCoordinator::finish(quint64 ticket,const CycleResult& result){return
         remember(kind,cause);
     }
     };
-    try {runtime_.finish(ticket,result);}
+    try {
+        if(!frozenCompletion_ && cancel_ && cancel_->load() && result.state!=ExecutionState::Skipped){
+            try {RuntimeService::suppressCancelled({ticket,runtime_.active()},result);}
+            catch(const std::exception& e){throw ProductionException(ProductionError::InvalidCompletion,QString::fromUtf8(e.what()));}
+        }
+        runtime_.finish(ticket,result);
+    }
     catch(const ProductionException& e){
         if(e.code()==ProductionError::PersistenceFailure){recordingPending_=true;rememberResult();
             if(cameraFailure()){runtime_.stopCameras();if(state_==RuntimeState::Running){faultAfterDrain_=true;state_=RuntimeState::Stopping;}}if(!frozenCompletion_){frozenCompletion_=result;frozenTicket_=ticket;}remember(RuntimeFailure::Persistence,QString::fromUtf8(e.what()));}
@@ -131,12 +139,14 @@ void RuntimeCoordinator::finish(quint64 ticket,const CycleResult& result){return
     recordingPending_=false;frozenCompletion_.reset();frozenTicket_=0;cancel_.reset();
     if(failure_==RuntimeFailure::Persistence){failure_=RuntimeFailure::None;error_.clear();}
     rememberResult();
+    if(state_==RuntimeState::Running && result.state==ExecutionState::Done && result.variables())variables_=result.variables();
     // Valid terminal ERROR keeps the existing acquisition/admission policy.
     // C1 classifies recovery; it does not invent a capture lifecycle fix.
     if(cameraFailure()){faultAfterDrain_=true;runtime_.stopCameras();state_=RuntimeState::Stopping;}
     if(state_==RuntimeState::Stopping && !runtime_.camerasPending())state_=faultAfterDrain_?RuntimeState::Fault:RuntimeState::LoadedStopped;
-},{{"ticket",QString::number(ticket)},{"cycleId",result.cycleId}});}
-void RuntimeCoordinator::remember(RuntimeFailure kind,const QString& reason){if(error_.isEmpty()){failure_=kind;error_=reason;}}
+},{{"ticket",QString::number(ticket)},{"cycleId",completion.cycleId}});}
+std::shared_ptr<const RuntimeVariableContext> RuntimeCoordinator::variables() const {owner();return state_==RuntimeState::Running && !runtime_.busy() && !recordingPending_ ? variables_:nullptr;}
+void RuntimeCoordinator::remember(RuntimeFailure kind,const QString& reason){variables_.reset();if(error_.isEmpty()){failure_=kind;error_=reason;}}
 QString RuntimeCoordinator::recovery()const {owner();switch(failure_){
 case RuntimeFailure::Persistence:return recordingPending_ ? "Kayıt hatası — Kaydı tekrar yaz aynı sonucu kaydeder; yeni görüntü almaz.":"Kayıt hatası — disk/erişim sorununu giderip Run ile yeniden hazırlayın; completion retry yok.";
 case RuntimeFailure::InvalidCompletion:return "Geçersiz completion — sonuç yayımlanmadı; kayıt retry kullanılamaz. Tanıyı inceleyin; çevrim kapısı korunur.";
