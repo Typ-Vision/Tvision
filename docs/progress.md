@@ -4,8 +4,8 @@
 
 ## Devam noktası
 
-**[COMM-22](archive/2026-10-27-comm-22.md):** Diagnostics.
-**Sıradaki COMM-23.**
+**[COMM-23 kısmi](archive/2026-10-27-comm-23-precheck.md):** 4 test; kabul açık.
+[COMM-22 tamam](archive/2026-10-27-comm-22.md).
 [21](archive/2026-10-27-comm-21.md): Publish;
 [20](archive/2026-10-27-comm-20.md): profil UI;
 [19](archive/2026-10-27-comm-19.md): retry/kapasite/namespace;
@@ -22,9 +22,9 @@ Editor/Load ağ açmaz; tombstone silinmez; fiziksel kabul açık.
 atomik evaluator/DAG/cache ve çok satırlı Editor UI.
 [Kabul](archive/2026-10-26-comm-08.md); UUID/type/unit/frame/enum/no-op/hash korunur.
 Editor dışarı yazmaz; değerler tanımda tutulmaz.
-COMM-03 iki Circle fixture hatası açık; COMM-09 koşmadı.
+COMM-03 Circle açık; COMM-09 koşmadı.
 
-**[COMM-01](archive/2026-10-26-comm-01.md):** [Kaynak haritası](architecture/communication/source-map.md),
+[COMM-01 kaynak haritası](architecture/communication/source-map.md),
 [Plan](architecture/communication/README.md):
 COMM-01–23 → 36 → 37; opsiyonel Modbus 24–28, OPC UA 29–33, sample 34, FANUC 35.
 Çevrim sonunda gönderim; akış ortası gönder/bekle ayrı kapsam. Fiziksel COMM-38,
