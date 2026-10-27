@@ -4,24 +4,25 @@
 
 ## Devam noktası
 
-**[COMM-21](archive/2026-10-27-comm-21.md):** Publish/mapping.
-**Sıradaki COMM-22; üretim UI COMM-23.**
+**[COMM-22](archive/2026-10-27-comm-22.md):** Diagnostics.
+**Sıradaki COMM-23.**
+[21](archive/2026-10-27-comm-21.md): Publish;
 [20](archive/2026-10-27-comm-20.md): profil UI;
 [19](archive/2026-10-27-comm-19.md): retry/kapasite/namespace;
 [18](archive/2026-10-27-comm-18.md): restart/dedup/recovery;
 [17](archive/2026-10-27-comm-17.md): Runtime/ACK.
 COMM-12–16: profil/intent/bundle/outbox/input-router/codec.
-Editor/Load ağ açmaz; tombstone otomatik silinmez, fiziksel kabul açık.
+Editor/Load ağ açmaz; tombstone silinmez; fiziksel kabul açık.
 
 **[COMM-11](archive/2026-10-27-comm-11.md):** Result DAG/ALL/ANY.
 **[COMM-10](archive/2026-10-27-comm-10.md):** Missing-first karar/export.
 **[COMM-09](archive/2026-10-27-comm-09.md):** Frozen cycle variable context/digest.
 
-**COMM-02–08 tamam:** typed scalar/spatial, variable katalog/komutları,
+**COMM-02–08 tamam:** scalar/spatial, variable katalog/komutları,
 atomik evaluator/DAG/cache ve çok satırlı Editor UI.
 [Kabul](archive/2026-10-26-comm-08.md); UUID/type/unit/frame/enum/no-op/hash korunur.
-Editor dışarı, değerler tanıma yazılmaz.
-COMM-03'teki iki eski Circle fixture hatası açık; COMM-09'da koşulmadı.
+Editor dışarı yazmaz; değerler tanımda tutulmaz.
+COMM-03 iki Circle fixture hatası açık; COMM-09 koşmadı.
 
 **[COMM-01](archive/2026-10-26-comm-01.md):** [Kaynak haritası](architecture/communication/source-map.md),
 [Plan](architecture/communication/README.md):

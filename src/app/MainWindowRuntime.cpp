@@ -1,3 +1,4 @@
+#include "application/DeliveryStore.hpp"
 #include "application/EditorObservation.hpp"
 #include "application/MeasurementDiagnostic.hpp"
 #include "application/CircleToolService.hpp"
@@ -430,7 +431,14 @@ void MainWindow::refreshLogs() {
         const auto events=ProductionStore(service_.path()+".production").recent("events",256);
         QMap<QString,QString> delivery;
         for(const auto& e:events){const auto action=e["action"].toString();if(action=="PLC_ACK")delivery[e["cycleId"].toString()]="ACKED";else if(action=="PLC_RESULT"){const auto id=e["response"].toObject()["cycleId"].toString();if(!delivery.contains(id))delivery[id]="RESULT_RECORDED / ACK kanıtı bu listede yok";}}
-        logStatus_->setText(QString("Son %1 kalıcı çevrim • restart sonrasında salt okunur • PLC: son 256 event ile ilişkilendirilir").arg(records.size()));
+        bool deliveryUnavailable=false;
+        try{for(const auto& item:DeliveryStore(service_.path()+".production").recovery())if(!item.status.cycleId.isEmpty()){
+            const auto state=item.status.state=="ACK_COMMITTED"?QString("ACKED / ACK_COMMITTED"):item.status.state;
+            const auto text=item.request.endpoint+" / "+item.request.requestId+": "+state;
+            auto& value=delivery[item.status.cycleId];value+=(value.isEmpty()?QString{}:QString("\n"))+text;
+        }
+        }catch(...){deliveryUnavailable=true;}
+        logStatus_->setText(QString("Son %1 kalıcı çevrim • restart sonrasında salt okunur • PLC: son 256 event ile ilişkilendirilir").arg(records.size())+(deliveryUnavailable ? " | v3 RECOVERY_REQUIRED: ledger unavailable" : " | v3 durable ledger by cycle ID"));
         for(const auto& record:records){const bool experimental=record["schema"]=="visionflow.experimental-runtime1" || record["schema"]=="visionflow.experimental-runtime2";const auto summary=experimental ? ExperimentalRuntime::summary(record):ProductionResultCodec::summary(record);const int row=logTable_->rowCount();logTable_->insertRow(row);QStringList decisions;
             QMap<QString,QString> sourceNames;if(experimental)for(const auto& tool:editorTools(record["configuration"].toObject()["definition"].toObject()))sourceNames[tool.id]=tool.name;
             for(const auto& v:record["tools"].toArray()){const auto t=v.toObject();if(t["decision"]!="NOT_EVALUATED")decisions<<t["name"].toString(t["toolId"].toString().left(8))+": "+t["decision"].toString();}

@@ -1,6 +1,6 @@
 # COMM-22 — Trigger/delivery diagnostics
 
-Durum: başlamadı. Önerilen düzey: **low**. Önkoşul: **COMM-21** tamam.
+Durum: yazılım/görsel kabulü tamamlandı; [kapanış](../../archive/2026-10-27-comm-22.md). Önerilen düzey: **low**. Önkoşul: **COMM-21** tamam.
 Bir oturumda yalnız bu kart; paralel uygulayıcı yok.
 
 ## Oku

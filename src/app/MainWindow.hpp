@@ -29,6 +29,7 @@ class QLabel;
 class QCloseEvent;
 class QFormLayout;
 namespace visionflow {
+class DeliveryDiagnosticsWidget;
 class ImageViewer;
 class EdgeProfileView;
 class CalibrationOverview;
@@ -242,6 +243,7 @@ private:
     std::unique_ptr<RuntimeService> runtime_;
     std::optional<IndustrialExecutionInputs> runtimeCameraComposition_; // in-memory fixture composition only
     std::unique_ptr<RuntimeCoordinator> runtimeCoordinator_;
+    DeliveryDiagnosticsWidget* deliveryDiagnostics_=nullptr;
     std::unique_ptr<PlcRuntimeSocket> plc_;
     QLineEdit* plcAddress_{};
     QComboBox* plcMapping_{};

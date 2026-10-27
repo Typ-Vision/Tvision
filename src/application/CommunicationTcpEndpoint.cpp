@@ -1,6 +1,7 @@
 #include "CommunicationTcpEndpoint.hpp"
 #include "ProductionResultCodec.hpp"
 #include <QJsonArray>
+#include <QDateTime>
 #include <QJsonDocument>
 #include <QUuid>
 #include <QRegularExpression>
@@ -61,6 +62,30 @@ void CommunicationTcpEndpoint::resumeDelivery(const TriggerRequest& r){
     s=ledger_.inspect(d);if(s.state=="ACK_RECEIVED"){ledger_.commitAcknowledgement(d);restoreDelivery();return;}
     if(s.dispatchable())replay(entries_[r.requestId]);
 }
+QJsonObject CommunicationTcpEndpoint::diagnosticStatus() const {
+    owner();auto o=status("STATUS");o["endpoint"]=options_.endpoint;o["peer"]=options_.peer;
+    o["canRetry"]=bool(peer_ && peer_->state()==QAbstractSocket::ConnectedState && !watcher_ && !pending_ && !runtime_.busy());
+    o["requestId"]=outstanding_;o["cycleId"]=cycle_.cycleId;return o;
+}
+QVector<QJsonObject> CommunicationTcpEndpoint::diagnosticEvents() const {owner();return diagnosticEvents_;}
+void CommunicationTcpEndpoint::recordDiagnostic(const QString& direction,const QJsonObject& packet){
+    // Whitelist metadata: never copy credentials, error descriptions, INPUT or field values.
+    QJsonObject event{{"timestamp",QDateTime::currentDateTimeUtc().toString(Qt::ISODateWithMs)},{"direction",direction},{"protocol","vf.socket/3"}};
+    for(const auto key:{"type","requestId","cycleId","resultId","state","decision","resultValid","code"})if(packet.contains(key))event[key]=packet[key];
+    diagnosticEvents_.append(event);if(diagnosticEvents_.size()>128)diagnosticEvents_.removeFirst();
+}
+void CommunicationTcpEndpoint::retryDelivery(const DeliveryRequest& d){
+    owner();require(!watcher_ && !pending_ && !runtime_.busy(),"Delivery retry requires idle execution");
+    require(peer_ && peer_->state()==QAbstractSocket::ConnectedState,"Delivery retry requires connected peer");
+    require(d.workcell==options_.workcell && d.project==options_.project && d.endpoint==options_.endpoint && d.peer==options_.peer,"Foreign delivery namespace");
+    const auto s=ledger_.inspect(d);require(s.dispatchable() && !s.payload.isEmpty(),"Committed pending payload required");
+    require(retryRequest_.isEmpty() || retryRequest_==d.requestId,"Another result is in flight");
+    const auto o=QJsonDocument::fromJson(s.payload).object();
+    TriggerRequest r{d.workcell,d.project,d.endpoint,d.peer,d.requestId,o["recipeId"].toString(),o["configId"].toString(),o["inputSnapshotId"].toString(),o["sequence"].toString().toULongLong(),o["inputRevision"].toString().toULongLong()};
+    require(TriggerRouter::deliveryRequest(r).fingerprint==d.fingerprint,"Payload request mismatch");
+    // Explicit retry rearms only this immutable delivery; it never calls the router.
+    retryRequest_.clear();retryExhausted_=false;retries_=0;entries_[d.requestId]={r,s.cycleId};replay(entries_[d.requestId]);
+}
 void CommunicationTcpEndpoint::stop(){owner();server_.close();timer_.stop();disconnectPeer();coordinator_.stop();}
 QString CommunicationTcpEndpoint::state() const {
     owner();if(!listening())return "STOPPED";if(!fault_.isEmpty())return fault_;if(!recoveryState_.isEmpty())return recoveryState_;
@@ -85,6 +110,7 @@ void CommunicationTcpEndpoint::acceptPeer(){while(server_.hasPendingConnections(
 }}
 void CommunicationTcpEndpoint::send(QJsonObject o){
     if(!peer_ || peer_->state()!=QAbstractSocket::ConnectedState)return;
+    recordDiagnostic("TX",o);
     o["v"]=3;o["sessionId"]=session_;const auto bytes=CommunicationWireCodec::encode(o);
     if(peer_->bytesToWrite()+bytes.size()>2*(CommunicationWireCodec::maxLineBytes+1) || peer_->write(bytes)!=bytes.size())disconnectPeer();
 }
@@ -98,6 +124,7 @@ void CommunicationTcpEndpoint::readPeer(){
     }
 }
 void CommunicationTcpEndpoint::receive(const QJsonObject& o){
+    recordDiagnostic("RX",o);
     if(o["sessionId"]!=session_){error("STALE_SESSION",o["requestId"].toString());return;}
     const auto type=o["type"].toString();if(type=="STATUS"){send(status("STATUS"));return;}
     if(type=="INPUT"){

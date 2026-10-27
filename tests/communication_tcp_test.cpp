@@ -66,6 +66,15 @@ int main(int argc,char** argv){QCoreApplication app(argc,argv);try{
   int cycles=0,acquisitions=0;server.completed=[&](const CycleResult& r){++cycles;acquisitions+=r.acquisitions;};
   peer.send(request("lost-ack"));peer.take("ACCEPTED");const auto initial=peer.take("RESULT");const auto retry=peer.take("RESULT");check(initial==retry,"automatic retry exact result");
   until([&]{return server.state()=="ACK_TIMEOUT";},"bounded retry exhaustion");check(cycles==1 && acquisitions==1,"retry never executes twice");
+  auto durableRequest=TriggerRouter::deliveryRequest({options.workcell,options.project,options.endpoint,options.peer,"lost-ack",p.activeRecipe()->id,config,"snapshot",1,1});
+  const auto beforeRetry=ledger.inspect(durableRequest);server.retryDelivery(durableRequest);const auto manual=peer.take("RESULT","lost-ack");
+  check(CommunicationWireCodec::resultPayload(manual)==beforeRetry.payload && ledger.inspect(durableRequest).attempts==beforeRetry.attempts+1 && cycles==1 && acquisitions==1,"manual diagnostics retry exact payload no acquisition");
+  peer.take("RESULT","lost-ack");until([&]{return server.state()=="ACK_TIMEOUT";},"manual retry bounded budget");
+  bool rejected=false;auto unknown=durableRequest;unknown.requestId="unknown";try{server.retryDelivery(unknown);}catch(...){rejected=true;}check(rejected && ledger.inspect(unknown).state=="ABSENT","unknown retry never creates ACK or intent");
+  for(int n=0;n<140;++n){peer.send({{"type","STATUS"}});peer.take("STATUS");}
+  const auto diagnostics=server.diagnosticEvents();check(diagnostics.size()==128,"bounded diagnostics trace");
+  for(const auto& event:diagnostics)check(!event.contains("fields") && !event.contains("password") && !event.contains("error") && event.contains("timestamp"),"trace metadata whitelist");
+  check(server.diagnosticStatus()["state"]=="ACK_TIMEOUT","delivery timeout distinct from vision decision");
   peer.send(request("blocked"));check(peer.take("INVALID")["reason"]=="DELIVERY_PENDING","required pending blocks cycle");
   QElapsedTimer silence;silence.start();while(silence.elapsed()<250){QCoreApplication::processEvents();QThread::msleep(1);}check(peer.messages.isEmpty(),"no automatic retries after budget");
   peer.disconnect();peer.connectTo(server.port());const auto reconnected=peer.take("RESULT");check(CommunicationWireCodec::resultPayload(reconnected)==CommunicationWireCodec::resultPayload(initial),"reconnect rearms same durable payload");

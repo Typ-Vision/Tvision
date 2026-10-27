@@ -394,3 +394,26 @@ bilgisayarının tarihsel kanıtıdır. Her makinede gerçek checkout ve indeks 
 - `tests/editor_publication_ui.cpp`, CTest `ui_publication_editor`: üç alanlı
   tek intent, UUID reopen/no-op, duplicate/missing/type/unit/frame hataları,
   Editor network=0, terminal sonrası tek ledger dispatch ve iki ekran boyutu.
+
+## COMM-22 — Trigger/delivery diagnostics
+
+`src/app/DeliveryDiagnosticsWidget.*` Communication sekmesinde machine-local
+`.production` DeliveryStore recovery kaydını salt okunur gösterir. En çok 128
+request görünür; kalıcı arşiv silinmez. Kimlikler ve payload hash, execution,
+decision, field validity birbirinden ayrı sunulur. Alan değerleri/free-form
+error ve packet metinleri gizlenir. `MainWindow::refreshLogs` v3 durumunu
+cycleId ile mevcut Logs teslim sütununa ekler; bozuk ledger kayıtları gizlemez.
+
+`CommunicationTcpEndpoint::diagnosticStatus/diagnosticEvents` owner-thread
+Ready/Busy/state ve 128 olaylık güvenli metadata verir; RX/TX, UTC millisecond,
+protocol/request/cycle/result ve decision alanları whitelist edilir.
+`retryDelivery(DeliveryRequest)` bağlı aynı namespace/idle/committed pending
+kanıtını doğrular; fingerprint ile canonical request'i yeniden kurar, aynı
+payload'ı replay eder. TriggerRouter/admission/acquisition çağırmaz.
+
+`deliveryDiagnostics_->bindEndpoint(endpoint)` COMM-23'ün normal Runtime
+endpoint yaşam döngüsünü bağlayacağı noktadır; QPointer kapanmış endpoint'i
+tutmaz. COMM-22 normal üretim listener'ı oluşturmaz. Endpoint bağlı değilse
+kalıcı recovery görünür, Retry disabled kalır. Recovery inspect ACK üretmez.
+`ui_delivery_diagnostics` iki boyut, secret/missing/ACK ve corrupt archive;
+`delivery_retry_runtime` gerçek TCP manual retry/trace sınırı kanıtıdır.

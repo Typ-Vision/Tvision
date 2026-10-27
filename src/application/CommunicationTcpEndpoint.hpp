@@ -31,6 +31,9 @@ public:
     // stable request identity and committed terminal evidence are required.
     QVector<DeliveryRecovery> inspectRecovery() const;
     void resumeDelivery(const TriggerRequest&);
+    QJsonObject diagnosticStatus() const;
+    QVector<QJsonObject> diagnosticEvents() const;
+    void retryDelivery(const DeliveryRequest&);
     quint16 port() const {return server_.serverPort();}
     bool listening() const {return server_.isListening();}
     QString state() const;
@@ -48,6 +51,8 @@ private:
     QString retryRequest_;qint64 retryDeadline_=0;int retries_=0;bool retryExhausted_=false;
     void tickDelivery();
     void restoreDelivery();
+    QVector<QJsonObject> diagnosticEvents_;
+    void recordDiagnostic(const QString&,const QJsonObject&);
     QString outstanding_;QJsonObject terminal_,sealed_;
     void owner() const;
     void acceptPeer();void disconnectPeer();void readPeer();void receive(const QJsonObject&);

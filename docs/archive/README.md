@@ -6,6 +6,7 @@ görev” ifadeleri yazıldıkları tarihe aittir.
 
 | Dönem / görev | Kayıt |
 | --- | --- |
+| 27 Ekim 2026 — COMM-22 | [Trigger/delivery diagnostics, kalıcı retry ve Logs ilişkisi](2026-10-27-comm-22.md) |
 | 27 Ekim 2026 — COMM-21 | [Publish Data bundle/field/grup Properties, fiziksel mapping ve bağlantısız preview](2026-10-27-comm-21.md) |
 | 27 Ekim 2026 — COMM-20 | [TCP v3 bağlantı profilleri, transaction ve bağlantı denemesi UI](2026-10-27-comm-20.md) |
 | 27 Ekim 2026 — COMM-19 | [Bounded retry, optional128, disk kapasitesi ve kalıcı namespace devri](2026-10-27-comm-19.md) |

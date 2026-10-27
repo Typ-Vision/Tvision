@@ -19,6 +19,7 @@
 #include <QApplication>
 #include <QDir>
 #include "EndpointProfileEditor.hpp"
+#include "DeliveryDiagnosticsWidget.hpp"
 
 namespace visionflow {
 QWidget* MainWindow::makeCommunication() {
@@ -59,7 +60,10 @@ plcAddress_=new QLineEdit("127.0.0.1");plcAddress_->setObjectName("plcAddress");
     v3scroll->setWidget(new EndpointProfileEditor(QFileInfo(settingsFile_).absolutePath()+"/communication-profiles.json",[this]{
         return runtimeCoordinator_ && runtimeCoordinator_->state()!=RuntimeState::Unloaded && runtimeCoordinator_->state()!=RuntimeState::LoadedStopped;
     }));
-    tabs->addTab(v3scroll,"TCP v3 profilleri");tabs->addTab(scroll,"TCP v2 (mevcut)");return tabs;
+    deliveryDiagnostics_=new DeliveryDiagnosticsWidget([this]{return service_.hasProject()?service_.path()+".production":QString{};});
+    deliveryDiagnostics_->setObjectName("deliveryDiagnostics");
+    tabs->addTab(deliveryDiagnostics_,"Trigger / Delivery");tabs->addTab(v3scroll,"TCP v3 profilleri");
+    tabs->setCurrentIndex(1);tabs->addTab(scroll,"TCP v2 (mevcut)");return tabs;
 }
 bool MainWindow::verifyEndpointProfiles(const QString& artifacts) {
     selectPage("communication");
