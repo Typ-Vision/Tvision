@@ -1,6 +1,7 @@
 #include "PrecisionInput.hpp"
 #include "SetVariablesEditor.hpp"
 #include "ResultEditor.hpp"
+#include "PublishDataEditor.hpp"
 #include "application/EditorObservation.hpp"
 #include "application/CalibrationWorkflow.hpp"
 #include "application/ExperimentalOecsAcquisition.hpp"
@@ -344,6 +345,12 @@ void MainWindow::showToolPropertiesView(const EditorContext& context,const std::
         }catch(const std::exception& ex){displayError(QString::fromUtf8(ex.what()));}});
         auto* manage=new QPushButton(cameras->count()==1 ? "Kamera ekle — Setup":"Kameraları aç");manage->setObjectName("sourceCameraManage");form->addRow(manage);connect(manage,&QPushButton::clicked,this,[this]{selectPage("camera");});
         form->addRow(note("Raw/px kalibrasyonsuzdur. mm yalnız bu kameranın uygun etkin modeliyle hesaplanır. Model/optik değişimi world ROI ve referansı yeniden denetler."));
+    } else if (tool.kind=="publish_data") {
+        form->addRow(new PublishDataEditor(tool,context.definition,QFileInfo(settingsFile_).absolutePath()+"/communication-profiles.json"));
+        auto* apply=new QPushButton("Paketi uygula");apply->setObjectName("publishApply");form->addRow(apply);
+        connect(apply,&QPushButton::clicked,this,[this]{if(applyToolProperties())QTimer::singleShot(0,this,&MainWindow::showToolProperties);});
+        auto* reset=new QPushButton("Taslağı geri al");reset->setObjectName("publishCancel");form->addRow(reset);
+        connect(reset,&QPushButton::clicked,this,[this]{QTimer::singleShot(0,this,&MainWindow::showToolProperties);});
     } else if (tool.kind=="result") {
         form->addRow(new ResultEditor(tool,context.definition));
         auto* apply=new QPushButton("Kararı uygula");apply->setObjectName("resultApply");form->addRow(apply);
@@ -662,6 +669,7 @@ void MainWindow::showToolPropertiesView(const EditorContext& context,const std::
 ToolDefinition MainWindow::readToolProperties(ToolDefinition tool) const {
     tool.name=propertiesBody_->findChild<QLineEdit*>("toolName")->text().trimmed(); tool.description=propertiesBody_->findChild<QLineEdit*>("toolDescription")->text();
     tool.enabled=propertiesBody_->findChild<QCheckBox*>("toolEnabled")->isChecked();
+    if(tool.kind=="publish_data")if(auto* settings=dynamic_cast<PublishDataEditor*>(propertiesBody_->findChild<QWidget*>("publishDataEditor")))tool.parameters=settings->parameters();
     if(tool.kind=="result")if(auto* settings=dynamic_cast<ResultEditor*>(propertiesBody_->findChild<QWidget*>("resultEditor")))tool.parameters=settings->parameters();
     if(tool.kind=="set_variables")if(auto* settings=dynamic_cast<SetVariablesEditor*>(propertiesBody_->findChild<QWidget*>("setVariablesEditor")))tool.parameters=settings->parameters();
     if (auto* score=propertiesBody_->findChild<QDoubleSpinBox*>("minScore")) tool.parameters["minScore"]=score->value()/100;
@@ -714,6 +722,13 @@ MainWindow::PropertyCommit MainWindow::commitToolProperties() {
                 if(!displayed.parameters.contains(i.key()))tool.parameters.remove(i.key());
             if(tool.kind=="result" && tool.enabled)if(auto* settings=dynamic_cast<ResultEditor*>(propertiesBody_->findChild<QWidget*>("resultEditor")))settings->validateDraft();
             if(tool.kind=="set_variables")if(auto* settings=dynamic_cast<SetVariablesEditor*>(propertiesBody_->findChild<QWidget*>("setVariablesEditor")))settings->validateDraft();
+            if(tool.kind=="publish_data")if(auto* settings=dynamic_cast<PublishDataEditor*>(propertiesBody_->findChild<QWidget*>("publishDataEditor"))){
+                const auto before=service_.activeRecipe()->definition;
+                auto candidate=service_;candidate.updatePublication(tool,settings->groups());
+                if(before==candidate.activeRecipe()->definition){displayedProperties_=displayed;return PropertyCommit::Unchanged;}
+                settings->validateDraft(tool);service_=std::move(candidate);displayedProperties_=displayed;
+                return PropertyCommit::Changed;
+            }
             if(tool.name==original.name && tool.description==original.description && tool.enabled==original.enabled && tool.parameters==original.parameters) {
                 displayedProperties_=displayed;
                 return PropertyCommit::Unchanged;
@@ -734,6 +749,7 @@ MainWindow::PropertyCommit MainWindow::commitToolProperties() {
             return PropertyCommit::Changed;
         }
     } catch (const std::exception& e) {
+        if(auto* settings=dynamic_cast<PublishDataEditor*>(propertiesBody_->findChild<QWidget*>("publishDataEditor")))settings->error(QString::fromUtf8(e.what()));
         if(auto* settings=dynamic_cast<ResultEditor*>(propertiesBody_->findChild<QWidget*>("resultEditor")))settings->error(QString::fromUtf8(e.what()));
         if(auto* settings=dynamic_cast<SetVariablesEditor*>(propertiesBody_->findChild<QWidget*>("setVariablesEditor")))
             settings->error("Atama kaydedilmedi: "+QString::fromUtf8(e.what())+"\nTüm satırlar birlikte doğrulanır. Hedef UUID, kaynak tipi, birimi ve revision bağını kontrol edin. Taslağı düzeltin veya geri alın; önceki kayıt korunur.");

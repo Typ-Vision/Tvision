@@ -1,15 +1,16 @@
-# VisionFlow — güncel devir
+# VisionFlow — devir
 
 [Arşiv](archive/README.md). [MCP](archive/2026-10-24-mcp-01.md).
 
 ## Devam noktası
 
-**[COMM-20](archive/2026-10-27-comm-20.md):** V3 profil/bağlantı UI.
-**Sonraki COMM-21.** Üretim UI aktivasyonu COMM-23.
+**[COMM-21](archive/2026-10-27-comm-21.md):** Publish/mapping.
+**Sıradaki COMM-22; üretim UI COMM-23.**
+[20](archive/2026-10-27-comm-20.md): profil UI;
 [19](archive/2026-10-27-comm-19.md): retry/kapasite/namespace;
 [18](archive/2026-10-27-comm-18.md): restart/dedup/recovery;
-[17](archive/2026-10-27-comm-17.md): Runtime/outbox/ACK.
-COMM-12–16: profil/intent/bundle/outbox/input-router/codec tamam.
+[17](archive/2026-10-27-comm-17.md): Runtime/ACK.
+COMM-12–16: profil/intent/bundle/outbox/input-router/codec.
 Editor/Load ağ açmaz; tombstone otomatik silinmez, fiziksel kabul açık.
 
 **[COMM-11](archive/2026-10-27-comm-11.md):** Result DAG/ALL/ANY.
@@ -22,7 +23,7 @@ atomik evaluator/DAG/cache ve çok satırlı Editor UI.
 Editor dışarı, değerler tanıma yazılmaz.
 COMM-03'teki iki eski Circle fixture hatası açık; COMM-09'da koşulmadı.
 
-**[COMM-01 tamam](archive/2026-10-26-comm-01.md):** [Kaynak haritası](architecture/communication/source-map.md),
+**[COMM-01](archive/2026-10-26-comm-01.md):** [Kaynak haritası](architecture/communication/source-map.md),
 [Plan](architecture/communication/README.md):
 COMM-01–23 → 36 → 37; opsiyonel Modbus 24–28, OPC UA 29–33, sample 34, FANUC 35.
 Çevrim sonunda gönderim; akış ortası gönder/bekle ayrı kapsam. Fiziksel COMM-38,

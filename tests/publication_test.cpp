@@ -26,7 +26,7 @@ template<class F>void rejects(F f,const char* s){bool rejected=false;try{f();}ca
 QString id(){return QUuid::createUuid().toString(QUuid::WithoutBraces);}
 }
 int main(int argc,char** argv){QCoreApplication app(argc,argv);try{
-    check(!ToolCatalog::canAdd("publish_data"),"core tool stays hidden until publication UI card");
+    check(ToolCatalog::canAdd("publish_data"),"Publish Data available in Toolbox");
     QTemporaryDir dir(QCoreApplication::applicationDirPath()+"/publication-XXXXXX");check(dir.isValid(),"fixture");
     QTcpServer observer;check(observer.listen(QHostAddress::LocalHost,0),"observer");
     CommunicationProfiles store(dir.filePath("machine.json"));EndpointProfile profile;profile.id=id();profile.enabled=true;profile.port=observer.serverPort();profile.credentialRef="vault:machine-token";profile.fieldMapping={{"accepted","physical/address"}};

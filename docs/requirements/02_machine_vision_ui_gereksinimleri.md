@@ -446,6 +446,15 @@ snapshot'ı değiştirmez, kullanım yeniden Load ister. Connect/Disconnect/Test
 Connection yalnız bağlantı denemesidir; üretim aktivasyonu COMM-23 kapsamındadır.
 TCP v2 sekmesi ve ayarları korunur; Modbus/OPC UA aktif seçenek değildir.
 
+COMM-21: Publish Data Toolbox/Properties'de UUID output group, Set Variables
+bundle alanları ve required/optional endpoint seçilir. Logical field → TCP JSON
+field fiziksel eşlemesi Communication profil panelindedir, reçeteye kopyalanmaz.
+Grup/araç birlikte atomik uygulanır; Cancel/no-op eski tanımı korur. Kaynak
+tip/birim/frame, eksik binding/revision ve duplicate field görünür hata üretir.
+Tanım önizlemesi gerçek değer veya gönderim iddiası taşımaz; Editor intent
+hesaplar, ağ yazmaz. Revision yenileme açık komuttur; loaded snapshot değişmez.
+
+
 Robot/PLC sekmeleri, Protocol (TCP Socket, Modbus TCP, OPC UA), IP Address, Port ve protokole özgü parametreler bulunur. Connect, Disconnect, Test Connection ve Save komutları servis katmanına gider.
 
 Data mapping:

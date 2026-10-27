@@ -98,8 +98,10 @@ OECS / GenTL probe komutları, sandbox sınırları ve kanıt bağlantıları
    Doğrulama kayıtlı metrik kaynak iznini yeni kareyle denetler; Run başlatmaz.
    Load/Run hazırlığı tek başına sonuç değildir. Stop → yeniden Load sürümü değiştirir.
 
-Setup → Communication → TCP v3 profilleri: Ekle/Kaydet/Vazgeç. Connect/Test
-yalnız bağlantıyı sınar; üretim kapalıdır. TCP v2 ayrı sekmededir.
+Toolbox → Publish Data: bundle alanları, grup ve required/optional endpoint seç;
+önizle, Paketi uygula. Editor ağ yazmaz. Communication TCP v3 profilleri
+Ekle/Kaydet/Vazgeç ve logical→TCP JSON eşlemesi sunar. Connect/Test yalnız
+bağlantıyı sınar; üretim aktivasyonu COMM-23'tedir. TCP v2 ayrı sekmededir.
 
 Normal kamera komutları uygun edinim yolunu seçer; ek OECS modu/onayı yoktur.
 Profil bağlama, PGM+JSON, kalibrasyon, Runtime ve panel

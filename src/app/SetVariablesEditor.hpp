@@ -13,6 +13,7 @@ public:
     SetVariablesEditor(const ToolDefinition&, const QJsonObject&, const CycleResult*);
     QJsonObject parameters() const;
     void validateDraft() const;
+    static void validateConfiguration(const ToolDefinition&,const QVector<VariableDefinition>&,const QVector<ToolDefinition>&);
     void error(const QString&);
 private:
     void selectRow();

@@ -199,7 +199,10 @@ QJsonObject SetVariablesEditor::parameters() const {
     return result;
 }
 void SetVariablesEditor::validateDraft() const {
-    const auto config=decodeAssignmentConfig(parameters(),tool_.id);
+    auto tool=tool_;tool.parameters=parameters();validateConfiguration(tool,variables_,tools_);
+}
+void SetVariablesEditor::validateConfiguration(const ToolDefinition& tool_,const QVector<VariableDefinition>& variables_,const QVector<ToolDefinition>& tools_) {
+    const auto config=decodeAssignmentConfig(tool_.parameters,tool_.id);
     require(!config.rows.isEmpty(),"En az bir atama satırı gerekli");
     for(const auto& row:config.rows) {
         const VariableDefinition* target=nullptr;

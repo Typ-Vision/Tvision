@@ -118,6 +118,15 @@ QVector<ToolDefinition> ProjectService::tools() const {
     const auto* recipe=activeRecipe(); if (!recipe) fail("Önce bir reçete açın."); return editorTools(recipe->definition);
 }
 QVector<OutputGroup> ProjectService::outputGroups() const {return activeRecipe() ? recipeOutputGroups(activeRecipe()->definition):QVector<OutputGroup>{};}
+void ProjectService::updatePublication(const ToolDefinition& tool,const QVector<OutputGroup>& groups) {
+    if(!activeRecipe() || tool.kind!="publish_data")fail("Publish Data required.");
+    auto d=activeRecipe()->definition;QJsonArray a;for(const auto& g:groups)a.append(encodeOutputGroup(g));
+    if(!groups.isEmpty() || d.contains("publication"))d["publication"]=QJsonObject{{"schemaVersion",1},{"groups",a}};
+    auto list=tools();bool found=false;for(auto& t:list)if(t.id==tool.id){if(t.kind!=tool.kind)fail("Tool kind mismatch.");t=tool;found=true;}
+    if(!found)fail("Publish Data missing.");d=withEditorTools(d,list);if(d==activeRecipe()->definition)return;
+    auto candidate=project();for(auto& r:candidate.recipes)if(r.id==activeId_){r.definition=d;r.status=RecipeStatus::Draft;}
+    validateProject(candidate);project_=candidate;dirty_=true;changedRecipes_.insert(activeId_);
+}
 void ProjectService::setOutputGroups(const QVector<OutputGroup>& groups) {
     if(!activeRecipe())fail("Open a recipe first.");
     const auto d=withRecipeOutputGroups(activeRecipe()->definition,groups);if(d==activeRecipe()->definition)return;

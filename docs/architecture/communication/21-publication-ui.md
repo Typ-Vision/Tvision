@@ -1,6 +1,6 @@
 # COMM-21 — Publish Data aracı ve mapping UI
 
-Durum: başlamadı. Önerilen düzey: **medium**. Önkoşul: **COMM-20** tamam.
+Durum: yazılım/görsel kabulü tamamlandı; [kapanış](../../archive/2026-10-27-comm-21.md). Önerilen düzey: **medium**. Önkoşul: **COMM-20** tamam.
 Bir oturumda yalnız bu kart; paralel uygulayıcı yok.
 
 ## Oku

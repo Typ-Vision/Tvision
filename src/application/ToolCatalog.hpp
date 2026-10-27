@@ -11,12 +11,12 @@ struct ToolCatalog {
         if(QStringList{"blob","code_read"}.contains(kind))return "detection";
         if(QStringList{"template_match","pattern_pose","shape_pose"}.contains(kind))return "matching";
         if(QStringList{"edge_point","edge_pair","line_fit","circle_fit","measurement","geometry_measurement"}.contains(kind))return "measurement";
-        if(kind=="calculate" || kind=="set_variables" || kind=="result")return "calculation";
+        if(kind=="calculate" || kind=="set_variables" || kind=="result" || kind=="publish_data")return "calculation";
         return "other";
     }
     static QVector<ToolDescriptor> entries() {
         auto result=ToolRegistry::entries();
-        result.erase(std::remove_if(result.begin(),result.end(),[](const auto& entry){return entry.kind=="edge" || entry.kind=="publish_data";}),result.end());
+        result.erase(std::remove_if(result.begin(),result.end(),[](const auto& entry){return entry.kind=="edge";}),result.end());
         return result;
     }
     static bool canAdd(const QString& kind) {

@@ -1,5 +1,7 @@
 #include "EndpointProfileEditor.hpp"
 #include <QVBoxLayout>
+#include <QTableWidget>
+#include <QHeaderView>
 #include <stdexcept>
 #include <QFormLayout>
 #include <QGridLayout>
@@ -25,6 +27,11 @@ EndpointProfileEditor::EndpointProfileEditor(QString path,std::function<bool()> 
     auto spin=[&](const char* name,int lo,int hi,const QString& label){auto* s=new QSpinBox;s->setObjectName(name);s->setRange(lo,hi);form->addRow(label,s);return s;};
     port_=spin("endpointPort",1,65535,"Port");timeout_=spin("endpointTimeout",100,60000,"Timeout (ms)");retries_=spin("endpointRetries",0,10,"Retry");
     credential_=new QLineEdit;credential_->setObjectName("endpointCredential");credential_->setEchoMode(QLineEdit::Password);credential_->setMaxLength(256);form->addRow("Credential ref (gizli gösterim)",credential_);layout->addLayout(form);
+    auto* mappingNote=new QLabel("Fiziksel TCP JSON eşlemesi: logical field → wire field (makineye yerel).");mappingNote->setWordWrap(true);layout->addWidget(mappingNote);
+    mapping_=new QTableWidget(0,2);mapping_->setObjectName("endpointMapping");mapping_->setHorizontalHeaderLabels({"Logical field","TCP JSON field"});mapping_->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);mapping_->setMinimumHeight(110);mapping_->setMaximumHeight(190);layout->addWidget(mapping_);
+    auto* mappingButtons=new QGridLayout;auto* add=new QPushButton("+ Eşleme");add->setObjectName("endpointAddMapping");auto* remove=new QPushButton("− Eşleme");remove->setObjectName("endpointRemoveMapping");mappingButtons->addWidget(add,0,0);mappingButtons->addWidget(remove,0,1);layout->addLayout(mappingButtons);
+    connect(add,&QPushButton::clicked,this,[this]{if(mapping_->rowCount()>=64)return;const int row=mapping_->rowCount();mapping_->insertRow(row);mapping_->setItem(row,0,new QTableWidgetItem);mapping_->setItem(row,1,new QTableWidgetItem);});
+    connect(remove,&QPushButton::clicked,this,[this]{if(mapping_->currentRow()>=0)mapping_->removeRow(mapping_->currentRow());});
     auto* grid=new QGridLayout;int i=0;
     for(auto pair:QVector<QPair<QString,QString>>{{"add","&Ekle"},{"save","&Kaydet"},{"cancel","&Vazgeç"},{"connect","&Connect"},{"disconnect","&Disconnect"},{"test","&Test Connection"}}){
         auto* b=new QPushButton(pair.second);b->setObjectName("endpoint_"+pair.first);grid->addWidget(b,i/3,i%3);++i;
@@ -43,6 +50,7 @@ void EndpointProfileEditor::refreshList(const QString& id){
 void EndpointProfileEditor::loadDraft(){
     draft_=profiles_.value(list_->currentData().toString());
     if(!profiles_.contains(draft_.id)){draft_.id=QUuid::createUuid().toString(QUuid::WithoutBraces);draft_.role="server";draft_.timeoutMs=2000;draft_.retries=3;}
+    mapping_->setRowCount(0);for(auto i=draft_.fieldMapping.begin();i!=draft_.fieldMapping.end();++i){const int row=mapping_->rowCount();mapping_->insertRow(row);mapping_->setItem(row,0,new QTableWidgetItem(i.key()));mapping_->setItem(row,1,new QTableWidgetItem(i.value()));}
     enabled_->setChecked(draft_.enabled);role_->setCurrentText(draft_.role);address_->setText(draft_.address);port_->setValue(draft_.port);timeout_->setValue(draft_.timeoutMs);retries_->setValue(draft_.retries);credential_->setText(draft_.credentialRef);
 }
 void EndpointProfileEditor::action(const QString& a){try{
@@ -50,6 +58,7 @@ void EndpointProfileEditor::action(const QString& a){try{
     if(a=="cancel"){refreshList(list_->currentData().toString());status_->setText("Taslak iptal edildi.");return;}
     if(a=="add"){list_->setCurrentIndex(-1);loadDraft();status_->setText("Yeni taslak; Kaydet ile uygulanır.");return;}
     auto p=draft_;p.enabled=enabled_->isChecked();p.role=role_->currentText();p.address=address_->text().trimmed();p.port=port_->value();p.timeoutMs=timeout_->value();p.retries=retries_->value();p.credentialRef=credential_->text();
+    p.fieldMapping.clear();for(int row=0;row<mapping_->rowCount();++row){const auto name=mapping_->item(row,0)->text().trimmed(),destination=mapping_->item(row,1)->text().trimmed();if(p.fieldMapping.contains(name))throw std::runtime_error("Duplicate logical field mapping.");p.fieldMapping[name]=destination;}
     QHostAddress address;if(!address.setAddress(p.address))throw std::runtime_error("Geçerli IPv4/IPv6 adresi girin.");validateEndpointProfile(p);
     if(a=="save"){
         const auto current=store_.load();

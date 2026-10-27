@@ -16,6 +16,7 @@ int main(int argc, char* argv[]) {
     QFile theme(":/resources/theme.qss");
     if (!theme.open(QIODevice::ReadOnly)) return 2;
     app.setStyleSheet(QString::fromUtf8(theme.readAll()));
+    const bool publicationOnly=app.arguments().contains("--publication-smoke");
     const bool endpointsOnly=app.arguments().contains("--endpoints-smoke");
     const bool resultOnly=app.arguments().contains("--result-smoke");
     const bool assignmentsOnly=app.arguments().contains("--assignments-smoke");
@@ -37,12 +38,13 @@ int main(int argc, char* argv[]) {
     const bool failureOnly=app.arguments().contains("--runtime-failure-smoke");
     const bool visibilityOnly=app.arguments().contains("--runtime-visibility-smoke");
     const bool overlaysOnly=app.arguments().contains("--runtime-overlays-smoke");
-    const bool smoke = endpointsOnly || resultOnly || assignmentsOnly || variablesOnly || overlaysOnly || visibilityOnly || restartOnly || failureOnly || responsivenessOnly || runtimeCamerasOnly || editorCamerasOnly || roiOnly || app.arguments().contains("--smoke-test") || circleOnly || geometryOnly || poseOnly || usabilityOnly || systemOnly || multiOnly || multiRuntimeOnly || experimentalOnly || recipeFieldsOnly;
+    const bool smoke = publicationOnly || endpointsOnly || resultOnly || assignmentsOnly || variablesOnly || overlaysOnly || visibilityOnly || restartOnly || failureOnly || responsivenessOnly || runtimeCamerasOnly || editorCamerasOnly || roiOnly || app.arguments().contains("--smoke-test") || circleOnly || geometryOnly || poseOnly || usabilityOnly || systemOnly || multiOnly || multiRuntimeOnly || experimentalOnly || recipeFieldsOnly;
     const QDir buildDir(smoke ? qEnvironmentVariable("VISIONFLOW_TEST_ARTIFACTS",QCoreApplication::applicationDirPath()):QCoreApplication::applicationDirPath());
     if(smoke)QDir().mkpath(buildDir.absolutePath());
     visionflow::MainWindow window(buildDir.filePath(smoke ? "ui-smoke.ini" : "../config/local.ui.ini"));
     window.show();
     if (smoke) QTimer::singleShot(100, &app, [&]{
+        if(publicationOnly){bool valid=false;try{valid=window.verifyPublicationUi(buildDir.absolutePath());}catch(const std::exception& e){QTextStream(stderr)<<e.what()<<'\n';}window.close();app.exit(valid?0:1);return;}
         if(endpointsOnly){bool valid=false;try{valid=window.verifyEndpointProfiles(buildDir.absolutePath());}catch(const std::exception& e){QTextStream(stderr)<<e.what()<<'\n';}window.close();app.exit(valid?0:1);return;}
         if(resultOnly){bool valid=false;try{valid=window.verifyResultUi(buildDir.absolutePath());}catch(const std::exception& e){QTextStream(stderr)<<e.what()<<'\n';}window.close();app.exit(valid?0:1);return;}
         if(assignmentsOnly){bool valid=false;try{valid=window.verifyAssignmentUi(buildDir.absolutePath());}catch(const std::exception& e){QTextStream(stderr)<<e.what()<<'\n';}window.close();app.exit(valid?0:1);return;}

@@ -378,3 +378,19 @@ bilgisayarının tarihsel kanıtıdır. Her makinede gerçek checkout ve indeks 
   adres/port hatası, gerçek localhost bind/client, redaction ve Tab dolaşımı.
   CTest `ui_endpoint_profiles`; `ui_endpoint_screen` normal MainWindow'da
   1400×900/850×600 offscreen görüntüleri alır. Fiziksel/native kabul değildir.
+
+## COMM-21 — Publish Data ve mapping Properties (27 Ekim 2026)
+
+- `PublishDataEditor.*`: output group / bundle producer+revision / field UUID /
+  required endpoint picker; çok alanlı logical mapping, çözülmüş tanım önizlemesi,
+  açık revision rebind. `SetVariablesEditor::validateConfiguration` aynı tip,
+  birim, enum ve frame doğrulamasını iki Editor için paylaşır.
+- `ProjectService::updatePublication`: output group ve PublishConfig tek aday
+  definition üzerinde doğrulanır, tek commit/no-op; eksik group ara durumu yoktur.
+- `EndpointProfileEditor.*`: ayrı physical mapping tablosu `CommunicationProfiles`
+  QSaveFile servisine gider; duplicate logical key map'e dönüşmeden reddedilir.
+- `MainWindowExecution.cpp`: Run Flow/Tool application publication snapshot'ını
+  capture eder; transport açmaz. Normal v3 Runtime UI aktivasyonu COMM-23'tedir.
+- `tests/editor_publication_ui.cpp`, CTest `ui_publication_editor`: üç alanlı
+  tek intent, UUID reopen/no-op, duplicate/missing/type/unit/frame hataları,
+  Editor network=0, terminal sonrası tek ledger dispatch ve iki ekran boyutu.

@@ -1,6 +1,7 @@
 #include "application/EditorObservation.hpp"
 #include "application/MeasurementDiagnostic.hpp"
 #include "MainWindow.hpp"
+#include "application/PublicationService.hpp"
 #include "application/IndustrialExecution.hpp"
 #include "application/AcquisitionPolicy.hpp"
 #include "application/ExperimentalOecsAcquisition.hpp"
@@ -219,6 +220,9 @@ void MainWindow::runExecution(const QString& targetTool) {
     }
     findChild<QTabWidget*>("editorTabs")->setCurrentWidget(findChild<QScrollArea*>("resultsScroll"));
     const auto recipe=*service_.activeRecipe();const auto definition=recipe.definition;const auto catalogPath=service_.path()+".calibrations.json";const auto resolver=calibrationResolver(recipe);QJsonObject acquisitionPlan;try{if(recipe.definition["editor"].toObject()["schemaVersion"]==9){QJsonObject sources;for(const auto& t:editorTools(definition))if(t.enabled && ToolRegistry::get(t.kind).acquisitionSource && (targetTool.isEmpty() || t.id==targetTool)){const auto branch=SystemCalibration::branch(recipe,t.id);if(branch.definition.contains("sourceSetup")){if(!measurementWorkspace_)throw std::runtime_error("Measurement workspace unavailable");sources[t.id]=measurementWorkspace_->acquisition(branch);}}acquisitionPlan["sources"]=sources;}else if(recipe.definition.contains("sourceSetup")){if(!measurementWorkspace_)throw std::runtime_error("Measurement workspace unavailable");acquisitionPlan=measurementWorkspace_->acquisition(recipe);}}catch(const std::exception& e){matchInfo_->setText(QString::fromUtf8(e.what()));return;}
+    std::shared_ptr<const PublicationSnapshot> publication;
+    try{publication=PublicationService::capture(definition,CommunicationProfiles(QFileInfo(settingsFile_).absolutePath()+"/communication-profiles.json"));}
+    catch(const std::exception& e){matchInfo_->setText(QString::fromUtf8(e.what()));return;}
     bool acquisition=false;for(const auto& t:editorTools(definition))if(t.id==targetTool)acquisition=ToolRegistry::get(t.kind).acquisitionSource;
     if(!targetTool.isEmpty() && !acquisition) {
         try {
@@ -242,7 +246,7 @@ void MainWindow::runExecution(const QString& targetTool) {
                 }else {editorSession_.matchOutcome.reset();matchInfo_->setText("Değişen girdi/ayar nedeniyle araç sonucu atıldı.");}
                 refreshMatchOverlay();refreshFlow();refreshCalibration();
             });
-            editorSession_.launch(watcher,[definition,directory,recipe,signature,cancel,targetTool,evaluation,resolver,timing]{AcquisitionTimingBinding binding(timing);return ExecutionService{}.runTool(definition,directory,recipe.id,signature,cancel,targetTool,evaluation,resolver);});
+            editorSession_.launch(watcher,[definition,directory,recipe,signature,cancel,targetTool,evaluation,resolver,timing,publication]{AcquisitionTimingBinding binding(timing);return ExecutionService{}.withPublicationSnapshot(publication).runTool(definition,directory,recipe.id,signature,cancel,targetTool,evaluation,resolver);});
         }catch(const std::exception& e){matchInfo_->setText(QString::fromUtf8(e.what()));}
         return;
     }
@@ -280,7 +284,7 @@ void MainWindow::runExecution(const QString& targetTool) {
         } else {editorSession_.cycle.reset();matchInfo_->setText("READY — değişen ayar/görüntü nedeniyle çevrim sonucu atıldı.");}
         refreshMatchOverlay();refreshFlow();refreshCalibration();
     });
-    editorSession_.launch(watcher,[definition,directory,id,signature,cancel,targetTool,resolver,acquisitionPlan,industrial,timing,commandedAt]{AcquisitionTimingBinding binding(timing);AcquisitionTiming::record(timing,"editor.worker-queue",commandedAt);return ExecutionService(industrial).run(definition,directory,id,signature,cancel,targetTool,{},resolver,nullptr,acquisitionPlan);});
+    editorSession_.launch(watcher,[definition,directory,id,signature,cancel,targetTool,resolver,acquisitionPlan,industrial,timing,commandedAt,publication]{AcquisitionTimingBinding binding(timing);AcquisitionTiming::record(timing,"editor.worker-queue",commandedAt);return ExecutionService(industrial).withPublicationSnapshot(publication).run(definition,directory,id,signature,cancel,targetTool,{},resolver,nullptr,acquisitionPlan);});
 }
 void MainWindow::loadImageAsync(const QString& path,bool commit) {
     editorSession_.references.clear();
