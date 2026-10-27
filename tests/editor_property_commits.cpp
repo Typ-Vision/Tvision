@@ -63,7 +63,7 @@ bool MainWindow::verifyEditorPropertyCommits(const QString& artifacts) {
         w.service_.save();
     }
     check(w.findChild<QPushButton*>("saveWorkspace")->focusPolicy()==Qt::TabFocus && w.findChild<QPushButton*>("addTool")->focusPolicy()==Qt::TabFocus,"mouse Save/Add retain pending editor focus");
-    w.selectTool(scalar);auto* limit=w.propertiesBody_->findChild<QDoubleSpinBox*>("upperMm");limit->setValue(limit->value()+1);QApplication::processEvents();limit->setFocus();QApplication::processEvents();
+    w.selectTool(scalar);auto* limit=w.propertiesBody_->findChild<QDoubleSpinBox*>("upperMm");limit->setValue(limit->value()+1);QApplication::processEvents();w.activateWindow();limit->setFocus();QApplication::processEvents();
     Sample numericSave;{Binding binding(numericSave);w.findChild<QPushButton*>("saveWorkspace")->click();}
     check(numericSave.calls[Editor]==1 && numericSave.calls[AtomicWrite]==1,"pending numeric Save has one refresh/write");
     check(limit->hasFocus(),"pending numeric Save retains focus");

@@ -47,9 +47,9 @@ void recoverProcess(const QString& path){
     check(ledger.inspect(da).state=="ACK_COMMITTED" && ledger.inspect(db).state=="ACK_COMMITTED" && !coordinator.deliveryPending(),"independent target ACKs survive process boundary");
     check(ProductionStore(archive).all("cycles").size()==1 && coordinator.state()==RuntimeState::Unloaded,"recovery produces no second cycle");
 }
-void scenario(bool optional){
+void scenario(bool optional,ApplicationType applicationType){
     QTemporaryDir dir(QCoreApplication::applicationDirPath()+"/multi-delivery-XXXXXX");check(dir.isValid(),"fixture");
-    ProjectService project;project.createProject("COMM-36 simulator","",dir.filePath("p.vfproject"),"");project.createRecipe("Pose transport fixture","",ApplicationType::DefectInspection);
+    ProjectService project;project.createProject("COMM-36 simulator","",dir.filePath("p.vfproject"),"");project.createRecipe("Pose transport fixture","",applicationType);
     QImage image(16,16,QImage::Format_Grayscale8);image.fill(255);check(image.save(dir.filePath("part.png")),"fixture image");project.setImageFile(dir.filePath("part.png"));
     const auto inputPose=pose();VariableDefinition variable;variable.name="WholePose";variable.type=VariableType::SpatialTransform;variable.unit=ScalarUnit::Millimetre;variable.frameConstraint=VariableFrameConstraint{inputPose.value->source,inputPose.value->target};variable.id=project.addVariable(variable);
     const auto producer=project.addTool("set_variables");
@@ -124,4 +124,4 @@ void scenario(bool optional){
     if(optional){for(int i=0;i<128;++i){auto q=db;q.requestId="queued-"+QString::number(i);ledger.request(q,false,false);}auto overflow=db;overflow.requestId="overflow";check(ledger.admission(overflow,false,false)=="QUEUE_FULL","optional offline backlog bounded at 128");rejects([&]{ledger.request(overflow,false,false);},"optional full queue refuses silent eviction");check(ledger.inspect(da).state=="ACK_COMMITTED","optional queue does not rewrite required ACK");}
 }
 }
-int main(int argc,char** argv){QCoreApplication app(argc,argv);try{if(app.arguments().size()==3 && app.arguments()[1]=="--recover"){recoverProcess(app.arguments()[2]);return 0;}scenario(false);scenario(true);QTextStream(stdout)<<checks<<" multi-endpoint delivery and pose checks passed\n";return 0;}catch(const std::exception& e){QTextStream(stderr)<<e.what()<<'\n';return 1;}}
+int main(int argc,char** argv){QCoreApplication app(argc,argv);try{if(app.arguments().size()==3 && app.arguments()[1]=="--recover"){recoverProcess(app.arguments()[2]);return 0;}for(const auto type:{ApplicationType::Measurement,ApplicationType::DefectInspection,ApplicationType::RobotGuidance}){scenario(false,type);scenario(true,type);}QTextStream(stdout)<<checks<<" multi-endpoint delivery and pose checks passed\n";return 0;}catch(const std::exception& e){QTextStream(stderr)<<e.what()<<'\n';return 1;}}

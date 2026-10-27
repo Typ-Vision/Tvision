@@ -8,7 +8,7 @@ public:
  AcquisitionCapabilities capabilities()const override{return {"webcam",true};}
  ImageFrame acquire(const AcquisitionRequest&)const override{const auto im=measurementStripe();return ImageFrame::fromBuffer(im.constBits(),im.sizeInBytes(),640,200,im.bytesPerLine(),PixelFormat::Gray8);}
 };
-int measurementAcceptance(){
+int measurementAcceptance(ApplicationType applicationType){
  QTemporaryDir dir(QCoreApplication::applicationDirPath()+"/tcp-measurement-XXXXXX");check(dir.isValid(),"measurement fixture");
  ProjectService p;p.createProject("TCP measurement","",dir.filePath("part.vfproject"),"");p.save();
  MeasurementWorkspace workspace(p.path(),p.project().id,[]{return true;});MeasurementSetupContract contract;
@@ -20,7 +20,7 @@ int measurementAcceptance(){
  IndependentCalibrationSession session;check(session.accept(IndependentCalibrationSession::run(session.begin(req),backend)),"measurement independent raster fixture");
  auto& math=session.math();check(math.accept(CalibrationWizardSession::run(math.scanPair("width",{{"image"},ScanSegment{{20,100},{620,100},4}}))),"real caliper");math.setKnownMillimetres(1.0);const auto model=math.calculate().named("Fixture scale");
  const SetupReference ref{camera.id,setup.id,1};workspace.calibrations().save(ref,model);workspace.calibrations().setOperational(camera.id,setup.id);workspace.calibrations().activate(ref,model.contentId(),session);
- p.createRecipe("Measured part","",ApplicationType::Measurement);p.enableMultiSource();check(measurementStripe().save(dir.filePath("part.png")),"measurement image");p.setImageFile(dir.filePath("part.png"));
+ p.createRecipe("Measured part","",applicationType);p.enableMultiSource();check(measurementStripe().save(dir.filePath("part.png")),"measurement image");p.setImageFile(dir.filePath("part.png"));
  QString source;for(const auto& t:p.tools())if(t.kind=="image_file")source=t.id;
  const auto left=p.addTool("edge_point"),right=p.addTool("edge_point"),metric=p.addTool("measurement"),decision=p.addTool("result");
  for(auto t:p.tools()){

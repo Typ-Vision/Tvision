@@ -650,7 +650,10 @@ bool MainWindow::verifyGeometry(const QString& artifacts){
     const auto precisionRecipe=service_.activeRecipe()->id;service_.openProject(service_.path());service_.selectRecipe(precisionRecipe);refreshWorkspace();selectTool(id);check(applyToolProperties() && service_.activeRecipe()->definition==precisionDefinition,"precision save reopen retains exact recipe");
     propertiesBody_->findChild<QCheckBox*>("gm_toleranceEnabled")->toggle();
     for(const auto& t:service_.tools())if(t.id==id)check(t.parameters["nominal"]==1.23456789 && t.parameters["fitMaxRms"]==.000123456789,"unrelated real recipe commit keeps legacy precision");
-    auto* preciseInput=propertiesBody_->findChild<QDoubleSpinBox*>("gm_nominal");preciseInput->selectAll();for(const auto ch:QString("1.235")){QKeyEvent key(QEvent::KeyPress,0,Qt::NoModifier,QString(ch));QApplication::sendEvent(preciseInput,&key);}check(applyToolProperties(),"explicit three-decimal recipe edit");
+    auto* preciseInput=propertiesBody_->findChild<QDoubleSpinBox*>("gm_nominal");preciseInput->setFocus();preciseInput->selectAll();
+    const auto localizedNominal=preciseInput->locale().toString(1.235,'f',3);
+    for(const auto ch:localizedNominal){QKeyEvent key(QEvent::KeyPress,ch.unicode(),Qt::NoModifier,QString(ch));QApplication::sendEvent(preciseInput,&key);}
+    check(applyToolProperties(),"explicit three-decimal recipe edit");
     for(auto t:service_.tools())if(t.id==id){check(t.parameters["nominal"]==1.235,"explicit recipe value committed");t.parameters=geometryMeasurementDefaults();service_.updateTool(t);}refreshWorkspace();selectTool(id);
     auto binding=[&](QString input,QString producer,QString port){auto* c=propertiesBody_->findChild<QComboBox*>("input_"+input);check(c && c->findData(producer+"/"+port)>0,"typed feature choice present");c->setCurrentIndex(c->findData(producer+"/"+port));wait();};
     auto operation=[&](QString op){selectTool(id);propertiesBody_->findChild<QComboBox*>("gm_operation")->setCurrentText(op);wait();};

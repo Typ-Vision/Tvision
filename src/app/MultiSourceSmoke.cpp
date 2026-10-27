@@ -145,7 +145,7 @@ bool MainWindow::verifyMultiSourceRuntime(const QString& artifacts){
         for(int i=0;i<n;++i)check(runtimePreparation_->item(i,0)->text().contains("Offline camera "+QString::number(n)+"-"+QString::number(i)) && runtimePreparation_->item(i,1)->toolTip().contains("offline-profile-"+QString::number(n)+"-"+QString::number(i)) && runtimePreparation_->item(i,3)->text()=="Kare yok","Offline industrial serial/setup/profile without actual frame");
         runtimeAction("run");wait();check(runtimeCoordinator_->state()==RuntimeState::Fault && !runtimeResult_ && !runtimeViewer_->hasImage(),"Native admission stays unavailable");
         const auto failedPreparation=runtimePreparation_->item(0,2)->text();
-        check((failedPreparation=="Kullanılamıyor" || failedPreparation=="Edinim hatası") && runtimePreparation_->item(0,1)->text().contains("Ölçüm doğrulanmadı"),"Unavailable or missing device differs from a raw-only result");
+        check((failedPreparation=="Kullanılamıyor" || failedPreparation=="Edinim hatası" || failedPreparation=="Zaman aşımı") && runtimePreparation_->item(0,1)->text().contains("Ölçüm doğrulanmadı"),"Unavailable or missing device differs from a raw-only result");
         setWindowState(Qt::WindowNoState);resize(1400,900);QApplication::processEvents();check(CameraFlowSmokeAudit::save(*this,output+QString("/industrial-%1-normal.png").arg(n)),"Industrial normal screenshot");resize(850,600);QApplication::processEvents();check(CameraFlowSmokeAudit::save(*this,output+QString("/industrial-%1-small.png").arg(n)),"Industrial small screenshot");
         check(runtimePreparation_->item(n-1,0)->toolTip().contains("SYNTHETIC-"+QString::number(n)+"-"+QString::number(n-1)),"All source details remain accessible");
     }

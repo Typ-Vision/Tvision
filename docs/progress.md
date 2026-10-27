@@ -4,9 +4,9 @@
 
 ## Devam noktası
 
-**[COMM-36 tamam](archive/2026-10-28-comm-36.md):** iki TCP hedef/whole Pose;
-Release/kabuller kayıtta. Sonraki **COMM-37**.
-[COMM-23 ve açık full hataları](archive/2026-10-28-comm-23.md).
+**[COMM-37 tamam](archive/2026-10-28-comm-37.md):** UI 164/core 127 geçti;
+her birinde dış plaka skipped. Temel faz kapandı; cihaz varsa COMM-38.
+[36](archive/2026-10-28-comm-36.md), [23](archive/2026-10-28-comm-23.md),
 [22](archive/2026-10-27-comm-22.md),
 [21](archive/2026-10-27-comm-21.md),
 [20](archive/2026-10-27-comm-20.md),
@@ -24,11 +24,11 @@ Editor/Load ağ açmaz; tombstone silinmez; fiziksel kabul açık.
 atomik evaluator/DAG/cache ve çok satırlı Editor UI.
 [Kabul](archive/2026-10-26-comm-08.md); UUID/type/unit/frame/enum/no-op/hash korunur.
 Editor dışarı yazmaz; değerler tanımda tutulmaz.
-Circle regresyonu açık.
+Circle regresyonu COMM-37’de kapandı.
 
 [COMM-01 kaynak haritası](architecture/communication/source-map.md),
 [Plan](architecture/communication/README.md):
-COMM-01–23 → 36 → 37; opsiyonel Modbus 24–28, OPC UA 29–33, sample 34, FANUC 35.
+COMM-01–23 → 36 → 37 tamam; opsiyonel Modbus 24–28, OPC UA 29–33, sample 34, FANUC 35.
 Çevrim sonunda gönderim; akış ortası gönder/bekle ayrı kapsam. Fiziksel COMM-38,
 Hand-eye/robot hareketi ayrı; araştırma notları plan indeksindedir.
 
@@ -36,8 +36,7 @@ Hand-eye/robot hareketi ayrı; araştırma notları plan indeksindedir.
 main'e birleşti. Güncel dal `Variables`; fiziksel/native engeller açık.
 
 **[CCUX-24I yazılım/görsel tamam](archive/2026-10-26-ccux-24i.md):** iki Release;
-UI'da 39 benzersiz test ilk koşum+düzeltme tekrarlarıyla, UI OFF 19 test geçti.
-Bozuk context hata sınırı düzeltildi; iki boyut fixture incelendi.
+UI 39/UI OFF 19 test; tekrar, context hata sınırı ve iki boyut fixture kayıtta.
 Native wheel/pan pencere yakalama hatasıyla açık; fiziksel kabul açık.
 Tercihler repo TEMP/localhost ile doğrulandı; varsayılan TEMP kabulü açık.
 

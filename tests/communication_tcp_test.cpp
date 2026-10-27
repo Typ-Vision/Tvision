@@ -20,7 +20,8 @@ template<class F>void until(F f,const char* why,int ms=10000){QElapsedTimer t;t.
 struct Peer {
  QTcpSocket socket;QByteArray bytes;QVector<QJsonObject> messages;QString session;
  Peer(){QObject::connect(&socket,&QTcpSocket::readyRead,[this]{bytes+=socket.readAll();for(;;){auto n=bytes.indexOf('\n');if(n<0)break;QTextStream(stdout)<<"RX "<<bytes.left(n)<<'\n';messages.append(CommunicationWireCodec::decode(bytes.left(n)));bytes.remove(0,n+1);}});}
- QJsonObject take(QString type,QString requestId={}){QJsonObject o;until([&]{if(!o.isEmpty())return true;for(int i=0;i<messages.size();++i)if(messages[i]["type"]==type && (requestId.isEmpty() || messages[i]["requestId"]==requestId)){o=messages.takeAt(i);return true;}return false;},qPrintable("Expected "+type));return o;}
+ // Durable terminal/journal writes are not a 10 s network response benchmark.
+ QJsonObject take(QString type,QString requestId={}){QJsonObject o;until([&]{if(!o.isEmpty())return true;for(int i=0;i<messages.size();++i)if(messages[i]["type"]==type && (requestId.isEmpty() || messages[i]["requestId"]==requestId)){o=messages.takeAt(i);return true;}return false;},qPrintable("Expected "+type),type=="RESULT" ? 60000:10000);return o;}
  void connectTo(quint16 port){messages.clear();socket.connectToHost(QHostAddress::LocalHost,port);session=take("HELLO")["sessionId"].toString();}
  void send(QJsonObject o){o["v"]=3;o["sessionId"]=session;socket.write(CommunicationWireCodec::encode(o));}
  void ack(QJsonObject o){send({{"type","ACK"},{"requestId",o["requestId"]},{"resultId",o["resultId"]},{"payloadHash",o["payloadHash"]}});}
@@ -29,11 +30,12 @@ struct Peer {
 }
 #include "tcp_measurement_acceptance.hpp"
 int main(int argc,char** argv){QCoreApplication app(argc,argv);try{
- if(app.arguments().contains("--measurement"))return measurementAcceptance();
+ const auto applicationType=app.arguments().contains("--robot") ? ApplicationType::RobotGuidance:app.arguments().contains("--measurement-type") ? ApplicationType::Measurement:ApplicationType::DefectInspection;
+ if(app.arguments().contains("--measurement"))return measurementAcceptance(applicationType);
  QTemporaryDir dir(QCoreApplication::applicationDirPath()+"/tcp3-XXXXXX");check(dir.isValid(),"fixture");
  if(qEnvironmentVariableIsSet("VISIONFLOW_KEEP_TEST_FIXTURE")){dir.setAutoRemove(false);QTextStream(stdout)<<"Fixture: "<<dir.path()<<'\n';}
  QImage image(30,30,QImage::Format_Grayscale8);image.fill(255);check(image.save(dir.filePath("part.png")),"actual image");
- ProjectService p;p.createProject("TCP3","",dir.filePath("p.vfproject"),"");p.createRecipe("Part","",ApplicationType::DefectInspection);p.setImageFile(dir.filePath("part.png"));const auto blob=p.addTool("blob"),decision=p.addTool("result");
+ ProjectService p;p.createProject("TCP3","",dir.filePath("p.vfproject"),"");p.createRecipe("Part","",applicationType);p.setImageFile(dir.filePath("part.png"));const auto blob=p.addTool("blob"),decision=p.addTool("result");
  for(auto t:p.tools())if(t.id==decision){t.enabled=true;t.parameters=encodeResultConfig({ResultOperator::All,{{blob,"found",4}}});p.updateTool(t);}
  VariableDefinition variable{uuid(),"Count"};variable.type=VariableType::Float64;variable.id.clear();variable.id=p.addVariable(variable);
  VariableDefinition acceptedVariable{uuid(),"Accepted"};acceptedVariable.type=VariableType::Boolean;acceptedVariable.id.clear();acceptedVariable.id=p.addVariable(acceptedVariable);
@@ -71,9 +73,14 @@ int main(int argc,char** argv){QCoreApplication app(argc,argv);try{
   peer.send(request("lost-ack"));peer.take("ACCEPTED");const auto initial=peer.take("RESULT");const auto retry=peer.take("RESULT");check(initial==retry,"automatic retry exact result");
   until([&]{return server.state()=="ACK_TIMEOUT";},"bounded retry exhaustion");check(cycles==1 && acquisitions==1,"retry never executes twice");
   auto durableRequest=TriggerRouter::deliveryRequest({options.workcell,options.project,options.endpoint,options.peer,"lost-ack",p.activeRecipe()->id,config,"snapshot",1,1});
-  const auto beforeRetry=ledger.inspect(durableRequest);server.retryDelivery(durableRequest);const auto manual=peer.take("RESULT","lost-ack");
-  check(CommunicationWireCodec::resultPayload(manual)==beforeRetry.payload && ledger.inspect(durableRequest).attempts==beforeRetry.attempts+1 && cycles==1 && acquisitions==1,"manual diagnostics retry exact payload no acquisition");
+  const auto beforeRetry=ledger.inspect(durableRequest);server.retryDelivery(durableRequest);
+  // Check the synchronous manual attempt before pumping the event loop: under
+  // load the 100 ms automatic retry may already be due when RESULT is received.
+  check(ledger.inspect(durableRequest).attempts==beforeRetry.attempts+1,"one explicit manual attempt");
+  const auto manual=peer.take("RESULT","lost-ack");
+  check(CommunicationWireCodec::resultPayload(manual)==beforeRetry.payload && cycles==1 && acquisitions==1,"manual diagnostics retry exact payload no acquisition");
   peer.take("RESULT","lost-ack");until([&]{return server.state()=="ACK_TIMEOUT";},"manual retry bounded budget");
+  check(ledger.inspect(durableRequest).attempts==beforeRetry.attempts+2,"manual retry plus exactly one automatic attempt");
   bool rejected=false;auto unknown=durableRequest;unknown.requestId="unknown";try{server.retryDelivery(unknown);}catch(...){rejected=true;}check(rejected && ledger.inspect(unknown).state=="ABSENT","unknown retry never creates ACK or intent");
   for(int n=0;n<140;++n){peer.send({{"type","STATUS"}});peer.take("STATUS");}
   const auto diagnostics=server.diagnosticEvents();check(diagnostics.size()==128,"bounded diagnostics trace");

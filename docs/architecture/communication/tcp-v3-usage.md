@@ -56,3 +56,23 @@ kullanılır. Terminali olmayan RECOVERY_REQUIRED operatör uzlaştırması iste
 Restart v3 seçimini/Run iznini geri yüklemez. Eski peer generation/request key'lerini
 yeniden kullanmayın; tombstone'lar kalıcıdır. Fiziksel PLC/robot/kamera/mm kabulü
 bu simulator örneğiyle kapanmaz.
+
+
+## Uygulanan yetenekler ve kabul sınırı
+
+| Yetenek | Uygulanan yol / sınır |
+| --- | --- |
+| Ölçüm ve kontrol | Üç applicationType aynı Set Variables → Result → Publish Data → terminal/outbox yolunu kullanır; mm ve Boolean false geçerli NOK olabilir. |
+| TCP v3 Runtime | Açık Run ile TCP server; en çok 16 ayrı hedef/grup, ilk grup tetik girişi, diğerleri RESULT/ACK. |
+| Genel Pose | Frame UUID/revision ve mm/quaternion-wxyz ile whole SpatialTransform; simulator sabiti ve typed INPUT/evaluator sınırı test edilir. Gerçek Runtime pose producer yoktur. |
+| Teslim / restart | Kalıcı dedup, terminal sonrası gönderim, hedef başına ACK/retry, required bariyeri, optional128 ve namespace rollover. Restart üretim başlatmaz. |
+| TCP client | Profil ve Connect/Test bağlantı probu vardır; üretim v3 client teslim/tetik adaptörü uygulanmadı. |
+| Legacy v2 | Ayrı listener/mesajlar ve eski scalar mapping korunur. V3'e sessiz geçiş yoktur. |
+| Modbus / OPC UA | Adaptör ve SDK entegrasyonu uygulanmadı; seçilmeyen alt fazlar COMM-24–33. Profil doğrulaması TCP dışı protokolü reddeder. |
+| CalibrationSample / FANUC | COMM-34/35 seçilmedi; robot veri profili, hand-eye ve hareket kontrolü yoktur. |
+| SDK OFF | OECS SDK başlıkları olmadan ürün ayarı/edinimi kullanılamaz; injected test API'si ürün capability'sini açmaz. ZXing OFF core yapılandırmasında reader unavailable'dır. |
+
+Yazılım kabulü gerçek localhost simulator/kalıcı kayıt fixture'larıyla alınır.
+Fiziksel PLC/robot/kamera, bağımsız mm, native OECS korelasyon, kurulum,
+dağıtım ve CUDA kabulü ayrıdır. SDK ON kamera düğmesi/readback kabulü SDK OFF
+koşumundan çıkarılmaz. Dış plaka rasteri verilmezse ilgili test skipped kalır.

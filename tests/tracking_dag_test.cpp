@@ -53,7 +53,7 @@ int main(int argc,char** argv){QCoreApplication app(argc,argv);try{
             if(consumerKind=="edge_pair")roi.geometry=ScanSegment{{95,85},{95,105},2};
             if(consumerKind=="line_fit")roi.geometry=RotatedRectangle{{115,60},{24,20},0};
             if(consumerKind=="circle_fit")roi.geometry=Annulus{{95,125},5,15};
-            consumer.parameters["scanRoi"]=roi.toJson();consumer.parameters["polarity"]=consumerKind=="edge_pair" ? "bright":"rising";
+            if(consumerKind=="circle_fit")consumer.parameters=defaultParameters("circle_fit");consumer.parameters["scanRoi"]=roi.toJson();consumer.parameters["polarity"]=consumerKind=="edge_pair" ? "bright":"rising";
             consumer=PoseRoiService::teachTool(consumer,{"part/local"},source,taught,teaching);project.updateTool(consumer);
             links.append({camera,"image",id,"image"});links.append({poseId,"pose",id,"poseReference"});
             reject([&]{ToolExecutors::get(consumerKind)(consumer,{{"image",{{"image",PortType::Image,"px","image"},current,true,"frame","cycle",current.metadata()}}},dir.path(),"frame","cycle",{});});

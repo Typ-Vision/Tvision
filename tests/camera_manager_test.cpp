@@ -216,7 +216,7 @@ int main(int argc,char** argv){QApplication app(argc,argv);try{
         MeasurementWorkspace legacy(path,"legacy",[]{return true;});CameraSession legacyJobs;CameraManager legacyView([&]{return &legacy;},[]{return true;},legacyJobs,dir.path()+"/legacy.ini",nullptr,scanner,factory);legacyView.resize(1400,900);legacyView.show();legacyView.scan();waitUi([&]{return !legacyJobs.busy();});
         auto* profiles=legacyView.findChild<QComboBox*>("cameraProfiles");check(profiles->currentIndex()==-1 && profiles->isVisible() && !legacyView.findChild<QPushButton*>("cameraSettingsRead")->isEnabled(),"legacy ambiguity requires explicit visible selection");CameraFlowSmokeAudit::save(legacyView,evidence+"/camera-legacy-ambiguous.png");
         legacyView.findChild<QLineEdit*>("cameraShortId")->setText("LEGACY");profiles->setCurrentIndex(1);legacyView.findChild<QPushButton*>("cameraDefaultsSave")->click();check(legacy.environment().defaults(r.camera.id).profile==p.id && profiles->isVisible(),"explicit legacy defaults persist then hide chooser");}
-    // Real experimental API contract through the widget, without a physical SDK.
+    // Product settings follow SDK availability; injected hardware is not physical evidence.
     {namespace oe=oecs_experimental_fixture;
         const auto path=dir.path()+"/product-settings.vfproject";QFile file(path);check(file.open(QIODevice::WriteOnly),"settings project");file.write("{}");file.close();
         MeasurementWorkspace ws(path,"product-settings",[]{return true;});CameraSession settingJobs;auto hardware=oe::state();hardware->dynamicAuto=true;
@@ -227,8 +227,10 @@ int main(int argc,char** argv){QApplication app(argc,argv);try{
         product.findChild<QLineEdit*>("cameraExperimentalRuntime")->setText(runtime.fileName());product.resize(1400,900);product.show();product.scan();waitUi([&]{return !settingJobs.busy();});
         auto* add=product.findChild<QPushButton*>("cameraRegister");auto* read=product.findChild<QPushButton*>("cameraSettingsRead");auto* apply=product.findChild<QPushButton*>("cameraApply");
         check(add->isEnabled() && !read->isEnabled(),"unregistered product camera can add without native admission");add->click();
-        check(ws.environment().current.cameras.size()==1 && add->text()=="Kamera kayıtlı" && !add->isEnabled() && read->isEnabled(),"pending registered camera can read real product settings");
+        check(ws.environment().current.cameras.size()==1 && add->text()=="Kamera kayıtlı" && !add->isEnabled(),"pending camera registered without native admission");
+        check(read->isEnabled()==oecsSdkBindingCompiled(),"SDK OFF keeps product settings unavailable despite injected API");
         check(!product.findChild<QPushButton*>("cameraPreview")->isEnabled(),"native preview stays closed");
+        if(oecsSdkBindingCompiled()){
         read->click();waitUi([&]{return !settingJobs.busy();});
         auto* exposure=product.findChild<QLineEdit*>("cameraExposure");check(exposure->isEnabled() && exposure->text()=="5000" && apply->isEnabled(),"product scalar values enabled from SDK readback");
         check(!product.findChild<QCheckBox*>("cameraExperimental"),"product has no acquisition opt-in");check(read->isEnabled() && apply->isEnabled(),"experimental opt-in does not disable settings");
@@ -243,6 +245,7 @@ int main(int argc,char** argv){QApplication app(argc,argv);try{
         product.findChild<QGroupBox*>("cameraAdvanced")->setChecked(false);
         product.findChild<QLabel*>("cameraTitle")->setText("Sentetik Opto SDK • ürün ayar yolu");
         for(const auto size:{QSize(1400,900),QSize(850,600)}){product.resize(size);QApplication::processEvents();product.findChild<QScrollArea*>()->ensureWidgetVisible(read);QApplication::processEvents();CameraFlowSmokeAudit::save(product,evidence+QString("/product-settings-%1.png").arg(size.width()));}
+        }
     }
     {namespace oe=oecs_experimental_fixture;
         const auto r=oe::request();const auto path=dir.path()+"/experimental.vfproject";
@@ -259,6 +262,8 @@ int main(int argc,char** argv){QApplication app(argc,argv);try{
         expView.findChild<QLineEdit*>("cameraExperimentalRuntime")->setText(dll.fileName());check(!expView.findChild<QCheckBox*>("cameraExperimental"),"new session has no experimental opt-in");
         expView.findChild<QSpinBox*>("cameraTimeout")->setValue(3000); // This SDK fixture asserts a 3 s stream budget.
         auto* expSave=expView.findChild<QPushButton*>("cameraSaveFrame");auto* expImage=static_cast<ImageViewer*>(expView.findChild<QGraphicsView*>("cameraPreviewImage"));
+        if(!oecsSdkBindingCompiled()){check(!expView.findChild<QPushButton*>("cameraPreview")->isEnabled() && !expSave->isEnabled() && !expImage->hasImage(),"SDK OFF cannot acquire or save a fabricated frame");}
+        else {
         expView.findChild<QPushButton*>("cameraPreview")->click();waitUi([&]{return !expJobs.busy();});
         check(expImage->hasImage() && expSave->isEnabled(),qPrintable("single experimental visible frame can save after clean shutdown: "+expView.findChild<QLabel*>("cameraStatus")->text()));
         const auto saved=evidence+"/visible-experimental.pgm";QFile::remove(saved);QFile::remove(saved+".json");
@@ -274,6 +279,7 @@ int main(int argc,char** argv){QApplication app(argc,argv);try{
         expView.findChild<QPushButton*>("cameraLive")->click();waitUi([&]{return expSave->isEnabled();});
         const auto liveSaved=evidence+"/visible-live.pgm";QFile::remove(liveSaved);QFile::remove(liveSaved+".json");choose(liveSaved,false);expSave->click();
         check(QFileInfo::exists(liveSaved),"save dialog holds visible live raster while acquisition continues");expView.stop();waitUi([&]{return !expJobs.busy();});
+        }
     }
     {const auto path=dir.filePath("management.vfproject");QFile file(path);check(file.open(QIODevice::WriteOnly),"management saved project");file.write("{}");file.close();
         const auto r=request();MeasurementEnvironmentRegistry registry(MeasurementEnvironmentRepository(path,"management"));registry.replace({{r.camera},{r.setup},{r.profile}});

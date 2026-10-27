@@ -24,7 +24,7 @@ using namespace visionflow;
 namespace {
 void check(bool ok,const char* why){if(!ok)throw std::runtime_error(why);}
 QByteArray hash(const QJsonObject& p){return QCryptographicHash::hash(QJsonDocument(p).toJson(QJsonDocument::Compact),QCryptographicHash::Sha256);}
-void type(QDoubleSpinBox* spin,const QString& text){spin->setFocus();spin->selectAll();QTest::keyClicks(spin,text);QTest::keyClick(spin,Qt::Key_Return);}
+void type(QDoubleSpinBox* spin,const QString& text){spin->setFocus();spin->selectAll();QTest::keyClicks(spin,QString(text).replace(".",spin->locale().decimalPoint()));QTest::keyClick(spin,Qt::Key_Return);}
 }
 int main(int argc,char** argv){QApplication app(argc,argv);QFontDatabase::addApplicationFont("C:/Windows/Fonts/segoeui.ttf");try{
     const double exact=1.23456789;
@@ -40,10 +40,10 @@ int main(int argc,char** argv){QApplication app(argc,argv);QFontDatabase::addApp
     // Typing the already visible value is an explicit edit, even without valueChanged.
     type(length,"1.235");check(editor.parameters()["diameterLower"]==1.235,"explicit same-display commit");
     type(tiny,"0.000");check(editor.parameters()["maxRms"]==.001,"new positive minimum");
-    loadPrecisionInput(length,exact,true);length->setFocus();length->selectAll();QTest::keyClicks(length,"2.345");QTest::keyClick(length,Qt::Key_Escape);
+    loadPrecisionInput(length,exact,true);length->setFocus();length->selectAll();QTest::keyClicks(length,QString("2.345").replace(".",length->locale().decimalPoint()));QTest::keyClick(length,Qt::Key_Escape);
     check(editor.parameters()["diameterLower"]==exact,"Escape restores original precision");
     loadPrecisionInput(length,exact,true);type(length,"2.345");type(length,"1.235");check(editor.parameters()["diameterLower"]==1.235,"typed return commits displayed value");
-    loadPrecisionInput(length,exact,true);length->setFocus();length->selectAll();QTest::keyClicks(length,"3.456");tiny->setFocus();QApplication::processEvents();check(editor.parameters()["diameterLower"]==3.456,"focus loss commits edit");
+    loadPrecisionInput(length,exact,true);length->setFocus();length->selectAll();QTest::keyClicks(length,QString("3.456").replace(".",length->locale().decimalPoint()));tiny->setFocus();QApplication::processEvents();check(editor.parameters()["diameterLower"]==3.456,"focus loss commits edit");
     loadPrecisionInput(length,exact,true);length->stepUp();length->stepDown();check(editor.parameters()["diameterLower"]==1.235,"step round trip is an explicit edit");
     const auto encoded=QJsonDocument(editor.parameters()).toJson();const auto reopened=QJsonDocument::fromJson(encoded).object();MetrologyEditor reopen("circle_fit",reopened,"raw",true);check(hash(reopen.parameters())==hash(reopened),"encode reopen no-op");
     auto edge=defaultParameters("edge_point");edge["sigmaPx"]=exact;EdgePointEditor ep(edge);ep.findChild<QCheckBox*>("ep_subpixel")->toggle();check(ep.parameters()["sigmaPx"]==exact,"edge unrelated commit");type(ep.findChild<QDoubleSpinBox*>("ep_sigmaPx"),"1.235");check(ep.parameters()["sigmaPx"]==1.235,"edge explicit commit");

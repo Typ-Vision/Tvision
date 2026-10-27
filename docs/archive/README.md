@@ -6,6 +6,7 @@ görev” ifadeleri yazıldıkları tarihe aittir.
 
 | Dönem / görev | Kayıt |
 | --- | --- |
+| 28 Ekim 2026 — COMM-37 | [Birleşik Release, üç tür TCP/Pose ve full regresyon kabulü](2026-10-28-comm-37.md) |
 | 28 Ekim 2026 — COMM-36 | [Çoklu TCP hedef, bağımsız ACK ve whole Pose kabulü](2026-10-28-comm-36.md) |
 | 28 Ekim 2026 — COMM-23 | [TCP yazılım/görsel kabul, hata matrisi ve regresyon sınırları](2026-10-28-comm-23.md) |
 | 27 Ekim 2026 — COMM-23-PRECHECK | [Kısmi COMM-23 kodu, dört test ve build ortamı](2026-10-27-comm-23-precheck.md) |

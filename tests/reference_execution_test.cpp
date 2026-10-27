@@ -63,7 +63,7 @@ int main(int argc,char** argv){QCoreApplication app(argc,argv);try{
             if(kind=="circle_fit")roi.geometry=ArcRoi{{{95,125},5,15},10,-330};
             if(kind=="blob")t.parameters["searchRoi"]=rect(120,160,40,20);
             else if(kind=="edge"){t.parameters["searchRoi"]=rect(88,50,15,21);t.parameters["direction"]="top_to_bottom";}
-            else {t.parameters["scanRoi"]=roi.toJson();t.parameters["polarity"]=kind=="edge_pair" ? "bright":"rising";}
+            else {if(kind=="circle_fit")t.parameters=defaultParameters("circle_fit");t.parameters["scanRoi"]=roi.toJson();t.parameters["polarity"]=kind=="edge_pair" ? "bright":"rising";}
             p.updateTool(t);
         }
         auto baseline=ExecutionService{}.run(p.activeRecipe()->definition,dir.path(),p.activeRecipe()->id,{}, {},{},teaching);done(baseline);

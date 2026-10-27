@@ -1,6 +1,6 @@
 # COMM-37 — Birleşik Release ve regresyon kabulü
 
-Durum: başlamadı. Önerilen düzey: **medium**. Önkoşul: **COMM-36** tamam; her etkin adaptörün COMM-23/28/33 kabulü mevcut.
+Durum: **tamamlandı** — [28 Ekim 2026 kabul kaydı](../../archive/2026-10-28-comm-37.md). Önerilen düzey: **medium**. Önkoşul: **COMM-36** tamam; her etkin adaptörün COMM-23/28/33 kabulü mevcut.
 Bir oturumda yalnız bu kart; paralel uygulayıcı yok.
 
 ## Oku

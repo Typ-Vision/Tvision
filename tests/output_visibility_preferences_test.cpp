@@ -137,7 +137,7 @@ int main(int argc, char** argv) {
         for (int n = 0; n < 4; ++n) {
             const auto result = n == 0 ? preferences.save(realId, QSet<QString>{}) : n == 1 ? preferences.showAll(realId, "blob")
                 : n == 2 ? preferences.save(realId, QSet<QString>{"count"}) : preferences.reset(realId);
-            check(result.ok(), "preference action persisted");
+            check(result.ok(), qPrintable("preference action persisted: " + result.error));
             check(!project.dirty() && !project.recipeDirty(recipe) && ProjectRepository::encode(project.project()) == encodedProject
                 && read(project.path()) == projectDisk, "recipe bytes/dirty/revision unchanged");
             check(session.signature(context) == signature && session.accepts(signature, context), "configuration hash unchanged");
