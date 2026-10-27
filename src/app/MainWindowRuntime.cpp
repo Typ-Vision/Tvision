@@ -15,6 +15,8 @@
 #include "application/CameraLocalConfiguration.hpp"
 #include "application/ExperimentalOecsAcquisition.hpp"
 #include <QCheckBox>
+#include <QLineEdit>
+#include "DeliveryDiagnosticsWidget.hpp"
 #include <QSettings>
 #include "application/RuntimeOverlay.hpp"
 #include "application/ReferenceService.hpp"
@@ -51,6 +53,8 @@ QWidget* MainWindow::makeRuntime() {
     const QVector<QPair<QString,QString>> commands{{"verify","Kaynağı doğrula"},{"run","Run"},{"stop","Stop"},{"cycle","Tek çevrim"},{"retry","Kaydı tekrar yaz"}};
     for(const auto& command:commands){auto* b=new QPushButton(command.second);b->setObjectName("runtime_"+command.first);actions->addWidget(b);connect(b,&QPushButton::clicked,this,[this,action=command.first]{runtimeAction(action);});}
     layout->addLayout(actions);
+    auto* tcpRow=new QHBoxLayout;auto* tcp=new QCheckBox("Run ile TCP v3 profilini aç");tcp->setObjectName("runtimeTcpV3");tcpRow->addWidget(tcp);
+    auto* peer=new QLineEdit;peer->setObjectName("runtimeTcpPeer");peer->setPlaceholderText("Peer / namespace generation (açık mutabakat)");peer->setMaxLength(128);tcpRow->addWidget(peer,1);auto* closeTcp=new QPushButton("V3 kapat");closeTcp->setObjectName("runtime_tcp_stop");tcpRow->addWidget(closeTcp);connect(closeTcp,&QPushButton::clicked,this,[this]{runtimeAction("tcp_stop");});layout->addLayout(tcpRow);
     auto* allTools=new QCheckBox("Tüm araçları göster");allTools->setObjectName("runtimeAllTools");
     {QSettings settings(settingsFile_,QSettings::IniFormat);allTools->setChecked(settings.value("runtime/allToolOverlays",true).toBool());}
     connect(allTools,&QCheckBox::toggled,this,[this](bool checked){QSettings settings(settingsFile_,QSettings::IniFormat);settings.setValue("runtime/allToolOverlays",checked);settings.sync();showRuntimeResult();});
@@ -101,16 +105,16 @@ void MainWindow::ensureRuntime() {
     if(runtime_ && runtimePath_==service_.path() && runtimeWorkspaceKey_==measurementWorkspaceKey_)return;
     if(plc_ && plc_->blocking())throw std::runtime_error("Önce PLC kaydı/ACK tamamlanmalı.");
     if(runtimeJobs_.busy() || (runtime_ && runtime_->busy()))throw std::runtime_error("Önce Runtime çevrimini/kaydını tamamlayın.");
-    if(plc_)plc_->bind(nullptr,nullptr);runtimeCoordinator_.reset();runtimePath_=service_.path();runtimeWorkspaceKey_=measurementWorkspaceKey_;runtime_=std::make_unique<RuntimeService>(runtimePath_+".production",runtimePath_+".calibrations.json",RuntimeIdentity::localEngineer(),[this]{return systemCalibrationSnapshot();},[this](const Recipe& r){return systemCalibrationSnapshot(&r);},[this](const Recipe& r){if(!measurementWorkspace_)throw std::runtime_error("Measurement workspace unavailable");return measurementWorkspace_->acquisition(r);},[this](const Recipe& r){return measurementWorkspace_->productionSources(r,runtimeCameraInputs());});
+    resetRuntimeTcp();if(plc_)plc_->bind(nullptr,nullptr);runtimeCoordinator_.reset();runtimePath_=service_.path();runtimeWorkspaceKey_=measurementWorkspaceKey_;runtime_=std::make_unique<RuntimeService>(runtimePath_+".production",runtimePath_+".calibrations.json",RuntimeIdentity::localEngineer(),[this]{return systemCalibrationSnapshot();},[this](const Recipe& r){return systemCalibrationSnapshot(&r);},[this](const Recipe& r){if(!measurementWorkspace_)throw std::runtime_error("Measurement workspace unavailable");return measurementWorkspace_->acquisition(r);},[this](const Recipe& r){return withPublication(r,measurementWorkspace_->productionSources(r,runtimeCameraInputs()));});
     runtime_->setAutomaticAcquisition([this](const Recipe& r){
         if(!measurementWorkspace_)throw std::runtime_error("Measurement workspace unavailable");
         const auto inputs=runtimeCameraInputs();
-        return measurementWorkspace_->productionSources(r,inputs,true);
+        return withPublication(r,measurementWorkspace_->productionSources(r,inputs,true));
     });
     runtime_->setConfigurationProviders(
         [this](const Recipe& r){return measurementWorkspace_->configurationForRecipe(r);},
-        [this](const Recipe& r){return measurementWorkspace_->configurationSources(r,runtimeCameraInputs());},
-        [this](const Recipe& r){return measurementWorkspace_->configurationSources(r,runtimeCameraInputs(),true);});
+        [this](const Recipe& r){return withPublication(r,measurementWorkspace_->configurationSources(r,runtimeCameraInputs()));},
+        [this](const Recipe& r){return withPublication(r,measurementWorkspace_->configurationSources(r,runtimeCameraInputs(),true));});
     runtime_->setSourceVerification(measurementWorkspace_->sourceVerification());
     runtimeVerificationError_.clear();
     runtimeCoordinator_=std::make_unique<RuntimeCoordinator>(*runtime_);
@@ -136,8 +140,8 @@ void MainWindow::updateOperatorMode(bool active) {
 void MainWindow::refreshRuntime(bool notification) {
     if(!runtimeStatus_)return;
     if(runtime_ && runtimePath_==service_.path() && service_.activeRecipe())runtime_->observeInstallation(*service_.activeRecipe());
-    if(runtime_ && (runtimePath_!=service_.path() || runtimeWorkspaceKey_!=measurementWorkspaceKey_) && !runtimeJobs_.busy() && !runtime_->busy() && !(plc_ && plc_->blocking())) {
-        if(plc_)plc_->bind(nullptr,nullptr);runtimeCoordinator_.reset();runtime_.reset();runtimePath_.clear();runtimeResult_.reset();showRuntimeResult();
+    if(runtime_ && (runtimePath_!=service_.path() || runtimeWorkspaceKey_!=measurementWorkspaceKey_) && !runtimeJobs_.busy() && !runtime_->busy() && !(plc_ && plc_->blocking()) && !(runtimeCoordinator_ && runtimeCoordinator_->deliveryPending())) {
+        resetRuntimeTcp();if(plc_)plc_->bind(nullptr,nullptr);runtimeCoordinator_.reset();runtime_.reset();runtimePath_.clear();runtimeResult_.reset();showRuntimeResult();
     }
     // Installation/snapshot invalidation and project retirement are never deferred.
     // Only a workspace-originated visual rebuild waits for this page to be shown.
@@ -163,18 +167,22 @@ void MainWindow::refreshRuntime(bool notification) {
     }
     if(runtimeCoordinator_ && runtimeCoordinator_->recordingPending() && !working)status+="\nKAYIT BEKLİYOR — yeni çevrim engelli";
     if(runtimeCoordinator_ && !runtimeCoordinator_->error().isEmpty()){if(state!=RuntimeState::Fault)status+="\n"+runtimeCoordinator_->error();status+="\n"+runtimeCoordinator_->recovery();}
+    if(tcpEndpoint_)status+="\nTCP v3: "+tcpEndpoint_->state()+" • port "+QString::number(tcpEndpoint_->port());
+    findChild<QPushButton*>("runtime_tcp_stop")->setEnabled(tcpEndpoint_ && !pending && !runtimeCoordinator_->deliveryPending() && !tcpEndpoint_->recordingPending() && state!=RuntimeState::Running && state!=RuntimeState::Starting && state!=RuntimeState::Stopping);
+    findChild<QCheckBox*>("runtimeTcpV3")->setEnabled(state==RuntimeState::LoadedStopped || state==RuntimeState::Unloaded);
+    findChild<QLineEdit*>("runtimeTcpPeer")->setEnabled(state==RuntimeState::LoadedStopped || state==RuntimeState::Unloaded);
     if(network)status+="\nPLC: "+plc_->state();
     QString readiness;const bool ready=runtimeSourcesReady(&readiness);
     if(state==RuntimeState::LoadedStopped || state==RuntimeState::Fault || verifying)status+="\n"+readiness;
     runtimeStatus_->setText(status);
     refreshRuntimeSources();
-    const bool available=!verifying && !working && !pending && !(plc_ && plc_->blocking()) && !editorSession_.busy() && !cameraSession_.busy();
+    const bool available=!verifying && !working && !pending && !(runtimeCoordinator_ && runtimeCoordinator_->deliveryPending()) && !(plc_ && plc_->blocking()) && !editorSession_.busy() && !cameraSession_.busy();
     findChild<QPushButton*>("runtime_verify")->setEnabled(available && (state==RuntimeState::LoadedStopped || state==RuntimeState::Fault));
     findChild<QPushButton*>("runtime_run")->setEnabled(available && ready && (state==RuntimeState::LoadedStopped || state==RuntimeState::Fault));
     findChild<QPushButton*>("runtime_cycle")->setEnabled(available && state==RuntimeState::Running && runtimeCoordinator_->mode()==RuntimeTrigger::Manual);
     findChild<QPushButton*>("runtime_stop")->setEnabled(state==RuntimeState::Starting || state==RuntimeState::Running || state==RuntimeState::Fault || working || verifying);
-    findChild<QPushButton*>("runtime_retry")->setVisible(runtimePending_.has_value() || (plc_ && plc_->recordingPending()));
-    findChild<QPushButton*>("runtime_retry")->setEnabled(!working && ((pending && runtimePending_.has_value()) || (plc_ && plc_->recordingPending())));
+    findChild<QPushButton*>("runtime_retry")->setVisible((tcpEndpoint_ && tcpEndpoint_->recordingPending()) || runtimePending_.has_value() || (plc_ && plc_->recordingPending()));
+    findChild<QPushButton*>("runtime_retry")->setEnabled(!working && ((tcpEndpoint_ && tcpEndpoint_->recordingPending()) || (pending && runtimePending_.has_value()) || (plc_ && plc_->recordingPending())));
 }
 bool MainWindow::runtimeSourcesReady(QString* reason) const {
     auto result=[&](bool ready,const QString& message){if(reason)*reason=message;return ready;};
@@ -208,11 +216,13 @@ bool MainWindow::runtimeSourcesReady(QString* reason) const {
 void MainWindow::runtimeAction(const QString& action) {
     const auto timing=AcquisitionTiming::request("runtime");const auto commandedAt=AcquisitionTiming::Clock::now();AcquisitionTimingBinding binding(timing);AcquisitionTimingSpan commandTiming("runtime.user-"+action);
     try {
+        if(action=="tcp_stop"){if(runtimeCoordinator_ && (runtimeCoordinator_->state()==RuntimeState::Running || runtimeCoordinator_->state()==RuntimeState::Starting || runtimeCoordinator_->state()==RuntimeState::Stopping))throw std::runtime_error("Önce Runtime Stop seçin.");resetRuntimeTcp();refreshRuntime();return;}
         if(action=="stop"){
             if(plc_ && plc_->working())plc_->cancel();
             if(runtimeCoordinator_)runtimeCoordinator_->stop();
             runtimeJobs_.stop(SessionJob::Execution);runtimeResult_.reset();showRuntimeResult();refreshRuntime();return;
         }
+        if(action=="retry" && tcpEndpoint_ && tcpEndpoint_->recordingPending()){tcpEndpoint_->retryRecording();refreshRuntime();return;}
         if(action=="retry" && plc_ && plc_->recordingPending()){plc_->retryRecording();refreshRuntime();return;}
         if(plc_ && plc_->blocking())throw std::runtime_error("PLC kayıt/teslimi bekleniyor.");
         if(runtimeJobs_.busy())return;
@@ -247,7 +257,9 @@ void MainWindow::runtimeAction(const QString& action) {
         }
         runtimeResult_.reset();showRuntimeResult();
         if(action=="run") {
+            resetRuntimeTcp();
             runtimeCoordinator_->start();
+            try{startRuntimeTcp();}catch(...){runtimeCoordinator_->stop();throw;}
         } else if(action=="cycle") {
             runtimeCycle_=runtimeCoordinator_->begin(RuntimeTrigger::Manual);const auto cycle=runtimeCycle_;const auto catalog=runtimePath_+".calibrations.json";
             auto* watcher=runtimeJobs_.watch<CycleResult>(this,SessionJob::Execution);const auto cancel=runtimeCoordinator_->cancellation();

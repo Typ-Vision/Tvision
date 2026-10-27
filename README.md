@@ -98,10 +98,10 @@ OECS / GenTL probe komutları, sandbox sınırları ve kanıt bağlantıları
    Doğrulama kayıtlı metrik kaynak iznini yeni kareyle denetler; Run başlatmaz.
    Load/Run hazırlığı tek başına sonuç değildir. Stop → yeniden Load sürümü değiştirir.
 
-Publish Data paketi Editor'da hazırlanır; dışarı yazmaz. Communication: TCP v3
-profil/mapping, bağlantı testi ve Trigger / Delivery diagnostics; Retry aynı
-payload'ı yollar. V2 ayrıdır. Üretim aktivasyonu COMM-23'tedir.
-[Kullanım/kimlik/geçerlilik/ACK ayrıntıları](docs/architecture/communication/source-map.md).
+Publish Data Editor'da paket hazırlar. TCP v3 için kayıtlı sunucu profili ve
+SoftwareTrigger reçetesiyle Load → Runtime'da v3 seçimi + peer generation → Run.
+Restart bu izni açmaz; Stop yeni tetikleri keser, pending ACK korunur. V2 ayrıdır.
+[Simulator ve kısa kullanım](docs/architecture/communication/tcp-v3-usage.md).
 
 Normal kamera komutları uygun edinim yolunu seçer; ek OECS modu/onayı yoktur.
 Profil bağlama, PGM+JSON, kalibrasyon, Runtime ve panel

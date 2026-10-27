@@ -22,6 +22,33 @@
 #include "DeliveryDiagnosticsWidget.hpp"
 
 namespace visionflow {
+MultiSourceDependencies MainWindow::withPublication(const Recipe& r,MultiSourceDependencies d) const {
+    d.publication=PublicationService::capture(r.definition,CommunicationProfiles(QFileInfo(settingsFile_).absolutePath()+"/communication-profiles.json"));return d;
+}
+void MainWindow::resetRuntimeTcp(){
+    if(tcpEndpoint_ && (runtime_->busy() || tcpEndpoint_->recordingPending() || runtimeCoordinator_->deliveryPending()))throw std::runtime_error("TCP v3 kayıt/ACK bekleniyor.");
+    tcpEndpoint_.reset();tcpRouter_.reset();tcpLedger_.reset();tcpInputs_.reset();
+}
+void MainWindow::startRuntimeTcp(){
+    if(!findChild<QCheckBox*>("runtimeTcpV3")->isChecked())return;
+    if(plc_ && plc_->listening())throw std::runtime_error("TCP v3 için önce v2 dinlemesini durdurun.");
+    if(runtime_->experimental() || runtimeCoordinator_->mode()!=RuntimeTrigger::SoftwareTrigger)throw std::runtime_error("TCP v3: kayıtlı SoftwareTrigger ve normal Runtime gerekir.");
+    const auto snapshot=runtime_->active();if(!snapshot || !snapshot->publication())throw std::runtime_error("TCP v3: yüklü Publish Data profili yok.");
+    QVector<OutputGroup> groups;for(const auto& t:editorTools(snapshot->recipe().definition))if(t.enabled && t.kind=="publish_data")for(const auto& id:decodePublishConfig(t.parameters).groups)for(const auto& g:recipeOutputGroups(snapshot->recipe().definition))if(g.id==id)groups.append(g);
+    if(groups.size()!=1)throw std::runtime_error("TCP v3: bu kapıda tek etkin yayın grubu gerekir; çoklu hedef COMM-36.");
+    const auto group=groups.first();const auto profile=snapshot->publication()->profiles.value(group.profileId);
+    if(!profile.enabled || profile.protocol!="tcp" || profile.role!="server")throw std::runtime_error("TCP v3: enabled TCP server profili gerekir.");
+    CommunicationTcpOptions options;options.address=QHostAddress(profile.address);options.port=profile.port;options.ackTimeoutMs=profile.timeoutMs;options.retryCount=profile.retries;
+    options.workcell="local";options.project=runtimeProjectId_;options.endpoint=profile.id;options.peer=findChild<QLineEdit*>("runtimeTcpPeer")->text().trimmed();options.outputGroupId=group.id;options.required=group.required;
+    tcpInputs_=std::make_unique<InputSnapshotStore>();tcpLedger_=std::make_unique<DeliveryStore>(runtimePath_+".production");
+    tcpRouter_=std::make_unique<TriggerRouter>(*runtimeCoordinator_,*runtime_,*tcpInputs_,*tcpLedger_,[this]{return editorSession_.busy() || cameraSession_.busy() || runtimeJobs_.busy()?QString("NOT_READY"):QString{};});
+    tcpEndpoint_=std::make_unique<CommunicationTcpEndpoint>(*runtime_,*runtimeCoordinator_,*tcpRouter_,*tcpInputs_,*tcpLedger_,runtimePath_+".production",runtimePath_+".calibrations.json");
+    tcpEndpoint_->started=[this]{runtimeResult_.reset();showRuntimeResult();refreshRuntime();};
+    tcpEndpoint_->completed=[this](const CycleResult& r){if(measurementWorkspace_ && runtime_->active())measurementWorkspace_->observeAcquisition(runtime_->active()->recipe(),r);if(runtimeCoordinator_->state()==RuntimeState::Running)runtimeResult_=r;else runtimeResult_.reset();showRuntimeResult();refreshRuntime();};
+    try{tcpEndpoint_->listen(options);}catch(...){tcpEndpoint_.reset();throw;}
+    if(deliveryDiagnostics_)deliveryDiagnostics_->bindEndpoint(tcpEndpoint_.get());
+}
+
 QWidget* MainWindow::makeCommunication() {
     auto* page=new QWidget;auto* layout=new QVBoxLayout(page);
     auto* description=new QLabel("PLC • TCP/IP Socket • VisionFlow sunucu / PLC istemci\nSürümlü JSON satırları: TRIGGER → BUSY → DONE → ACK. Robot iletişimi henüz uygulanmadı.");
@@ -49,7 +76,7 @@ plcAddress_=new QLineEdit("127.0.0.1");plcAddress_->setObjectName("plcAddress");
     auto* trace=new QPlainTextEdit;trace->setReadOnly(true);trace->setObjectName("plcTrace");trace->setMaximumBlockCount(128);layout->addWidget(trace,1);
     auto* note=new QLabel("Socket reçeteden bağımsızdır. AutoStart otomatik Run yapmaz. Tetik modu ve sonuç kaynağı reçeteye Save ile kaydedilir. Fiziksel PLC ve ölçüm kabulü açık.");note->setWordWrap(true);layout->addWidget(note);
     connect(page->findChild<QCheckBox*>("plc_enabled"),&QCheckBox::toggled,this,[this]{refreshCommunication();});
-    auto* timer=new QTimer(page);timer->setInterval(250);connect(timer,&QTimer::timeout,this,[this]{refreshCommunication();});timer->start();
+    auto* timer=new QTimer(page);timer->setInterval(250);connect(timer,&QTimer::timeout,this,[this]{refreshCommunication();if(tcpEndpoint_ && runtimeStatus_){const auto state=tcpEndpoint_->state();if(runtimeStatus_->property("tcpState").toString()!=state){runtimeStatus_->setProperty("tcpState",state);refreshRuntime(false);}}});timer->start();
     for(auto* field:page->findChildren<QLineEdit*>())field->setMinimumHeight(26);
     for(auto* field:page->findChildren<QSpinBox*>())field->setMinimumHeight(26);
     for(auto* field:page->findChildren<QComboBox*>())field->setMinimumHeight(26);
@@ -123,6 +150,7 @@ void MainWindow::communicationAction(const QString& action) {
                 if(settings.status()!=QSettings::NoError)throw std::runtime_error("Socket settings could not be saved.");
             }else {
                 if(!findChild<QCheckBox*>("plc_enabled")->isChecked())throw std::runtime_error("TCP iletişimini etkinleştir kutusunu işaretleyin.");
+                if(tcpEndpoint_ && tcpEndpoint_->listening())throw std::runtime_error("Önce TCP v3 Runtime Stop ve yeni Run için v3 seçimini kaldırın.");
                 PlcSocketOptions options;options.address=address;options.port=quint16(findChild<QSpinBox*>("plcPort")->value());options.ackTimeoutMs=findChild<QSpinBox*>("plcAckTimeout")->value();options.retryCount=findChild<QSpinBox*>("plcRetries")->value();
                 if(runtimeCoordinator_ && runtimeCoordinator_->loaded())options.measurementToolId=runtimeCoordinator_->loaded()->definition["runtime"].toObject()["measurementToolId"].toString();
                 plc_->listen(options);

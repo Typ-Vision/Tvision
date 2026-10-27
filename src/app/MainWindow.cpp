@@ -236,6 +236,7 @@ void MainWindow::restoreLayout() {
     bottom->setChildrenCollapsible(false);bottom->setOrientation(Qt::Horizontal);
 }
 void MainWindow::closeEvent(QCloseEvent* event) {
+    if(tcpEndpoint_ && (tcpEndpoint_->recordingPending() || (runtimeCoordinator_ && runtimeCoordinator_->deliveryPending()))){displayError("TCP v3 kayıt/ACK bekleniyor; diagnostics ile uzlaştırın.");event->ignore();return;}
     if(plc_ && plc_->blocking()){displayError("PLC çevrim kaydı ve ACK tamamlanmadan pencere kapatılamaz.");event->ignore();return;}
     if(cameraManager_ && cameraManager_->hasPreview()){
         cameraManager_->leave([this]{close();});event->ignore();return;

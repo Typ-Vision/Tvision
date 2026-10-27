@@ -16,7 +16,7 @@ int main(int argc, char* argv[]) {
     QFile theme(":/resources/theme.qss");
     if (!theme.open(QIODevice::ReadOnly)) return 2;
     app.setStyleSheet(QString::fromUtf8(theme.readAll()));
-    const bool publicationOnly=app.arguments().contains("--publication-smoke");
+    const bool publicationOnly=app.arguments().contains("--publication-smoke") || app.arguments().contains("--tcp-acceptance-smoke");
     const bool endpointsOnly=app.arguments().contains("--endpoints-smoke");
     const bool resultOnly=app.arguments().contains("--result-smoke");
     const bool assignmentsOnly=app.arguments().contains("--assignments-smoke");

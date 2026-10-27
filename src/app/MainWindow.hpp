@@ -15,6 +15,7 @@
 #include "application/PlaneMappingService.hpp"
 #include "application/RuntimeCoordinator.hpp"
 #include "application/PlcRuntimeSocket.hpp"
+#include "application/CommunicationTcpEndpoint.hpp"
 #include "application/MeasurementWorkspace.hpp"
 class QVBoxLayout;
 class QTableWidget;
@@ -104,6 +105,9 @@ private:
     void ensureRuntime();
     IndustrialExecutionInputs runtimeCameraInputs() const;
     void initializeCommunication();
+    MultiSourceDependencies withPublication(const Recipe&,MultiSourceDependencies) const;
+    void startRuntimeTcp();
+    void resetRuntimeTcp();
     void refreshCalibration();
     QWidget* makeProjectManager();
     QWidget* makeRecipeManager();
@@ -245,6 +249,10 @@ private:
     std::unique_ptr<RuntimeCoordinator> runtimeCoordinator_;
     DeliveryDiagnosticsWidget* deliveryDiagnostics_=nullptr;
     std::unique_ptr<PlcRuntimeSocket> plc_;
+    std::unique_ptr<InputSnapshotStore> tcpInputs_;
+    std::unique_ptr<DeliveryStore> tcpLedger_;
+    std::unique_ptr<TriggerRouter> tcpRouter_;
+    std::unique_ptr<CommunicationTcpEndpoint> tcpEndpoint_;
     QLineEdit* plcAddress_{};
     QComboBox* plcMapping_{};
     QLabel* plcStatus_{};
