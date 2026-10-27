@@ -1,0 +1,442 @@
+{
+  "fixtureVersion": 1,
+  "messages": [
+    {
+      "v": 3,
+      "type": "STATUS",
+      "sessionId": "session-1"
+    },
+    {
+      "v": 3,
+      "type": "HELLO",
+      "sessionId": "session-1",
+      "state": "READY",
+      "ready": true,
+      "busy": false,
+      "recipeId": "recipe-1",
+      "configId": "config-1"
+    },
+    {
+      "v": 3,
+      "type": "STATUS",
+      "sessionId": "session-1",
+      "state": "STOPPED",
+      "ready": false,
+      "busy": false,
+      "recipeId": "",
+      "configId": ""
+    },
+    {
+      "v": 3,
+      "type": "TRIGGER",
+      "sessionId": "session-1",
+      "requestId": "part-1",
+      "sequence": "9007199254740993",
+      "recipeId": "recipe-1",
+      "configId": "config-1",
+      "inputSnapshotId": "input-1",
+      "inputRevision": "1"
+    },
+    {
+      "v": 3,
+      "type": "INPUT",
+      "sessionId": "session-1",
+      "snapshotId": "input-1",
+      "revision": "1",
+      "recipeId": "recipe-1",
+      "configId": "config-1",
+      "fields": [
+        {
+          "name": "count",
+          "type": "Int64",
+          "value": "9223372036854775807",
+          "validity": "valid",
+          "reason": "",
+          "unit": "unitless",
+          "producerId": "",
+          "producerPort": "",
+          "cycleId": "",
+          "frameId": "",
+          "configId": "",
+          "dependencyIds": []
+        },
+        {
+          "name": "missing",
+          "type": "Float64",
+          "value": null,
+          "validity": "missing",
+          "reason": "source unavailable",
+          "unit": "mm",
+          "producerId": "",
+          "producerPort": "",
+          "cycleId": "",
+          "frameId": "",
+          "configId": "",
+          "dependencyIds": []
+        },
+        {
+          "name": "pose",
+          "type": "Pose",
+          "value": {
+            "schemaVersion": 1,
+            "convention": "right-handed-column-vector",
+            "source": {
+              "deviceId": "robot-controller",
+              "robotId": "robot-1",
+              "groupId": "",
+              "frameUuid": "11111111-1111-4111-8111-111111111111",
+              "revision": 1
+            },
+            "target": {
+              "deviceId": "robot-controller",
+              "robotId": "robot-1",
+              "groupId": "",
+              "frameUuid": "22222222-2222-4222-8222-222222222222",
+              "revision": 1
+            },
+            "translationUnit": "mm",
+            "translation": [
+              10,
+              20,
+              30
+            ],
+            "rotation": {
+              "format": "quaternion-wxyz",
+              "value": [
+                1,
+                0,
+                0,
+                0
+              ]
+            }
+          },
+          "validity": "valid",
+          "reason": "",
+          "unit": "mm",
+          "producerId": "",
+          "producerPort": "",
+          "cycleId": "",
+          "frameId": "",
+          "configId": "",
+          "dependencyIds": []
+        },
+        {
+          "name": "passed",
+          "type": "Boolean",
+          "value": false,
+          "validity": "valid",
+          "reason": "",
+          "unit": "unitless",
+          "producerId": "",
+          "producerPort": "",
+          "cycleId": "",
+          "frameId": "",
+          "configId": "",
+          "dependencyIds": []
+        },
+        {
+          "name": "label",
+          "type": "String",
+          "value": "part",
+          "validity": "valid",
+          "reason": "",
+          "unit": "unitless",
+          "producerId": "",
+          "producerPort": "",
+          "cycleId": "",
+          "frameId": "",
+          "configId": "",
+          "dependencyIds": []
+        },
+        {
+          "name": "ratio",
+          "type": "Float64",
+          "value": 12.5,
+          "validity": "valid",
+          "reason": "",
+          "unit": "unitless",
+          "producerId": "",
+          "producerPort": "",
+          "cycleId": "",
+          "frameId": "",
+          "configId": "",
+          "dependencyIds": []
+        },
+        {
+          "name": "code",
+          "type": "Enum",
+          "value": {
+            "definitionId": "part-code",
+            "code": 2
+          },
+          "validity": "valid",
+          "reason": "",
+          "unit": "unitless",
+          "producerId": "",
+          "producerPort": "",
+          "cycleId": "",
+          "frameId": "",
+          "configId": "",
+          "dependencyIds": []
+        },
+        {
+          "name": "signed",
+          "type": "Int32",
+          "value": -2147483648,
+          "validity": "valid",
+          "reason": "",
+          "unit": "unitless",
+          "producerId": "",
+          "producerPort": "",
+          "cycleId": "",
+          "frameId": "",
+          "configId": "",
+          "dependencyIds": []
+        },
+        {
+          "name": "unsigned",
+          "type": "UInt32",
+          "value": 4294967295,
+          "validity": "valid",
+          "reason": "",
+          "unit": "unitless",
+          "producerId": "",
+          "producerPort": "",
+          "cycleId": "",
+          "frameId": "",
+          "configId": "",
+          "dependencyIds": []
+        }
+      ],
+      "sourceTime": "2026-10-27T10:00:00Z",
+      "clockId": "plc-clock"
+    },
+    {
+      "v": 3,
+      "type": "ACCEPTED",
+      "sessionId": "session-1",
+      "requestId": "part-1",
+      "sequence": "9007199254740993",
+      "cycleId": "cycle-1"
+    },
+    {
+      "v": 3,
+      "type": "BUSY",
+      "sessionId": "session-1",
+      "requestId": "part-1",
+      "sequence": "9007199254740993",
+      "cycleId": "cycle-1"
+    },
+    {
+      "v": 3,
+      "type": "RESULT",
+      "sessionId": "session-1",
+      "requestId": "part-1",
+      "sequence": "9007199254740993",
+      "recipeId": "recipe-1",
+      "configId": "config-1",
+      "inputSnapshotId": "input-1",
+      "inputRevision": "1",
+      "resultId": "result-1",
+      "cycleId": "cycle-1",
+      "execution": "DONE",
+      "decision": "NOK",
+      "resultValid": true,
+      "fields": [
+        {
+          "name": "count",
+          "type": "Int64",
+          "value": "9223372036854775807",
+          "validity": "valid",
+          "reason": "",
+          "unit": "unitless",
+          "producerId": "",
+          "producerPort": "",
+          "cycleId": "",
+          "frameId": "",
+          "configId": "",
+          "dependencyIds": []
+        },
+        {
+          "name": "missing",
+          "type": "Float64",
+          "value": null,
+          "validity": "missing",
+          "reason": "source unavailable",
+          "unit": "mm",
+          "producerId": "",
+          "producerPort": "",
+          "cycleId": "",
+          "frameId": "",
+          "configId": "",
+          "dependencyIds": []
+        },
+        {
+          "name": "pose",
+          "type": "Pose",
+          "value": {
+            "schemaVersion": 1,
+            "convention": "right-handed-column-vector",
+            "source": {
+              "deviceId": "robot-controller",
+              "robotId": "robot-1",
+              "groupId": "",
+              "frameUuid": "11111111-1111-4111-8111-111111111111",
+              "revision": 1
+            },
+            "target": {
+              "deviceId": "robot-controller",
+              "robotId": "robot-1",
+              "groupId": "",
+              "frameUuid": "22222222-2222-4222-8222-222222222222",
+              "revision": 1
+            },
+            "translationUnit": "mm",
+            "translation": [
+              10,
+              20,
+              30
+            ],
+            "rotation": {
+              "format": "quaternion-wxyz",
+              "value": [
+                1,
+                0,
+                0,
+                0
+              ]
+            }
+          },
+          "validity": "valid",
+          "reason": "",
+          "unit": "mm",
+          "producerId": "",
+          "producerPort": "",
+          "cycleId": "",
+          "frameId": "",
+          "configId": "",
+          "dependencyIds": []
+        },
+        {
+          "name": "passed",
+          "type": "Boolean",
+          "value": false,
+          "validity": "valid",
+          "reason": "",
+          "unit": "unitless",
+          "producerId": "",
+          "producerPort": "",
+          "cycleId": "",
+          "frameId": "",
+          "configId": "",
+          "dependencyIds": []
+        },
+        {
+          "name": "label",
+          "type": "String",
+          "value": "part",
+          "validity": "valid",
+          "reason": "",
+          "unit": "unitless",
+          "producerId": "",
+          "producerPort": "",
+          "cycleId": "",
+          "frameId": "",
+          "configId": "",
+          "dependencyIds": []
+        },
+        {
+          "name": "ratio",
+          "type": "Float64",
+          "value": 12.5,
+          "validity": "valid",
+          "reason": "",
+          "unit": "unitless",
+          "producerId": "",
+          "producerPort": "",
+          "cycleId": "",
+          "frameId": "",
+          "configId": "",
+          "dependencyIds": []
+        },
+        {
+          "name": "code",
+          "type": "Enum",
+          "value": {
+            "definitionId": "part-code",
+            "code": 2
+          },
+          "validity": "valid",
+          "reason": "",
+          "unit": "unitless",
+          "producerId": "",
+          "producerPort": "",
+          "cycleId": "",
+          "frameId": "",
+          "configId": "",
+          "dependencyIds": []
+        },
+        {
+          "name": "signed",
+          "type": "Int32",
+          "value": -2147483648,
+          "validity": "valid",
+          "reason": "",
+          "unit": "unitless",
+          "producerId": "",
+          "producerPort": "",
+          "cycleId": "",
+          "frameId": "",
+          "configId": "",
+          "dependencyIds": []
+        },
+        {
+          "name": "unsigned",
+          "type": "UInt32",
+          "value": 4294967295,
+          "validity": "valid",
+          "reason": "",
+          "unit": "unitless",
+          "producerId": "",
+          "producerPort": "",
+          "cycleId": "",
+          "frameId": "",
+          "configId": "",
+          "dependencyIds": []
+        }
+      ],
+      "error": "",
+      "payloadHash": "a5fe80ce7a6b0933e60327ad30de429e8240135ebc10d9c1ff2c3cc3f482f099"
+    },
+    {
+      "v": 3,
+      "type": "ACK",
+      "sessionId": "session-1",
+      "requestId": "part-1",
+      "resultId": "result-1",
+      "payloadHash": "a5fe80ce7a6b0933e60327ad30de429e8240135ebc10d9c1ff2c3cc3f482f099"
+    },
+    {
+      "v": 3,
+      "type": "ACKED",
+      "sessionId": "session-1",
+      "requestId": "part-1",
+      "resultId": "result-1",
+      "payloadHash": "a5fe80ce7a6b0933e60327ad30de429e8240135ebc10d9c1ff2c3cc3f482f099"
+    },
+    {
+      "v": 3,
+      "type": "INVALID",
+      "sessionId": "session-1",
+      "requestId": "part-2",
+      "reason": "NOT_READY"
+    },
+    {
+      "v": 3,
+      "type": "ERROR",
+      "sessionId": "session-1",
+      "requestId": "",
+      "code": "BAD_MESSAGE"
+    }
+  ]
+}

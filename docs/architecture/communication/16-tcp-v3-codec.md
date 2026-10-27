@@ -1,6 +1,6 @@
 # COMM-16 — TCP v3 codec ve framing
 
-Durum: başlamadı. Önerilen düzey: **medium**. Önkoşul: **COMM-15** tamam.
+Durum: tamamlandı; [kapanış](../../archive/2026-10-27-comm-16.md). Önerilen düzey: **medium**. Önkoşul: **COMM-15** tamam.
 Bir oturumda yalnız bu kart; paralel uygulayıcı yok.
 
 ## Oku
@@ -16,6 +16,8 @@ Bir oturumda yalnız bu kart; paralel uygulayıcı yok.
 1. V3 command/result/input/ack strict JSON codec'i ve bounded JSON-LF framer'ı ayrı ekle.
 2. C7 zarf/alan kurallarını versioned examples/fixture olarak kaydet; v2 parser'a yeni alan zorlaması yapma.
 3. Canonical persisted payload ve hash için deterministik format tanımla.
+
+Uygulanan exact alanlar ve canonical format: [v3 wire sözleşmesi](tcp-v3-wire.md).
 
 ## Değişiklik sınırı
 

@@ -4,16 +4,18 @@
 
 ## Devam noktası
 
-**[COMM-15](archive/2026-10-27-comm-15.md):** Input/Trigger Router tamam; ağ yok.
-**Sonraki COMM-16.** [COMM-14](archive/2026-10-27-comm-14.md): journal/outbox.
+**[COMM-16](archive/2026-10-27-comm-16.md):** V3 codec/LF/hash.
+**Sonraki COMM-17.** V3 ağ yok.
+[COMM-15](archive/2026-10-27-comm-15.md): Input/router;
+[COMM-14](archive/2026-10-27-comm-14.md): journal/outbox;
 [COMM-13](archive/2026-10-27-comm-13.md): Terminal10/bundle1;
-[COMM-12](archive/2026-10-27-comm-12.md): yerel profil/group/intent.
-Editor/Load ağ başlatmaz.
+[COMM-12](archive/2026-10-27-comm-12.md): profil/group/intent.
+Editor/Load ağ açmaz.
 
 **[COMM-11](archive/2026-10-27-comm-11.md):** Result DAG/ALL/ANY ve ayrı summary.
 **[COMM-10](archive/2026-10-27-comm-10.md):** Missing-first karar/export koruması.
 **[COMM-09](archive/2026-10-27-comm-09.md):** Frozen cycle variable context/digest.
-Checkout/indeks `C:/Projects/Tvision`; ev kökü burada yok. Native/fiziksel açık.
+Checkout/indeks `C:/Projects/Tvision`; native/fiziksel açık.
 
 **COMM-02–08 tamam:** typed scalar/spatial, variable katalog/komutları,
 atomik evaluator/DAG/cache ve çok satırlı Editor UI.

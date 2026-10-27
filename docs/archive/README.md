@@ -6,6 +6,7 @@ görev” ifadeleri yazıldıkları tarihe aittir.
 
 | Dönem / görev | Kayıt |
 | --- | --- |
+| 27 Ekim 2026 — COMM-16 | [Strict TCP v3 codec, bounded LF framing ve canonical payload hash](2026-10-27-comm-16.md) |
 | 27 Ekim 2026 — COMM-15 | [Immutable typed input snapshot ve ortak Trigger Router](2026-10-27-comm-15.md) |
 | 27 Ekim 2026 — COMM-14 | [Kalıcı request journal/outbox, immutable dispatch ve ACK commit](2026-10-27-comm-14.md) |
 | 27 Ekim 2026 — COMM-13 | [Immutable terminal bundle ve atomik kayıt/retry codec](2026-10-27-comm-13.md) |

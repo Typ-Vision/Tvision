@@ -1,0 +1,9 @@
+{
+  "fixtureVersion": 1,
+  "status": {
+    "v": 2,
+    "type": "STATUS",
+    "sessionId": "session-1"
+  },
+  "statusBytes": "{\"sessionId\":\"session-1\",\"type\":\"STATUS\",\"v\":2}\n"
+}
