@@ -52,11 +52,11 @@ değildir; gerçek sonuç olmadan PASS, skor veya robot pose gösterilmez.
 ## EUI kullanıcı tekrar testi
 
 Uygulamayı repo kökünden `.\scripts\run-local.ps1` ile başlatın. EXE:
-`C:\Projects\Tvision\build\reference-ui\visionflow.exe`. ExecutionPolicy engeli
+`D:\TVision\build\reference-ui\visionflow.exe`. ExecutionPolicy engeli
 varsa yalnız başlatılan alt süreç için şu komutu kullanın:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File "C:\Projects\Tvision\scripts\run-local.ps1"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "D:\TVision\scripts\run-local.ps1"
 ```
 
 1400×900 ve 850×600 pencere boyutlarında gerçek bir görüntüyle deneyin:

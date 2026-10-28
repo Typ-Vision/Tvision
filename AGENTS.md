@@ -1,6 +1,6 @@
 <!-- codebase-memory-mcp:start -->
 Yapısal kod incelemesinde `codebase-memory` becerisini kullan. Önce `list_projects` ve
-`index_status` ile kökü `C:/OpenCode/TVision` olan projeyi seç (eski `C:/Projects/Tvision` yok); sorgularda mutlak
+`index_status` ile güncel çalışma kökü `D:/TVision` olan projeyi seç; indeks yoksa bu kökü indeksle. Sorgularda mutlak
 proje yolunu kullan. İlgili yolları `check_index_coverage` ile doğrula; eksik/kısmi
 kapsamı kaynak okuyarak tamamla. MCP bağlantı hatasını boş arama sonucu sayma.
 <!-- codebase-memory-mcp:end -->

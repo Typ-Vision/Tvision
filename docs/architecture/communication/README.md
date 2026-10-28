@@ -45,8 +45,8 @@ değildir. Agent/model ayarı otomatik değiştirilmez; paralel ajan çalıştı
 
 [COMM-01 kaynak haritası](source-map.md) actual dosya/sembol/test/şema ve Release
 baseline'ını sabitler. COMM-01 ev bilgisayarında `C:/OpenCode/TVision` ile
-alındı; güncel checkout/indeks kökü de `C:/OpenCode/TVision`'dır.
-Eski `C:/Projects/Tvision` kullanılmaz.
+alındı; bu makinede güncel checkout/indeks kökü `D:/TVision`'dır.
+Güncel kök için AGENTS ve çalışma dizini esas alınır.
 Her makinede gerçek tool root/HEAD verisi doğrulanır. Seçili coverage'ın kısmi
 satırları kaynakla tamamlandı. Sonraki kartlar bu haritanın ilgili bölümünü kullanır;
 indeks erişim/kapsama hatası boş sonuç olarak yorumlanmaz.

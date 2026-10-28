@@ -4,8 +4,10 @@
 
 ## Devam noktası
 
-**[DOC-VAR-01](archive/2026-10-28-doc-var-01.md):**
-[Değişken rehberi](variables-usage.md).
+**[DEV-DRIVE-01](archive/2026-10-28-dev-drive-01.md):** `D:/TVision`; build güncel,
+OpenCV geçti; CTest erken durduruldu (tam kabul değil).
+
+[DOC-VAR-01](archive/2026-10-28-doc-var-01.md): [Değişken rehberi](variables-usage.md).
 
 **[COMM-37 tamam](archive/2026-10-28-comm-37.md):** UI 164/core 127 geçti;
 her birinde dış plaka skipped. Temel faz kapandı; cihaz varsa COMM-38.
@@ -23,8 +25,8 @@ Editor/Load ağ açmaz; tombstone silinmez; fiziksel kabul açık.
 **[COMM-10](archive/2026-10-27-comm-10.md):** Missing-first karar/export.
 **[COMM-09](archive/2026-10-27-comm-09.md):** Frozen cycle variable context/digest.
 
-**[COMM-02–08 tamam](archive/2026-10-26-comm-08.md):** scalar/spatial,
-katalog, atomik atama/DAG/cache/UI; UUID/type/unit/frame/enum/no-op/hash korunur.
+**[COMM-02–08 tamam](archive/2026-10-26-comm-08.md):**
+UUID/type/unit/frame/enum/no-op/hash korunur.
 Editor dışarı yazmaz; değerler tanımda tutulmaz. Circle: COMM-37’de kapandı.
 
 [Kaynak haritası](architecture/communication/source-map.md),
@@ -33,8 +35,8 @@ opsiyonel Modbus 24–28, OPC UA 29–33, sample 34, FANUC 35.
 Çevrim sonunda gönderim; akış ortası gönder/bekle ayrı kapsam. Fiziksel COMM-38,
 Hand-eye/robot hareketi ayrı; araştırma notları plan indeksindedir.
 
-**[INT-10 tamam](archive/2026-10-26-int-10.md):** CameraIntegration geçmişiyle
-main'e birleşti. Güncel dal `Variables`; fiziksel/native engeller açık.
+**[INT-10](archive/2026-10-26-int-10.md):** CameraIntegration main’e birleşti;
+dal `Variables`, fiziksel/native açık.
 
 **[CCUX-24I yazılım/görsel tamam](archive/2026-10-26-ccux-24i.md):** iki Release;
 UI 39/UI OFF 19 test; tekrar, context hata sınırı ve iki boyut fixture kayıtta.
@@ -78,8 +80,7 @@ görüntü/mm kabulü değildir.
 temizleme hatası ve 7000 µs / 1 dB readback reddi açık. CCUX-15 bağımsız referans,
 tolerans/mm, lens/düzlem ve belgeli fiziksel kabulü tamamlanmadı.
 
-**[CCUX-14 tamamlandı](archive/2026-10-22-ccux-14.md):** 1/5 kamera, üç tür,
-Stop/retry yazılım/görsel kabulü; fiziksel açık. `build/ccux/ccux-14/`.
+**[CCUX-14 tamam](archive/2026-10-22-ccux-14.md):** yazılım/görsel; fiziksel açık.
 
 CCUX-01–13 tamamlandı; [arşiv](archive/README.md).
 Kamera kimliği/profil, oturum drain, kalibrasyon izni, typed köken/hash,

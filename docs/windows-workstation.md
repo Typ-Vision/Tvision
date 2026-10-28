@@ -6,7 +6,7 @@ smoke çalıştırır; normal kullanımda parametresiz açılır. Kaynak/EXE eş
 birleşik kabul [INT devir kaydındadır](architecture/camera-integration-handoff.md).
 Aşağıdaki tarihli kurulum/test sayıları tarihsel kanıttır; yeni ürün kabulü değildir.
 
-Bu bilgisayarın çalışma kopyası `C:/Projects/Tvision`. Qt araçları `C:/Qt`
+Bu bilgisayarın çalışma kopyası `D:/TVision`. Qt araçları `C:/Qt`
 altındadır. Aşağıdaki yollar geliştirme kurulumudur; taşınabilir ürün paketi değildir.
 
 ## Bileşenler
@@ -39,7 +39,7 @@ $env:PATH = 'C:\OpenCV\5.0.0\x64\mingw\bin;C:\Qt\6.12.0\mingw_64\bin;C:\Qt\Tools
 .\scripts\probe-opencv.ps1
 .\scripts\probe-zxing.ps1
 
-cmake -S . -B build/reference-ui -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=C:/Qt/6.12.0/mingw_64 -DOpenCV_DIR=C:/OpenCV/5.0.0/x64/mingw/lib -DVISIONFLOW_BUILD_UI=ON -DVISIONFLOW_WITH_ZXING=ON -DVISIONFLOW_ZXING_PREFIX=C:/Projects/Tvision/build/deps/zxing-prefix
+cmake -S . -B build/reference-ui -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=C:/Qt/6.12.0/mingw_64 -DOpenCV_DIR=C:/OpenCV/5.0.0/x64/mingw/lib -DVISIONFLOW_BUILD_UI=ON -DVISIONFLOW_WITH_ZXING=ON -DVISIONFLOW_ZXING_PREFIX=D:/TVision/build/deps/zxing-prefix
 cmake --build build/reference-ui -j 6
 ctest --test-dir build/reference-ui --output-on-failure
 .\scripts\run-local.ps1

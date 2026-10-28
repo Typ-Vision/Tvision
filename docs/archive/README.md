@@ -6,6 +6,7 @@ görev” ifadeleri yazıldıkları tarihe aittir.
 
 | Dönem / görev | Kayıt |
 | --- | --- |
+| 28 Ekim 2026 — DEV-DRIVE-01 | [D: taşıma kontrolü ve güncel yollar](2026-10-28-dev-drive-01.md) |
 | 28 Ekim 2026 — DOC-VAR-01 | [Değişken oluşturma ve değer değiştirme kısa rehberi](2026-10-28-doc-var-01.md) |
 | 28 Ekim 2026 — COMM-37 | [Birleşik Release, üç tür TCP/Pose ve full regresyon kabulü](2026-10-28-comm-37.md) |
 | 28 Ekim 2026 — COMM-36 | [Çoklu TCP hedef, bağımsız ACK ve whole Pose kabulü](2026-10-28-comm-36.md) |

@@ -43,7 +43,7 @@ foreach ($variant in @('ui', 'off')) {
     $names | Set-Content "$evidence/tests-$variant.txt"
     if (!$SkipBuild) {
         $enabled = if ($variant -eq 'ui') { 'ON' } else { 'OFF' }
-        Invoke-Recorded "configure-$variant" @('-S', '.', '-B', $build, '-G', 'Ninja', '-DCMAKE_BUILD_TYPE=Release', '-DCMAKE_PREFIX_PATH=C:/Qt/6.12.0/mingw_64', '-DOpenCV_DIR=C:/OpenCV/5.0.0/x64/mingw/lib', "-DVISIONFLOW_BUILD_UI=$enabled", "-DVISIONFLOW_WITH_ZXING=$enabled", '-DVISIONFLOW_ZXING_PREFIX=C:/Projects/Tvision/build/deps/zxing-prefix')
+        Invoke-Recorded "configure-$variant" @('-S', '.', '-B', $build, '-G', 'Ninja', '-DCMAKE_BUILD_TYPE=Release', '-DCMAKE_PREFIX_PATH=C:/Qt/6.12.0/mingw_64', '-DOpenCV_DIR=C:/OpenCV/5.0.0/x64/mingw/lib', "-DVISIONFLOW_BUILD_UI=$enabled", "-DVISIONFLOW_WITH_ZXING=$enabled", "-DVISIONFLOW_ZXING_PREFIX=$root/build/deps/zxing-prefix")
         Invoke-Recorded "build-$variant" @('--build', $build, '-j', '6')
     }
     Invoke-Recorded "ctest-$variant-list" @('--test-dir', $build, '-N')

@@ -26,7 +26,7 @@ Yazım akışı açık tutulur; kayıtlar worker işlemi, edinim/kapanış ve UI
 ilk paint sınırlarında flush edilir. Log dosyasını okurken bu sınırı bekleyin.
 
 ```powershell
-$env:VISIONFLOW_ACQUISITION_TIMING = 'C:/Projects/Tvision/build/ccux/ccux-22a/manual-trace.jsonl'
+$env:VISIONFLOW_ACQUISITION_TIMING = 'D:/TVision/build/ccux/ccux-22a/manual-trace.jsonl'
 .\scripts\run-local.ps1
 # Uygulama kapandıktan sonra aynı terminalde:
 Remove-Item Env:VISIONFLOW_ACQUISITION_TIMING
@@ -43,7 +43,7 @@ başarılı paint örneği oluşmaz. Session close/join ayrı ölçülür; açı
 Elle fiziksel servis baseline'ı için, kullanılmamış mutlak kanıt dizini seçin:
 
 ```powershell
-.\scripts\measure-acquisition-baseline.ps1 -OutputDirectory 'C:/Projects/Tvision/build/ccux/ccux-22a/new-physical-run'
+.\scripts\measure-acquisition-baseline.ps1 -OutputDirectory 'D:/TVision/build/ccux/ccux-22a/new-physical-run'
 ```
 
 Bu komut Editor/Runtime/kalibrasyon servislerinde aynı kamera ve 56000 µs/0 dB

@@ -1,6 +1,6 @@
 param(
     [Parameter(Mandatory=$true)][string]$OutputDirectory,
-    [string]$ProbePath = 'C:/Projects/Tvision/build/reference-ui/oecs_experimental_probe.exe',
+    [string]$ProbePath = (Join-Path (Split-Path -Parent $PSScriptRoot) 'build/reference-ui/oecs_experimental_probe.exe'),
     [string]$RuntimeDll = 'C:/Program Files (x86)/Common Files/OECS/Runtime/Win64_x64/MvCameraControl.dll',
     [string]$ProducerPath = 'C:/Program Files (x86)/Common Files/OECS/Runtime/Win64_x64/MvProducerU3V.cti',
     [double]$ExposureUs = 56000
