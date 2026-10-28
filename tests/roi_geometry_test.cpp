@@ -44,6 +44,7 @@ int main(int argc,char** argv){QCoreApplication app(argc,argv);try{
         auto processed=ImageAccess::processed(input,copy,input.format(),"test-transform",1,parameterId,false);copy.setTo(cv::Scalar::all(99));
         check(processed.metadata().frameId==m.frameId && processed.metadata().coordinateSystemId==m.coordinateSystemId && processed.processing().size()==1 && processed.processing().first().inputContentId==hash,"processing preserves raw origin and records input identity");
         check(ImageAccess(processed).row(0)[0]==std::byte{42} && input.contentId()==hash,"processed output owns separate bytes");
+        check(processed.geometry()==input.geometry(),"same-size processing preserves sealed geometry");
         auto noChange=ImageAccess::processed(input,access.ownedCopy(),input.format(),"identity",1,parameterId,false);
         check(noChange.contentId()==hash && !noChange.processingId().isEmpty() && input.processingId().isEmpty(),"provenance independent of identical pixel hash");
         reject([&]{access.row(2);},"row boundary");

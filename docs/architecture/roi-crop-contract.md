@@ -1,6 +1,7 @@
 # EFR-03a-1 — tek ROI crop sözleşmesi ve uygulama devri
 
-28 Ekim 2026. **Tasarım tamam; crop henüz uygulanmadı.**
+28 Ekim 2026. **EFR-03a-2 owned crop/geometri altyapısı uygulandı; ROI executor,
+tüm consumer ve UI entegrasyonu EFR-03a-3/4 ve 03b kapsamındadır.**
 [Ana plan](editor-flow-roi-update-plan.md#efr-03a--roi-kırpmanın-görüntükoordinat-sözleşmesi).
 Bu belge EFR-03a-2/3/4 için bağlayıcı API ve dosya/test kapsamıdır.
 EFR-03b checkbox/viewer kabulü ayrıdır. Mevcut Region özelliği çalışır;
@@ -77,6 +78,22 @@ Kaynak/frame kimliği henüz verilmemiş kök, metadata atanırken kök olarak
 bağlanır. Child'ın `withMetadata()` çağrısı dönüşümünü kaybetmez ve yerel
 coordinate ID'yi değiştiremez; source/root değiştirme yeni kök edinimi ister.
 Frame/cycle/zaman yeniden damgalamak yeni geometri üretmez.
+
+EFR-03a-2 kesin public erişim: alanlar aynı adlı const getter'lardır
+(`rootSize()`, `rasterSize()`, `rootCoordinateSystemId()`, `coordinateSystemId()`,
+`rootOffset()`, `identity()`, `cropDepth()`). `ImageGeometry` OpenCV'sizdir;
+root/child üretimi private, frame'e dışarıdan scope yerleştirme yoktur.
+Boş varsayılan scope yalnız boş frame içindir ve mapping'de reddedilir.
+`requireFootprint` boş vektörü reddeder; verilen bütün pixel centre'larını
+denetler (bilinear komşuları üretmek sampler'ın sonraki kart sorumluluğudur).
+Mevcut kök `withMetadata` yeniden bağlama davranışı uyumluluk için korunur:
+source/coordinate değişirse yeni root identity oluşur. Bu API child'ı köke
+çevirmez; child source ve local coordinate değişiklikleri açık hata verir.
+Child oluşturmadan önce acquisition metadata'sı bağlanmalıdır; anonim kökten
+üretilmiş child sonradan farklı kaynağa bağlanamaz. Kök kimliği canonical
+JSON `image-root/1`, source, coordinate ve size içerir. Crop geometry identity
+aynı canonical `roi-crop/1` girdisinin hash'i olduğundan ProcessingStep'in
+`parametersId` alanında doğrudan bu 32 byte değer kullanılır.
 
 `toRoot(p)=p+rootOffset`, `fromRoot(p)=p-rootOffset`; iki yönde sonlu sayı,
 root ve raster pixel-centre domain `[0,w-1]×[0,h-1]` kontrolü vardır. Yerel

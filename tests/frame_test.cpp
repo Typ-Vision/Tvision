@@ -1,4 +1,5 @@
 #include "application/AcquisitionService.hpp"
+#include "application/ImageFileService.hpp"
 #include "application/ExecutionService.hpp"
 #include "application/ToolExecutors.hpp"
 #include "domain/ToolRegistry.hpp"
@@ -30,6 +31,8 @@ int main(int argc,char** argv) {
         check(acquired.state==AcquisitionState::Done,"preview-free acquired frame valid");const auto& f=acquired.frame->image;
         check(f.preview().isNull() && f.size()==QSize(2,3) && f.pixelText(1,2)=="Gray: 60","owned buffer survived adapter reuse; raw size independent");
         check(f.metadata().sourceId=="source" && f.metadata().cycleId=="cycle" && f.metadata().frameId=="frame" && f.metadata().coordinateSystemId=="source/image","acquisition identity");
+        check(f.geometry().rootSize()==f.size() && f.geometry().rasterSize()==f.size() && f.geometry().rootOffset()==QPoint(0,0) &&
+            f.geometry().coordinateSystemId()==f.metadata().coordinateSystemId && f.geometry().rootCoordinateSystemId()==f.metadata().coordinateSystemId && f.geometry().cropDepth()==0,"acquisition binds owned root geometry");
         check(f.metadata().completedAtUtc.timeSpec()==Qt::UTC && f.metadata().exposureAtUtc->toMSecsSinceEpoch()==1000 && *f.metadata().deviceTimestampTicks==123 && f.metadata().deviceClockId=="device-clock","completion exposure device clock separate");
         std::array<unsigned short,6> gray16{1000,65535,0,42,64,0};auto g=ImageFrame::fromBuffer(gray16.data(),sizeof(gray16),2,2,6,PixelFormat::Gray16);gray16.fill(0);
         check(g.pixelText(1,0)=="Gray: 65535" && g.pixelText(0,1)=="Gray: 42" && g.preview().pixelColor(1,0).red()==255,"Gray16 padded ownership and preview");
@@ -39,6 +42,7 @@ int main(int argc,char** argv) {
         check(alpha.pixelText(0,0)=="R:7 G:8 B:9 A:10" && alpha.preview().pixelColor(0,0).alpha()==10,"RGBA alpha order");
         auto copied=g;auto metadata=g.metadata();metadata.sourceId="other";auto rebound=g.withMetadata(metadata);
         check(copied.pixelText(1,0)=="Gray: 65535" && g.metadata().sourceId.isEmpty() && rebound.metadata().sourceId=="other","immutable shared pixels independent metadata");
+        check(copied.geometry()==g.geometry() && rebound.geometry().identity()!=g.geometry().identity() && rebound.contentId()==g.contentId(),"root metadata binding updates geometry independently of content");
         for(const auto& sample:{f,g,color,alpha,rebound}){
             QCryptographicHash hash(QCryptographicHash::Sha256);
             hash.addData(QByteArray::number(sample.size().width())+":"+QByteArray::number(sample.size().height())+":"+QByteArray::number(int(sample.format())));
@@ -51,6 +55,9 @@ int main(int argc,char** argv) {
         const auto fixturePath=directory.filePath("owned.pgm");QFile fixture(fixturePath);
         check(fixture.open(QIODevice::WriteOnly),"frame source fixture");
         fixture.write("P5\n2 3\n255\n");for(int i=1;i<=6;++i)fixture.putChar(char(10*i));fixture.close();
+        const auto loaded=ImageFileService{}.load(fixturePath);
+        check(loaded.geometry().rootSize()==QSize(2,3) && loaded.geometry().rasterSize()==loaded.size() && loaded.geometry().cropDepth()==0 &&
+            loaded.geometry().rootOffset()==QPoint(0,0) && loaded.geometry().toRoot({1,2})==QPointF(1,2),"file decode creates owned root geometry");
         auto sourceId=QUuid::createUuid().toString();ToolDefinition source{sourceId,"image_file","Source","",true,{{"path",fixturePath}}};
         ToolDefinition blob{QUuid::createUuid().toString(),"blob","Blob","",true,defaultParameters("blob")};
         auto def=withEditorConnections(withEditorTools({}, {source,blob}),{{source.id,"image",blob.id,"image"}});

@@ -1,4 +1,5 @@
 #pragma once
+#include "ImageGeometry.hpp"
 #include <QImage>
 #include <QJsonObject>
 #include <QDateTime>
@@ -30,6 +31,7 @@ public:
                                  std::size_t stride,PixelFormat format,const FrameMetadata& metadata={},bool preview=true);
     ImageFrame withMetadata(const FrameMetadata& metadata) const;
     const FrameMetadata& metadata() const {return metadata_;}
+    const ImageGeometry& geometry() const {return geometry_;}
     const QImage& preview() const {return preview_;}
     QSize size() const {return {pixels_.cols,pixels_.rows};}
     std::size_t stride() const {return pixels_.step;}
@@ -53,6 +55,7 @@ private:
     // Computed before publication; copies and worker/UI readers share immutable identity.
     QByteArray contentId_;
     FrameMetadata metadata_;
+    ImageGeometry geometry_;
     QVector<ProcessingStep> processing_;
 };
 }

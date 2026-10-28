@@ -4,16 +4,16 @@
 
 ## Devam noktası
 
-**[EFR-03a-1](archive/2026-10-28-efr-03a-1.md):** ROI/13 tüketici API tasarımı;
-8 CTest geçti. Crop yok. Sonraki EFR-03a-2;
-[sözleşme](architecture/roi-crop-contract.md).
+**[EFR-03a-2](archive/2026-10-28-efr-03a-2.md):** owned crop/geometri;
+Core Release/4 CTest geçti. ROI/consumer/UI entegrasyonu yok.
+Sonraki **EFR-03a-3**; [sözleşme](architecture/roi-crop-contract.md).
 [EFR-01](archive/2026-10-28-efr-01.md)/[02](archive/2026-10-28-efr-02.md)
 korunur; OS wheel, Save odak açık. Match/θ ertelendi.
 
 **[DEV-DRIVE-01](archive/2026-10-28-dev-drive-01.md):** `D:/TVision`;
 OpenCV geçti, CTest kısmi.
 
-[Değişken rehberi](variables-usage.md); [DOC-VAR-01](archive/2026-10-28-doc-var-01.md).
+[Değişken rehberi](variables-usage.md).
 
 **[COMM-37](archive/2026-10-28-comm-37.md):** UI 164/core 127 geçti;
 dış plaka skipped. Faz kapandı; cihaz varsa COMM-38.

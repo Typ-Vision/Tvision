@@ -33,6 +33,7 @@ ImageFrame ImageFrame::fromBuffer(const void* data,std::size_t bytes,int width,i
     if(format==PixelFormat::Rgba8)cv::cvtColor(frame.pixels_,frame.pixels_,cv::COLOR_RGBA2BGRA);
     frame.pixelFormat_=format==PixelFormat::Rgb8 ? PixelFormat::Bgr8 : format==PixelFormat::Rgba8 ? PixelFormat::Bgra8 : format;
     frame.format_=label;frame.metadata_=metadata;
+    frame.geometry_=ImageGeometry::root({width,height},metadata.sourceId,metadata.coordinateSystemId);
     if(preview) {
         AcquisitionTimingSpan timing("raster.preview");
         cv::Mat display;QImage::Format qformat=QImage::Format_Grayscale8;
@@ -45,7 +46,17 @@ ImageFrame ImageFrame::fromBuffer(const void* data,std::size_t bytes,int width,i
     frame.contentId_=frame.contentId();
     return frame;
 }
-ImageFrame ImageFrame::withMetadata(const FrameMetadata& metadata) const {auto copy=*this;copy.metadata_=metadata;return copy;}
+ImageFrame ImageFrame::withMetadata(const FrameMetadata& metadata) const {
+    auto copy=*this;
+    if(geometry_.cropDepth()>0) {
+        if(metadata.sourceId!=metadata_.sourceId || metadata.coordinateSystemId!=geometry_.coordinateSystemId())
+            throw std::runtime_error("Cannot rebind child image source/coordinate geometry");
+    } else if(!size().isEmpty()) {
+        // Preserve the existing root snapshot/acquisition metadata binding API.
+        copy.geometry_=ImageGeometry::root(size(),metadata.sourceId,metadata.coordinateSystemId);
+    }
+    copy.metadata_=metadata;return copy;
+}
 QString ImageFrame::pixelText(int x,int y) const {
     if(x<0 || y<0 || x>=pixels_.cols || y>=pixels_.rows)return {};
     if(pixels_.type()==CV_8UC1)return "Gray: "+QString::number(pixels_.at<uchar>(y,x));

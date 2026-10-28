@@ -9,6 +9,7 @@ public:
     explicit ImageAccess(ImageFrame frame):frame_(std::move(frame)){}
     std::span<const std::byte> row(int y) const;
     cv::Mat ownedCopy() const;
+    static ImageFrame cropped(const ImageFrame& input,const QRect& rect,bool preview=true);
     static ImageFrame processed(const ImageFrame& input,const cv::Mat& output,PixelFormat format,
                                const QString& method,int version,const QByteArray& parametersId,bool preview=true);
 private:
