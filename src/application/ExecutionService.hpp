@@ -22,7 +22,7 @@ enum class ExecutionState { Ready, Busy, Done, Error, Skipped };
 QString executionStateName(ExecutionState state);
 using PortData=std::variant<ImageFrame,QRect,QPointF,double,bool,QString,CodeResults,PointSet,Profile,Line2D,Circle2D,Arc2D,Pose2D,InspectionResults,AssignmentBundle>;
 struct PortValue {PortDefinition port; PortData data=false; bool valid=false; QString frameId,cycleId; FrameMetadata origin;
-    QString evaluationId,method;int methodVersion=0;bool diagnostic=false;QString invalidReason;
+    QString evaluationId,method;int methodVersion=0;bool diagnostic=false;QString invalidReason;std::optional<ImageGeometry> imageGeometry;
 };
 enum class PartDecision { NotEvaluated, Pass, Fail };
 struct RegionMask {QByteArray pixels; QSize size; QPoint origin;};
@@ -85,7 +85,7 @@ public:
     // Never persisted and never issues production completion authority.
     ExecutionService withExperimentalEditorReplay(bool enabled=true) const {auto service=*this;service.experimentalEditorReplay_=enabled;service.automaticAcquisition_=false;return service;}
     // Bump when execution semantics change; validation records bind this identity.
-    static QString version() { return QStringLiteral("visionflow.execution/34"); }
+    static QString version() { return QStringLiteral("visionflow.execution/35"); }
     ExecutionService withPublicationSnapshot(std::shared_ptr<const PublicationSnapshot> s) const {auto copy=*this;copy.publication_=std::move(s);return copy;}
     ExecutionService withCycleId(QString id) const {auto copy=*this;copy.cycleId_=std::move(id);return copy;}
     static QByteArray toolSignature(const QJsonObject&,const QString& directory,const QString& tool,const QByteArray& scope);

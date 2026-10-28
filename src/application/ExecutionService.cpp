@@ -219,7 +219,7 @@ CycleResult ExecutionService::run(const QJsonObject& definition,const QString& d
                         }
                         const auto& m=value.origin;
                         if(m.frameId.isEmpty() || m.frameId!=value.frameId || m.cycleId!=value.cycleId || m.coordinateSystemId.isEmpty())throw std::runtime_error("Giriş frame metadata eksik/uyumsuz.");
-                        if(targetOnly && (m.sourceId!=targetOnly->frame.metadata().sourceId || m.coordinateSystemId!=targetOnly->frame.metadata().coordinateSystemId))throw std::runtime_error("Cached input source/coordinate identity differs from raw frame.");
+                        if(targetOnly && (m.sourceId!=targetOnly->frame.metadata().sourceId || (value.imageGeometry ? value.imageGeometry->rootCoordinateSystemId():m.coordinateSystemId)!=targetOnly->frame.geometry().rootCoordinateSystemId() || (value.imageGeometry && value.imageGeometry->rootSize()!=targetOnly->frame.geometry().rootSize())))throw std::runtime_error("Cached input source/coordinate identity differs from raw frame.");
                         if(!coordinates.isEmpty() && (coordinates!=m.coordinateSystemId || sourceFrame!=m.frameId || sourceId!=m.sourceId))throw std::runtime_error("Giriş frame/koordinat sistemleri uyumsuz.");
                         coordinates=m.coordinateSystemId;sourceFrame=m.frameId;sourceId=m.sourceId;
                     }
@@ -304,7 +304,7 @@ CycleResult ExecutionService::run(const QJsonObject& definition,const QString& d
                                 WebcamAdapter adapter({0,"qt",device.providerId,geometry.resolution});const auto actual=AcquisitionService{}.acquire(adapter,{t.id,cycle.cycleId,toolFrameId,TriggerMode::Software,int(multi ? std::min<qint64>(t.parameters["timeoutMs"].toInt(),std::max<qint64>(1,limits.deadlineMs-total.elapsed())):t.parameters["timeoutMs"].toInt()),cancel});
                                 if(actual.state!=AcquisitionState::Done || !actual.frame)throw std::runtime_error(actual.error.toUtf8().constData());r.state=ExecutionState::Done;r.outputs["image"]={outputPorts(t.kind).first(),actual.frame->image,true,toolFrameId,cycle.cycleId,actual.frame->image.metadata()};
                             }else {if(multi && t.kind=="webcam")effective.parameters["timeoutMs"]=int(std::min<qint64>(t.parameters["timeoutMs"].toInt(),std::max<qint64>(1,limits.deadlineMs-total.elapsed())));
-                                if(multi && t.kind=="preprocess" && inputs.contains("image")){const auto& image=std::get<ImageFrame>(inputs["image"].data);if(quint64(image.size().width())*image.size().height()*12>limits.imageBytes-retainedBytes)throw std::runtime_error("Multi-source image budget preflight rejected");}
+                                if(multi && (t.kind=="preprocess" || (t.kind=="roi" && t.parameters["cropImage"].toBool())) && inputs.contains("image")){const auto& image=std::get<ImageFrame>(inputs["image"].data);if(quint64(image.size().width())*image.size().height()*12>limits.imageBytes-retainedBytes)throw std::runtime_error("Multi-source image budget preflight rejected");}
                                 r=worldTracking ? WorldTrackingService::execute(t,std::get<ImageFrame>(inputs.value("image").data),*worldTracking,cancel)
                                 :ToolExecutors::get(t.kind,measurement,resolvedRoi)(effective,inputs,directory,toolFrameId,cycle.cycleId,cancel);}
                             const auto overlayInput=inputs.value("image");
@@ -315,6 +315,7 @@ CycleResult ExecutionService::run(const QJsonObject& definition,const QString& d
                         const auto binding=sourceBinding;if(sourceAcquisition.isEmpty() || binding["sourceToolId"]!=t.id || sourceAcquisition["target"]!=binding["target"])throw std::runtime_error("Physical source requires exact immutable acquisition snapshot");
                         const auto image=r.outputs.value("image");const auto geometry=GeometryDescriptor::fromJson(sourceAcquisition["geometry"].toObject());if(!image.valid || !std::holds_alternative<ImageFrame>(image.data) || std::get<ImageFrame>(image.data).size()!=geometry.resolution)throw std::runtime_error("Actual frame/physical source geometry mismatch");
                     }
+                    for(auto& value:r.outputs)if(value.valid)if(const auto* image=std::get_if<ImageFrame>(&value.data))value.imageGeometry=image->geometry();
                     const auto declaredOutputs=outputPorts(t.kind);
                     for(const auto& value:r.outputs)if(!experimentalEditorReplay && (!value.origin.experimentalAcquisition.isEmpty() || (std::holds_alternative<ImageFrame>(value.data) && !std::get<ImageFrame>(value.data).metadata().experimentalAcquisition.isEmpty())))throw std::runtime_error("Experimental output requires explicit Editor policy");
                     const bool referenceProducer=std::any_of(declaredOutputs.begin(),declaredOutputs.end(),[&](const auto& p){return referenceSourcePort(t.kind,p.id);});

@@ -6,6 +6,10 @@
 #include <QTemporaryDir>
 #include <QDir>
 #include <QTextStream>
+#include <QFile>
+#include <QJsonDocument>
+#include <QJsonArray>
+#include "application/ToolResultCodec.hpp"
 using namespace visionflow;
 namespace {
 int checks=0;
@@ -67,5 +71,67 @@ int main(int argc,char** argv){QCoreApplication app(argc,argv);try{
         const auto otherImage=std::get<ImageFrame>(result(bad,other).outputs["image"].data);for(auto t:project.tools())if(t.id==roi){t.parameters=RoiService::teach(otherImage,{10,10,50,40});project.updateTool(t);}
         check(run().state==ExecutionState::Done && count(run(),blob)==1,"multi-source ROI uses its bound source");
     }
+    // Dedicated crop graph, independent pixel oracle, legacy codec and lifecycle.
+    ProjectService crop;crop.createProject("Crop","",dir.filePath("crop.vfproject"),"file");
+    const auto recipe=crop.createRecipe("Crop","",ApplicationType::Measurement,"file");
+    const auto source=crop.setImageFile(path),r1=crop.addTool("roi"),r2=crop.addTool("roi"),pre=crop.addTool("preprocess"),branch=crop.addTool("preprocess");
+    crop.setConnections({{source,"image",r1,"image"},{r1,"image",r2,"image"},{r2,"image",pre,"image"},{source,"image",branch,"image"}});
+    auto run=[&]{return ExecutionService{}.run(crop.activeRecipe()->definition,dir.path(),recipe,"crop",{});};
+    auto tool=[&](const QString& id){for(const auto& t:crop.tools())if(t.id==id)return t;throw std::runtime_error("tool missing");};
+    auto full=run();const auto raw=std::get<ImageFrame>(result(full,source).outputs["image"].data);
+    auto first=tool(r1);first.parameters=RoiService::teach(raw,{10,10,50,40});crop.updateTool(first);
+    full=run();const auto pass=std::get<ImageFrame>(result(full,r1).outputs["image"].data);
+    check(pass.contentId()==raw.contentId() && pass.processingId()==raw.processingId() && pass.geometry()==raw.geometry(),"false passes unchanged immutable frame");
+    for(const auto bad:QJsonArray{QJsonValue(),QJsonValue(0),QJsonValue("true")}){auto invalid=first;invalid.parameters["cropImage"]=bad;reject([&]{crop.updateTool(invalid);});}
+    check(outputPorts("roi").size()==2 && outputPorts("roi")[0].id=="region" && outputPorts("roi")[1].id=="image" && ToolRegistry::get("roi").version==2,"stable port order and revision");
+    first.parameters["cropImage"]=true;crop.updateTool(first);full=run();
+    const auto child=std::get<ImageFrame>(result(full,r1).outputs["image"].data);
+    check(child.size()==QSize(50,40) && child.geometry().rootOffset()==QPoint(10,10) && child.preview().pixelColor(10,10).red()==255 && child.preview().pixelColor(0,0).red()==0,"real child pixels and offset");
+    check(result(full,r1).outputs["region"].origin.coordinateSystemId==raw.metadata().coordinateSystemId && result(full,r1).outputs["image"].origin.coordinateSystemId==child.metadata().coordinateSystemId && result(full,r1).outputs["region"].imageGeometry==raw.geometry(),"two ROI ports have distinct own scopes");
+    auto second=tool(r2);second.parameters=RoiService::teach(child,{5,5,30,30},true);crop.updateTool(second);full=run();
+    const auto nested=std::get<ImageFrame>(result(full,r2).outputs["image"].data);
+    check(full.state==ExecutionState::Done && nested.size()==QSize(30,30) && nested.geometry().rootOffset()==QPoint(15,15) && std::get<ImageFrame>(result(full,pre).outputs["image"].data).geometry()==nested.geometry(),"nested ROI then preprocess");
+    EditorSession editor;auto context=[&]{return EditorContext{crop.project().id,crop.path(),recipe,crop.activeRecipe()->definition,{}};};auto c=context();
+    full=ExecutionService{}.run(c.definition,dir.path(),recipe,editor.signature(c),{});check(editor.acceptCycle(full,editor.signature(c),c),"accept child graph");
+    auto target=ExecutionService{}.runTool(c.definition,dir.path(),recipe,editor.signature(c),{},pre,editor.evaluation(c));check(target.state==ExecutionState::Done && target.acquisitions==0,"cached child input validates acquisition ancestry");
+    const auto branchSignature=ExecutionService::toolSignature(c.definition,dir.path(),branch,"scope");
+    editor.references[r1]={editor.referenceSignature(c,r1),QPointF(10,10)};editor.resultSignature="old";
+    first.parameters["cropImage"]=false;crop.updateTool(first);c=context();editor.reconcile(c);
+    check(!editor.references.contains(r1) && editor.resultSignature.isEmpty(),"upstream edit discards cached teaching anchor and presentation");
+    check(tool(r2).parameters["imageBinding"].toObject().isEmpty(),"mode edit clears downstream ROI teaching");
+    check(ExecutionService::toolSignature(c.definition,dir.path(),branch,"scope")==branchSignature,"unrelated branch signature unchanged");
+    first.parameters["cropImage"]=true;crop.updateTool(first);c=context();editor.reconcile(c);
+    target=ExecutionService{}.runTool(c.definition,dir.path(),recipe,editor.signature(c),{},pre,editor.evaluation(c));check(target.executedTools.isEmpty(),"A B A does not revive downstream result");
+    full=run();check(result(full,r2).state==ExecutionState::Error && result(full,r2).outputs.isEmpty(),"A B A does not revive ROI teaching");
+    second=tool(r2);second.parameters=RoiService::teach(child,{5,5,30,30},true);crop.updateTool(second);check(run().state==ExecutionState::Done,"explicit reteach restores permission");
+    // Same size, different rect also invalidates teaching, including save/reopen.
+    first.parameters=RoiService::teach(raw,{11,10,50,40},true);crop.updateTool(first);first.parameters=RoiService::teach(raw,{10,10,50,40},true);crop.updateTool(first);
+    crop.save();crop.openProject(crop.path());crop.selectRecipe(recipe);check(tool(r2).parameters["imageBinding"].toObject().isEmpty(),"rect A B A stale binding survives reopen");
+    second=tool(r2);second.parameters=RoiService::teach(child,{5,5,30,30},true);crop.updateTool(second);
+    // Cross-scope Region+Image is a real execution error, never a hidden rebase.
+    const auto blob=crop.addTool("blob");auto links=editorConnections(crop.activeRecipe()->definition);for(auto& l:links)if(l.targetTool==blob)l.sourceTool=r1;links.append({r1,"region",blob,"region"});crop.setConnections(links);
+    full=run();check(result(full,blob).state==ExecutionState::Error && result(full,blob).outputs.isEmpty(),"parent region and child image rejected");
+    crop.removeTool(blob);
+    // Missing boolean is normalized only on read for schema 7/8/9.
+    for(const int schema:{7,8,9}){
+        auto definition=crop.activeRecipe()->definition;auto e=definition["editor"].toObject();auto ts=e["tools"].toArray();for(int n=0;n<ts.size();++n){auto t=ts[n].toObject();if(t["kind"]=="roi"){auto p=t["parameters"].toObject();p.remove("cropImage");t["parameters"]=p;ts[n]=t;}}
+        e["tools"]=ts;e["schemaVersion"]=schema;definition["editor"]=e;
+        const auto decoded=editorTools(definition);for(const auto& t:decoded)if(t.kind=="roi")check(t.parameters["cropImage"].isBool() && !t.parameters["cropImage"].toBool(),"legacy missing crop false");
+        const auto canonical=withEditorTools(definition,decoded);check(withEditorTools(canonical,editorTools(canonical))==canonical && editorConnections(canonical)==editorConnections(definition),"canonical save/reopen connections stable");
+        crop.save();QFile file(crop.path());check(file.open(QIODevice::ReadOnly),"read project fixture");auto root=QJsonDocument::fromJson(file.readAll()).object();file.close();auto recipes=root["recipes"].toArray();auto record=recipes[0].toObject();record["definition"]=definition;recipes[0]=record;root["recipes"]=recipes;
+        const auto fixture=dir.filePath(QString("legacy-roi-%1.vfproject").arg(schema));QFile legacyFile(fixture);check(legacyFile.open(QIODevice::WriteOnly) && legacyFile.write(QJsonDocument(root).toJson())>0,"write independent old two-field fixture");legacyFile.close();
+        ProjectService legacy;legacy.openProject(fixture);legacy.selectRecipe(recipe);check(!legacy.dirty() && legacy.tools()[1].id==r1 && legacy.tools()[1].parameters["cropImage"]==false,"disk open normalizes without dirty/UUID loss");
+        auto renamed=legacy.tools()[1];renamed.name="Legacy renamed";legacy.updateTool(renamed);legacy.save();const auto saved=legacy.activeRecipe()->definition;legacy.openProject(fixture);legacy.selectRecipe(recipe);check(legacy.activeRecipe()->definition==saved && editorConnections(saved)==editorConnections(definition),"old ROI saved as canonical boolean and connections retained");
+    }
+    // Crop budget and stop fail without publishing partial ROI outputs.
+    crop.enableMultiSource();full=run();check(result(full,r1).state==ExecutionState::Done && result(full,r2).state==ExecutionState::Done,"multi-source child ancestry");
+    const auto budget=quint64(raw.size().width())*raw.size().height()*12+100;
+    const auto limited=ExecutionService{}.run(crop.activeRecipe()->definition,dir.path(),recipe,"budget",{},{},{},{},nullptr,{},ExecutionLimits{30000,budget});
+    check(result(limited,r1).state==ExecutionState::Error && result(limited,r1).outputs.isEmpty(),"crop allocation budget fails closed");
+    // Renaming is non-geometric; upstream source configuration edits are sticky.
+    first=tool(r1);auto renamed=tool(source);renamed.name="Source renamed";crop.updateTool(renamed);check(tool(r1).parameters["imageBinding"]==first.parameters["imageBinding"],"rename preserves teaching");
+    const auto originalSource=renamed;renamed.parameters["path"]="other.png";crop.updateTool(renamed);crop.updateTool(originalSource);
+    check(tool(r1).parameters["imageBinding"].toObject().isEmpty() && tool(r2).parameters["imageBinding"].toObject().isEmpty(),"source A B A cannot restore ROI teaching");
+
     QTextStream(stdout)<<checks<<" ROI checks passed\n";return 0;
 }catch(const std::exception& e){QTextStream(stderr)<<"FAIL after "<<checks<<": "<<e.what()<<'\n';return 1;}}

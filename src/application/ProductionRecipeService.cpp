@@ -101,6 +101,7 @@ QByteArray ProductionRecipeService::completionDigest(const CycleResult& r) {
         out<<t.outputs.size();for(auto it=t.outputs.cbegin();it!=t.outputs.cend();++it) {
             out<<it.key()<<QJsonDocument(ProductionResultCodec::output(*it)).toJson(QJsonDocument::Compact);
             metadata(it->origin);
+            out<<bool(it->imageGeometry);if(it->imageGeometry){const auto& g=*it->imageGeometry;out<<g.identity()<<g.rootCoordinateSystemId()<<g.coordinateSystemId()<<g.rootSize()<<g.rasterSize()<<g.rootOffset()<<g.cropDepth();}
             if(it->valid && std::holds_alternative<ImageFrame>(it->data)) {
                 const auto& image=std::get<ImageFrame>(it->data);metadata(image.metadata());
                 out<<image.contentId()<<image.processingId()<<image.size()<<int(image.format());
@@ -338,7 +339,7 @@ void ProductionRecipeService::finishCycle(quint64 ticket,const CycleResult& r) {
         for(auto it=t.outputs.cbegin();it!=t.outputs.cend();++it) {
             const auto ports=outputPorts(tool->kind);const auto expected=std::find_if(ports.begin(),ports.end(),[&](const auto& p){return p.id==it.key();});
             if(expected==ports.end())fail(ProductionError::InvalidCompletion,"Undeclared completion port");
-            if(it->valid && it->port.type!=PortType::AssignmentBundle && it->port.frame!="cycle" && std::none_of(r.frames.cbegin(),r.frames.cend(),[&](const auto& f){return f.frameId==it->frameId && f.cycleId==it->cycleId && f.sourceId==it->origin.sourceId && f.coordinateSystemId==it->origin.coordinateSystemId;}))fail(ProductionError::InvalidCompletion,"Output origin does not match an acquired frame.");
+            if(it->valid && it->port.type!=PortType::AssignmentBundle && it->port.frame!="cycle" && std::none_of(r.frames.cbegin(),r.frames.cend(),[&](const auto& f){return f.frameId==it->frameId && f.cycleId==it->cycleId && f.sourceId==it->origin.sourceId && f.coordinateSystemId==(it->imageGeometry ? it->imageGeometry->rootCoordinateSystemId():it->origin.coordinateSystemId);}))fail(ProductionError::InvalidCompletion,"Output origin does not match an acquired frame.");
             if(it->valid && int(it->port.type)>int(PortType::Boolean) && (r.evaluationId.isEmpty() || it->evaluationId!=r.evaluationId))fail(ProductionError::InvalidCompletion,"Output evaluation identity differs from cycle");
             try {ToolResultCodec::validate(*it,*expected,r.frameId,r.cycleId);}catch(const std::exception& e){fail(ProductionError::InvalidCompletion,QString::fromUtf8(e.what()));}
         }

@@ -6,6 +6,7 @@ görev” ifadeleri yazıldıkları tarihe aittir.
 
 | Dönem / görev | Kayıt |
 | --- | --- |
+| 28 Ekim 2026 — EFR-03a-3 | [ROI Image executor, kayıt uyumluluğu ve kalıcı teaching/cache invalidation](2026-10-28-efr-03a-3.md) |
 | 28 Ekim 2026 — EFR-03a-2 | [Owned crop, immutable raw/child geometri ve kararlı kimlik](2026-10-28-efr-03a-2.md) |
 | 28 Ekim 2026 — EFR-03a-1 | [Tek ROI crop sözleşmesi, 13 Image tüketicisi ve koordinat/kalibrasyon API tasarımı](2026-10-28-efr-03a-1.md) |
 | 28 Ekim 2026 — EFR-02 | [Merkezi combobox wheel politikası, kabul matrisi ve native sınırı](2026-10-28-efr-02.md) |

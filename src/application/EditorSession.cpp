@@ -105,12 +105,17 @@ TargetEvaluation EditorSession::evaluation(const EditorContext& c,const QString&
     return e;
 }
 void EditorSession::reconcile(const EditorContext& c) {
+    const auto previousCacheSize=cache_.size();
     if(!frame && sourceFrames.isEmpty()){cache_.clear();if(cycle && cycle->state==ExecutionState::Done)cycle.reset();return;}
     if(c.definition["editor"].toObject()["schemaVersion"].toInt()==9) {
         for(auto it=cache_.begin();it!=cache_.end();)if(it->signature!=ExecutionService::toolSignature(c.definition,QFileInfo(c.path).absolutePath(),it.key(),evaluationScope(c,sourceForTool(c,it.key()))))it=cache_.erase(it);else ++it;
         for(auto it=sourceFrames.begin();it!=sourceFrames.end();)if(!cache_.contains(it.key()))it=sourceFrames.erase(it);else ++it;
         if(frame && !sourceFrames.contains(frame->metadata().sourceId))frame.reset();
     }else {const auto e=evaluation(c);cache_=e.cache;}
+    // Once an upstream edit evicts a result, returning to an earlier signature
+    // must not resurrect its cached teaching anchor/presentation.
+    for(auto it=references.begin();it!=references.end();)if(!cache_.contains(it.key()))it=references.erase(it);else ++it;
+    if(cache_.size()!=previousCacheSize){matchOutcome.reset();resultSignature.clear();}
     if(cycle) {
         if(cycle->configId!=signature(c))cycle->publicationIntents.clear();
         cycle->tools.erase(std::remove_if(cycle->tools.begin(),cycle->tools.end(),[&](const auto& r){return !cache_.contains(r.toolId);}),cycle->tools.end());

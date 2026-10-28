@@ -1,11 +1,10 @@
 # EFR-03a-1 — tek ROI crop sözleşmesi ve uygulama devri
 
-28 Ekim 2026. **EFR-03a-2 owned crop/geometri altyapısı uygulandı; ROI executor,
-tüm consumer ve UI entegrasyonu EFR-03a-3/4 ve 03b kapsamındadır.**
+28 Ekim 2026. **EFR-03a-2 owned crop/geometri ve EFR-03a-3 ROI executor/registry/cache uygulandı; tüm consumer ve UI entegrasyonu EFR-03a-4 ve 03b kapsamındadır.**
 [Ana plan](editor-flow-roi-update-plan.md#efr-03a--roi-kırpmanın-görüntükoordinat-sözleşmesi).
 Bu belge EFR-03a-2/3/4 için bağlayıcı API ve dosya/test kapsamıdır.
 EFR-03b checkbox/viewer kabulü ayrıdır. Mevcut Region özelliği çalışır;
-buradaki Image çıkışı ve dönüşümler mevcut ürün yeteneği olarak sunulmaz.
+ROI Image portu core katmanda vardır; tam consumer/UI kabulü henüz tamamlanmadı.
 
 ## 1. Tek araç, parametre ve kayıt
 
@@ -47,6 +46,32 @@ connections ve dependencies korunur. `ExecutionService::version()` gerçek
 semantik değişiklikte EFR-03a-3'te artırılır; eski production validation yeniden
 kullanılmaz. Kayıt güncellemesi ProjectService'in tek candidate/atomik save
 yolundan geçer; açılışta UI veya edinim çalıştırılmaz.
+
+### EFR-03a-3 uygulama sınırı ve sonraki karta API devri
+
+`roi` descriptor revision 2, execution engine `/35` oldu. Okuma schema 7/8/9
+missing `cropImage` alanını bellekte false'a çevirir; yeni yazım canonical
+boolean taşır. Aynı ImageFrame false modda kopyasız geçirilir; true modda
+`ImageAccess::cropped` kullanılır. `RoiService::teach(image, rect, bool=false)`
+tercihi açık alır; UI çağrısının tercihi koruması EFR-03b kapsamındadır.
+
+`PortValue::imageGeometry` optional immutable scope'tur. ROI Region girdinin,
+Image çıktısı kendi frame'inin scope'unu taşır; execution bütün Image
+çıktılarında bunu doldurur. Target-only ve SourceFrameIndex root coordinate
+soyunu kabul eder, farklı local Image/Region girişlerini eşitlemez.
+Production completion aynı soy kontrolünü yapar ve scope'u capability digest'e
+katar. **Kalıcı strict scope codec/trace ve diğer consumer px çıktıları henüz
+EFR-03a-4 kapsamındadır**; bu alanı kalıcı kayıt okuması doldurmuş sayılmaz.
+
+ProjectService setTools/updateToolConnections/setConnections transaction'ları
+upstream parametre/enabled/dependency veya bağlantı değişiminde downstream
+ROI `imageBinding` alanını temizler. Search rect ve crop tercihi korunur;
+A→B→A ve save/reopen öğretimi canlandırmaz. Rename/description etkisizdir,
+ilgisiz dal korunur. Bu kart yalnız downstream ROI öğretimini temizler;
+bütün model/reference/pose öğretim yolları EFR-03a-4'te tamamlanır.
+EditorSession reconcile sonuçla birlikte cached reference anchor ve eski
+presentation imzasını da siler. Crop/preprocess allocation preflight ve
+retained raster bütçesi mevcut multi-source execution sınırını paylaşır.
 
 ## 2. Owned raster ve koordinat API'si — EFR-03a-2
 

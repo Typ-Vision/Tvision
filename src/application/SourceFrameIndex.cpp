@@ -25,7 +25,7 @@ const FrameMetadata& SourceFrameIndex::frame(const QString& source) const {
 }
 void SourceFrameIndex::validatePort(const QString& source,const PortValue& value,const PortDefinition& port) const {
     const auto& acquired=frame(source);
-    require(value.origin.sourceId==source && value.origin.coordinateSystemId==acquired.coordinateSystemId,"Port source/coordinate mismatch");
+    require(value.origin.sourceId==source && (value.imageGeometry ? value.imageGeometry->rootCoordinateSystemId():value.origin.coordinateSystemId)==acquired.coordinateSystemId,"Port source/coordinate mismatch");
     require(value.frameId==acquired.frameId && value.cycleId==acquired.cycleId && value.origin.frameId==acquired.frameId && value.origin.cycleId==acquired.cycleId,"Port acquired frame/cycle mismatch");
     ToolResultCodec::validate(value,port,acquired.frameId,acquired.cycleId);
 }

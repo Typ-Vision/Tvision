@@ -4,9 +4,9 @@
 
 ## Devam noktası
 
-**[EFR-03a-2](archive/2026-10-28-efr-03a-2.md):** owned crop/geometri;
-Core Release/4 CTest geçti. ROI/consumer/UI entegrasyonu yok.
-Sonraki **EFR-03a-3**; [sözleşme](architecture/roi-crop-contract.md).
+**[EFR-03a-3](archive/2026-10-28-efr-03a-3.md):** ROI/Image, soy/cache/teaching;
+Core Release/9 CTest geçti. Sonraki **EFR-03a-4** consumer/kalibrasyon/trace,
+UI 03b. [Sözleşme](architecture/roi-crop-contract.md).
 [EFR-01](archive/2026-10-28-efr-01.md)/[02](archive/2026-10-28-efr-02.md)
 korunur; OS wheel, Save odak açık. Match/θ ertelendi.
 

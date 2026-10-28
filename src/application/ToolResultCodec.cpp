@@ -40,6 +40,8 @@ void ToolResultCodec::validate(const PortValue& v,const PortDefinition& expected
         require((v.port.type==PortType::Text && std::holds_alternative<QString>(v.data)) || (v.port.type==PortType::Boolean && std::holds_alternative<bool>(v.data)),"Cycle scalar type mismatch");return;
     }
     require(!frameId.isEmpty() && !cycleId.isEmpty() && v.frameId==frameId && v.cycleId==cycleId && v.origin.frameId==frameId && v.origin.cycleId==cycleId && !v.origin.sourceId.isEmpty() && !v.origin.coordinateSystemId.isEmpty(),"Port frame/cycle/source mismatch");
+    if(v.imageGeometry)require(v.imageGeometry->coordinateSystemId()==v.origin.coordinateSystemId && !v.imageGeometry->identity().isEmpty(),"Port image geometry/origin mismatch");
+    if(const auto* image=std::get_if<ImageFrame>(&v.data))if(v.imageGeometry)require(*v.imageGeometry==image->geometry(),"Image geometry scope mismatch");
     const auto name=portTypeName(v.port.type);
     const auto encoded=payload(v);
     const auto actual=std::visit([](const auto& p)->QString {using T=std::decay_t<decltype(p)>;
