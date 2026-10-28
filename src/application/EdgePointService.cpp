@@ -16,7 +16,7 @@ ToolResult EdgePointService::execute(const ToolDefinition& tool,const QMap<QStri
     options.minContrast=p["minContrast"].toDouble();options.subpixel=p["subpixel"].toBool();
     const auto result=EdgeFinder::find(image,ToolRoi::fromJson(p["scanRoi"].toObject()),options,cancel);
     ToolResult r;r.toolId=tool.id;r.state=ExecutionState::Done;r.message=result.selected ? "FOUND":"NOT_FOUND";
-    auto put=[&](const QString& id,PortData data,bool valid=true){for(const auto& port:outputPorts(tool.kind))if(port.id==id){PortValue v{port,std::move(data),valid,frameId,cycleId,image.metadata()};v.method="profile-edge";v.methodVersion=1;if(!valid)v.invalidReason="NOT_FOUND";r.outputs[id]=std::move(v);}};
+    auto put=[&](const QString& id,PortData data,bool valid=true){for(const auto& port:outputPorts(tool.kind))if(port.id==id){PortValue v{port,std::move(data),valid,frameId,cycleId,image.metadata()};v.imageGeometry=image.geometry();v.method="profile-edge";v.methodVersion=1;if(!valid)v.invalidReason="NOT_FOUND";r.outputs[id]=std::move(v);}};
     put("found",bool(result.selected));
     if(result.selected){const auto& c=result.candidates[*result.selected];put("point",c.point);put("strength",c.strength);put("signedStrength",c.signedStrength);put("refined",c.refined);r.points.append(c.point);r.message+=" • "+c.refinement;}
     else {put("point",QPointF{},false);put("strength",0.0,false);put("signedStrength",0.0,false);put("refined",false,false);}

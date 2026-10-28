@@ -33,7 +33,7 @@ ToolResult CodeReadService::execute(const ToolDefinition& t,const QMap<QString,P
     const auto codes=CodeReader::read(image,options,cancel);const auto checks=inspect(codes,p);
     const bool accepted=std::all_of(checks.items.begin(),checks.items.end(),[](const auto& c){return c.accepted;});
     ToolResult result;result.toolId=t.id;result.state=ExecutionState::Done;result.message=codes.items.isEmpty() ? "NO_READ" : "READ";
-    auto put=[&](const QString& id,PortData data){for(const auto& port:outputPorts(t.kind))if(port.id==id){PortValue v{port,std::move(data),true,frameId,cycleId,image.metadata()};v.method="zxing-reader";v.methodVersion=1;result.outputs[id]=std::move(v);}};
+    auto put=[&](const QString& id,PortData data){for(const auto& port:outputPorts(t.kind))if(port.id==id){PortValue v{port,std::move(data),true,frameId,cycleId,image.metadata()};v.imageGeometry=image.geometry();v.method="zxing-reader";v.methodVersion=1;result.outputs[id]=std::move(v);}};
     put("codes",codes);put("count",double(codes.items.size()));put("found",!codes.items.isEmpty());put("accepted",accepted);put("checks",checks);
     return result;
 }

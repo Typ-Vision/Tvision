@@ -21,7 +21,7 @@ QJsonValue ToolResultCodec::payload(const PortValue& v) {
         else if constexpr(std::is_same_v<T,bool>)return p;
         else if constexpr(std::is_same_v<T,QPointF>){require(finite(p),"Nonfinite Point");return QJsonObject{{"x",p.x()},{"y",p.y()}};}
         else if constexpr(std::is_same_v<T,QRect>){require(p.width()>0 && p.height()>0,"Invalid Region");return QJsonObject{{"x",p.x()},{"y",p.y()},{"width",p.width()},{"height",p.height()}};}
-        else if constexpr(std::is_same_v<T,ImageFrame>){require(!p.size().isEmpty(),"Empty Image");QJsonObject o{{"width",p.size().width()},{"height",p.size().height()},{"pixelFormat",p.pixelFormat()}};if(!p.processingId().isEmpty())o["processingId"]=QString::fromLatin1(p.processingId().toHex());return o;}
+        else if constexpr(std::is_same_v<T,ImageFrame>){require(!p.size().isEmpty(),"Empty Image");QJsonObject o{{"width",p.size().width()},{"height",p.size().height()},{"pixelFormat",p.pixelFormat()}};if(!p.processingId().isEmpty())o["processingId"]=QString::fromLatin1(p.processingId().toHex());if(p.geometry().cropDepth())o["imageGeometry"]=p.geometry().toJson();return o;}
         else if constexpr(std::is_same_v<T,AssignmentBundle>)return encodeAssignmentBundle(p);
         else return ToolValues::encode(ToolValueData(p));
     },v.data);
@@ -29,6 +29,7 @@ QJsonValue ToolResultCodec::payload(const PortValue& v) {
 void ToolResultCodec::validate(const PortValue& v,const PortDefinition& expected,const QString& frameId,const QString& cycleId) {
     require(v.port.id==expected.id && v.port.type==expected.type && v.port.unit==expected.unit && v.port.frame==expected.frame,"Port declaration mismatch");
     require(!portTypeName(v.port.type).isEmpty() && !v.port.id.isEmpty() && v.port.id.size()<=128 && v.port.unit.size()<=32 && !v.port.frame.isEmpty() && v.port.frame.size()<=128,"Invalid port declaration");
+    if(v.origin.coordinateSystemId.startsWith("roi-crop/"))require(v.imageGeometry.has_value(),"Child port requires image geometry scope");
     if(!v.valid){if(int(v.port.type)>int(PortType::Boolean))require(!v.invalidReason.isEmpty() && v.invalidReason.size()<=2048,"Invalid typed port requires reason");return;}
     if(int(v.port.type)>int(PortType::Boolean))require(!v.evaluationId.isEmpty() && v.evaluationId.size()<=256 && !v.method.isEmpty() && v.method.size()<=128 && v.methodVersion>=1 && v.methodVersion<=1000000 && v.invalidReason.isEmpty(),"Typed value method/evaluation provenance missing");
     if(v.port.type==PortType::AssignmentBundle){
@@ -40,7 +41,7 @@ void ToolResultCodec::validate(const PortValue& v,const PortDefinition& expected
         require((v.port.type==PortType::Text && std::holds_alternative<QString>(v.data)) || (v.port.type==PortType::Boolean && std::holds_alternative<bool>(v.data)),"Cycle scalar type mismatch");return;
     }
     require(!frameId.isEmpty() && !cycleId.isEmpty() && v.frameId==frameId && v.cycleId==cycleId && v.origin.frameId==frameId && v.origin.cycleId==cycleId && !v.origin.sourceId.isEmpty() && !v.origin.coordinateSystemId.isEmpty(),"Port frame/cycle/source mismatch");
-    if(v.imageGeometry)require(v.imageGeometry->coordinateSystemId()==v.origin.coordinateSystemId && !v.imageGeometry->identity().isEmpty(),"Port image geometry/origin mismatch");
+    if(v.imageGeometry)require(v.imageGeometry->sourceId()==v.origin.sourceId && v.imageGeometry->coordinateSystemId()==v.origin.coordinateSystemId && !v.imageGeometry->identity().isEmpty(),"Port image geometry/origin mismatch");
     if(const auto* image=std::get_if<ImageFrame>(&v.data))if(v.imageGeometry)require(*v.imageGeometry==image->geometry(),"Image geometry scope mismatch");
     const auto name=portTypeName(v.port.type);
     const auto encoded=payload(v);
@@ -68,20 +69,23 @@ void ToolResultCodec::validate(const PortValue& v,const PortDefinition& expected
 }
 QJsonObject ToolResultCodec::encode(const PortValue& v) {
     require(v.port.type!=PortType::Image,"Image bytes are not port JSON");validate(v,v.port,v.frameId,v.cycleId);
-    return {{"schemaVersion",1},{"id",v.port.id},{"type",portTypeName(v.port.type)},{"unit",v.port.unit},{"coordinateFrame",v.port.frame},{"required",v.port.required},{"valid",v.valid},
+    QJsonObject o{{"schemaVersion",1},{"id",v.port.id},{"type",portTypeName(v.port.type)},{"unit",v.port.unit},{"coordinateFrame",v.port.frame},{"required",v.port.required},{"valid",v.valid},
         {"frameId",v.frameId},{"cycleId",v.cycleId},{"sourceId",v.origin.sourceId},{"sourceCoordinates",v.origin.coordinateSystemId},
         {"evaluationId",v.evaluationId},{"method",v.method},{"methodVersion",v.methodVersion},{"diagnostic",v.diagnostic},{"invalidReason",v.invalidReason},
         {"value",v.valid ? payload(v):QJsonValue(QJsonValue::Null)}};
+    if(v.imageGeometry && v.imageGeometry->cropDepth()){o["schemaVersion"]=2;o["imageGeometry"]=v.imageGeometry->toJson();}return o;
 }
 PortValue ToolResultCodec::decode(const QJsonObject& o) {
     require(QJsonDocument(o).toJson(QJsonDocument::Compact).size()<=(o["type"]=="AssignmentBundle" ? 8*1024*1024:ToolValues::maxJsonBytes)+4096,"Port envelope too big");
-    keys(o,{"schemaVersion","id","type","unit","coordinateFrame","required","valid","frameId","cycleId","sourceId","sourceCoordinates","value","evaluationId","method","methodVersion","diagnostic","invalidReason"});
-    require(o["schemaVersion"].isDouble() && o["schemaVersion"].toDouble()==1 && o["valid"].isBool() && o["required"].isBool(),"Invalid port schema/flags");
+    auto envelope=o;if(o["schemaVersion"]==2){require(o["imageGeometry"].isObject(),"Child geometry scope missing");envelope.remove("imageGeometry");}
+    keys(envelope,{"schemaVersion","id","type","unit","coordinateFrame","required","valid","frameId","cycleId","sourceId","sourceCoordinates","value","evaluationId","method","methodVersion","diagnostic","invalidReason"});
+    require(o["schemaVersion"].isDouble() && (o["schemaVersion"].toDouble()==1 || o["schemaVersion"].toDouble()==2) && o["valid"].isBool() && o["required"].isBool(),"Invalid port schema/flags");
     const auto type=str(o,"type");PortType pt=PortType::Image;
     for(int n=int(PortType::Region);n<=int(PortType::AssignmentBundle);++n)if(portTypeName(PortType(n))==type)pt=PortType(n);
     require(pt!=PortType::Image,"Unknown/non-serializable port type");
     PortValue v;v.port={str(o,"id"),pt,str(o,"unit"),str(o,"coordinateFrame"),o["required"].toBool()};v.valid=o["valid"].toBool();
     v.frameId=str(o,"frameId");v.cycleId=str(o,"cycleId");v.origin={str(o,"sourceId"),v.frameId,v.cycleId,str(o,"sourceCoordinates")};
+    if(o["schemaVersion"]==2)v.imageGeometry=ImageGeometry::fromJson(o["imageGeometry"].toObject());
     v.evaluationId=str(o,"evaluationId");v.method=str(o,"method",128);v.invalidReason=str(o,"invalidReason",2048);const auto mv=num(o,"methodVersion");require(mv>=0 && mv<=1000000 && mv==std::floor(mv) && o["diagnostic"].isBool(),"Invalid method version/diagnostic");v.methodVersion=int(mv);v.diagnostic=o["diagnostic"].toBool();
     if(!v.valid){require(o["value"].isNull(),"Invalid port cannot carry payload");validate(v,v.port,v.frameId,v.cycleId);return v;}
     const auto value=o["value"];

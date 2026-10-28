@@ -7,13 +7,13 @@ RuntimeOverlayCollection runtimeOverlays(const CycleResult& cycle,const QVector<
     const ImageFrame& raw,const std::shared_ptr<const ProductionSnapshot>& snapshot,const QString& selectedTool) {
     const auto& m=raw.metadata();
     RuntimeOverlayCollection out{snapshot ? snapshot->validation().id.toUtf8()+"|"+snapshot->validation().dependencyId:QByteArray{},m.sourceId,m.frameId,m.cycleId,m.coordinateSystemId,raw.size(),{}};
-    if(!RuntimeService::presentationMatches(cycle,snapshot) || cycle.recipeId!=snapshot->recipe().id || cycle.configId!=snapshot->validation().contentId || cycle.cycleId!=m.cycleId || m.sourceId.isEmpty() || m.frameId.isEmpty() || m.coordinateSystemId.isEmpty() || !raw.processing().isEmpty())return out;
+    if(!RuntimeService::presentationMatches(cycle,snapshot) || cycle.recipeId!=snapshot->recipe().id || cycle.configId!=snapshot->validation().contentId || cycle.cycleId!=m.cycleId || m.sourceId.isEmpty() || m.frameId.isEmpty() || m.coordinateSystemId.isEmpty())return out;
     auto matches=[&](const FrameMetadata& x){return x.sourceId==m.sourceId && x.frameId==m.frameId && x.cycleId==m.cycleId && x.coordinateSystemId==m.coordinateSystemId;};
     for(const auto& r:cycle.tools){
         if(r.state!=ExecutionState::Done || graph.toolSources.value(r.toolId)!=m.sourceId || (!selectedTool.isEmpty() && r.toolId!=selectedTool))continue;
         const auto definition=std::find_if(tools.begin(),tools.end(),[&](const auto& t){return t.id==r.toolId;});if(definition==tools.end())continue;
         bool current=false,mismatch=false;
-        for(const auto& v:r.outputs)if(v.valid){current=true;if(!matches(v.origin) || v.frameId!=m.frameId || v.cycleId!=m.cycleId)mismatch=true;}
+        for(const auto& v:r.outputs)if(v.valid && v.port.type!=PortType::Image){current=true;if(!matches(v.origin) || v.frameId!=m.frameId || v.cycleId!=m.cycleId)mismatch=true;}
         if(!current || mismatch)continue;
         RuntimeOverlayLayer layer;layer.toolId=r.toolId;layer.name=definition->name;layer.state=executionStateName(r.state);layer.detail=r.message;
         const auto hash=QCryptographicHash::hash(r.toolId.toUtf8(),QCryptographicHash::Sha256);layer.color=QColor::fromHsv((quint8(hash[0])*256+quint8(hash[1]))%360,165,255);

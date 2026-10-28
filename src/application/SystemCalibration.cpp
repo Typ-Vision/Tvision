@@ -92,7 +92,7 @@ void SystemCalibration::compatible(const ActiveCalibrationSnapshot& s,const Reci
     const auto declared=recipe.definition["planarSetup"].toObject();if(!declared.isEmpty())require(declared["lensId"]==setup.lensId && declared["workingPlaneId"]==setup.planeId,"Eski reçetenin lens/düzlem beyanı ortak kurulumdan farklı; açıkça düzenleyin.");
 }
 MeasurementExecutionContext SystemCalibration::resolve(const ActiveCalibrationSnapshot& s,const Recipe& recipe,const QString& directory,const ImageFrame& image){
-    MeasurementExecutionContext result;result.rawSize=image.size();try{compatible(s,recipe,directory,image.size());const auto tool=source(recipe);const auto& m=image.metadata();require(m.sourceId==tool.id && !m.frameId.isEmpty() && !m.cycleId.isEmpty() && m.completedAtUtc.isValid(),"System calibration actual frame provenance mismatch");auto c=executionModel(s,tool.id,m.coordinateSystemId);result.current=c.dependency();result.calibration=std::make_shared<const PlanarCalibration>(std::move(c));}catch(const std::exception& e){result.error=QString::fromUtf8(e.what());}return result;
+    MeasurementExecutionContext result;result.rawSize=image.geometry().rootSize();try{compatible(s,recipe,directory,image.geometry().rootSize());const auto tool=source(recipe);const auto& m=image.metadata();require(m.sourceId==tool.id && !m.frameId.isEmpty() && !m.cycleId.isEmpty() && m.completedAtUtc.isValid(),"System calibration actual frame provenance mismatch");auto c=executionModel(s,tool.id,image.geometry().rootCoordinateSystemId());result.current=c.dependency();result.calibration=std::make_shared<const PlanarCalibration>(std::move(c));}catch(const std::exception& e){result.error=QString::fromUtf8(e.what());}return result;
 }
 CalibrationDependency SystemCalibration::experimentalBinding(const ExperimentalScopedCalibrationSnapshot& typed,const QString& tool,const QString& coordinates){
     const auto& s=typed.snapshot.calibration;const auto record=CalibrationModelRecord::decode(s.record.encode());const auto& original=record.model().dependency();
@@ -106,18 +106,18 @@ CalibrationDependency SystemCalibration::experimentalBinding(const ExperimentalS
     d.contentId=digest({{"policy","experimental-editor-model/1"},{"record",record.contentId()},{"selection",selection(s.selection)},{"scope",s.scope},{"acquisition",a},{"source",tool},{"coordinates",coordinates}});d.validate();return d;
 }
 MeasurementExecutionContext SystemCalibration::resolveExperimental(const ExperimentalScopedCalibrationSnapshot& typed,const Recipe& recipe,const ImageFrame& image){
-    MeasurementExecutionContext result;result.rawSize=image.size();try{
-        const auto& s=typed.snapshot.calibration;const auto tool=source(recipe);experimentalBinding(typed,tool.id,image.metadata().coordinateSystemId);const auto ref=setupReference(recipe);require(ref && *ref==typed.snapshot.target,"Experimental source requires exact setup binding");
+    MeasurementExecutionContext result;result.rawSize=image.geometry().rootSize();try{
+        const auto& s=typed.snapshot.calibration;const auto tool=source(recipe);experimentalBinding(typed,tool.id,image.geometry().rootCoordinateSystemId());const auto ref=setupReference(recipe);require(ref && *ref==typed.snapshot.target,"Experimental source requires exact setup binding");
         const auto probe=MeasurementSourceEvidence::fromJson(s.acquisition["probe"].toObject());const auto& expected=*probe.experimental;
         ExperimentalCalibrationEvidence actual{tool.kind=="image_file" ? SourceOrigin::SetupFile:SourceOrigin::CameraAcquired,expected.camera,expected.setup,expected.profile,image.metadata().experimentalAcquisition};actual.validate();
-        require(image.size()==expected.setup.geometry.resolution && image.metadata().sourceId==tool.id && !image.metadata().frameId.isEmpty() && !image.metadata().cycleId.isEmpty() && image.metadata().completedAtUtc.isValid(),"Experimental execution raster/source mismatch");
+        require(image.geometry().rootSize()==expected.setup.geometry.resolution && image.metadata().sourceId==tool.id && !image.metadata().frameId.isEmpty() && !image.metadata().cycleId.isEmpty() && image.metadata().completedAtUtc.isValid(),"Experimental execution raster/source mismatch");
         if(image.processing().isEmpty())actual.verify(image);
         require(tool.kind=="image_file" || tool.kind=="industrial_camera","Experimental source adapter mismatch");
         if(tool.kind=="industrial_camera"){
             const auto request=IndustrialSourceReference::fromJson(tool.parameters["sourceReference"].toObject());request.validateAgainst(MeasurementSetupContract{{expected.camera},{expected.setup},{expected.profile}});
         }
         const auto declared=recipe.definition["planarSetup"].toObject();require(declared.isEmpty() || (declared["lensId"]==s.record.setup().lensId && declared["workingPlaneId"]==s.record.setup().planeId),"Recipe optical declaration differs");
-        auto model=s.record.model();model.dependency_=experimentalBinding(typed,tool.id,image.metadata().coordinateSystemId);model.readyRecordContentId_=s.record.contentId();result.current=model.dependency();result.calibration=std::make_shared<const PlanarCalibration>(std::move(model));
+        auto model=s.record.model();model.dependency_=experimentalBinding(typed,tool.id,image.geometry().rootCoordinateSystemId());model.readyRecordContentId_=s.record.contentId();result.current=model.dependency();result.calibration=std::make_shared<const PlanarCalibration>(std::move(model));
     }catch(const std::exception& e){result.error=QString::fromUtf8(e.what());}return result;
 }
 QStringList SystemCalibration::impact(const ActiveCalibrationSnapshot& s,const Recipe& recipe,const QString& directory){

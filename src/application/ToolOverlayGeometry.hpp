@@ -18,7 +18,7 @@ inline ToolOverlayGeometry toolOverlayGeometry(const ToolDefinition& original,co
         if(world)roi=original.parameters.contains("referenceBinding") ? toolReferenceBinding(original).nominal:ToolRoi::fromJson(original.parameters["scanRoi"].toObject());
         else if(!roi && !effective.parameters["scanRoi"].toObject().isEmpty())roi=ToolRoi::fromJson(effective.parameters["scanRoi"].toObject());
         auto map=[&](QPointF p){
-            if(world)p=world->nominalToRaw(p);
+            if(world)p=world->nominalToImage(p);
             else if(roi && roi->frame.unit==LengthUnit::Millimetre)p=CircleToolService::mapPoint(frame,context,p,true);
             if(!std::isfinite(p.x()) || !std::isfinite(p.y()) || p.x()<0 || p.y()<0 || p.x()>frame.size().width()-1 || p.y()>frame.size().height()-1)throw std::runtime_error("Tarama geometrisi raw alanın dışında");
             return p;

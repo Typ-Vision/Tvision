@@ -83,6 +83,8 @@ int main(int argc,char** argv){QCoreApplication app(argc,argv);try {
     auto holdout=[&](QString id,QPointF a,QPointF b){return CalibrationSample{id,{project(a),hSetup.source},{project(b),hSetup.source},QLineF(a,b).length()};};
     const auto hAccepted=service.validate(service.teachHomography(hSetup,mapping),{holdout("hx",{2,3},{27,3}),holdout("hy",{3,2},{3,23})},.0001);
     EdgePairCalibration hContext{hAccepted,hAccepted.dependency()};auto hScan=scan;hScan.frame.id="image";const auto hImage=frame(stripe,"source","image");
+    emptyError(EdgePairService::measure(hImage,hScan,o,EdgePairMode::Calibrated,&hContext)); // complete old scan crosses the calibration hull
+    hScan=ToolRoi{{"image"},ScanSegment{{30,64},{90,64},2}};
     result=EdgePairService::measure(hImage,hScan,o,EdgePairMode::Calibrated,&hContext);check(result.found && result.widthMm.has_value(),"projective pair measured");
     const double expected=QLineF(unproject({39.5,64}),unproject({63.5,64})).length();near(*result.widthMm,expected,1e-5,"independent projective endpoint oracle");check(std::abs(expected-24./4)>.5,"nominal scale negative control");
     cv::Mat outside(128,128,CV_8UC1,cv::Scalar(0));outside(cv::Rect(5,0,24,128)).setTo(200);auto outsideScan=roi({1,64},{110,64});outsideScan.frame.id="image";

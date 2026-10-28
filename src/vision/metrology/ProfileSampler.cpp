@@ -24,7 +24,7 @@ double bilinear(const ImageAccess& access,const ImageFrame& frame,QPointF p) {
     require(p.x()>=-1e-9 && p.y()>=-1e-9 && p.x()<=size.width()-1+1e-9 && p.y()<=size.height()-1+1e-9,"Profile sample outside image");
     const double x=std::clamp(p.x(),0.0,double(size.width()-1)),y=std::clamp(p.y(),0.0,double(size.height()-1));
     const int x0=int(std::floor(x)),y0=int(std::floor(y));
-    const int x1=std::min(x0+1,size.width()-1),y1=std::min(y0+1,size.height()-1);
+    const int x1=int(std::ceil(x)),y1=int(std::ceil(y));
     const double fx=x-x0,fy=y-y0;
     return (1-fy)*((1-fx)*pixel(access,frame.format(),x0,y0)+fx*pixel(access,frame.format(),x1,y0))
            +fy*((1-fx)*pixel(access,frame.format(),x0,y1)+fx*pixel(access,frame.format(),x1,y1));

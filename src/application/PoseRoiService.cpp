@@ -1,4 +1,5 @@
 #include "PoseRoiService.hpp"
+#include "CalibratedImageGeometry.hpp"
 #include "CircleToolService.hpp"
 #include "MeasurementService.hpp"
 #include "ToolResultCodec.hpp"
@@ -28,6 +29,7 @@ Pose2D reference(const ToolDefinition& source,const ToolResult& result,const Ima
     for(const auto& d:outputPorts(source.kind))if(d.id=="pose" || d.id=="scale" || d.id=="found" || d.id=="ambiguous" || d.id=="truncated"){
         require(result.outputs.contains(d.id),"Tracking reference port missing");const auto& v=result.outputs[d.id];
         ToolResultCodec::validate(v,d,m.frameId,m.cycleId);
+        if(image.geometry().cropDepth())require(v.imageGeometry && *v.imageGeometry==image.geometry(),"Tracking child scope differs from image");
         require(v.frameId==m.frameId && v.cycleId==m.cycleId && v.origin.sourceId==m.sourceId && v.origin.coordinateSystemId==m.coordinateSystemId &&
             v.origin.frameId==m.frameId && v.origin.cycleId==m.cycleId && v.origin.completedAtUtc==m.completedAtUtc &&
             v.origin.exposureAtUtc==m.exposureAtUtc && v.origin.deviceTimestampTicks==m.deviceTimestampTicks && v.origin.deviceClockId==m.deviceClockId,"Tracking acquisition mismatch");
@@ -72,7 +74,9 @@ ToolDefinition PoseRoiService::teachWorldTool(const ToolDefinition& consumer,con
     taught.parameters["scanRoi"]=nominal.toJson();
     if(taught.kind!="edge_point")taught.parameters["mode"]="calibrated";
     if(taught.kind=="circle_fit")taught.parameters["unitsPerSample"]=unit;
-    WorldPoseTracking b{reference(source,result,image),source.id,geometryIdentity(source),image.metadata().sourceId,scanRoiIdentity(taught),image.size(),ctx.calibration->dependency(),unit};
+    auto rootPose=reference(source,result,image);rootPose.position=image.geometry().toRoot(rootPose.position);rootPose.frame.id=image.geometry().rootCoordinateSystemId();
+    WorldPoseTracking b{rootPose,source.id,geometryIdentity(source),image.metadata().sourceId,scanRoiIdentity(taught),image.geometry().rootSize(),ctx.calibration->dependency(),unit};
+    if(image.geometry().cropDepth())b.imageGeometry=image.geometry();
     taught.parameters["poseTracking"]=b.toJson();ToolRegistry::validate(taught);
     // Preflight the actual configured sampling footprint, including transverse
     // taps and budgets. Missing/poor feature fits do not invalidate teaching.
@@ -80,10 +84,10 @@ ToolDefinition PoseRoiService::teachWorldTool(const ToolDefinition& consumer,con
     return taught;
 }
 PoseRoi PoseRoiService::teach(const ToolRoi& raw,const CoordinateFrame& local,const ToolDefinition& source,const ToolResult& result,const ImageFrame& image){
-    require(raw.inside(image.size()),"Tracking teaching footprint outside image");return PoseRoi::teach(raw,reference(source,result,image),local,source.id,geometryIdentity(source),image.size(),image.metadata().sourceId);
+    require(raw.inside(image.size()),"Tracking teaching footprint outside image");return PoseRoi::teach(raw,reference(source,result,image),local,source.id,geometryIdentity(source),image.size(),image.metadata().sourceId,image.geometry().cropDepth() ? std::optional<ImageGeometry>(image.geometry()):std::nullopt);
 }
 PoseRoiResolution PoseRoiService::resolve(const PoseRoi& binding,const ToolDefinition& source,const ToolResult& result,const ImageFrame& image){
-    try{binding.validate();require(binding.sourceTool==source.id && binding.geometryId==geometryIdentity(source),"Tracking teaching stale; model/anchor changed");
+    try{binding.validate();require(!binding.invalidated,"Tracking teaching invalidated; reteach required");require(binding.imageGeometry ? *binding.imageGeometry==image.geometry():!image.geometry().cropDepth(),"Tracking image scope changed; reteach");require(binding.sourceTool==source.id && binding.geometryId==geometryIdentity(source),"Tracking teaching stale; model/anchor changed");
         require(binding.imageSource==image.metadata().sourceId,"Tracking acquisition source changed; reteach required");
         auto pose=reference(source,result,image);return {ExecutionState::Done,binding.resolve(pose,1.,image.size()),{}};
     }catch(const Unavailable& e){return {ExecutionState::Skipped,{},QString::fromUtf8(e.what())};}
@@ -93,7 +97,8 @@ WorldTrackingMap PoseRoiService::worldMap(const PoseRoi& binding,const ToolDefin
     const MeasurementExecutionContext& ctx,const std::shared_ptr<std::atomic_bool>& cancel){
     const auto resolved=resolve(binding,source,result,image);require(resolved.state==ExecutionState::Done,"World tracking reference unavailable");
     require(binding.calibration.has_value(),"World tracking requires teaching calibration");
-    WorldPoseTracking world{binding.taughtPose,binding.sourceTool,binding.geometryId,binding.imageSource,binding.geometryId,binding.rawSize,*binding.calibration,1.};
+    auto rootPose=binding.taughtPose;rootPose.position=image.geometry().toRoot(rootPose.position);rootPose.frame.id=image.geometry().rootCoordinateSystemId();
+    WorldPoseTracking world{rootPose,binding.sourceTool,binding.geometryId,binding.imageSource,binding.geometryId,image.geometry().rootSize(),*binding.calibration,1.,binding.imageGeometry};
     return worldMap(world,source,result,image,ctx,cancel);
 }
 WorldTrackingResolution PoseRoiService::resolveWorld(const WorldPoseTracking& binding,const ToolDefinition& source,const ToolResult& result,const ImageFrame& image,
@@ -105,14 +110,15 @@ WorldTrackingResolution PoseRoiService::resolveWorld(const WorldPoseTracking& bi
 WorldTrackingMap PoseRoiService::worldMap(const WorldPoseTracking& binding,const ToolDefinition& source,const ToolResult& result,const ImageFrame& image,
     const MeasurementExecutionContext& ctx,const std::shared_ptr<std::atomic_bool>& cancel){
     require(!cancel || !cancel->load(),"World tracking cancelled");
-    binding.validate();
+    binding.validate();require(!binding.invalidated,"World tracking teaching invalidated; reteach required");
+    require(binding.imageGeometry ? *binding.imageGeometry==image.geometry():!image.geometry().cropDepth(),"World tracking image scope changed; reteach");
     require(binding.sourceTool==source.id && binding.geometryId==geometryIdentity(source),"World tracking teaching stale; model/anchor changed");
-    require(binding.imageSource==image.metadata().sourceId && binding.rawSize==image.size(),"World tracking acquisition source/resolution changed");
+    require(binding.imageSource==image.metadata().sourceId && binding.rawSize==image.geometry().rootSize(),"World tracking acquisition source/resolution changed");
     require(ctx.current && ctx.calibration && ctx.calibration->measurementReady(),"World tracking requires bound active or accepted legacy calibration");
     binding.calibration.requireCurrent(*ctx.current);binding.calibration.requireCurrent(ctx.calibration->dependency());
-    require(ctx.rawSize==image.size() && binding.calibration.resolution==image.size(),"World tracking actual resolution mismatch");
+    require(ctx.rawSize==image.geometry().rootSize() && binding.calibration.resolution==image.geometry().rootSize(),"World tracking actual resolution mismatch");
     require(!binding.calibration.cameraId.startsWith("calibration-test:"),"File-test calibration cannot track production ROI");
-    const auto current=reference(source,result,image);
+    auto current=reference(source,result,image);current.position=image.geometry().toRoot(current.position);current.frame.id=image.geometry().rootCoordinateSystemId();
     const auto delta=poseTransform(binding.taughtPose,CoordinateFrame{"tracking/delta"}).inverse().then(poseTransform(current,CoordinateFrame{"tracking/delta"}));
     return calibratedMap(binding.calibration,delta,image,ctx,cancel);
 }
@@ -121,29 +127,20 @@ WorldTrackingMap PoseRoiService::calibratedMap(const CalibrationDependency& depe
     require(!cancel || !cancel->load(),"World tracking cancelled");delta.validate();
     require(ctx.current && ctx.calibration && ctx.calibration->measurementReady(),"World tracking requires active or accepted legacy calibration");
     dependency.requireCurrent(*ctx.current);dependency.requireCurrent(ctx.calibration->dependency());
-    require(ctx.rawSize==image.size() && dependency.resolution==image.size(),"World tracking actual resolution mismatch");
+    require(ctx.rawSize==image.geometry().rootSize() && dependency.resolution==image.geometry().rootSize(),"World tracking actual resolution mismatch");
     require(!dependency.cameraId.startsWith("calibration-test:"),"File-test calibration cannot track production ROI");
     require(delta.source==dependency.source && delta.target==dependency.source,"World transform raw frame mismatch");
-    // Copy the resolver value and immutable image/calibration ownership. Neither
-    // caller edits nor stack lifetimes may change a sampling job halfway through.
-    const auto rawFrame=delta.source;
-    auto forward=[image,ctx,cancel](QPointF raw){
-        require(!cancel || !cancel->load(),"World tracking cancelled");
-        return CircleToolService::mapPoint(image,ctx,raw,false);
+    const auto map=CalibratedImageGeometry::bind(image,ctx,cancel);
+    auto forward=[map](QPointF local){return map.imageToWorld(local);};
+    auto inverse=[image,map,delta](QPointF world){
+        const auto taught=map.worldToRoot(world);
+        const auto current=delta.map(Point2D{taught,delta.source}).position;
+        const auto local=image.geometry().fromRoot(current);map.imageToWorld(local);
+        // Every bilinear neighbour belongs to this child and the calibrated hull.
+        map.requireSamplingFootprint(local);
+        return local;
     };
-    auto inverse=[image,ctx,cancel,delta,rawFrame,forward](QPointF world){
-        require(!cancel || !cancel->load(),"World tracking cancelled");
-        const auto taughtRaw=CircleToolService::mapPoint(image,ctx,world,true);
-        const auto raw=delta.map(Point2D{taughtRaw,rawFrame}).position;
-        forward(raw); // Every actual transverse/longitudinal tap checks current hull.
-        return raw;
-    };
-    const auto content=image.contentId(),processing=image.processingId();
-    auto sameImage=[image,content,processing,cancel](const ImageFrame& actual){
-        require(!cancel || !cancel->load(),"World tracking cancelled");
-        const auto& a=actual.metadata();const auto& b=image.metadata();
-        require(actual.size()==image.size() && actual.format()==image.format() && a.sourceId==b.sourceId && a.frameId==b.frameId && a.cycleId==b.cycleId && a.coordinateSystemId==b.coordinateSystemId && a.completedAtUtc==b.completedAtUtc && a.exposureAtUtc==b.exposureAtUtc && a.deviceTimestampTicks==b.deviceTimestampTicks && a.deviceClockId==b.deviceClockId && actual.contentId()==content && actual.processingId()==processing,"World tracking sampling image differs from reference snapshot");
-    };
+    auto sameImage=[map](const ImageFrame& actual){map.requireImage(actual);};
     return {inverse,forward,sameImage,dependency.target,dependency};
 }
 QVector<Point2D> PoseRoiService::worldPoints(const PoseRoi& binding,const ToolDefinition& source,const ToolResult& result,const ImageFrame& image,
@@ -152,7 +149,7 @@ QVector<Point2D> PoseRoiService::worldPoints(const PoseRoi& binding,const ToolDe
     const auto map=worldMap(binding,source,result,image,ctx,cancel);
     QVector<Point2D> points;points.reserve(nominal.size());
     for(const auto& p:nominal){require(p.frame==map.world,"World tracking point frame mismatch");
-        points.append({map.rawToWorld(map.nominalToRaw(p.position)),map.world});
+        points.append({map.imageToWorld(map.nominalToImage(p.position)),map.world});
     }return points;
 }
 }

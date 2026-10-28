@@ -1,4 +1,5 @@
 #pragma once
+#include "vision/ImageGeometry.hpp"
 #include "ToolRoi.hpp"
 #include <optional>
 namespace visionflow {
@@ -12,9 +13,11 @@ struct PoseRoi {
     QSize rawSize;
     QString imageSource;
     std::optional<CalibrationDependency> calibration;
+    std::optional<ImageGeometry> imageGeometry;
+    bool invalidated=false;
     void validate() const;
     static PoseRoi teach(const ToolRoi& raw,const Pose2D&,const CoordinateFrame& local,
-                         const QString& sourceTool,const QString& geometryId,const QSize& rawSize,const QString& imageSource);
+                         const QString& sourceTool,const QString& geometryId,const QSize& rawSize,const QString& imageSource,const std::optional<ImageGeometry>& scope={});
     ToolRoi resolve(const Pose2D&,double scale,const QSize&) const;
     QJsonObject toJson() const;
     static PoseRoi fromJson(const QJsonObject&);

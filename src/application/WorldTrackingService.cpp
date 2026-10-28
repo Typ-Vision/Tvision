@@ -12,7 +12,7 @@ void require(bool ok,const char* why){if(!ok)throw std::runtime_error(why);}
 void validate(const ImageFrame& image,const ToolRoi& roi,const WorldTrackingMap& map,double unit){
     require(bool(map.requireImage),"World tracking image snapshot missing");map.requireImage(image);
     roi.validate();require(roi.frame==map.world && roi.frame.unit==LengthUnit::Millimetre,"World tracking ROI frame mismatch");
-    require(bool(map.nominalToRaw) && bool(map.rawToWorld),"World tracking mapping missing");
+    require(bool(map.nominalToImage) && bool(map.imageToWorld),"World tracking mapping missing");
     require(std::isfinite(unit) && unit>0,"World tracking sample unit must be positive finite");
 }
 ScanSegment scan(const ToolRoi& roi,double unit){
@@ -20,18 +20,18 @@ ScanSegment scan(const ToolRoi& roi,double unit){
     auto s=std::get<ScanSegment>(roi.geometry);return {s.start/unit,s.end/unit,s.width/unit};
 }
 TrackedWorldPoint point(const WorldTrackingMap& map,QPointF nominal){
-    const auto raw=map.nominalToRaw(nominal);return {raw,map.rawToWorld(raw)};
+    const auto raw=map.nominalToImage(nominal);return {raw,map.imageToWorld(raw)};
 }
 }
 std::optional<TrackedWorldPoint> WorldTrackingService::edge(const ImageFrame& image,const ToolRoi& roi,double unit,const WorldTrackingMap& map,const EdgeOptions& o,const std::shared_ptr<std::atomic_bool>& cancel,FitDiagnostic* diagnostic){
     validate(image,roi,map,unit);
-    const auto found=EdgeFinder::findMapped(image,scan(roi,unit),[&](QPointF p){return map.nominalToRaw(p*unit);},o,cancel);
+    const auto found=EdgeFinder::findMapped(image,scan(roi,unit),[&](QPointF p){return map.nominalToImage(p*unit);},o,cancel);
     if(!found.selected){if(diagnostic)*diagnostic=FitDiagnostic{"EDGE_NOT_FOUND","edge_search",1,0,1,0,scanRejections(found)};return {};}
     return point(map,found.candidates[*found.selected].point*unit);
 }
 std::optional<TrackedWorldPair> WorldTrackingService::pair(const ImageFrame& image,const ToolRoi& roi,double unit,const WorldTrackingMap& map,const EdgePairOptions& o,const std::shared_ptr<std::atomic_bool>& cancel,FitDiagnostic* diagnostic){
     validate(image,roi,map,unit);
-    const auto found=EdgePairFinder::findMapped(image,scan(roi,unit),[&](QPointF p){return map.nominalToRaw(p*unit);},o,cancel);
+    const auto found=EdgePairFinder::findMapped(image,scan(roi,unit),[&](QPointF p){return map.nominalToImage(p*unit);},o,cancel);
     if(!found.selected){if(diagnostic)*diagnostic=FitDiagnostic{"PAIR_NOT_FOUND","pair_search",1,0,1,0,scanRejections(found.edges)};return {};}
     const auto p=found.candidates[*found.selected];
     const auto a=point(map,found.edges.candidates[p.firstEdge].point*unit),b=point(map,found.edges.candidates[p.secondEdge].point*unit);
@@ -41,7 +41,7 @@ TrackedWorldLine WorldTrackingService::line(const ImageFrame& image,const ToolRo
     validate(image,roi,map,unit);require(std::holds_alternative<RotatedRectangle>(roi.geometry),"World tracking line requires rectangle");
     const auto box=std::get<RotatedRectangle>(roi.geometry);
     const RotatedRectangle synthetic{box.centre/unit,box.size/unit,box.angleDegrees};
-    auto world=LineFitter::observationsMapped(image,synthetic,[&](QPointF p){return map.nominalToRaw(p*unit);},o,cancel),raw=world;
+    auto world=LineFitter::observationsMapped(image,synthetic,[&](QPointF p){return map.nominalToImage(p*unit);},o,cancel),raw=world;
     for(int i=0;i<world.size();++i)if(world[i].point){const auto p=point(map,*world[i].point*unit);raw[i].point=p.raw;world[i].point=p.world;}
     const double a=box.angleDegrees*std::numbers::pi/180;const QPointF u(std::cos(a),std::sin(a));
     const auto start=point(map,box.centre-u*(box.size.width()/2)),end=point(map,box.centre+u*(box.size.width()/2));
@@ -51,9 +51,9 @@ TrackedWorldCircle WorldTrackingService::circle(const ImageFrame& image,const To
     validate(image,roi,map,o.unitsPerSample);
     require(std::holds_alternative<Annulus>(roi.geometry) || std::holds_alternative<ArcRoi>(roi.geometry),"World tracking circle requires annulus or arc");
     const auto arc=std::holds_alternative<Annulus>(roi.geometry) ? ArcRoi{std::get<Annulus>(roi.geometry),0,360}:std::get<ArcRoi>(roi.geometry);
-    auto search=RadialScanner::findMapped(image,arc,map.nominalToRaw,o,cancel);
+    auto search=RadialScanner::findMapped(image,arc,map.nominalToImage,o,cancel);
     QVector<CircleFitPoint> observations;
-    for(auto& s:search.scans){if(s.rawPoint)s.point=map.rawToWorld(*s.rawPoint);observations.append({s.point,{},false,s.reason,s.rejections});}
+    for(auto& s:search.scans){if(s.rawPoint)s.point=map.imageToWorld(*s.rawPoint);observations.append({s.point,{},false,s.reason,s.rejections});}
     // A projective image of a nominal circle need not remain circular. Existing
     // fit quality limits reject it; no radius/angle conversion or scale fallback.
     return {search,CircleFitter::fit(observations,fit,cancel)};
@@ -120,9 +120,9 @@ void WorldTrackingService::preflight(const ToolDefinition& t,const ImageFrame& i
     const double unit=t.parameters.contains("referenceBinding") ? b.mmPerSample:worldPoseTracking(t).mmPerSample;const auto roi=ToolRoi::fromJson(t.parameters["scanRoi"].toObject());validate(image,roi,map,unit);
     if(t.kind=="line_fit"){
         auto box=std::get<RotatedRectangle>(roi.geometry);box.centre/=unit;box.size/=unit;
-        LineFitter::observationsMapped(image,box,[&](QPointF q){return map.nominalToRaw(q*unit);},lineOptions(t.parameters),cancel);
-    }else if(t.kind=="circle_fit")RadialScanner::findMapped(image,radialRoi(roi),map.nominalToRaw,radialOptions(t.parameters),cancel);
-    else EdgeFinder::findMapped(image,scan(roi,unit),[&](QPointF q){return map.nominalToRaw(q*unit);},edgeOptions(t.parameters),cancel);
+        LineFitter::observationsMapped(image,box,[&](QPointF q){return map.nominalToImage(q*unit);},lineOptions(t.parameters),cancel);
+    }else if(t.kind=="circle_fit")RadialScanner::findMapped(image,radialRoi(roi),map.nominalToImage,radialOptions(t.parameters),cancel);
+    else EdgeFinder::findMapped(image,scan(roi,unit),[&](QPointF q){return map.nominalToImage(q*unit);},edgeOptions(t.parameters),cancel);
 }
 ToolResult WorldTrackingService::execute(const ToolDefinition& t,const ImageFrame& image,const WorldTrackingMap& map,const std::shared_ptr<std::atomic_bool>& cancel){
     ToolRegistry::validate(t);const auto b=t.parameters.contains("referenceBinding") ? toolReferenceBinding(t):ReferenceBinding{};
@@ -132,7 +132,7 @@ ToolResult WorldTrackingService::execute(const ToolDefinition& t,const ImageFram
     ToolResult r;r.toolId=t.id;r.state=ExecutionState::Done;r.calibration=map.calibration;
     // Raw fits and synthetic derivative units remain unavailable. Tool tolerance
     // is separate from the unevaluated part decision and production permission.
-    for(const auto& port:outputPorts(t.kind)){PortValue v{port,false,false,m.frameId,m.cycleId,m};v.invalidReason="WORLD_TRACKING_UNAVAILABLE";v.method="world-raw-rigid-refit";v.methodVersion=2;r.outputs[port.id]=v;}
+    for(const auto& port:outputPorts(t.kind)){PortValue v{port,false,false,m.frameId,m.cycleId,m};v.imageGeometry=image.geometry();v.invalidReason="WORLD_TRACKING_UNAVAILABLE";v.method="world-raw-rigid-refit";v.methodVersion=2;r.outputs[port.id]=v;}
     auto put=[&](QString id,PortData data,bool valid=true,QString reason="NOT_EVALUATED"){require(r.outputs.contains(id),"Unknown world tracking output");auto& v=r.outputs[id];v.data=std::move(data);v.valid=valid;v.invalidReason=valid ? QString{}:reason;};
     if(t.kind=="edge_point"){
         FitDiagnostic d;const auto hit=edge(image,roi,unit,map,edgeOptions(p),cancel,&d);if(!hit){r.fitDiagnostic=d;r.message=presentMeasurementDiagnostic(d);}put("found",bool(hit));if(hit){put("point",hit->raw);put("pointMm",hit->world);r.points.append(hit->raw);}

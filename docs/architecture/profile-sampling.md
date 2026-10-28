@@ -4,7 +4,9 @@
 
 ## Girdi ve geometri
 
-Salt okunur owned `ImageFrame`, raw px/XRightYDown `ToolRoi::ScanSegment`, `ProfileOptions` ve optional atomic cancel. ROI frame ID görüntünün coordinateSystemId'siyle aynı olmalı. A→B yönü ve tam dik şerit genişliği kullanılır. Bütün dört köşe `[0,w-1] × [0,h-1]` pixel-centre alanında olmalı; crop, clipping, AABB replacement, border padding veya pose/world mapping yoktur. Tam integer sınırdaki sıfır ağırlıklı dış komşu gerekmez; yalnız doğrulanmış geometrinin hesaplamasında 1e-9 px roundoff sınır noktasına snap edilebilir. Sınır dışı ROI önceden reddedilir.
+Salt okunur owned `ImageFrame`, girdi rasterına ait local px/XRightYDown `ToolRoi::ScanSegment`, `ProfileOptions` ve optional atomic cancel. ROI frame ID görüntünün coordinateSystemId'siyle aynı olmalı. A→B yönü ve tam dik şerit genişliği kullanılır. Bütün dört köşe `[0,w-1] × [0,h-1]` pixel-centre alanında olmalı; sampler kırpma, clipping, AABB replacement veya border padding yapmaz. Tam integer sınırdaki sıfır ağırlıklı dış komşu gerekmez; yalnız doğrulanmış geometrinin hesaplamasında 1e-9 px roundoff sınır noktasına snap edilebilir. Sınır dışı ROI önceden reddedilir.
+
+`sampleMapped` callback'i verilen ImageFrame'in local rasterına döner; crop girdisinde root pikseli döndürmez. Kalibre çağıran gerçek tap ve bilinear komşularının hull denetimini ortak [crop/kalibrasyon sınırında](roi-crop-contract.md#3-kalibrasyon-ve-sampling-apisi--efr-03a-4) yapar. Sampler yalnız owned child rasterını okur.
 
 Boyunca `ceil(length/stepPx)` eşit aralık kullanılır, iki uç dahildir. Gerçek step istenenden büyük değildir ve sonuçta ayrıca taşınır. Genişlikte `ceil(width/widthStepPx)` eşit aralık, iki şerit sınırı dahil; her noktada double bilinear yoğunluk, sonra eşit ağırlıklı aritmetik ortalama. Genişlik ortalaması sürekli alan integrali veya trapezoid ağırlığı değildir. Width=1 de ±0.5 px şerittir. Renk `.299R + .587G + .114B`; alpha göz ardı edilir. Gray16 `255/65535` double ölçeğiyle çalışır, 8 bit'e nicemlenmez. RGB/BGR girişlerinin ImageFrame normalizasyonu korunur. UI piksel erişimi açılmaz, full-image Mat kopyası gerekmez.
 

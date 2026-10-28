@@ -16,25 +16,37 @@ namespace visionflow {
 namespace {
 QString newId() { return QUuid::createUuid().toString(QUuid::WithoutBraces); }
 void fail(const QString& message) { throw std::runtime_error(message.toUtf8().constData()); }
-// Persistently erase ROI teaching after an upstream edit. Returning to the old
-// geometry cannot restore permission; only an explicit teach fills the binding.
-QJsonObject invalidateRoiTeaching(const QJsonObject& before,QJsonObject after) {
+// Invalidate image-dependent teaching after an upstream edit. Returning to the
+// old geometry cannot restore permission; only explicit teaching renews it.
+QJsonObject invalidateImageTeaching(const QJsonObject& before,QJsonObject after) {
     const auto oldTools=editorTools(before),newTools=editorTools(after);
     const auto oldLinks=editorConnections(before),newLinks=editorConnections(after);
     QSet<QString> changed,stale;
     for(const auto& old:oldTools) {
         const auto next=std::find_if(newTools.begin(),newTools.end(),[&](const auto& t){return t.id==old.id;});
-        if(next==newTools.end() || old.parameters!=next->parameters || old.enabled!=next->enabled || old.dependencies!=next->dependencies)changed.insert(old.id);
+        if(next==newTools.end() || (old.parameters!=next->parameters && (old.kind!="template_match" || referenceGeometry(old)!=referenceGeometry(*next))) || old.enabled!=next->enabled || old.dependencies!=next->dependencies)changed.insert(old.id);
     }
     for(const auto& link:oldLinks)if(!newLinks.contains(link))stale.insert(link.targetTool);
-    for(const auto& link:newLinks)if(!oldLinks.contains(link))stale.insert(link.targetTool);
+    for(const auto& link:newLinks)if(!oldLinks.contains(link) && std::any_of(oldLinks.begin(),oldLinks.end(),[&](const auto& old){return old.targetTool==link.targetTool && old.targetPort==link.targetPort;}))stale.insert(link.targetTool);
     auto links=oldLinks;for(const auto& link:newLinks)if(!links.contains(link))links.append(link);
     QStringList pending=changed.values()+stale.values();
     while(!pending.isEmpty()){const auto id=pending.takeFirst();for(const auto& link:links)if(link.sourceTool==id && !stale.contains(link.targetTool)){stale.insert(link.targetTool);pending.append(link.targetTool);}}
     auto tools=newTools;bool cleared=false;
-    for(auto& t:tools)if(t.kind=="roi" && stale.contains(t.id) && !t.parameters["imageBinding"].toObject().isEmpty()){
+    for(auto& t:tools)if(stale.contains(t.id)){
         const auto old=std::find_if(oldTools.begin(),oldTools.end(),[&](const auto& v){return v.id==t.id;});
-        if(old!=oldTools.end() && old->parameters["imageBinding"]==t.parameters["imageBinding"]){t.parameters["imageBinding"]=QJsonObject{};cleared=true;}
+        if(old==oldTools.end())continue;
+        for(const auto& key:{"imageBinding","referenceBinding","poseTracking","referenceOrigin"})if(t.parameters.contains(key) && old->parameters[key]==t.parameters[key]){
+            if(QString(key)=="imageBinding" || QString(key)=="referenceOrigin")t.parameters[key]=QJsonObject{};
+            else {auto binding=t.parameters[key].toObject();
+                if(QString(key)=="poseTracking" && binding.contains("binding")){auto nested=binding["binding"].toObject();nested["invalidated"]=true;binding["binding"]=nested;}
+                else binding["invalidated"]=true;
+                t.parameters[key]=binding;
+            }
+            cleared=true;
+        }
+        // A model image encodes pixels from the old input geometry. Erasing the
+        // model makes the unchanged tool explicitly untrained until reteaching.
+        if(t.parameters.contains("modelPng") && !t.parameters["modelPng"].toString().isEmpty() && old->parameters["modelPng"]==t.parameters["modelPng"]){t.parameters["modelPng"]="";cleared=true;}
     }
     return cleared ? withEditorTools(after,tools):after;
 }
@@ -202,7 +214,7 @@ void ProjectService::setTools(const QVector<ToolDefinition>& tools,const QVector
                 std::none_of(tools.begin(),tools.end(),[&](const auto& t){return t.id==id;});
         };
         connections.erase(std::remove_if(connections.begin(),connections.end(),[&](const auto& c){return removed(c.sourceTool) || removed(c.targetTool);}),connections.end());
-        definition=invalidateRoiTeaching(r.definition,withEditorConnections(definition,connections));
+        definition=invalidateImageTeaching(r.definition,withEditorConnections(definition,connections));
         if (definition==r.definition || definition==withEditorTools(r.definition,editorTools(r.definition))) return;
         if(r.calibrationBinding) {
             auto sourceConfig=[](const QVector<ToolDefinition>& list){QJsonArray sources;for(const auto& t:list)if(ToolRegistry::get(t.kind).acquisitionSource)sources.append(QJsonObject{{"id",t.id},{"kind",t.kind},{"enabled",t.enabled},{"parameters",t.parameters}});return sources;};
@@ -293,7 +305,7 @@ void ProjectService::updateToolConnections(const ToolDefinition& tool,const QVec
     auto updated=tools();bool found=false;
     for(auto& t:updated)if(t.id==tool.id){if(t.kind!=tool.kind)fail("Tool türü değiştirilemez.");t=tool;found=true;}
     if(!found)fail("Tool bulunamadı.");
-    const auto definition=invalidateRoiTeaching(activeRecipe()->definition,withEditorConnections(withEditorTools(activeRecipe()->definition,updated),connections));
+    const auto definition=invalidateImageTeaching(activeRecipe()->definition,withEditorConnections(withEditorTools(activeRecipe()->definition,updated),connections));
     validateEditorDefinition(definition);
     const auto graph=validateGraph(updated,connections);
     // An unfinished editor may have other unconnected tools. This edit must not
@@ -374,7 +386,7 @@ void ProjectService::setConnections(const QVector<ToolConnection>& connections) 
             for(const auto& source:updated)if(source.id==c.sourceTool)
                 for(auto& target:updated)if(target.id==c.targetTool && target.kind=="edge" && target.parameters["referenceGeometry"].toString().isEmpty())
                     target.parameters["referenceGeometry"]=referenceGeometry(source);
-        auto definition=invalidateRoiTeaching(r.definition,withEditorConnections(withEditorTools(r.definition,updated),connections));
+        auto definition=invalidateImageTeaching(r.definition,withEditorConnections(withEditorTools(r.definition,updated),connections));
         validateEditorDefinition(definition);
         if (definition==withEditorConnections(withEditorTools(r.definition,tools()),editorConnections(r.definition))) return;
         r.definition=definition; r.status=RecipeStatus::Draft; validateProject(candidate);

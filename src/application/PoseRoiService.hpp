@@ -11,9 +11,12 @@ struct PoseRoiResolution {
 };
 struct WorldTrackingMap {
     // Owns a validated snapshot; each call checks cancellation and mapping domain.
-    std::function<QPointF(QPointF)> nominalToRaw;
-    std::function<QPointF(QPointF)> rawToWorld;
+    std::function<QPointF(QPointF)> nominalToImage;
+    std::function<QPointF(QPointF)> imageToWorld;
     std::function<void(const ImageFrame&)> requireImage;
+    // Compatibility for UI callers; EFR-03b migrates these names.
+    QPointF nominalToRaw(QPointF p) const {return nominalToImage(p);}
+    QPointF rawToWorld(QPointF p) const {return imageToWorld(p);}
     CoordinateFrame world;
     CalibrationDependency calibration;
 };

@@ -1,10 +1,10 @@
 # EFR-03a-1 — tek ROI crop sözleşmesi ve uygulama devri
 
-28 Ekim 2026. **EFR-03a-2 owned crop/geometri ve EFR-03a-3 ROI executor/registry/cache uygulandı; tüm consumer ve UI entegrasyonu EFR-03a-4 ve 03b kapsamındadır.**
+28 Ekim 2026. **EFR-03a-2 owned crop/geometri ve EFR-03a-3 ROI executor/registry/cache ve EFR-03a-4 consumer/kalibrasyon/trace uygulandı; UI entegrasyonu EFR-03b kapsamındadır.**
 [Ana plan](editor-flow-roi-update-plan.md#efr-03a--roi-kırpmanın-görüntükoordinat-sözleşmesi).
 Bu belge EFR-03a-2/3/4 için bağlayıcı API ve dosya/test kapsamıdır.
 EFR-03b checkbox/viewer kabulü ayrıdır. Mevcut Region özelliği çalışır;
-ROI Image portu core katmanda vardır; tam consumer/UI kabulü henüz tamamlanmadı.
+ROI Image portu core katmanda vardır; core consumer kabulü EFR-03a-4 kapanışında, UI kabulü EFR-03b kapsamındadır.
 
 ## 1. Tek araç, parametre ve kayıt
 
@@ -60,15 +60,16 @@ Image çıktısı kendi frame'inin scope'unu taşır; execution bütün Image
 çıktılarında bunu doldurur. Target-only ve SourceFrameIndex root coordinate
 soyunu kabul eder, farklı local Image/Region girişlerini eşitlemez.
 Production completion aynı soy kontrolünü yapar ve scope'u capability digest'e
-katar. **Kalıcı strict scope codec/trace ve diğer consumer px çıktıları henüz
-EFR-03a-4 kapsamındadır**; bu alanı kalıcı kayıt okuması doldurmuş sayılmaz.
+katar. **Kalıcı strict scope codec/trace ve diğer consumer çıktıları EFR-03a-4
+ile scope taşır**; replay yalnız kökeni geri yükler, ImageFrame/piksel veya
+canlı çalışma izni üretmez.
 
 ProjectService setTools/updateToolConnections/setConnections transaction'ları
 upstream parametre/enabled/dependency veya bağlantı değişiminde downstream
 ROI `imageBinding` alanını temizler. Search rect ve crop tercihi korunur;
 A→B→A ve save/reopen öğretimi canlandırmaz. Rename/description etkisizdir,
 ilgisiz dal korunur. Bu kart yalnız downstream ROI öğretimini temizler;
-bütün model/reference/pose öğretim yolları EFR-03a-4'te tamamlanır.
+bütün model/reference/pose öğretim yolları EFR-03a-4 ile tamamlandı.
 EditorSession reconcile sonuçla birlikte cached reference anchor ve eski
 presentation imzasını da siler. Crop/preprocess allocation preflight ve
 retained raster bütçesi mevcut multi-source execution sınırını paylaşır.
@@ -315,6 +316,46 @@ kontrolü korunur.
 03a-4 matrisi tamamlamadan 03b UI kabulüne geçilmez. Fiziksel mm doğruluğu,
 native kamera izni, CUDA/kurulum veya robot hareketi bu yazılım kapılarıyla
 doğrulanmış sayılmaz.
+
+## EFR-03a-4 uygulama ve EFR-03b API devri
+
+`CalibratedImageGeometry::bind` rootSize/rawSize, acquisition source/root frame,
+current calibration ve zaman kökenini doğrular. `imageToWorld`/`worldToImage`
+local raster kullanır; `rootToWorld`/`worldToRoot` yalnız koordinat matematiği
+sağlar, root piksellerine erişmez. `requireSamplingFootprint` gerçek bilinear
+floor/ceil komşularını child domain ve calibration hull içinde denetler.
+Uniform ve projective yollar aynı kapıları kullanır. Pixel-debug araçların
+kalibrasyon önkoşulu yoktur; destekli kalibre modlar crop nedeniyle reddedilmez.
+
+`ImageGeometry::toJson/fromJson` scope schema 1'i strict/bounded okur. En fazla
+32 crop rect'i root'tan replay edilip local/root boyut, offset, depth ve SHA-256
+identity bütünü karşılaştırılır; yalnız kimliği tutup offset değiştirmek
+geçerli değildir. Bu codec scope üretir; ImageFrame'e dışarıdan piksel/geometri
+takma API'si açmaz. Image trace `imageInfo.imageGeometry`; child non-Image
+portları envelope schema 2 kullanır. Eski root envelope schema 1/no-op biçimi
+korunur. Child ID scope olmadan, yanlış kaynak/rect/chain ile okunamaz.
+
+Raw ReferenceBinding/PoseRoi eski `rawSize` alanını local teaching raster boyutu
+olarak korur ve ayrıca optional `imageGeometry` kaydeder. World teaching'de
+`rawSize` edinim root boyutu, taught anchor root koordinatıdır; current child
+anchor açıkça root'a taşınır, rigid delta root'ta uygulanır ve sampling child'a
+döner. Aynı `WorldTrackingMap` içindeki `nominalToImage`/`imageToWorld` yeni
+adları application kodunda kullanılır. Eski UI caller'ları için salt yönlendiren
+`nominalToRaw(p)`/`rawToWorld(p)` yöntemleri korunur; EFR-03b bunları taşıyabilir.
+
+Project edit upstream scope'u değiştirdiğinde ROI imageBinding boşalır, model
+PNG silinir; reference/pose kaydı optional `invalidated:true` tombstone taşır.
+Tombstone strict codec ile kalır ve execution yeniden öğretim ister. Böylece
+world ROI/bağlantı grafiği okunur kalır, A→B→A veya reopen eski izni canlandırmaz.
+İlk bağlantının kurulması yeni öğretilmiş binding'i silmez; mevcut input bağının
+kaynak/port değişimi ve upstream semantik edit invalidate eder.
+
+Core overlay gerçek input raster metadata'sıyla üretilir. RuntimeOverlay seçilen
+frame'in local coordinate ID'siyle eşleşmeyen consumer sonuçlarını göstermez;
+ROI'nin parent Region/child Image portlarına tek ID dayatmaz. EFR-03b viewer'da
+actual child ImageFrame seçimi, checkbox ve `RoiService::teach(..., cropImage)`
+tercihini koruma işini tamamlar. Ortak engine sürümü `/36`'dır. Core test/kanıt
+ve kapsam ayrıntısı [EFR-03a-4 kapanışındadır](../archive/2026-10-29-efr-03a-4.md).
 
 ## Kaynak incelemesi ve sınır
 

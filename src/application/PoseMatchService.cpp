@@ -37,7 +37,7 @@ ToolResult PoseMatchService::execute(const ToolDefinition& tool,const QMap<QStri
     const auto matcher=tool.kind=="shape_pose" ? ShapeMatcher::find : PoseMatcher::find;
     const auto result=matcher(raw,model,{anchor["x"].toDouble(),anchor["y"].toDouble()},{roi.x(),roi.y(),roi.width(),roi.height()},options,cancel);
     ToolResult r;r.toolId=tool.id;r.state=ExecutionState::Done;r.searchRegion=roi;r.milliseconds=timer.nsecsElapsed()/1e6;r.message=result.ambiguous ? "AMBIGUOUS":result.selected ? "FOUND":"NOT_FOUND";
-    auto put=[&](const QString& id,PortData data,bool valid=true){for(const auto& port:outputPorts(tool.kind))if(port.id==id){PortValue v{port,std::move(data),valid,frameId,cycleId,image.metadata()};v.method=tool.kind=="shape_pose" ? "unsigned-oriented-chamfer-pyramid" : "masked-ccoeff-normed-pyramid";v.methodVersion=1;if(!valid)v.invalidReason=r.message;r.outputs[id]=std::move(v);}};
+    auto put=[&](const QString& id,PortData data,bool valid=true){for(const auto& port:outputPorts(tool.kind))if(port.id==id){PortValue v{port,std::move(data),valid,frameId,cycleId,image.metadata()};v.imageGeometry=image.geometry();v.method=tool.kind=="shape_pose" ? "unsigned-oriented-chamfer-pyramid" : "masked-ccoeff-normed-pyramid";v.methodVersion=1;if(!valid)v.invalidReason=r.message;r.outputs[id]=std::move(v);}};
     put("found",!result.candidates.empty());put("ambiguous",result.ambiguous);put("truncated",result.truncated);
     QJsonArray candidates;for(const auto& c:result.candidates)candidates.append(QJsonObject{{"x",c.anchor.x},{"y",c.anchor.y},{"angleRadians",c.angleRadians},{"scale",c.scale},{"score",c.score}});
     put("candidates",QString::fromUtf8(QJsonDocument(candidates).toJson(QJsonDocument::Compact)));

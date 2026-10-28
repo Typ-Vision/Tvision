@@ -3,6 +3,7 @@
 #include "application/WorldTrackingService.hpp"
 #include "application/MeasurementService.hpp"
 #include "application/PoseMatchService.hpp"
+#include "application/ShapeMatchService.hpp"
 #include "domain/ToolRegistry.hpp"
 #include <QCoreApplication>
 #include <QTextStream>
@@ -16,22 +17,26 @@ template<class F>void reject(F f){bool bad=false;try{f();}catch(const std::excep
 void near(QPointF a,QPointF b,double e){check(QLineF(a,b).length()<e,"independent coordinate oracle");}
 const CoordinateFrame raw{"camera/image"};
 FrameMetadata metadata{"camera","frame","cycle",raw.id,QDateTime::currentDateTimeUtc()};
-ImageFrame image(const QByteArray& b){return ImageFrame::fromBuffer(b.data(),b.size(),256,256,256,PixelFormat::Gray8,metadata,false);}
+bool cropMode=false;
+QPointF cropOffset(){return cropMode ? QPointF(10,10):QPointF{};}
+ImageFrame image(const QByteArray& b){auto root=ImageFrame::fromBuffer(b.data(),b.size(),256,256,256,PixelFormat::Gray8,metadata,false);return cropMode ? ImageAccess::cropped(root,{10,10,220,220},false):root;}
 QPointF project(QPointF q){double w=1+.015*q.x()+.008*q.y();return {(4*q.x()+20)/w,(4*q.y()+20)/w};}
 QPointF inverse(QPointF q){double s=3.54/(4-.015*q.x()-.008*q.y());return {(q.x()*s-20)/4,(q.y()*s-20)/4};}
 QPointF rotate(QPointF p,double a){return {std::cos(a)*p.x()-std::sin(a)*p.y(),std::sin(a)*p.x()+std::cos(a)*p.y()};}
 ToolResult result(const ToolDefinition& source,QPointF p,double a=0){
+    const auto scope=image(QByteArray(256*256,char(30)));p-=cropOffset();
     ToolResult r;r.toolId=source.id;r.state=ExecutionState::Done;
     for(const auto& d:outputPorts(source.kind)){
-        PortValue v{d,false,true,metadata.frameId,metadata.cycleId,metadata};v.evaluationId="current";v.method=source.kind=="edge_point" ? "profile-edge":"masked-ccoeff-normed-pyramid";v.methodVersion=1;
-        if(d.id=="pose")v.data=Pose2D{p,a,raw};else if(d.id=="point")v.data=p;
+        PortValue v{d,false,true,metadata.frameId,metadata.cycleId,scope.metadata()};v.imageGeometry=scope.geometry();v.evaluationId="current";v.method=source.kind=="edge_point" ? "profile-edge":source.kind=="shape_pose" ? "unsigned-oriented-chamfer-pyramid":"masked-ccoeff-normed-pyramid";v.methodVersion=1;
+        if(d.id=="pose")v.data=Pose2D{p,a,{scope.metadata().coordinateSystemId}};else if(d.id=="point")v.data=p;
         else if(d.id=="found")v.data=true;else if(d.id=="scale" || d.id=="score")v.data=1.;else if(d.type==PortType::Number)v.data=0.;else if(d.id=="candidates")v.data=QString("[]");
         r.outputs[d.id]=v;
     }return r;
 }
 }
 int main(int argc,char** argv){QCoreApplication app(argc,argv);try{
-    for(bool perspective:{false,true})for(bool yUp:{false,true})for(bool pose:{false,true}){
+    for(bool cropped:{false,true})for(bool shape:{false,true})for(bool perspective:{false,true})for(bool yUp:{false,true})for(bool pose:{false,true}){
+        cropMode=cropped;if(shape && !pose)continue;
         if(perspective && yUp)continue; // Homography contract uses target-local columns/rows.
         const CoordinateFrame world{"plane",LengthUnit::Millimetre,yUp ? AxisConvention::XRightYUp:AxisConvention::XRightYDown};
         auto toRaw=[&](QPointF p){if(yUp)p.setY(-p.y());return perspective ? project(p):p*4;};
@@ -43,8 +48,8 @@ int main(int argc,char** argv){QCoreApplication app(argc,argv);try{
         auto cal=MeasurementService{}.validate((perspective ? MeasurementService{}.teachHomography(setup,PlaneMappingService::fit(obs)):MeasurementService{}.teach(setup,sample("teach",{1,1},{21,1}))),{sample("hx",{2,3},{27,3}),sample("hy",{3,2},{3,27})},1e-5);
         const MeasurementExecutionContext ctx{std::make_shared<PlanarCalibration>(cal),cal.dependency(),{256,256},{}};
         QByteArray model(256*256,char(30));for(int y=0;y<24;++y)for(int x=0;x<24;++x)model[(46+y)*256+51+x]=char(40+(x*37+y*71+x*y*13)%190);
-        ToolDefinition source{"source",pose ? "pattern_pose":"edge_point","Source","",true,defaultParameters(pose ? "pattern_pose":"edge_point")};
-        if(pose)source.parameters=PoseMatchService::teach(image(model),{51,46,24,24},{9,14},source.parameters);
+        ToolDefinition source{"source",pose ? (shape ? "shape_pose":"pattern_pose"):"edge_point","Source","",true,defaultParameters(pose ? (shape ? "shape_pose":"pattern_pose"):"edge_point")};
+        if(pose){const auto rect=QRect(51,46,24,24).translated(-cropOffset().toPoint());source.parameters=shape ? ShapeMatchService::teach(image(model),rect,{9,14},source.parameters):PoseMatchService::teach(image(model),rect,{9,14},source.parameters);}
         const QPointF p0=toRaw({15,yUp ? -15.:15.}),p=p0+QPointF(2,1),offset(1.25,-.75);
         const double a=pose ? .15:0,da=pose ? -.06:0;
         auto moved=[&](QPointF q){return p+rotate(rotate(toRaw(q)-p0,da)+offset,a);};
@@ -71,18 +76,18 @@ int main(int argc,char** argv){QCoreApplication app(argc,argv);try{
             check(ReferenceBinding::fromJson(b.toJson()).toJson()==b.toJson(),"world strict codec roundtrip");
             check(ReferenceService::teachWorld(t,roi,.2,source,port,result(source,p0),raster,ctx,offset,da).parameters==t.parameters,"reteach does not accumulate offsets");
             const auto mapped=ReferenceService::resolveWorld(b,source,result(source,p,a),raster,ctx);check(mapped.map.has_value(),"current world reference resolves");
-            auto counted=*mapped.map;int taps=0;const auto original=counted.nominalToRaw;
-            counted.nominalToRaw=[&](QPointF q){++taps;const auto r=original(q);near(r,moved(q),1e-5);return r;};
+            auto counted=*mapped.map;int taps=0;const auto original=counted.nominalToImage;
+            counted.nominalToImage=[&](QPointF q){++taps;const auto r=original(q);near(r,moved(q)-cropOffset(),1e-5);return r;};
             const auto measured=WorldTrackingService::execute(t,raster,counted);check(taps>100 && measured.outputs["found"].valid && std::get<bool>(measured.outputs["found"].data),"every actual tap maps; real raster feature found");
             check(measured.decision==PartDecision::NotEvaluated,"no part decision manufactured");
             const auto overlay=toolOverlayGeometry(t,t,raster,ctx,{},mapped.map,measured);check(overlay.reason.isEmpty() && !overlay.outlines.isEmpty() && !overlay.guides.isEmpty(),"24H resolved world raw overlay evidence");
             const auto hidden=toolOverlayGeometry(t,t,raster,ctx,{},WorldTrackingMap{[](QPointF)->QPointF{throw std::runtime_error("domain rejected");},{},{},{},{}},measured);check(!hidden.reason.isEmpty() && hidden.outlines.isEmpty() && hidden.guides.isEmpty(),"24H mapping failure removes every primitive");
-            if(kind=="edge_point")near(std::get<QPointF>(measured.outputs["point"].data),moved({15,wy(13)}),.45);
+            if(kind=="edge_point")near(std::get<QPointF>(measured.outputs["point"].data),moved({15,wy(13)})-cropOffset(),.45);
             if(kind=="edge_pair"){const double expected=QLineF(toWorld(moved({15,wy(13)})),toWorld(moved({15,wy(17)}))).length();check(std::abs(std::get<double>(measured.outputs["widthMm"].data)-expected)<.2,"current world endpoint width oracle");}
             if(kind=="line_fit"){check(measured.outputs["lineMm"].valid && measured.outputs["accepted"].valid,"actual world line refit and tolerance");check(!measured.outputs["originPx"].valid,"unavailable raw fit stays unavailable");}
             if(kind=="circle_fit"){near(std::get<QPointF>(measured.outputs["centreMm"].data),centre,.15);check(std::abs(std::get<double>(measured.outputs["radiusMm"].data)-3)<.15,"current world circle refit oracle");check(measured.outputs["arcMm"].valid==arc,"signed arc current metric");auto producer=measured;for(auto& v:producer.outputs)v.evaluationId="current";const auto unavailable=ReferenceService::current(t,"centrePx",producer,raster);check(!unavailable.anchor && unavailable.state==ExecutionState::Skipped,"unavailable raw circle centre rejected as source");}
             if(kind=="edge_point"){
-                auto rawConsumer=t;rawConsumer.parameters.remove("referenceBinding");rawConsumer.parameters["scanRoi"]=ToolRoi{raw,ScanSegment{{40,40},{80,40},1}}.toJson();
+                auto rawConsumer=t;rawConsumer.parameters.remove("referenceBinding");rawConsumer.parameters["scanRoi"]=ToolRoi{{raster.metadata().coordinateSystemId},ScanSegment{{40,40},{80,40},1}}.toJson();
                 rawConsumer=ReferenceService::teach(rawConsumer,source,port,result(source,p0),raster);
                 reject([&]{WorldTrackingService::execute(rawConsumer,raster,*mapped.map);});reject([&]{WorldTrackingService::preflight(rawConsumer,raster,*mapped.map);});
             }

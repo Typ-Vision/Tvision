@@ -10,7 +10,7 @@ CalibrationInstallation CalibrationWorkflow::installation(const Recipe& recipe,c
     const auto& m=frame.metadata();require(!frame.size().isEmpty() && !m.sourceId.isEmpty() && !m.frameId.isEmpty() && !m.cycleId.isEmpty() && !m.coordinateSystemId.isEmpty() && m.completedAtUtc.isValid(),"Önce reçetenin kaynağından yeni bir kare alın.");
     int sources=0;for(const auto& t:editorTools(recipe.definition))if(t.enabled && (t.kind=="image_file" || t.kind=="webcam")) {++sources;require(t.id==m.sourceId,"Kare başka reçete/kaynaktan geliyor.");}
     require(sources==1,"Tek enabled edinim kaynağı gerekli.");
-    return {m.sourceId,setup["lensId"].toString(),setup["workingPlaneId"].toString(),frame.size(),{m.coordinateSystemId,LengthUnit::Pixel,AxisConvention::XRightYDown},{setup["workingPlaneId"].toString()+"/mm",LengthUnit::Millimetre,model=="raw_planar_homography" ? AxisConvention::XRightYDown : AxisConvention::XRightYUp}};
+    return {m.sourceId,setup["lensId"].toString(),setup["workingPlaneId"].toString(),frame.geometry().rootSize(),{frame.geometry().rootCoordinateSystemId(),LengthUnit::Pixel,AxisConvention::XRightYDown},{setup["workingPlaneId"].toString()+"/mm",LengthUnit::Millimetre,model=="raw_planar_homography" ? AxisConvention::XRightYDown : AxisConvention::XRightYUp}};
 }
 PlanarCalibration CalibrationWorkflow::teach(const Recipe& recipe,const ImageFrame& frame,const QString& id,int version,const CalibrationSample& sample) {
     require(!id.trimmed().isEmpty() && id==id.trimmed() && id.size()<=128 && version>0 && version<=1000000000,"Kalibrasyon kimliği/sürümü geçersiz.");
@@ -18,7 +18,7 @@ PlanarCalibration CalibrationWorkflow::teach(const Recipe& recipe,const ImageFra
     return MeasurementService{}.teach({id,version,"pending",s.cameraId,s.lensId,s.resolution,s.workingPlaneId,s.source,s.target},sample);
 }
 MeasurementExecutionContext CalibrationWorkflow::resolve(const Recipe& recipe,const ImageFrame& frame,const QString& path) {
-    MeasurementExecutionContext result;result.rawSize=frame.size();
+    MeasurementExecutionContext result;result.rawSize=frame.geometry().rootSize();
     try {
         const auto setup=installation(recipe,frame);const CalibrationService catalog(path,[setup](const QString&){return setup;});
         const auto c=catalog.resolve(recipe);result.calibration=std::make_shared<const PlanarCalibration>(c);

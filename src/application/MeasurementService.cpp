@@ -115,17 +115,19 @@ MeasurementResult MeasurementService::distance(const ToolResult& first,const QSt
         code="TOLERANCE_INVALID";require(std::isfinite(lower) && std::isfinite(upper) && lower>=0 && lower<=upper,"Invalid millimetre tolerance interval");
         code="MEASUREMENT_INPUT_INVALID";
         require(first.state==ExecutionState::Done && second.state==ExecutionState::Done,"Upstream not DONE");
-        const auto a=first.outputs.value(firstPort),b=second.outputs.value(secondPort);
+        auto a=first.outputs.value(firstPort),b=second.outputs.value(secondPort);
+        require(a.origin.coordinateSystemId==b.origin.coordinateSystemId && ((a.imageGeometry && a.imageGeometry->cropDepth()) || (b.imageGeometry && b.imageGeometry->cropDepth()) ? a.imageGeometry==b.imageGeometry : (!a.imageGeometry || !b.imageGeometry || a.imageGeometry==b.imageGeometry)),"Measurement local scopes differ");
+        for(auto* v:{&a,&b})if(v->imageGeometry){const auto& g=*v->imageGeometry;require(g.sourceId()==v->origin.sourceId && g.coordinateSystemId()==v->origin.coordinateSystemId && g.rootSize()==size && g.rootCoordinateSystemId()==current.source.id,"Measurement geometry scope mismatch");v->data=g.toRoot(std::get<QPointF>(v->data));v->origin.coordinateSystemId=g.rootCoordinateSystemId();}
         for(const auto& v:{a,b}) {
             require(v.valid && v.port.type==PortType::Point && v.port.unit=="px" && v.port.frame=="image" && std::holds_alternative<QPointF>(v.data),"Missing/invalid Point px image port");
             const auto& m=v.origin;
             require(!m.frameId.isEmpty() && !m.cycleId.isEmpty() && m.frameId==v.frameId && m.cycleId==v.cycleId && m.sourceId==current.cameraId && m.coordinateSystemId==current.source.id && m.completedAtUtc.isValid(),"Input source/frame/cycle/coordinate provenance mismatch");
             point({std::get<QPointF>(v.data),current.source},current);
         }
-        require(a.frameId==b.frameId && a.cycleId==b.cycleId && a.origin.completedAtUtc==b.origin.completedAtUtc,"Inputs originate from different acquisition");
+        require(a.frameId==b.frameId && a.cycleId==b.cycleId && a.origin.completedAtUtc==b.origin.completedAtUtc && a.origin.exposureAtUtc==b.origin.exposureAtUtc && a.origin.deviceTimestampTicks==b.origin.deviceTimestampTicks && a.origin.deviceClockId==b.origin.deviceClockId,"Inputs originate from different acquisition");
         const auto px=length(std::get<QPointF>(a.data),std::get<QPointF>(b.data));const double mm=c.mapping_ ? PlaneMappingService::distance(*c.mapping_,std::get<QPointF>(a.data),std::get<QPointF>(b.data)).millimetres : c.manualProvenance_ ? px/c.pixelsPerMillimetre_ : px*c.scale_;
         require(std::isfinite(px) && std::isfinite(mm) && (px==0 || mm>0),"Measurement overflow/underflow");
-        r.pixels=px;r.millimetres=mm;r.origin=a.origin;r.calibration=c.dependency();r.state=ExecutionState::Done;
+        r.pixels=px;r.millimetres=mm;r.origin=first.outputs.value(firstPort).origin;r.calibration=c.dependency();r.state=ExecutionState::Done;
         r.decision=mm>=lower && mm<=upper ? PartDecision::Pass : PartDecision::Fail;
     }catch(const std::exception& e){r.errorCode=code;r.error=QString::fromUtf8(e.what());}
     return r;

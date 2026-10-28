@@ -1,4 +1,5 @@
 #include "EdgePairService.hpp"
+#include "CalibratedImageGeometry.hpp"
 #include <limits>
 #include <stdexcept>
 namespace visionflow {
@@ -7,15 +8,21 @@ EdgePairResult EdgePairService::measure(const ImageFrame& image,const ToolRoi& r
         auto stop=[&]{if(cancel && cancel->load())throw std::runtime_error("Edge pair measurement cancelled");};stop();
         if(mode!=EdgePairMode::PixelDebug && mode!=EdgePairMode::Calibrated)throw std::runtime_error("Invalid edge pair mode");
         if(mode==EdgePairMode::Calibrated && !calibration)throw std::runtime_error("Edge pair requires calibration");
-        const auto search=EdgePairFinder::find(image,roi,options,cancel);
+        const auto search=[&]{
+            if(mode==EdgePairMode::PixelDebug)return EdgePairFinder::find(image,roi,options,cancel);
+            const auto map=CalibratedImageGeometry::bind(image,{std::make_shared<PlanarCalibration>(calibration->calibration),calibration->current,image.geometry().rootSize(),{}},cancel);
+            if(roi.frame.id!=image.metadata().coordinateSystemId || !std::holds_alternative<ScanSegment>(roi.geometry))throw std::runtime_error("Edge pair scan local frame/type mismatch");
+            return EdgePairFinder::findMapped(image,std::get<ScanSegment>(roi.geometry),[map](QPointF p){map.requireSamplingFootprint(p);return p;},options,cancel);
+        }();
         // Validate calibrated context even for no-found, using real scan endpoints.
         auto metric=[&](QPointF a,QPointF b){
             const auto& m=image.metadata();ToolResult points;points.state=ExecutionState::Done;
             points.outputs["a"]={{"a",PortType::Point,"px","image"},a,true,m.frameId,m.cycleId,m};
             points.outputs["b"]={{"b",PortType::Point,"px","image"},b,true,m.frameId,m.cycleId,m};
+            points.outputs["a"].imageGeometry=points.outputs["b"].imageGeometry=image.geometry();
             // Reuse all existing current/frame/hull/evidence checks. The internal
             // interval does not create an Edge Pair decision or tolerance result.
-            const auto value=MeasurementService{}.distance(points,"a",points,"b",calibration->calibration,calibration->current,image.size(),0,std::numeric_limits<double>::max());
+            const auto value=MeasurementService{}.distance(points,"a",points,"b",calibration->calibration,calibration->current,image.geometry().rootSize(),0,std::numeric_limits<double>::max());
             if(value.state!=ExecutionState::Done || !value.millimetres)throw std::runtime_error(value.error.toStdString());
             return *value.millimetres;
         };

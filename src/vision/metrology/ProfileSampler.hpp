@@ -31,7 +31,8 @@ struct SampledProfile {
     QVector<IntensityProfileSample> samples;
     QVector<ProfileDerivative> derivatives;
 };
-// Maps a synthetic pixel-centre sampling plane to raw pixels. Caller owns domain checks.
+// Maps a synthetic sampling plane to the supplied frame's local raster.
+// Caller checks calibration hull; the sampler bounds every actual pixel tap.
 using ProfileRawMap=std::function<QPointF(QPointF)>;
 class ProfileSampler {
 public:

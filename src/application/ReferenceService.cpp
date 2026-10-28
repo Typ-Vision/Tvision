@@ -1,4 +1,5 @@
 #include "ReferenceService.hpp"
+#include "CalibratedImageGeometry.hpp"
 #include "ToolResultCodec.hpp"
 #include "WorldTrackingService.hpp"
 #include "MeasurementService.hpp"
@@ -9,6 +10,9 @@
 namespace visionflow {
 namespace {
 void require(bool b,const char* s){if(!b)throw std::runtime_error(s);}
+ReferenceAnchor rootAnchor(ReferenceAnchor anchor,const ImageFrame& image){
+    return std::visit([&](auto a)->ReferenceAnchor{a.position=image.geometry().toRoot(a.position);a.frame.id=image.geometry().rootCoordinateSystemId();return a;},anchor);
+}
 QString method(const ToolDefinition& t){
     if(t.kind=="template_match")return "template-ncc";
     if(t.kind=="blob")return "connected-components";
@@ -35,6 +39,7 @@ ReferenceResolution ReferenceService::current(const ToolDefinition& source,const
             const auto ports=outputPorts(source.kind);auto d=std::find_if(ports.begin(),ports.end(),[&](const auto& p){return p.id==id;});
             require(d!=ports.end() && result.outputs.contains(id),"Reference output missing");const auto v=result.outputs[id];
             ToolResultCodec::validate(v,*d,m.frameId,m.cycleId);
+            if(image.geometry().cropDepth())require(v.imageGeometry && *v.imageGeometry==image.geometry(),"Reference child scope differs from image");
             require(v.origin.sourceId==m.sourceId && v.origin.coordinateSystemId==m.coordinateSystemId && v.origin.completedAtUtc==m.completedAtUtc &&
                 v.origin.exposureAtUtc==m.exposureAtUtc && v.origin.deviceClockId==m.deviceClockId && v.origin.deviceTimestampTicks==m.deviceTimestampTicks,"Reference acquisition differs");
             // Raw metrology ports are diagnostic for metric measurement but remain real raw reference points.
@@ -57,12 +62,13 @@ ToolDefinition ReferenceService::teach(const ToolDefinition& consumer,const Tool
     auto tool=consumer;tool.parameters.remove("poseTracking");tool.parameters.remove("referenceBinding");ToolRegistry::validate(tool);
     ReferenceBinding b;b.mode=port=="pose" ? ReferenceMode::Rigid:ReferenceMode::Translation;b.sourceTool=source.id;b.sourcePort=port;
     b.geometryId=referenceGeometryIdentity(source,port);b.imageSource=image.metadata().sourceId;b.rawSize=image.size();b.taught=*currentResult.anchor;
+    if(image.geometry().cropDepth())b.imageGeometry=image.geometry();
     b.nominal=referenceNominalRoi(tool,{image.metadata().coordinateSystemId});b.offsetPx=offset;b.angleOffsetRadians=angle;
     b.resolve(b.taught,1,image.size());tool.parameters["referenceBinding"]=b.toJson();ToolRegistry::validate(tool);return tool;
 }
 ReferenceResolution ReferenceService::resolve(const ReferenceBinding& b,const ToolDefinition& source,const ToolResult& result,const ImageFrame& image){
     try {
-        b.validate();require(b.sourceTool==source.id && b.geometryId==referenceGeometryIdentity(source,b.sourcePort),"Reference geometry/port changed; reteach");
+        b.validate();require(!b.invalidated,"Reference teaching invalidated; reteach required");require(b.imageGeometry ? *b.imageGeometry==image.geometry():!image.geometry().cropDepth(),"Reference teaching image scope changed; reteach");require(b.sourceTool==source.id && b.geometryId==referenceGeometryIdentity(source,b.sourcePort),"Reference geometry/port changed; reteach");
         require(b.imageSource==image.metadata().sourceId && b.rawSize==image.size() && b.nominal.frame.id==image.metadata().coordinateSystemId,"Reference source/frame/resolution changed");
         require(!b.world,"World reference requires calibrated mapper");
         auto r=current(source,b.sourcePort,result,image);if(!r.anchor)return r;
@@ -72,11 +78,11 @@ ReferenceResolution ReferenceService::resolve(const ReferenceBinding& b,const To
 WorldTrackingResolution ReferenceService::resolveWorld(const ReferenceBinding& b,const ToolDefinition& source,const ToolResult& result,const ImageFrame& image,
     const MeasurementExecutionContext& ctx,const std::shared_ptr<std::atomic_bool>& cancel){
     try{
-        b.validate();require(b.world && b.calibration.has_value(),"World reference binding missing");
+        b.validate();require(!b.invalidated,"Reference teaching invalidated; reteach required");require(b.imageGeometry ? *b.imageGeometry==image.geometry():!image.geometry().cropDepth(),"World reference teaching image scope changed; reteach");require(b.world && b.calibration.has_value(),"World reference binding missing");
         require(b.sourceTool==source.id && b.geometryId==referenceGeometryIdentity(source,b.sourcePort),"Reference geometry/port changed; reteach");
-        require(b.imageSource==image.metadata().sourceId && b.rawSize==image.size() && b.calibration->source.id==image.metadata().coordinateSystemId,"Reference source/frame/resolution changed");
+        require(b.imageSource==image.metadata().sourceId && b.rawSize==image.geometry().rootSize() && b.calibration->source.id==image.geometry().rootCoordinateSystemId(),"Reference source/frame/resolution changed");
         const auto r=current(source,b.sourcePort,result,image);if(!r.anchor)return {r.state,{},r.reason};
-        return {ExecutionState::Done,PoseRoiService::calibratedMap(*b.calibration,b.rawTransform(*r.anchor,1,image.size()),image,ctx,cancel),{}};
+        return {ExecutionState::Done,PoseRoiService::calibratedMap(*b.calibration,b.rawTransform(rootAnchor(*r.anchor,image),1,image.geometry().rootSize()),image,ctx,cancel),{}};
     }catch(const std::exception& e){return {ExecutionState::Error,{},QString::fromUtf8(e.what())};}
 }
 ToolDefinition ReferenceService::teachWorld(const ToolDefinition& consumer,const ToolRoi& nominal,double unit,const ToolDefinition& source,const QString& port,
@@ -87,7 +93,7 @@ ToolDefinition ReferenceService::teachWorld(const ToolDefinition& consumer,const
     if(tool.kind!="edge_point")tool.parameters["mode"]="calibrated";if(tool.kind=="circle_fit")tool.parameters["unitsPerSample"]=unit;
     ReferenceBinding b;b.world=true;b.mmPerSample=unit;b.calibration=ctx.calibration->dependency();b.nominal=nominal;
     b.mode=port=="pose" ? ReferenceMode::Rigid:ReferenceMode::Translation;b.sourceTool=source.id;b.sourcePort=port;
-    b.geometryId=referenceGeometryIdentity(source,port);b.imageSource=image.metadata().sourceId;b.rawSize=image.size();b.taught=*r.anchor;b.offsetPx=offset;b.angleOffsetRadians=angle;
+    b.geometryId=referenceGeometryIdentity(source,port);b.imageSource=image.metadata().sourceId;b.rawSize=image.geometry().rootSize();b.taught=rootAnchor(*r.anchor,image);if(image.geometry().cropDepth())b.imageGeometry=image.geometry();b.offsetPx=offset;b.angleOffsetRadians=angle;
     tool.parameters["referenceBinding"]=b.toJson();ToolRegistry::validate(tool);
     const auto mapped=resolveWorld(b,source,result,image,ctx,cancel);require(mapped.map.has_value(),mapped.reason.toUtf8().constData());
     WorldTrackingService::preflight(tool,image,*mapped.map,cancel);return tool;

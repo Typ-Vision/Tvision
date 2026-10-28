@@ -30,6 +30,8 @@ void ReferenceBinding::validate() const {
     identity(sourceTool,128);identity(sourcePort,128);identity(imageSource,256);identity(nominal.frame.id,256);
     require(geometryId.size()==64 && QByteArray::fromHex(geometryId.toLatin1()).toHex()==geometryId.toLatin1(),"Reference source geometry SHA256 invalid");
     require(rawSize.width()>0 && rawSize.height()>0 && qint64(rawSize.width())*rawSize.height()<=16*1024*1024,"Reference resolution invalid");
+    if(imageGeometry)require(imageGeometry->sourceId()==imageSource && imageGeometry->cropDepth()>0 && (world ? imageGeometry->rootSize():imageGeometry->rasterSize())==rawSize,"Reference image geometry mismatch");
+    if(!world && nominal.frame.id.startsWith("roi-crop/"))require(imageGeometry && imageGeometry->coordinateSystemId()==nominal.frame.id,"Reference child requires matching scope");
     nominal.validate();
     if(world){require(calibration.has_value(),"World reference calibration missing");require(nominal.frame==calibration->target,"World reference nominal plane mismatch");require(std::isfinite(mmPerSample) && mmPerSample>=1e-9 && mmPerSample<=1e9,"World sample unit invalid");}
     else require(nominal.frame.unit==LengthUnit::Pixel && nominal.frame.axes==AxisConvention::XRightYDown && nominal.inside(rawSize),"Reference requires bounded raw nominal ROI");
@@ -71,17 +73,17 @@ QJsonObject ReferenceBinding::toJson() const {
         {"nominal",nominal.toJson()},{"roiIdentity",roiIdentity()},{"taught",teaching},{"width",rawSize.width()},{"height",rawSize.height()},
         {"offset",QJsonObject{{"x",offsetPx.x()},{"y",offsetPx.y()},{"angleRadians",angleOffsetRadians},{"unit","px"},{"axes",mode==ReferenceMode::Translation ? "image":"source-local"}}},
         {"calibration",calibration ? QJsonValue(calibration->toJson()):QJsonValue(QJsonValue::Null)}};
-    if(world)o["mmPerSample"]=mmPerSample;return o;
+    if(world)o["mmPerSample"]=mmPerSample;if(imageGeometry)o["imageGeometry"]=imageGeometry->toJson();if(invalidated)o["invalidated"]=true;return o;
 }
 ReferenceBinding ReferenceBinding::fromJson(const QJsonObject& o){
     require(QJsonDocument(o).toJson(QJsonDocument::Compact).size()<=160*1024,"Reference JSON limit");
     const bool world=o["schemaVersion"]==2;
-    QSet<QString> expected{"schemaVersion","mapping","mode","sourceTool","sourcePort","geometryId","imageSource","nominal","roiIdentity","taught","width","height","offset","calibration"};if(world)expected.insert("mmPerSample");keys(o,expected);
+    QSet<QString> expected{"schemaVersion","mapping","mode","sourceTool","sourcePort","geometryId","imageSource","nominal","roiIdentity","taught","width","height","offset","calibration"};if(world)expected.insert("mmPerSample");if(o.contains("imageGeometry"))expected.insert("imageGeometry");if(o.contains("invalidated"))expected.insert("invalidated");keys(o,expected);
     require((world ? o["mapping"]=="world-reference-v1":o["schemaVersion"]==1 && o["mapping"]=="raw-reference-v1") && (o["mode"]=="translation" || o["mode"]=="rigid"),"Reference schema/mode invalid");
     for(auto k:{"sourceTool","sourcePort","geometryId","imageSource","roiIdentity"})require(o[k].isString(),"Reference string required");
     for(auto k:{"nominal","taught","offset"})require(o[k].isObject(),"Reference object required");
     require(o["calibration"].isNull() || o["calibration"].isObject(),"Reference calibration invalid");
-    ReferenceBinding b;b.mode=o["mode"]=="translation" ? ReferenceMode::Translation:ReferenceMode::Rigid;
+    ReferenceBinding b;if(o.contains("invalidated")){require(o["invalidated"].isBool() && o["invalidated"].toBool(),"Invalid reference tombstone");b.invalidated=true;}if(o.contains("imageGeometry")){require(o["imageGeometry"].isObject(),"Reference geometry object required");b.imageGeometry=ImageGeometry::fromJson(o["imageGeometry"].toObject());}b.mode=o["mode"]=="translation" ? ReferenceMode::Translation:ReferenceMode::Rigid;
     b.world=world;if(world)b.mmPerSample=number(o,"mmPerSample");
     if(o["calibration"].isObject())b.calibration=CalibrationDependency::fromJson(o["calibration"].toObject());
     b.sourceTool=o["sourceTool"].toString();b.sourcePort=o["sourcePort"].toString();b.geometryId=o["geometryId"].toString();b.imageSource=o["imageSource"].toString();

@@ -85,7 +85,7 @@ public:
     // Never persisted and never issues production completion authority.
     ExecutionService withExperimentalEditorReplay(bool enabled=true) const {auto service=*this;service.experimentalEditorReplay_=enabled;service.automaticAcquisition_=false;return service;}
     // Bump when execution semantics change; validation records bind this identity.
-    static QString version() { return QStringLiteral("visionflow.execution/35"); }
+    static QString version() { return QStringLiteral("visionflow.execution/36"); }
     ExecutionService withPublicationSnapshot(std::shared_ptr<const PublicationSnapshot> s) const {auto copy=*this;copy.publication_=std::move(s);return copy;}
     ExecutionService withCycleId(QString id) const {auto copy=*this;copy.cycleId_=std::move(id);return copy;}
     static QByteArray toolSignature(const QJsonObject&,const QString& directory,const QString& tool,const QByteArray& scope);

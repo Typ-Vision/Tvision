@@ -10,6 +10,7 @@ namespace {
 void require(bool ok,const char* why){if(!ok)throw std::runtime_error(why);}
 }
 void WorldPoseTracking::validate() const {
+    if(imageGeometry)require(imageGeometry->cropDepth()>0 && imageGeometry->rootSize()==rawSize && imageGeometry->sourceId()==imageSource && imageGeometry->rootCoordinateSystemId()==taughtPose.frame.id,"World tracking crop scope differs");
     taughtPose.validate();calibration.validate();
     require(taughtPose.frame==calibration.source && taughtPose.frame.unit==LengthUnit::Pixel && taughtPose.frame.axes==AxisConvention::XRightYDown,"World tracking raw pose/frame mismatch");
     require(rawSize==calibration.resolution && rawSize.width()>0 && rawSize.height()>0 && qint64(rawSize.width())*rawSize.height()<=16*1024*1024,"World tracking resolution invalid");
@@ -20,18 +21,20 @@ void WorldPoseTracking::validate() const {
     require(std::isfinite(mmPerSample) && mmPerSample>=1e-9 && mmPerSample<=1e9,"World tracking sample unit invalid");
 }
 QJsonObject WorldPoseTracking::toJson() const {
-    validate();return {{"schemaVersion",2},{"mapping","world-raw-rigid-v1"},{"taughtPose",ToolValues::encode(taughtPose)},{"sourceTool",sourceTool},{"geometryId",geometryId},{"imageSource",imageSource},{"roiIdentity",roiIdentity},{"width",rawSize.width()},{"height",rawSize.height()},{"calibration",calibration.toJson()},{"mmPerSample",mmPerSample}};
+    validate();QJsonObject o{{"schemaVersion",2},{"mapping","world-raw-rigid-v1"},{"taughtPose",ToolValues::encode(taughtPose)},{"sourceTool",sourceTool},{"geometryId",geometryId},{"imageSource",imageSource},{"roiIdentity",roiIdentity},{"width",rawSize.width()},{"height",rawSize.height()},{"calibration",calibration.toJson()},{"mmPerSample",mmPerSample}};if(imageGeometry)o["imageGeometry"]=imageGeometry->toJson();if(invalidated)o["invalidated"]=true;return o;
 }
 WorldPoseTracking WorldPoseTracking::fromJson(const QJsonObject& o){
     require(QJsonDocument(o).toJson(QJsonDocument::Compact).size()<=160*1024,"World tracking JSON limit");
-    const QStringList keys{"schemaVersion","mapping","taughtPose","sourceTool","geometryId","imageSource","roiIdentity","width","height","calibration","mmPerSample"};
+    QStringList keys{"schemaVersion","mapping","taughtPose","sourceTool","geometryId","imageSource","roiIdentity","width","height","calibration","mmPerSample"};
+    if(o.contains("invalidated"))keys.append("invalidated");
+    if(o.contains("imageGeometry"))keys.append("imageGeometry");
     require(o.size()==keys.size(),"World tracking fields missing/extra");for(auto i=o.begin();i!=o.end();++i)require(keys.contains(i.key()),"World tracking unknown field");
     require(o["schemaVersion"]==2 && o["mapping"]=="world-raw-rigid-v1" && o["taughtPose"].isObject() && o["calibration"].isObject(),"World tracking schema invalid");
     for(auto key:{"sourceTool","geometryId","imageSource","roiIdentity"})require(o[key].isString(),"World tracking string field invalid");
     for(auto key:{"width","height"})require(o[key].isDouble() && o[key].toDouble()==o[key].toInt(),"World tracking integer resolution required");
     require(o["mmPerSample"].isDouble(),"World tracking sample unit required");
     auto value=ToolValues::decode(o["taughtPose"].toObject());require(std::holds_alternative<Pose2D>(value),"World tracking teaching requires Pose2D");
-    WorldPoseTracking r{std::get<Pose2D>(value),o["sourceTool"].toString(),o["geometryId"].toString(),o["imageSource"].toString(),o["roiIdentity"].toString(),{o["width"].toInt(),o["height"].toInt()},CalibrationDependency::fromJson(o["calibration"].toObject()),o["mmPerSample"].toDouble()};r.validate();return r;
+    WorldPoseTracking r{std::get<Pose2D>(value),o["sourceTool"].toString(),o["geometryId"].toString(),o["imageSource"].toString(),o["roiIdentity"].toString(),{o["width"].toInt(),o["height"].toInt()},CalibrationDependency::fromJson(o["calibration"].toObject()),o["mmPerSample"].toDouble()};if(o.contains("imageGeometry")){require(o["imageGeometry"].isObject(),"World tracking geometry object required");r.imageGeometry=ImageGeometry::fromJson(o["imageGeometry"].toObject());}if(o.contains("invalidated")){require(o["invalidated"].isBool() && o["invalidated"].toBool(),"Invalid tracking tombstone");r.invalidated=true;}r.validate();return r;
 }
 bool isWorldPoseTracking(const ToolDefinition& t){return t.parameters["poseTracking"].toObject()["schemaVersion"]==2;}
 WorldPoseTracking worldPoseTracking(const ToolDefinition& t){
@@ -69,7 +72,7 @@ PoseRoi poseTrackingBinding(const ToolDefinition& t){
     const auto roi=nominalTrackingRoi(t,binding.taughtPose.frame);
     require(!binding.calibration && roi.frame==binding.taughtPose.frame && roi.geometry.index()==binding.local.geometry.index(),"Tracking ROI plane/type mismatch");
     require(roi.inside(binding.rawSize),"Tracking nominal ROI outside teaching image");
-    const auto expected=PoseRoi::teach(roi,binding.taughtPose,binding.local.frame,binding.sourceTool,binding.geometryId,binding.rawSize,binding.imageSource);
+    const auto expected=PoseRoi::teach(roi,binding.taughtPose,binding.local.frame,binding.sourceTool,binding.geometryId,binding.rawSize,binding.imageSource,binding.imageGeometry);
     require(expected.local.toJson()==binding.local.toJson(),"Tracking local geometry differs from nominal teaching ROI");
     return binding;
 }

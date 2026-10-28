@@ -1,5 +1,10 @@
 # T5.1 — Edge Pair çekirdeği ve ölçüm servisi
 
+29 Ekim 2026: güncel local raster/crop ve tam kalibre sampling hull kapıları
+[ortak ROI sözleşmesindedir](roi-crop-contract.md#3-kalibrasyon-ve-sampling-apisi--efr-03a-4).
+Aşağıdaki tarihsel endpoint doğrulamasına ek olarak bütün gerçek tap ve bilinear
+komşularının footprint/hull denetimi örnekleme sırasında yapılır.
+
 10 Ekim güncellemesi: **T5.3 tamamlandı**; kullanıcı aracı/registry/recipe/kalibre world Line/Runtime/Logs/CSV ve UI kabulü [Metrology sözleşmesinde](metrology.md). Engine execution/10, güncel binary build/metrology-ui/visionflow.exe. Aşağıdaki T5.1/T5.2 kapsam ve kanıtı tarihsel çekirdek teslimidir; “T5.3’te” ifadeleri o teslimin sınırını anlatır.
 
 9 Ekim 2026. Bu teslim vision/application API'sidir. Toolbox, reçete kind/port/config, Runtime/Logs/CSV ve caliper overlay bağlantısı T5.3'te uygulanacak; çalışan kullanıcı aracı olarak sunulmaz. Sıradaki alt paket T5.2 Line fit. Mevcut Edge Point/Measurement/UI ve execution/9/editor7/terminal3/vf.socket/2 değişmez.

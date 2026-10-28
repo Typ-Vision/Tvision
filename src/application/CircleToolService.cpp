@@ -1,4 +1,5 @@
 #include "CircleToolService.hpp"
+#include "CalibratedImageGeometry.hpp"
 #include "MeasurementDiagnostic.hpp"
 #include "RadialScanService.hpp"
 #include "domain/ToolRegistry.hpp"
@@ -13,13 +14,8 @@ void require(bool b,const char* why){if(!b)throw std::runtime_error(why);}
 QPointF polar(QPointF c,double r,double a){a*=std::numbers::pi/180.;return c+QPointF(r*std::cos(a),r*std::sin(a));}
 }
 QPointF CircleToolService::mapPoint(const ImageFrame& image,const MeasurementExecutionContext& ctx,QPointF p,bool toRaw){
-    require(ctx.calibration && ctx.current,"Circle requires current validated calibration");const auto& c=*ctx.calibration;
-    QPointF raw=p;
-    if(toRaw){if(c.mapping())raw=PlaneMappingService::inverseMap(*c.mapping(),p);else {raw=p/c.millimetresPerPixel();if(c.dependency().target.axes==AxisConvention::XRightYUp)raw.setY(-raw.y());}}
-    ToolResult t;t.state=ExecutionState::Done;const auto m=image.metadata();t.outputs["p"]={{"p",PortType::Point,"px","image"},raw,true,m.frameId,m.cycleId,m};
-    const auto check=MeasurementService{}.distance(t,"p",t,"p",c,*ctx.current,image.size(),0,std::numeric_limits<double>::max());require(check.state==ExecutionState::Done,check.error.toUtf8().constData());
-    if(toRaw)return raw;if(c.mapping())return PlaneMappingService::map(*c.mapping(),raw);
-    auto q=raw*c.millimetresPerPixel();if(c.dependency().target.axes==AxisConvention::XRightYUp)q.setY(-q.y());return q;
+    const auto map=CalibratedImageGeometry::bind(image,ctx);
+    return toRaw ? map.worldToImage(p):map.imageToWorld(p);
 }
 ToolResult CircleToolService::execute(const ToolDefinition& t,const QMap<QString,PortValue>& inputs,const QString& frame,const QString& cycle,const std::shared_ptr<std::atomic_bool>& cancel,const MeasurementExecutionContext& ctx){
     ToolRegistry::validate(t);const auto p=t.parameters;const bool world=p["mode"]=="calibrated";
@@ -34,7 +30,7 @@ ToolResult CircleToolService::execute(const ToolDefinition& t,const QMap<QString
     o.edge.profile={p["stepPx"].toDouble(),p["widthStepPx"].toDouble(),p["sigmaPx"].toDouble()};o.edge.minContrast=p["minContrast"].toDouble();o.edge.subpixel=p["subpixel"].toBool();o.edge.selection=p["selection"]=="first" ? EdgeSelection::First:p["selection"]=="last" ? EdgeSelection::Last:EdgeSelection::Strongest;o.edge.polarity=p["polarity"]=="rising" ? EdgePolarity::Rising:p["polarity"]=="falling" ? EdgePolarity::Falling:EdgePolarity::Any;
     const auto search=world ? RadialScanService::scan(image,arc,o,{*ctx.calibration,*ctx.current},cancel).search:RadialScanner::find(image,roi,o,cancel);
     ToolResult r;r.toolId=t.id;r.state=ExecutionState::Done;
-    auto put=[&](QString id,PortData data,bool valid=true,QString reason={}){for(const auto& port:outputPorts(t.kind))if(port.id==id){PortValue v{port,std::move(data),valid,frame,cycle,m};v.method="radial-circle";v.methodVersion=1;v.diagnostic=!world;if(!valid)v.invalidReason=reason.isEmpty() ? "NOT_EVALUATED":reason;r.outputs[id]=std::move(v);}};
+    auto put=[&](QString id,PortData data,bool valid=true,QString reason={}){for(const auto& port:outputPorts(t.kind))if(port.id==id){PortValue v{port,std::move(data),valid,frame,cycle,m};v.imageGeometry=image.geometry();v.method="radial-circle";v.methodVersion=1;v.diagnostic=!world;if(!valid)v.invalidReason=reason.isEmpty() ? "NOT_EVALUATED":reason;r.outputs[id]=std::move(v);}};
     // Missing fit is an execution error; qualified metric failure below remains DONE.
     QVector<CircleFitPoint> points;for(const auto& s:search.scans)points.append({s.point,{},false,s.reason,s.rejections});
     CircleFitOptions f;f.minPoints=p["minPoints"].toInt();f.minCoverage=p["minFitCoverage"].toDouble();f.minAngularSpanDegrees=p["minAngularSpan"].toDouble();f.maxCondition=p["maxCondition"].toDouble();f.ransac=p["ransac"].toBool();f.inlierDistance=p["inlierDistance"].toDouble();f.maxRms=p["maxRms"].toDouble();f.maxResidual=p["maxResidual"].toDouble();

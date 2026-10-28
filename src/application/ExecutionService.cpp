@@ -315,7 +315,13 @@ CycleResult ExecutionService::run(const QJsonObject& definition,const QString& d
                         const auto binding=sourceBinding;if(sourceAcquisition.isEmpty() || binding["sourceToolId"]!=t.id || sourceAcquisition["target"]!=binding["target"])throw std::runtime_error("Physical source requires exact immutable acquisition snapshot");
                         const auto image=r.outputs.value("image");const auto geometry=GeometryDescriptor::fromJson(sourceAcquisition["geometry"].toObject());if(!image.valid || !std::holds_alternative<ImageFrame>(image.data) || std::get<ImageFrame>(image.data).size()!=geometry.resolution)throw std::runtime_error("Actual frame/physical source geometry mismatch");
                     }
-                    for(auto& value:r.outputs)if(value.valid)if(const auto* image=std::get_if<ImageFrame>(&value.data))value.imageGeometry=image->geometry();
+                    for(auto& value:r.outputs){
+                        if(const auto* image=std::get_if<ImageFrame>(&value.data);value.valid && image)value.imageGeometry=image->geometry();
+                        else if(!value.imageGeometry && value.port.frame!="cycle") {
+                            const auto input=inputs.contains("image") ? inputs.value("image"):inputs.isEmpty() ? PortValue{}:inputs.first();
+                            if(input.origin.coordinateSystemId==value.origin.coordinateSystemId)value.imageGeometry=input.imageGeometry;
+                        }
+                    }
                     const auto declaredOutputs=outputPorts(t.kind);
                     for(const auto& value:r.outputs)if(!experimentalEditorReplay && (!value.origin.experimentalAcquisition.isEmpty() || (std::holds_alternative<ImageFrame>(value.data) && !std::get<ImageFrame>(value.data).metadata().experimentalAcquisition.isEmpty())))throw std::runtime_error("Experimental output requires explicit Editor policy");
                     const bool referenceProducer=std::any_of(declaredOutputs.begin(),declaredOutputs.end(),[&](const auto& p){return referenceSourcePort(t.kind,p.id);});

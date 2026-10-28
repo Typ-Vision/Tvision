@@ -98,6 +98,9 @@ ToolResult ToolExecutors::calculate(const ToolDefinition& t,const QMap<QString,P
         else if(!inputs.isEmpty())origin=inputs.first().origin;
         r.outputs[id]={p,std::move(data),valid,frameId,cycleId,origin};
     }};
+        if(inputs["p1"].origin.coordinateSystemId!=inputs["p2"].origin.coordinateSystemId || ((inputs["p1"].imageGeometry && inputs["p1"].imageGeometry->cropDepth()) || (inputs["p2"].imageGeometry && inputs["p2"].imageGeometry->cropDepth())) && inputs["p1"].imageGeometry!=inputs["p2"].imageGeometry)throw std::runtime_error("Calculate local scopes differ");
+        const auto am=inputs["p1"].origin,bm=inputs["p2"].origin;
+        if(am.sourceId!=bm.sourceId || am.frameId!=bm.frameId || am.cycleId!=bm.cycleId || am.completedAtUtc!=bm.completedAtUtc || am.exposureAtUtc!=bm.exposureAtUtc || am.deviceTimestampTicks!=bm.deviceTimestampTicks || am.deviceClockId!=bm.deviceClockId)throw std::runtime_error("Calculate acquisition provenance differs");
         const auto a=std::get<QPointF>(inputs["p1"].data),b=std::get<QPointF>(inputs["p2"].data);
         put("value",std::hypot(a.x()-b.x(),a.y()-b.y()));r.points={a,b};return r;
 }
@@ -276,7 +279,16 @@ ToolExecutor ToolExecutors::get(const QString& kind,const MeasurementExecutionCo
     auto executor=select();
     return [executor](const ToolDefinition& t,const QMap<QString,PortValue>& inputs,const QString& directory,const QString& frame,const QString& cycle,const std::shared_ptr<std::atomic_bool>& cancel){
         if(t.parameters.contains("referenceBinding"))throw std::runtime_error("Reference binding must be resolved by execution engine");
-        return executor(t,inputs,directory,frame,cycle,cancel);
+        if(inputs.contains("image"))if(const auto* image=std::get_if<ImageFrame>(&inputs.constFind("image")->data);image && image->geometry().cropDepth()){
+            for(auto i=inputs.begin();i!=inputs.end();++i)if(i.key()!="image" && i->valid){
+                if(i->origin.sourceId!=image->metadata().sourceId || i->origin.coordinateSystemId!=image->metadata().coordinateSystemId || !i->imageGeometry || *i->imageGeometry!=image->geometry())throw std::runtime_error("Crop consumer input local scope mismatch");
+            }
+        }
+        auto result=executor(t,inputs,directory,frame,cycle,cancel);
+        const auto input=inputs.contains("image") ? inputs.value("image"):inputs.isEmpty() ? PortValue{}:inputs.first();
+        auto scope=input.imageGeometry;if(const auto* image=std::get_if<ImageFrame>(&input.data))scope=image->geometry();
+        for(auto& value:result.outputs)if(!value.imageGeometry && value.origin.coordinateSystemId==input.origin.coordinateSystemId)value.imageGeometry=scope;
+        return result;
     };
 }
 }

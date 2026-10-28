@@ -1,4 +1,5 @@
 #pragma once
+#include "vision/ImageGeometry.hpp"
 #include "ToolDefinition.hpp"
 #include "PoseRoi.hpp"
 namespace visionflow {
@@ -9,6 +10,8 @@ struct WorldPoseTracking {
     QSize rawSize;
     CalibrationDependency calibration;
     double mmPerSample=1;
+    std::optional<ImageGeometry> imageGeometry;
+    bool invalidated=false;
     void validate() const;
     QJsonObject toJson() const;
     static WorldPoseTracking fromJson(const QJsonObject&);

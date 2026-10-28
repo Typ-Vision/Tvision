@@ -1,6 +1,6 @@
 # Flow, combobox ve ROI güncelleme planı — EFR-PLAN-02
 
-28 Ekim 2026. **EFR-01/02 ve EFR-03a-2/3 core altyapısı uygulandı; EFR-03a-1 tasarımı tamam, kalan kartlar plandır.** Kullanıcının güncel kapsamı:
+28 Ekim 2026. **EFR-01/02 ve EFR-03a-2/3/4 core altyapısı uygulandı; EFR-03a-1 tasarımı tamam, kalan kartlar plandır.** Kullanıcının güncel kapsamı:
 1) Flow sağ tıkta Remove Tool, 2) tekerlekle combobox değerinin değişmemesi,
 3) ROI'de isteğe bağlı gerçek görüntü kırpma. Template Match/θ ertelendi.
 [Shape Pose hızlandırma notu](shape-pose-performance-note.md) bağımsız inceleme
@@ -9,11 +9,11 @@ girdisidir. Eski U1–U4 tamamlanmış işleri yeniden açılmaz.
 Önerilen uygulama sırası: **EFR-01 → EFR-02 → EFR-03a-1 → EFR-03a-2 →
 EFR-03a-3 → EFR-03a-4 → EFR-03b → EFR-04**.
 Her kart ayrı görev ID'li commit/kapanış; ajanlar paralel çalışmaz. Sonraki
-uygulama kartı EFR-03a-4'tür. EFR-03a-1 sözleşme/envanter tasarımı ve
+uygulama kartı EFR-03b'dir. EFR-03a-1 sözleşme/envanter tasarımı ve
 [EFR-03a-2 owned crop/geometri altyapısı](../archive/2026-10-28-efr-03a-2.md)
 tamamlandı; [kesin API ve dosya/test devri](roi-crop-contract.md).
-ROI executor/registry/cache core entegrasyonu tamam; consumer/kalibrasyon/trace
-ve UI crop kabulü sonraki kartlardadır.
+ROI executor/registry/cache ve consumer/kalibrasyon/trace core entegrasyonu
+[EFR-03a-4](../archive/2026-10-29-efr-03a-4.md) ile tamamlandı; UI crop kabulü EFR-03b kapsamındadır.
 Kalan plan üretim kabulü verilmiş anlamına gelmez.
 Üç applicationType aynı Editor/Runtime sözleşmesini kullanır.
 

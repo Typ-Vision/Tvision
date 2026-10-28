@@ -1,3 +1,5 @@
+#include "CircleToolService.hpp"
+#include "CalibratedImageGeometry.hpp"
 #include "MetrologyService.hpp"
 #include "MeasurementDiagnostic.hpp"
 #include "vision/metrology/ScanLayout.hpp"
@@ -66,7 +68,7 @@ ToolResult MetrologyService::execute(const ToolDefinition& t,const QMap<QString,
     if(world && (!context.calibration || !context.current))throw std::runtime_error(context.error.isEmpty() ? "Metrology requires current calibration":context.error.toStdString());
     const auto roi=ToolRoi::fromJson(p["scanRoi"].toObject());
     ToolResult r;r.toolId=t.id;r.state=ExecutionState::Done;
-    auto put=[&](const QString& id,PortData data,bool valid=true,const QString& reason=QString{}){for(const auto& port:outputPorts(t.kind))if(port.id==id){PortValue v{port,std::move(data),valid,frameId,cycleId,m};v.method=t.kind=="edge_pair" ? "profile-pair":"robust-line";v.methodVersion=1;v.diagnostic=!world;if(!valid)v.invalidReason=reason.isEmpty() ? "NOT_FOUND":reason;r.outputs[id]=std::move(v);}};
+    auto put=[&](const QString& id,PortData data,bool valid=true,const QString& reason=QString{}){for(const auto& port:outputPorts(t.kind))if(port.id==id){PortValue v{port,std::move(data),valid,frameId,cycleId,m};v.imageGeometry=image.geometry();v.method=t.kind=="edge_pair" ? "profile-pair":"robust-line";v.methodVersion=1;v.diagnostic=!world;if(!valid)v.invalidReason=reason.isEmpty() ? "NOT_FOUND":reason;r.outputs[id]=std::move(v);}};
     const ProfileOptions profile{p["stepPx"].toDouble(),p["widthStepPx"].toDouble(),p["sigmaPx"].toDouble()};
     const auto selection=p["selection"]=="first" ? EdgeSelection::First:p["selection"]=="last" ? EdgeSelection::Last:EdgeSelection::Strongest;
     if(t.kind=="edge_pair"){
@@ -81,14 +83,20 @@ ToolResult MetrologyService::execute(const ToolDefinition& t,const QMap<QString,
     }else {
         LineScanOptions o;o.scanCount=p["scanCount"].toInt();o.scanWidthPx=p["scanWidthPx"].toDouble();o.edge.profile=profile;o.edge.selection=selection;o.edge.minContrast=p["minContrast"].toDouble();o.edge.subpixel=p["subpixel"].toBool();o.edge.polarity=p["polarity"]=="rising" ? EdgePolarity::Rising:p["polarity"]=="falling" ? EdgePolarity::Falling:EdgePolarity::Any;
         o.fit.minPoints=p["minPoints"].toInt();o.fit.minCoverage=p["minCoverage"].toDouble();o.fit.minSpanCoverage=p["minSpanCoverage"].toDouble();o.fit.ransac=p["ransac"].toBool();o.fit.minSpan=p["minSpanPx"].toDouble();o.fit.inlierDistance=p["inlierDistancePx"].toDouble();o.fit.maxRms=p["maxRmsPx"].toDouble();o.fit.maxResidual=p["maxResidualPx"].toDouble();
-        const auto raw=LineFitter::find(image,roi,o,cancel).line;auto fitted=raw;
+        const auto raw=[&]{
+            if(!world)return LineFitter::find(image,roi,o,cancel).line;
+            if(roi.frame.id!=m.coordinateSystemId || !std::holds_alternative<RotatedRectangle>(roi.geometry))throw std::runtime_error("Line scan local frame/type mismatch");
+            const auto map=CalibratedImageGeometry::bind(image,context,cancel);const auto box=std::get<RotatedRectangle>(roi.geometry);
+            const auto points=LineFitter::observationsMapped(image,box,[map](QPointF p){map.requireSamplingFootprint(p);return p;},o,cancel);
+            const auto angle=box.angleDegrees*std::numbers::pi/180.;return LineFitter::fit(points,{std::cos(angle),std::sin(angle)},o.fit,cancel);
+        }();auto fitted=raw;
         const CoordinateFrame pixel{m.coordinateSystemId,LengthUnit::Pixel,AxisConvention::XRightYDown};
         PointSet observations{{},pixel};for(const auto& s:raw.scans)if(s.point)observations.points.append(*s.point);put("observationsPx",observations);
         put("linePx",Line2D{raw.supportStart,raw.supportEnd,pixel});put("originPx",raw.origin);put("tangentPx",raw.tangent);put("anglePx",raw.angleDegrees);put("spanPx",raw.span);put("rmsPx",raw.rms);put("maxResidualPx",raw.maxResidual);
         if(world){
             // Reuse the full validated current/source/frame/hull guard for every
             // observed point before mapping. No nominal-scale angle conversion.
-            auto map=[&](QPointF point){ToolResult v;v.state=ExecutionState::Done;v.outputs["p"]={{"p",PortType::Point,"px","image"},point,true,frameId,cycleId,m};const auto check=MeasurementService{}.distance(v,"p",v,"p",*context.calibration,*context.current,image.size(),0,std::numeric_limits<double>::max());if(check.state!=ExecutionState::Done)throw std::runtime_error(check.error.toStdString());const auto& c=*context.calibration;if(c.mapping())return PlaneMappingService::map(*c.mapping(),point);auto q=point*c.millimetresPerPixel();if(c.dependency().target.axes==AxisConvention::XRightYUp)q.setY(-q.y());return q;};
+            auto map=[&](QPointF point){stop();return CircleToolService::mapPoint(image,context,point,false);};
             QVector<LineScanPoint> scans=raw.scans;for(auto& s:scans){stop();if(s.point)s.point=map(*s.point);}
             const auto a=map(raw.supportStart),b=map(raw.supportEnd);auto fit=o.fit;fit.minSpan=p["minSpanMm"].toDouble();fit.inlierDistance=p["inlierDistanceMm"].toDouble();fit.maxRms=p["maxRmsMm"].toDouble();fit.maxResidual=p["maxResidualMm"].toDouble();fitted=LineFitter::fit(scans,b-a,fit,cancel);
             put("lineMm",Line2D{fitted.supportStart,fitted.supportEnd,context.calibration->dependency().target});put("originMm",fitted.origin);put("tangentMm",fitted.tangent);put("angleMm",fitted.angleDegrees);put("spanMm",fitted.span);put("rmsMm",fitted.rms);put("maxResidualMm",fitted.maxResidual);r.calibration=context.calibration->dependency();

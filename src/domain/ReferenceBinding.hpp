@@ -1,4 +1,5 @@
 #pragma once
+#include "vision/ImageGeometry.hpp"
 #include "PoseRoi.hpp"
 #include <variant>
 
@@ -21,6 +22,8 @@ struct ReferenceBinding {
     bool world=false;
     double mmPerSample=1;
 
+    std::optional<ImageGeometry> imageGeometry;
+    bool invalidated=false;
     void validate() const;
     QString roiIdentity() const;
     // Point input stays Point; mode/type mismatch never manufactures a pose.

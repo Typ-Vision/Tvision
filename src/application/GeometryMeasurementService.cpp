@@ -32,12 +32,13 @@ ToolResult GeometryMeasurementService::execute(const ToolDefinition& t,const QMa
     for(const auto& v:inputs)require(v.origin.sourceId==m.sourceId && v.origin.coordinateSystemId==m.coordinateSystemId &&
         v.origin.frameId==m.frameId && v.origin.cycleId==m.cycleId && v.origin.completedAtUtc==m.completedAtUtc &&
         v.origin.exposureAtUtc==m.exposureAtUtc && v.origin.deviceTimestampTicks==m.deviceTimestampTicks && v.origin.deviceClockId==m.deviceClockId,"Geometry inputs differ from actual acquisition");
+    if(image.geometry().cropDepth())for(const auto& v:inputs)require(v.imageGeometry && *v.imageGeometry==image.geometry(),"Geometry child input scope differs from image");
     const CoordinateFrame rawFrame{m.coordinateSystemId,LengthUnit::Pixel,AxisConvention::XRightYDown};
     if(world){
         if(!ctx.calibration || !ctx.current)throw std::runtime_error((QString("Geometry requires current active or accepted legacy calibration. ")+
             (ctx.error.isEmpty() ? QString("Current calibration unavailable"):ctx.error)+
             "; Runtime: Stop → Kaynağı doğrula. Model/kurulum eksikse Setup → Calibration üzerinden kayıtlı exact seçimi ve kaynak bağını denetleyin.").toUtf8().constData());
-        require(ctx.rawSize==image.size(),"Geometry resolver actual resolution differs from image");
+        require(ctx.rawSize==image.geometry().rootSize(),"Geometry resolver actual resolution differs from image");
         require(!ctx.calibration->dependency().cameraId.startsWith("calibration-test:"),"File-test calibration cannot measure production geometry");
     }
     const auto targetFrame=world ? ctx.calibration->dependency().target:rawFrame;
@@ -105,7 +106,7 @@ ToolResult GeometryMeasurementService::execute(const ToolDefinition& t,const QMa
         else value=G::circleSize(a,op=="circle_radius" ? CircleSize::Radius:CircleSize::Diameter);
     }
     for(const auto& port:geometryMeasurementOutputs()){
-        PortValue v{port,false,false,frame,cycle,m};v.method="geometry-refit/"+op;v.methodVersion=2;v.diagnostic=!world;
+        PortValue v{port,false,false,frame,cycle,m};v.imageGeometry=image.geometry();v.method="geometry-refit/"+op;v.methodVersion=2;v.diagnostic=!world;
         const QString suffix=world ? "Mm":"Px";
         if(port.id=="accepted" && p["toleranceEnabled"].toBool() && (value || angle)){const auto metric=value ? *value:*angle;v.data=metric>=p["lower"].toDouble() && metric<=p["upper"].toDouble();v.valid=true;}
         if(port.id=="status"){v.data=status;v.valid=true;}

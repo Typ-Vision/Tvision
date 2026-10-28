@@ -62,10 +62,10 @@ int main(int argc,char** argv){QCoreApplication app(argc,argv);try{
         for(int y=0;y<256;++y)for(int x=0;x<256;++x){const auto q=nominalAtRaw({double(x),double(y)});stripe[y*256+x]=char(std::lround(128+100*(std::erf((q.y()-13)/.5)-std::erf((q.y()-17)/.5)-1)));}
         const auto raster=image(stripe);const auto hash=raster.contentId();
         const auto map=PoseRoiService::worldMap(binding,source,result,raster,ctx);
-        for(int y=6;y<25;++y)for(int x=6;x<25;++x){near(map.nominalToRaw({double(x),double(y)}),movedRaw({double(x),double(y)}),1e-5);near(map.rawToWorld(movedRaw({double(x),double(y)})),inverse(movedRaw({double(x),double(y)})),1e-5);}
+        for(int y=6;y<25;++y)for(int x=6;x<25;++x){near(map.nominalToImage({double(x),double(y)}),movedRaw({double(x),double(y)}),1e-5);near(map.imageToWorld(movedRaw({double(x),double(y)})),inverse(movedRaw({double(x),double(y)})),1e-5);}
         ToolRoi scan{world,ScanSegment{{15,9},{15,21},.2}};
         EdgeOptions edge;edge.profile={.5,1,1};edge.polarity=EdgePolarity::Rising;edge.minContrast=5;
-        auto counted=map;int calls=0;counted.nominalToRaw=[&](QPointF p){++calls;const auto q=map.nominalToRaw(p);near(q,movedRaw(p),1e-5);return q;};
+        auto counted=map;int calls=0;counted.nominalToImage=[&](QPointF p){++calls;const auto q=map.nominalToImage(p);near(q,movedRaw(p),1e-5);return q;};
         check(WorldTrackingService::edge(raster,scan,.2,counted,edge).has_value() && calls>200,"every actual longitudinal/transverse tap mapped");
         ToolDefinition worldConsumer{"world-edge","edge_point","World edge","",true,edgePointDefaults()};
         worldConsumer.parameters["polarity"]="rising";worldConsumer.parameters["minContrast"]=5.;
@@ -159,9 +159,9 @@ int main(int argc,char** argv){QCoreApplication app(argc,argv);try{
         auto outPose=current;outPose.position=project({29,15});const auto outResult=synthetic(source,outPose);const auto outMap=PoseRoiService::worldMap(binding,source,outResult,raster,ctx);
         reject([&]{WorldTrackingService::edge(raster,{world,ScanSegment{{15,9},{15,21},.2}},.2,outMap,edge);});
         // Caller edits cannot change an already created job snapshot.
-        invalid=ctx;auto snapshot=PoseRoiService::worldMap(binding,source,result,raster,invalid);invalid.current->lensId="changed";near(snapshot.nominalToRaw({15,15}),movedRaw({15,15}),1e-5);
+        invalid=ctx;auto snapshot=PoseRoiService::worldMap(binding,source,result,raster,invalid);invalid.current->lensId="changed";near(snapshot.nominalToImage({15,15}),movedRaw({15,15}),1e-5);
         auto cancel=std::make_shared<std::atomic_bool>(false);const auto cancellable=PoseRoiService::worldMap(binding,source,result,raster,ctx,cancel);cancel->store(true);reject([&]{WorldTrackingService::edge(raster,scan,.2,cancellable,edge);});reject([&]{WorldTrackingService::circle(circleImage,annulus,cancellable,radial,fit);});
-        cancel->store(false);auto during=cancellable;int taps=0;during.nominalToRaw=[&](QPointF q){if(++taps==20)cancel->store(true);return cancellable.nominalToRaw(q);};reject([&]{WorldTrackingService::edge(raster,scan,.2,during,edge);});check(taps==20,"cancellation during sampling returns no partial feature");
+        cancel->store(false);auto during=cancellable;int taps=0;during.nominalToImage=[&](QPointF q){if(++taps==20)cancel->store(true);return cancellable.nominalToImage(q);};reject([&]{WorldTrackingService::edge(raster,scan,.2,during,edge);});check(taps==20,"cancellation during sampling returns no partial feature");
         check(raster.contentId()==hash,"raw pixels immutable");
         // Actual pose producer -> uniform/Y-up world sampler. Synthetic pose
         // above isolates the non-affine sampling oracle from matcher accuracy.
