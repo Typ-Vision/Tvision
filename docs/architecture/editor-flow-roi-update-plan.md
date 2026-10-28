@@ -1,6 +1,6 @@
 # Flow, combobox ve ROI güncelleme planı — EFR-PLAN-02
 
-28 Ekim 2026. **EFR-01 ve EFR-02 uygulandı; kalan kartlar plandır.** Kullanıcının güncel kapsamı:
+28 Ekim 2026. **EFR-01/02 uygulandı; EFR-03a-1 tasarımı tamam, kalan kartlar plandır.** Kullanıcının güncel kapsamı:
 1) Flow sağ tıkta Remove Tool, 2) tekerlekle combobox değerinin değişmemesi,
 3) ROI'de isteğe bağlı gerçek görüntü kırpma. Template Match/θ ertelendi.
 [Shape Pose hızlandırma notu](shape-pose-performance-note.md) bağımsız inceleme
@@ -9,7 +9,9 @@ girdisidir. Eski U1–U4 tamamlanmış işleri yeniden açılmaz.
 Önerilen uygulama sırası: **EFR-01 → EFR-02 → EFR-03a-1 → EFR-03a-2 →
 EFR-03a-3 → EFR-03a-4 → EFR-03b → EFR-04**.
 Her kart ayrı görev ID'li commit/kapanış; ajanlar paralel çalışmaz. Sonraki
-uygulama kartı EFR-03a-1'dir. Kalan plan üretim kabulü verilmiş anlamına gelmez.
+uygulama kartı EFR-03a-2'dir. EFR-03a-1 sözleşme/envanter tasarımı tamamlandı;
+[kesin API ve dosya/test devri](roi-crop-contract.md). Crop henüz uygulanmadı.
+Kalan plan üretim kabulü verilmiş anlamına gelmez.
 Üç applicationType aynı Editor/Runtime sözleşmesini kullanır.
 
 ## Kaynak başlangıcı ve korunacak sözleşmeler
@@ -107,7 +109,9 @@ native kontrol yapılamazsa açık sınırlama olarak kaydedilir.
 
 ## EFR-03a — ROI kırpmanın görüntü/koordinat sözleşmesi
 
-Bu kart checkbox'tan önce bitirilir. `processed()` boyut kontrolünü kaldırmak
+Bu kart checkbox'tan önce bitirilir. EFR-03a-1'in
+[tek ROI, 13 Image tüketicisi ve API sözleşmesi](roi-crop-contract.md)
+EFR-03a-2/3/4 başlangıç bağımlılığıdır. `processed()` boyut kontrolünü kaldırmak
 ve eski raw coordinate kimliğini yeni rastera kopyalamak çözüm değildir.
 
 ### Parametre, port ve uyumluluk
@@ -183,7 +187,8 @@ Yeni resize/rotation/rectification dönüşümleri bu kartların kapsamında de�
 
 Bu bölüm tek büyük ajan görevi olarak verilmez. Sol6.1 medium alt ajanları
 sırayla çalışır; her kart kendi testleri, kapanış kaydı ve commit'iyle teslim
-edilir. Yönetici ajan sonucu incelemeden sonraki karta geçilmez.
+edilir. Güncel kullanıcı yönlendirmesiyle yönetici sonucu okumadan veya
+değerlendirmeden sonraki kart için yeni ajanı başlatır.
 
 | Kart | Sorumluluk ve çıkış kapısı |
 | --- | --- |

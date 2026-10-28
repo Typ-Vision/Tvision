@@ -4,10 +4,11 @@
 
 ## Devam noktası
 
-**[EFR-02](archive/2026-10-28-efr-02.md):** Combo wheel; 2 CTest/Windows Qt geçti.
-Release geçti; OS wheel açık. Save odak hatası sürer.
-[EFR-01](archive/2026-10-28-efr-01.md) korunur. Sonraki EFR-03a-1;
-[plan](architecture/editor-flow-roi-update-plan.md). Match/θ ertelendi.
+**[EFR-03a-1](archive/2026-10-28-efr-03a-1.md):** ROI/13 tüketici API tasarımı;
+8 CTest geçti. Crop yok. Sonraki EFR-03a-2;
+[sözleşme](architecture/roi-crop-contract.md).
+[EFR-01](archive/2026-10-28-efr-01.md)/[02](archive/2026-10-28-efr-02.md)
+korunur; OS wheel, Save odak açık. Match/θ ertelendi.
 
 **[DEV-DRIVE-01](archive/2026-10-28-dev-drive-01.md):** `D:/TVision`;
 OpenCV geçti, CTest kısmi.
