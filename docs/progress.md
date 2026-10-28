@@ -4,6 +4,9 @@
 
 ## Devam noktası
 
+**[EFR-PLAN-01](archive/2026-10-28-efr-plan-01.md):** Flow/combobox/ROI planı ve
+Shape hız notu hazır; uygulama yok. Sonraki EFR-01. Match/θ ertelendi.
+
 **[DEV-DRIVE-01](archive/2026-10-28-dev-drive-01.md):** `D:/TVision`; build güncel,
 OpenCV geçti; CTest erken durduruldu (tam kabul değil).
 
@@ -93,11 +96,9 @@ CCUX-14 fixture bunu kapatmaz. [CCUX planı](architecture/camera-setup/README.md
 
 ## Hazır olanlar
 
-- **EXP-01–03 hazır:** [son devir ve önceki kanıtlar](archive/2026-10-21-icm-oecs-exp-03b.md).
-  Uzun probe zorunlu sonlandırma sınırı; PLC/robot kapalı, restart izni kapatır.
-  Fiziksel/optik/mm kabulü açık. MUI-01–03/EUI-01–08 tamam;
-  **MUI-04 özgün raster/reçete/ROI problemi açık**. Eski testler yeni kabul değildir.
-- KMC/ICM/G2 yazılımı tamam: [önceki devir](archive/2026-10-21-ccux-plan-02-oncesi.md).
+- EXP-01–03, MUI-01–03/EUI-01–08 ve KMC/ICM/G2 yazılımı hazır;
+  [kanıt/korunan sınırlar](archive/2026-10-28-efr-plan-01.md).
+  **MUI-04 özgün raster/reçete/ROI açık**; fiziksel/optik/mm kabulü açık.
 
 ## Korunacak engeller ve kararlar
 
