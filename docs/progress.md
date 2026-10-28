@@ -4,8 +4,8 @@
 
 ## Devam noktası
 
-**[EFR-PLAN-01](archive/2026-10-28-efr-plan-01.md):** Flow/combobox/ROI planı ve
-Shape hız notu hazır; uygulama yok. Sonraki EFR-01. Match/θ ertelendi.
+**[EFR-PLAN-02](archive/2026-10-28-efr-plan-02.md):** Tek ROI, tüm Image
+tüketicileri; 03a dört kart. Uygulama yok; sonraki EFR-01. Match/θ ertelendi.
 
 **[DEV-DRIVE-01](archive/2026-10-28-dev-drive-01.md):** `D:/TVision`; build güncel,
 OpenCV geçti; CTest erken durduruldu (tam kabul değil).

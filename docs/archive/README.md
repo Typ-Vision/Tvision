@@ -6,6 +6,7 @@ görev” ifadeleri yazıldıkları tarihe aittir.
 
 | Dönem / görev | Kayıt |
 | --- | --- |
+| 28 Ekim 2026 — EFR-PLAN-02 | [Tek ROI, tüm Image tüketicileri ve sıralı uygulama kartları](2026-10-28-efr-plan-02.md) |
 | 28 Ekim 2026 — EFR-PLAN-01 | [Flow silme, combobox tekerlek, ROI crop planı ve Shape hız notu](2026-10-28-efr-plan-01.md) |
 | 28 Ekim 2026 — DEV-DRIVE-01 | [D: taşıma kontrolü ve güncel yollar](2026-10-28-dev-drive-01.md) |
 | 28 Ekim 2026 — DOC-VAR-01 | [Değişken oluşturma ve değer değiştirme kısa rehberi](2026-10-28-doc-var-01.md) |
