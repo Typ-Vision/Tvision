@@ -162,3 +162,13 @@ Recipe schema 2 calibrationBinding, legacy dependency schema 1 yanında raw homo
 ## P3 Runtime seçenekleri
 
 Recipe definition.runtime isteğe bağlı {"trigger":"Manual" veya "SoftwareTrigger", "measurementToolId":"tool UUID veya boş"} nesnesidir. Alan yoksa Manual/mapping yok; açma/no-op Save migration veya dirty üretmez. Explicit setRuntimeOptions değişikliği DRAFT ve normal Save sürüm artışını kullanır. Bilinmeyen trigger veya alan/tip reddedilir. Endpoint/autoStart/ACK machine ayarları burada tutulmaz. Loaded immutable kopya draft seçeneklerini kendiliğinden izlemez. Eski binary ile yeni trigger anlamının uygulanması garanti edilmez; vf.socket/2 peer gerekir.
+
+## EFR-03b — ROI görüntü modu
+
+Tek `roi` kind'ının `cropImage` boolean parametresi reçete verisidir; eksik alan
+okumada false olur. Properties checkbox'ı normal ProjectService candidate
+transaction yolunu kullanır; Save/reopen değeri, UUID ve Region/Image bağlarını
+korur. Yerel INI tercihi değildir; editor schema artırılmaz. Region input scope,
+Image açık modda child scope taşır. Upstream geometri edit'i teaching bağlarını
+geçersizleştirir; UI yeniden öğretim ihtiyacını görünür kılar.
+[Kesin raster/codec/consumer sözleşmesi](roi-crop-contract.md).

@@ -1,6 +1,6 @@
 # EFR-03a-1 — tek ROI crop sözleşmesi ve uygulama devri
 
-28 Ekim 2026. **EFR-03a-2 owned crop/geometri ve EFR-03a-3 ROI executor/registry/cache ve EFR-03a-4 consumer/kalibrasyon/trace uygulandı; UI entegrasyonu EFR-03b kapsamındadır.**
+28 Ekim 2026. **EFR-03a-2/3/4 core ve EFR-03b checkbox/viewer entegrasyonu uygulandı.**
 [Ana plan](editor-flow-roi-update-plan.md#efr-03a--roi-kırpmanın-görüntükoordinat-sözleşmesi).
 Bu belge EFR-03a-2/3/4 için bağlayıcı API ve dosya/test kapsamıdır.
 EFR-03b checkbox/viewer kabulü ayrıdır. Mevcut Region özelliği çalışır;
@@ -369,3 +369,27 @@ sağlayıcıları kaynak okumalarıyla çıkarıldı; geniş regex'in boş sonuc
 kanıtı yapılmadı. Dayanılan yollar için coverage ve parse_partial satırları
 doğrudan kaynakla tamamlandı; ayrıntılı kanıt `build/efr/efr-03a-1/` altında.
 Bu belge gelecekteki implementasyonun test başarısı değildir.
+
+## EFR-03b — uygulanmış UI sınırı
+
+Properties `cropImage` reçete transaction'ına bağlıdır; mod/çizim ve mevcut
+bağlantılar korunur. Güncel ROI açıkken child raster, kapalıyken input raster +
+Region gösterilir. Girişte çiz/düzenle eylemi parent rasterı seçer; tüketicinin
+çizimi kendi Image girdisindedir. Viewer sunum kimliği local coordinate ID
+barındırır; aynı boyut/farklı konum eski tutamaç/overlay'i taşımaz. Piksel sorgusu
+da gösterilen gerçek rasterı kullanır. Geometri etiketleri görüntü px der;
+child raster edinim raw kökü gibi adlandırılmaz.
+
+Runtime seçili araçta actual output/input ImageFrame'i, tüm araçlar görünümünde
+edinim root'unu gösterir. Non-Image port scope'u source/frame/cycle/root ve local
+kimliğiyle doğrulanır; rootOffset farkı point/region/line/scan/mask/code layer'ına
+bir kez uygulanır. ROI parent Region'ı child çıktı üstüne yanlış çizilmez. Mm
+çıktıların typed birimi korunur; overlay yine kanıtlanmış raster koordinatıdır.
+Stop downstream cache'i ve sunumu temizler; eski crop Image yeniden kullanılamaz.
+Reference/pose tombstone'u Properties'de yeniden öğretim uyarısıdır. Metrologi
+sayısal/drawing hazır kapısı güncel Image girdisi ve busy durumuyla yenilenir;
+kalibrasyon edit'inden sonra güncel kaynak çıktısı edinilmeden öğretim yapılmaz.
+
+Yeni yazılım/görsel kanıt, korunan Save odak hatası ve sınırlar
+[EFR-03b kapanışında](../archive/2026-10-29-efr-03b.md) kayıtlıdır. EFR-04 birleşik
+kabul bu teslimde başlatılmadı.

@@ -34,3 +34,15 @@ Raw domain sınırı çizilir. `setValidDomain()` çağrısı varsa ek polygon o
 ## Kanıt
 
 Yeni Release `build/tool-roi-ui` (ZXing OFF) CTest 31/31; `build/tool-roi-core` (ZXing ON, Widgets OFF) 28/28. `roi_geometry_contract` ownership/all six formats/stride/provenance ve analitik footprint; `roi_viewer_interaction` bütün şekiller/mouse/handles/numeric/Escape/undo/zoom/legacy rectangle; ana smoke gerçek Editor entry/no recipe mutation sınar. Normal/küçük PNG'ler `build/tool-roi-ui/t2-roi-*` ve `t2-editor-roi*` altında açılıp incelendi. Testler fiziksel doğruluk veya kurulum/dağıtım/CUDA kabulü değildir.
+
+## EFR-03b — reçete ROI ve viewer rasterı
+
+Geçici geometri çalışma alanı yukarıdaki sınırını korur. Reçete ROI'sinin
+`cropImage` modu [ROI crop sözleşmesindeki](roi-crop-contract.md) owned child
+rasterı kullanır. Seçili tüketicinin çizimi/önizlemesi bağlı Image girdisinin
+local koordinatlarındadır; ROI'nin açık güncel sonucu child rasterdır ve parent
+Region child üstünde düzenlenmez. Giriş görüntüsünde çiz/düzenle eylemi ayrı
+sunulur. Görüntü sunum kimliği local coordinate ID içerir; aynı boyutta farklı
+konum değişimi eski overlay/undo'yu taşımaz. Runtime ham görüntüsünde child
+layer'ları source/frame/cycle/root scope doğrulamasından sonra rootOffset
+farkıyla açıkça çevrilir; seçili child viewer local layer kullanır.

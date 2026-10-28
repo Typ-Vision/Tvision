@@ -6,6 +6,7 @@ görev” ifadeleri yazıldıkları tarihe aittir.
 
 | Dönem / görev | Kayıt |
 | --- | --- |
+| 29 Ekim 2026 — EFR-03b | [ROI crop checkbox, actual raster/overlay ve UI kabulü](2026-10-29-efr-03b.md) |
 | 29 Ekim 2026 — EFR-03a-4 | [Tüm crop tüketicileri, kalibrasyon/reference/pose ve strict trace kökeni](2026-10-29-efr-03a-4.md) |
 | 28 Ekim 2026 — EFR-03a-3 | [ROI Image executor, kayıt uyumluluğu ve kalıcı teaching/cache invalidation](2026-10-28-efr-03a-3.md) |
 | 28 Ekim 2026 — EFR-03a-2 | [Owned crop, immutable raw/child geometri ve kararlı kimlik](2026-10-28-efr-03a-2.md) |

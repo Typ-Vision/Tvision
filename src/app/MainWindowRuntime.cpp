@@ -418,13 +418,16 @@ void MainWindow::showRuntimeResult() {
     }
     if(snapshot && rawFrame){
         const bool all=findChild<QCheckBox*>("runtimeAllTools")->isChecked();
+        if(!all){
+            const auto tool=runtimeTools_->currentData().toString();std::optional<ImageFrame> selectedImage;
+            for(const auto& result:c.tools)if(result.toolId==tool && result.state==ExecutionState::Done){const auto output=result.outputs.value("image");if(output.valid)if(const auto* frame=std::get_if<ImageFrame>(&output.data))selectedImage=*frame;}
+            if(!selectedImage)for(const auto& link:editorConnections(snapshot->recipe().definition))if(link.targetTool==tool && link.targetPort=="image")for(const auto& result:c.tools)if(result.toolId==link.sourceTool && result.state==ExecutionState::Done){const auto output=result.outputs.value(link.sourcePort);if(output.valid)if(const auto* frame=std::get_if<ImageFrame>(&output.data))selectedImage=*frame;}
+            if(selectedImage && selectedImage->metadata().sourceId==selectedSource){rawFrame=selectedImage;runtimeViewer_->setImage(rawFrame->preview(),runtimeProjectId_+"|"+snapshot->recipe().id+"|"+selectedSource+"|"+rawFrame->metadata().coordinateSystemId);}
+        }
         const auto layers=runtimeOverlays(c,editorTools(snapshot->recipe().definition),graph,*rawFrame,snapshot,all ? QString{}:runtimeTools_->currentData().toString());
         runtimeViewer_->setRuntimeOverlays(layers);
         for(const auto& layer:layers.layers)if(layer.detail.contains("Tarama alanı"))lines<<layer.name+": "+layer.detail;
-        if(!all)for(const auto& t:c.tools)if(t.toolId==runtimeTools_->currentData().toString() && t.state==ExecutionState::Done){
-            const auto preview=t.outputs.value("image");if(preview.valid && preview.origin.sourceId==rawFrame->metadata().sourceId && preview.frameId==rawFrame->metadata().frameId && preview.cycleId==c.cycleId)
-                if(const auto* frame=std::get_if<ImageFrame>(&preview.data))if(frame->size()==rawFrame->size())runtimeViewer_->setPreviewPixels(frame->preview());
-        }
+
     }
     QStringList diagnoses;
     for(const auto& t:c.tools)if(t.fitDiagnostic && graph.toolSources.value(t.toolId)==selectedSource){QString name=t.toolId;if(snapshot)for(const auto& configured:editorTools(snapshot->recipe().definition))if(configured.id==t.toolId)name=configured.name;diagnoses<<name+" • "+executionStateName(t.state)<<presentMeasurementDiagnostic(*t.fitDiagnostic);}

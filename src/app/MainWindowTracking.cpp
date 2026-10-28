@@ -32,6 +32,8 @@ void MainWindow::addTrackingProperties(QFormLayout* host,const ToolDefinition& t
         else if(tool.parameters.contains("poseTracking")){selected=trackingSourceTool(tool)+"/pose";world=isWorldPoseTracking(tool);if(world)unit=worldPoseTracking(tool).mmPerSample;}
         else for(const auto& c:editorConnections(service_.activeRecipe()->definition))if(c.targetTool==tool.id && c.targetPort=="reference")selected=c.sourceTool+"/"+c.sourcePort;
     }catch(const std::exception&){}
+    const bool invalidated=tool.parameters["referenceBinding"].toObject()["invalidated"].toBool() || tool.parameters["poseTracking"].toObject()["invalidated"].toBool();
+    if(invalidated){auto* warning=new QLabel("Görüntü / ROI geometrisi değişti. Referans ilişkisini güncel görüntü ve kaynak sonucuyla yeniden öğretin.");warning->setObjectName("referenceInvalidated");warning->setWordWrap(true);form->addRow(warning);}
     world=world || tool.parameters["mode"]=="calibrated";
     if(!selected.isEmpty() && picker->findData(selected)<0)picker->addItem("Eksik / devre dışı: "+selected,selected);
     for(int i=0;i<picker->count();++i)picker->setItemData(i,picker->itemText(i),Qt::ToolTipRole);

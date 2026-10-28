@@ -4,11 +4,10 @@
 
 ## Devam noktası
 
-**[EFR-03a-4](archive/2026-10-29-efr-03a-4.md):** consumer/kalibrasyon/trace;
-Release, 39 CTest geçti (Runtime timeout tekrarı dahil).
-Sonraki **EFR-03b** checkbox/viewer. [Sözleşme](architecture/roi-crop-contract.md).
-[EFR-01](archive/2026-10-28-efr-01.md)/[02](archive/2026-10-28-efr-02.md)
-korunur; OS wheel, Save odak açık. Match/θ ertelendi.
+**[EFR-03b](archive/2026-10-29-efr-03b.md):** checkbox, viewer ve child overlay; Release/core 19 geçti, UI 5/6 (eski Save odak hatası).
+Sonraki **EFR-04** birleşik kabul; başlatılmadı. [ROI sözleşmesi](architecture/roi-crop-contract.md).
+[03a-4](archive/2026-10-29-efr-03a-4.md) core kanıtı korunur.
+OS wheel/Save odak açık; Match/θ ertelendi.
 
 **[DEV-DRIVE-01](archive/2026-10-28-dev-drive-01.md):** `D:/TVision`;
 OpenCV geçti, CTest kısmi.

@@ -89,7 +89,7 @@ QWidget* MainWindow::makeEditor() {
     annotations->setToolTip("Sonuç etiketlerini gösterir; geometri ve Results tablosu görünür kalır.");
     annotations->setChecked(QSettings(settingsFile_,QSettings::IniFormat).value("editor/showResultAnnotations",false).toBool());
     connect(annotations,&QCheckBox::toggled,this,[this](bool visible){imageViewer_->setResultAnnotationsVisible(visible);QSettings(settingsFile_,QSettings::IniFormat).setValue("editor/showResultAnnotations",visible);});
-    auto* stop=new QPushButton("Stop");stop->setObjectName("stopFlow");commands->addWidget(stop);connect(stop,&QPushButton::clicked,this,[this]{pendingDrawTool_.clear();editorCameraPendingExecution_.reset();imageViewer_->cancelRoi();imageViewer_->drawRegion(false);editorSession_.stop(SessionJob::Execution);editorSession_.stop(SessionJob::Teaching);editorCameras_.stop();refreshFlow();});
+    auto* stop=new QPushButton("Stop");stop->setObjectName("stopFlow");commands->addWidget(stop);connect(stop,&QPushButton::clicked,this,[this]{pendingDrawTool_.clear();editorCameraPendingExecution_.reset();imageViewer_->cancelRoi();imageViewer_->drawRegion(false);editorSession_.stop(SessionJob::Execution);editorSession_.stop(SessionJob::Teaching);editorCameras_.stop();if(service_.activeRecipe()){const auto context=editorContext();for(const auto& tool:service_.tools())if(!ToolRegistry::get(tool.kind).acquisitionSource)editorSession_.invalidateTool(context,tool.id);}invalidateMatch();refreshFlow();});
     commands->addWidget(annotations);commands->addStretch();
     auto* more=new QPushButton("...");more->setObjectName("editorMore");more->setCheckable(true);more->setAccessibleName("Reçete ayrıntıları");more->setToolTip("Reçete bilgileri ve çok kaynaklı Editor");commands->addWidget(more);
     connect(more,&QPushButton::toggled,details,&QWidget::setVisible);layout->addLayout(commands);layout->addWidget(details);details->hide();
@@ -132,7 +132,12 @@ QWidget* MainWindow::makeEditor() {
     imageInfo_=new ElidedLabel;imageInfo_->setObjectName("muted");imageInfo_->setText("Görüntü yok."); imageLayout->addWidget(imageInfo_); imageLayout->addWidget(imageViewer_,1);
     auto* footer=new QHBoxLayout; pixelInfo_=note("Piksel: —"); zoomInfo_=note("Zoom: —"); footer->addWidget(pixelInfo_,1); footer->addWidget(zoomInfo_); imageLayout->addLayout(footer);
     imageViewer_->onZoom=[this](double zoom){zoomInfo_->setText(QString("Zoom: %1%").arg(zoom*100,0,'f',1)); pixelInfo_->setText("Piksel: —");};
-    imageViewer_->onPixel=[this](QPoint pixel){const ImageFrame* displayed=drawingImage_ ? &*drawingImage_:editorSession_.frame ? &*editorSession_.frame:nullptr;if(editorSession_.cycle)for(const auto& r:editorSession_.cycle->tools)if(r.toolId==selectedToolId_){auto it=r.outputs.constFind("image");if(it!=r.outputs.cend() && it->valid)if(const auto* image=std::get_if<ImageFrame>(&it->data))displayed=image;}pixelInfo_->setText(displayed && pixel.x()>=0 ? QString("X:%1 Y:%2 px  |  %3").arg(pixel.x()).arg(pixel.y()).arg(displayed->pixelText(pixel.x(),pixel.y())) : "Piksel: —");};
+    imageViewer_->onPixel=[this](QPoint pixel){
+        std::optional<ImageFrame> displayed=drawingImage_ ? drawingImage_:editorSession_.frame;
+        if(!drawingImage_){try{displayed=editorSession_.toolImage(editorContext(),selectedToolId_);}catch(const std::exception&){}
+            if(editorSession_.cycle && editorSession_.cycle->configId==editorSession_.signature(editorContext()))for(const auto& r:editorSession_.cycle->tools)if(r.toolId==selectedToolId_ && r.state==ExecutionState::Done){const auto output=r.outputs.value("image");if(output.valid)if(const auto* image=std::get_if<ImageFrame>(&output.data))displayed=*image;}}
+        pixelInfo_->setText(displayed && pixel.x()>=0 ? QString("X:%1 Y:%2 px  |  %3").arg(pixel.x()).arg(pixel.y()).arg(displayed->pixelText(pixel.x(),pixel.y())) : "Piksel: —");
+    };
     imageViewer_->onImageClicked={};
     horizontal_->addWidget(imagePanel);
     auto* scroll=new QScrollArea; scroll->setObjectName("propertiesScroll"); scroll->setWidgetResizable(true); scroll->setMinimumWidth(210);
@@ -443,26 +448,26 @@ void MainWindow::showToolPropertiesView(const EditorContext& context,const std::
         }
         auto* robust=new QCheckBox("Robust refit (RANSAC)");robust->setObjectName("gm_fitRansac");robust->setChecked(tool.parameters["fitRansac"].toBool());fitForm->addRow(robust);form->addRow(fitPanel);connect(robust,&QCheckBox::toggled,this,[this]{applyToolProperties();});
     } else if(tool.kind=="edge_pair" || tool.kind=="line_fit" || tool.kind=="circle_fit") {
-        const auto frame=editorSession_.frame;auto* settings=new MetrologyEditor(tool.kind,tool.parameters,frame ? frame->metadata().coordinateSystemId:QString{},frame.has_value() && !editorSession_.busy());form->addRow(settings);settings->onChanged=[this]{applyToolProperties();};
-        settings->onDraw=[this,kind=tool.kind]{if(auto* dialog=findChild<QDialog*>("roiGeometryDialog"))dialog->close();refreshMatchOverlay();if(!editorSession_.busy() && applyToolProperties() && setDrawingImage()){if(kind=="circle_fit")for(const auto& t:service_.tools())if(t.id==selectedToolId_ && t.parameters["mode"]=="calibrated"){const auto ctx=calibrationResolver(*service_.activeRecipe())(*editorSession_.frame);if(!ctx.calibration || !ctx.current){displayError("Circle teaching requires current calibration");return;}}imageViewer_->beginRoi(kind=="circle_fit" ? 2:kind=="edge_pair" ? 0:1);}};
+        std::optional<ImageFrame> frame;try{frame=editorSession_.toolImage(context,tool.id);}catch(const std::exception&){}auto* settings=new MetrologyEditor(tool.kind,tool.parameters,frame ? frame->metadata().coordinateSystemId:QString{},frame.has_value() && !editorSession_.busy());form->addRow(settings);settings->onChanged=[this]{applyToolProperties();};
+        settings->onDraw=[this,kind=tool.kind]{if(auto* dialog=findChild<QDialog*>("roiGeometryDialog"))dialog->close();refreshMatchOverlay();if(!editorSession_.busy() && applyToolProperties() && setDrawingImage()){if(kind=="circle_fit")for(const auto& t:service_.tools())if(t.id==selectedToolId_ && t.parameters["mode"]=="calibrated"){const auto ctx=calibrationResolver(*service_.activeRecipe())(editorSession_.toolImage(editorContext(),selectedToolId_));if(!ctx.calibration || !ctx.current){displayError("Circle teaching requires current calibration");return;}}imageViewer_->beginRoi(kind=="circle_fit" ? 2:kind=="edge_pair" ? 0:1);}};
         settings->onPreview=[this,id=tool.id](const ToolRoi& roi){
             if(editorSession_.busy() || selectedToolId_!=id)return;
             for(const auto& t:service_.tools())if(t.id==id && !t.parameters.contains("referenceBinding") && !t.parameters.contains("poseTracking")) {
-                if(!editorSession_.frame || (roi.frame.unit==LengthUnit::Pixel && !roi.inside(editorSession_.frame->size())))return;
+                try{if(!editorSession_.frame || (roi.frame.unit==LengthUnit::Pixel && !roi.inside(editorSession_.toolImage(editorContext(),selectedToolId_).size())))return;}catch(const std::exception&){return;}
                 invalidateMatch();imageViewer_->previewRoi(roi);
             }
         };
-        settings->onRoi=[this,id=tool.id,kind=tool.kind](const ToolRoi& value){try{if(selectedToolId_!=id)return;auto roi=value;for(const auto& t:service_.tools())if(t.id==selectedToolId_ && (t.parameters.contains("referenceBinding") || t.parameters.contains("poseTracking")))return;if(editorSession_.busy() || !applyToolProperties())return;if(kind=="circle_fit")for(const auto& t:service_.tools())if(t.id==selectedToolId_ && t.parameters["mode"]=="calibrated"){auto ctx=calibrationResolver(*service_.activeRecipe())(*editorSession_.frame);if(!ctx.calibration || !ctx.current)throw std::runtime_error("Circle teaching requires current calibration");roi.frame=ctx.calibration->dependency().target;}if(!editorSession_.frame || (roi.frame.unit==LengthUnit::Pixel && !roi.inside(editorSession_.frame->size())))throw std::runtime_error("ROI görüntü sınırı dışında");imageViewer_->setRoi(roi);}catch(const std::exception& e){displayError(QString::fromUtf8(e.what()));}};
+        settings->onRoi=[this,id=tool.id,kind=tool.kind](const ToolRoi& value){try{if(selectedToolId_!=id)return;auto roi=value;for(const auto& t:service_.tools())if(t.id==selectedToolId_ && (t.parameters.contains("referenceBinding") || t.parameters.contains("poseTracking")))return;if(editorSession_.busy() || !applyToolProperties())return;if(kind=="circle_fit")for(const auto& t:service_.tools())if(t.id==selectedToolId_ && t.parameters["mode"]=="calibrated"){auto ctx=calibrationResolver(*service_.activeRecipe())(editorSession_.toolImage(editorContext(),selectedToolId_));if(!ctx.calibration || !ctx.current)throw std::runtime_error("Circle teaching requires current calibration");roi.frame=ctx.calibration->dependency().target;}if(!editorSession_.frame || (roi.frame.unit==LengthUnit::Pixel && !roi.inside(editorSession_.toolImage(editorContext(),selectedToolId_).size())))throw std::runtime_error("ROI görüntü sınırı dışında");imageViewer_->setRoi(roi);}catch(const std::exception& e){displayError(QString::fromUtf8(e.what()));}};
     } else if(tool.kind=="edge_point") {
         auto* settings=new EdgePointEditor(tool.parameters);form->addRow(settings);settings->onChanged=[this]{applyToolProperties();};
-        const auto frame=editorSession_.frame;const auto frameId=frame ? frame->metadata().coordinateSystemId:QString{};
+        std::optional<ImageFrame> frame;try{frame=editorSession_.toolImage(context,tool.id);}catch(const std::exception&){}
         ScanSegment scan{{10,10},{50,10},4};if(frame){const auto size=frame->size();scan={{size.width()*.2,size.height()*.5},{size.width()*.8,size.height()*.5},4};}
         const auto saved=tool.parameters["scanRoi"].toObject();if(!saved.isEmpty())scan=std::get<ScanSegment>(ToolRoi::fromJson(saved).geometry);
         auto* draw=new QPushButton("Ok çiz (A → B)");draw->setObjectName("edgeDraw");draw->setEnabled(frame.has_value() && !editorSession_.busy());form->addRow(draw);
         connect(draw,&QPushButton::clicked,this,[this]{if(auto* dialog=findChild<QDialog*>("roiGeometryDialog"))dialog->close();refreshMatchOverlay();if(!editorSession_.busy() && applyToolProperties() && setDrawingImage())imageViewer_->beginRoi(0);});
-        for(const auto& entry:QVector<QPair<QString,double>>{{"ax",scan.start.x()},{"ay",scan.start.y()},{"bx",scan.end.x()},{"by",scan.end.y()},{"width",scan.width}}){auto* spin=new QDoubleSpinBox;spin->setObjectName("scan_"+entry.first);spin->setDecimals(9);spin->setRange(entry.first=="width" ? .000000001:-1e8,entry.first=="width" ? 1024:1e8);loadPrecisionInput(spin,entry.second,true,entry.first=="width");form->addRow(entry.first+(isWorldPoseTracking(tool) ? " (nominal world mm)":" (raw px)"),spin);}
+        for(const auto& entry:QVector<QPair<QString,double>>{{"ax",scan.start.x()},{"ay",scan.start.y()},{"bx",scan.end.x()},{"by",scan.end.y()},{"width",scan.width}}){auto* spin=new QDoubleSpinBox;spin->setObjectName("scan_"+entry.first);spin->setDecimals(9);spin->setRange(entry.first=="width" ? .000000001:-1e8,entry.first=="width" ? 1024:1e8);loadPrecisionInput(spin,entry.second,true,entry.first=="width");form->addRow(entry.first+(isWorldPoseTracking(tool) ? " (nominal world mm)":" (görüntü px)"),spin);}
         auto* apply=new QPushButton("Koordinatları uygula");apply->setObjectName("edgeApplyScan");apply->setEnabled(frame.has_value() && !editorSession_.busy());form->addRow(apply);
-        connect(apply,&QPushButton::clicked,this,[this,frameId]{if(auto* dialog=findChild<QDialog*>("roiGeometryDialog"))dialog->close();refreshMatchOverlay();if(editorSession_.busy() || !applyToolProperties())return;auto value=[this](const char* key){return precisionValue(propertiesBody_->findChild<QDoubleSpinBox*>(QString("scan_")+key));};try{ToolRoi roi{{frameId},ScanSegment{{value("ax"),value("ay")},{value("bx"),value("by")},value("width")}};if(!editorSession_.frame || (roi.frame.unit==LengthUnit::Pixel && !roi.inside(editorSession_.frame->size())))throw std::runtime_error("Ok şeridi görüntü sınırları dışında.");imageViewer_->setRoi(roi);}catch(const std::exception& e){displayError(QString::fromUtf8(e.what()));}});
+        connect(apply,&QPushButton::clicked,this,[this]{if(auto* dialog=findChild<QDialog*>("roiGeometryDialog"))dialog->close();refreshMatchOverlay();if(editorSession_.busy() || !applyToolProperties())return;auto value=[this](const char* key){return precisionValue(propertiesBody_->findChild<QDoubleSpinBox*>(QString("scan_")+key));};try{ToolRoi roi{{editorSession_.toolImage(editorContext(),selectedToolId_).metadata().coordinateSystemId},ScanSegment{{value("ax"),value("ay")},{value("bx"),value("by")},value("width")}};if(!editorSession_.frame || (roi.frame.unit==LengthUnit::Pixel && !roi.inside(editorSession_.toolImage(editorContext(),selectedToolId_).size())))throw std::runtime_error("Ok şeridi görüntü sınırları dışında.");imageViewer_->setRoi(roi);}catch(const std::exception& e){displayError(QString::fromUtf8(e.what()));}});
         auto* reverse=new QPushButton("Yönü ters çevir");reverse->setObjectName("edgeReverse");reverse->setEnabled(!saved.isEmpty() && frame.has_value() && !editorSession_.busy());form->addRow(reverse);
         connect(reverse,&QPushButton::clicked,this,[this]{if(auto* dialog=findChild<QDialog*>("roiGeometryDialog"))dialog->close();refreshMatchOverlay();if(editorSession_.busy() || !applyToolProperties())return;try{for(auto t:service_.tools())if(t.id==selectedToolId_){auto roi=ToolRoi::fromJson(t.parameters["scanRoi"].toObject());auto& g=std::get<ScanSegment>(roi.geometry);std::swap(g.start,g.end);imageViewer_->setRoi(roi);break;}}catch(const std::exception& e){displayError(QString::fromUtf8(e.what()));}});
         form->addRow(note(saved.isEmpty() ? "Ok öğretilmedi; çizim veya koordinatları uygula gerekir.":"Ok reçeteye bağlıdır; tutamaçları sürükleyin. Ctrl+Z geometriyi geri alır. Escape çizimi iptal eder."));
@@ -470,13 +475,16 @@ void MainWindow::showToolPropertiesView(const EditorContext& context,const std::
         auto* settings=new CodeReadEditor(tool.parameters);form->addRow(settings);settings->onChanged=[this]{applyToolProperties();};
         auto* roi=new QPushButton("Search ROI çiz");roi->setObjectName("searchRoi");form->addRow(roi);connect(roi,&QPushButton::clicked,this,[this]{beginRoi(false);});
         auto* clear=new QPushButton("Tam kare ara");clear->setObjectName("clearSearch");clear->setObjectName("clearSearch");form->addRow(clear);connect(clear,&QPushButton::clicked,this,[this]{if(!applyToolProperties())return;try{for(auto t:service_.tools())if(t.id==selectedToolId_){t.parameters["searchRoi"]=QJsonObject{};service_.updateTool(t);refreshWorkspace();break;}}catch(const std::exception& e){displayError(QString::fromUtf8(e.what()));}});
-        const auto roiValue=tool.parameters["searchRoi"].toObject();form->addRow("Arama alanı (raw px)",note(roiValue.isEmpty() ? "Tam kare":QString("X: %1 px · Y: %2 px\nGenişlik: %3 px · Yükseklik: %4 px").arg(roiValue["x"].toInt()).arg(roiValue["y"].toInt()).arg(roiValue["width"].toInt()).arg(roiValue["height"].toInt())));
+        const auto roiValue=tool.parameters["searchRoi"].toObject();form->addRow("Arama alanı (görüntü px)",note(roiValue.isEmpty() ? "Tam kare":QString("X: %1 px · Y: %2 px\nGenişlik: %3 px · Yükseklik: %4 px").arg(roiValue["x"].toInt()).arg(roiValue["y"].toInt()).arg(roiValue["width"].toInt()).arg(roiValue["height"].toInt())));
     } else if(tool.kind=="roi") {
-        auto* draw=new QPushButton("Dikdörtgen ROI çiz");draw->setObjectName("searchRoi");form->addRow(draw);
+        auto* draw=new QPushButton("Giriş görüntüsünde ROI çiz / düzenle");draw->setObjectName("searchRoi");form->addRow(draw);
         connect(draw,&QPushButton::clicked,this,[this]{beginRoi(false);});
         const auto r=MatchService::rectangle(tool.parameters["searchRoi"].toObject());
         form->addRow("İşlem alanı (px)",note(r.isEmpty() ? "ROI çizilmedi":QString("X: %1 · Y: %2\nGenişlik: %3 · Yükseklik: %4").arg(r.x()).arg(r.y()).arg(r.width()).arg(r.height())));
-        form->addRow(note("Image girdisini bağlayın, ROI çizin. Region çıktısını Blob veya Template Match aracının region girdisine bağlayın. Görüntü kırpılmaz. Yalnız dikdörtgen desteklenir; diğer araçlar kendi ROI alanını kullanır."));
+        auto* crop=new QCheckBox("Görüntüyü ROI’ye kırp");crop->setObjectName("cropImage");crop->setChecked(tool.parameters["cropImage"].toBool());crop->setEnabled(!editorSession_.busy());form->addRow(crop);
+        auto* explanation=note(crop->isChecked() ? "Açıkken Image çıktısı yalnız seçili alanı içerir. Sonraki araçta Görüntü kaynağı olarak ROI/Image seçin. Düzenleme giriş görüntüsünde yapılır." : "Kapalıyken Image çıktısı tam giriş görüntüsüdür. Region çıktısını aynı görüntüyü kullanan aracın region girdisine bağlayın.");explanation->setObjectName("cropImageHelp");form->addRow(explanation);
+        if(tool.parameters["imageBinding"].toObject().isEmpty())form->addRow(note("Giriş görüntüsünde ROI çizerek öğretin. Kaynak veya üst araç değiştiyse yeniden öğretim gerekir."));
+        connect(crop,&QCheckBox::toggled,this,[this,explanation](bool enabled){if(editorSession_.busy())return;explanation->setText(enabled ? "Açıkken Image çıktısı yalnız seçili alanı içerir. Sonraki araçta Görüntü kaynağı olarak ROI/Image seçin. Düzenleme giriş görüntüsünde yapılır." : "Kapalıyken Image çıktısı tam giriş görüntüsüdür. Region çıktısını aynı görüntüyü kullanan aracın region girdisine bağlayın.");applyToolProperties();});
     } else if(tool.kind=="preprocess") {
         auto* settings=new PreprocessEditor(tool.parameters);form->addRow(settings);settings->onChanged=[this]{applyToolProperties();};
     } else if (tool.kind=="blob") {
@@ -532,16 +540,18 @@ void MainWindow::showToolPropertiesView(const EditorContext& context,const std::
         QString current;
         for(const auto& c:connections)if(c.targetTool==tool.id && c.targetPort==input.id)current=c.sourceTool+"/"+c.sourcePort;
         for(const auto& upstream:service_.tools())if(upstream.id!=tool.id && !(tool.kind=="geometry_measurement" && (upstream.kind=="circle_fit" || upstream.kind=="line_fit") && upstream.parameters["mode"]=="calibrated" && input.id!="image") && !(tool.kind=="edge" && input.id=="region" && upstream.kind=="template_match"))for(const auto& output:outputPorts(upstream.kind))if(output.type==input.type && output.unit==input.unit && output.frame==input.frame)
-            binding->addItem(upstream.name+"."+output.id,upstream.id+"/"+output.id);
+            binding->addItem(upstream.name+(upstream.kind=="roi" ? " · ROI/":".")+output.id,upstream.id+"/"+output.id);
         if(!current.isEmpty() && binding->findData(current)<0)binding->addItem("INVALID: "+current,current);
         binding->setCurrentIndex(current.isEmpty() ? 0 : binding->findData(current));
         if(tool.kind=="geometry_measurement"){
             binding->setToolTip("Yalnız aynı type/unit/frame portları listelenir. Eksik giriş sonuç üretmez. Feature ve samples aynı üreticiden gelmelidir.");
             if(input.id.startsWith("samples"))binding->setEnabled(false);
         }
+        if(input.id=="region")binding->setToolTip("Region ile Image aynı görüntü koordinatlarına ait olmalıdır. Kırpma açıkken aynı ROI'nin Region ve Image çıkışlarını birlikte kullanmayın; child görüntüde yerel ROI çizin veya tam kareyi kullanın.");
         form->addRow(input.id=="image" ? QString("Görüntü kaynağı") : (input.id=="reference" ? QString("Referans merkezi") : input.id)+" · "+portTypeName(input.type)+" · "+input.unit+" · "+input.frame,binding);
         connect(binding,&QComboBox::currentIndexChanged,this,[this,binding,input,tool]{
             try {
+                if(editorSession_.busy())return;
                 pendingDrawTool_.clear();
                 auto list=editorConnections(service_.activeRecipe()->definition);
                 list.erase(std::remove_if(list.begin(),list.end(),[&](const auto& c){return c.targetTool==tool.id && c.targetPort==input.id;}),list.end());
@@ -715,6 +725,7 @@ ToolDefinition MainWindow::readToolProperties(ToolDefinition tool) const {
         tool.parameters["minArea"]=propertiesBody_->findChild<QSpinBox*>("minArea")->value();
         tool.parameters["maxArea"]=propertiesBody_->findChild<QCheckBox*>("blobUnlimited")->isChecked() ? QJsonValue(QJsonValue::Null) : QJsonValue(propertiesBody_->findChild<QSpinBox*>("maxArea")->value());
     }
+    if(tool.kind=="roi")if(auto* crop=propertiesBody_->findChild<QCheckBox*>("cropImage"))tool.parameters["cropImage"]=crop->isChecked();
     if (auto* direction=propertiesBody_->findChild<QComboBox*>("edgeDirection")) tool.parameters["direction"]=direction->currentData().toString();
     if(auto* contrast=propertiesBody_->findChild<QDoubleSpinBox*>("minContrast"))tool.parameters["minContrast"]=contrast->value();
     if(auto* index=propertiesBody_->findChild<QSpinBox*>("webcamIndex"))tool.parameters["deviceIndex"]=index->value();
@@ -818,9 +829,11 @@ void MainWindow::openImageDialog() {
 bool MainWindow::setDrawingImage() {
     try {
         const auto image=editorSession_.toolImage(editorContext(),selectedToolId_);
-        drawingImage_=image;imageViewer_->setPreviewPixels(image.preview(),editorRecipeId_+"|"+image.metadata().sourceId);
+        drawingImage_=image;imageViewer_->setPreviewPixels(image.preview(),editorRecipeId_+"|"+image.metadata().sourceId+"|"+image.metadata().coordinateSystemId);
+        imageViewer_->setRoiMapping({image.metadata().coordinateSystemId});
+        refreshMatchOverlay();
         findChild<QPushButton*>("stopFlow")->setEnabled(true);
-        imageInfo_->setText(image.processing().isEmpty() ? "Ham görüntü · bağlı kaynak" : "İşlenmiş görüntü · bağlı Preprocess");
+        imageInfo_->setText(QString("Düzenleme: bağlı Image girdisi · %1 × %2 px").arg(image.size().width()).arg(image.size().height()));
         return true;
     }catch(const std::exception& e){matchInfo_->setText(QString::fromUtf8(e.what()));return false;}
 }

@@ -93,7 +93,7 @@ void ImageViewer::setRoi(const std::optional<ToolRoi>& value,bool remember){
     if(value && roiToRaw_)for(auto p:roiHandles(*value))roiToRaw_(p);
     cancelRoi();if(value==roi_)return;
     if(remember){roiUndo_.append(roi_);if(roiUndo_.size()>64)roiUndo_.removeFirst();}
-    roi_=value;roiEditing_=value.has_value();roiStatus_=value ? "Geçici ROI • raw px • reçeteye bağlı değil":"Geometri yok.";
+    roi_=value;roiEditing_=value.has_value();roiStatus_=value ? "Geçici ROI • görüntü px • reçeteye bağlı değil":"Geometri yok.";
     renderRoi();if(onRoiChanged)onRoiChanged();if(onRoiStatus)onRoiStatus();if(remember && onRoiEdited)onRoiEdited();
 }
 void ImageViewer::cancelRoi(){
@@ -163,7 +163,7 @@ void ImageViewer::renderRoi(){
         }
     }catch(const std::exception&){}
     if(roiEditing_ && !roiDraft_){QPen pen(QColor("#66e3c4"),2);pen.setCosmetic(true);for(auto p:roiHandles(*shown)){auto* h=scene_->addRect(-4,-4,8,8,pen,QBrush(QColor("#101923")));h->setFlag(QGraphicsItem::ItemIgnoresTransformations);h->setPos(roiToRaw_ ? roiToRaw_(p):p);h->setZValue(11);roiItems_<<h;}}
-    auto* label=scene_->addSimpleText(valid ? (roiRecipeBound_ ? (roi_ && std::holds_alternative<ScanSegment>(roi_->geometry) ? (roiToRaw_ ? "Reçete oku • A → B • mm → raw":"Reçete oku • A → B • raw px"):(roiToRaw_ ? "Reçete halka/yay • mm → raw":"Reçete ROI • raw px")):"Geçici ROI • raw px"):"Geçersiz / sınır dışında");label->setBrush(valid ? QColor("#ffd166"):QColor("#ff8585"));label->setFlag(QGraphicsItem::ItemIgnoresTransformations);label->setPos(0,0);label->setZValue(12);roiItems_<<label;
+    auto* label=scene_->addSimpleText(valid ? (roiRecipeBound_ ? (roi_ && std::holds_alternative<ScanSegment>(roi_->geometry) ? (roiToRaw_ ? "Reçete oku • A → B • mm → görüntü":"Reçete oku • A → B • görüntü px"):(roiToRaw_ ? "Reçete halka/yay • mm → görüntü":"Reçete ROI • görüntü px")):"Geçici ROI • görüntü px"):"Geçersiz / sınır dışında");label->setBrush(valid ? QColor("#ffd166"):QColor("#ff8585"));label->setFlag(QGraphicsItem::ItemIgnoresTransformations);label->setPos(0,0);label->setZValue(12);roiItems_<<label;
 }
 bool ImageViewer::roiPress(QMouseEvent* e){
     if(!imageItem_ || e->button()!=Qt::LeftButton)return false;

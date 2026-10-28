@@ -1,6 +1,7 @@
 #include "application/EditorObservation.hpp"
 #include "application/MeasurementDiagnostic.hpp"
 #include "MainWindow.hpp"
+#include "MetrologyEditor.hpp"
 #include "application/PublicationService.hpp"
 #include "application/IndustrialExecution.hpp"
 #include "application/AcquisitionPolicy.hpp"
@@ -104,7 +105,7 @@ void MainWindow::refreshFlowView(const EditorContext& context,const std::optiona
         bool source=false,unavailable=false;if(service_.activeRecipe())for(const auto& t:service_.tools())if(t.id==selectedToolId_){source=ToolRegistry::get(t.kind).acquisitionSource;unavailable=t.kind=="industrial_camera" && !t.parameters["sourceReference"].isObject();}
         run->setText(source ? "Görüntü al" : "Run Tool");run->setEnabled(!selectedToolId_.isEmpty() && !editorSession_.busy() && !unavailable);
     }
-    findChild<QPushButton*>("stopFlow")->setEnabled(editorSession_.busy() || !pendingDrawTool_.isEmpty() || imageViewer_->drawingActive() || editorCameras_.hasTargets() || editorCameras_.draining());
+    findChild<QPushButton*>("stopFlow")->setEnabled(editorSession_.busy() || !pendingDrawTool_.isEmpty() || imageViewer_->drawingActive() || editorSession_.cycle.has_value() || editorCameras_.hasTargets() || editorCameras_.draining());
     for(const auto name:{"teachPoseReference","clearPoseReference","runSelectedTool","removeTool"})if(auto* button=findChild<QPushButton*>(name)) {
         bool enabled=!editorSession_.busy();
         if(QString(name)=="removeTool")enabled=enabled && !editorCameraPendingExecution_;
@@ -112,6 +113,17 @@ void MainWindow::refreshFlowView(const EditorContext& context,const std::optiona
         if(QString(name)=="teachPoseReference")enabled=enabled && editorSession_.frame.has_value();
         if(QString(name)=="clearPoseReference"){enabled=false;for(const auto& t:service_.tools())if(t.id==selectedToolId_)enabled=!editorSession_.busy() && (t.parameters.contains("poseTracking") || t.parameters.contains("referenceBinding"));}
         button->setEnabled(enabled);
+    }
+    for(auto* picker:propertiesBody_->findChildren<QComboBox*>())if(picker->objectName().startsWith("input_"))picker->setEnabled(!editorSession_.busy() && !picker->objectName().startsWith("input_samples"));
+    if(auto* crop=propertiesBody_->findChild<QCheckBox*>("cropImage"))crop->setEnabled(!editorSession_.busy());
+    for(const auto* name:{"edgeDraw","edgeApplyScan","edgeReverse"})if(auto* button=propertiesBody_->findChild<QPushButton*>(name)){
+        bool ready=false;try{editorSession_.toolImage(context,selectedToolId_);ready=!editorSession_.busy();}catch(const std::exception&){}
+        if(QString(name)=="edgeReverse")for(const auto& tool:service_.tools())if(tool.id==selectedToolId_)ready=ready && !tool.parameters["scanRoi"].toObject().isEmpty();
+        button->setEnabled(ready);
+    }
+    if(auto* settings=dynamic_cast<MetrologyEditor*>(propertiesBody_->findChild<QWidget*>("metrologySettings"))) {
+        std::optional<ImageFrame> input;try{input=editorSession_.toolImage(context,selectedToolId_);}catch(const std::exception&){}
+        settings->setImageFrame(input ? input->metadata().coordinateSystemId:QString{},input.has_value() && !editorSession_.busy());
     }
     bool tracking=false;if(service_.activeRecipe())for(const auto& t:service_.tools())if(t.id==selectedToolId_)tracking=(t.parameters.contains("poseTracking") || t.parameters.contains("referenceBinding"));
     if(auto* picker=propertiesBody_->findChild<QComboBox*>("poseReferencePicker")){
@@ -137,24 +149,23 @@ void MainWindow::showExecutionResultView(const EditorContext& context) {
     }else drawingImage_.reset();
     edgeProfile_->setDiagnostics({});
     imageViewer_->setToolOverlay({},{});
-    QImage displayPreview;
-    if(editorSession_.frame){displayPreview=drawingImage_ ? drawingImage_->preview():editorSession_.frame->preview();imageInfo_->setText(QString("Ham g\u00f6r\u00fcnt\u00fc - %1 x %2 px - Frame %3").arg(editorSession_.frame->size().width()).arg(editorSession_.frame->size().height()).arg(editorSession_.frame->metadata().frameId));}
-    if(drawingImage_)imageInfo_->setText(drawingImage_->processing().isEmpty() ? "Ham görüntü · bağlı kaynak":"İşlenmiş görüntü · bağlı Preprocess");
-    if(!drawingImage_ && service_.activeRecipe())for(const auto& tool:service_.tools())if(tool.id==selectedToolId_ && tool.kind=="blob")try{
-        const auto image=editorSession_.toolImage(context,tool.id);displayPreview=image.preview();
-        QString source=image.metadata().sourceId;for(const auto& candidate:service_.tools())if(candidate.id==source){source=candidate.name;break;}
-        imageInfo_->setText(QString("%1 · bağlı kaynak: %2 · %3 × %4 px · Frame %5").arg(image.processing().isEmpty() ? "Ham görüntü":"İşlenmiş görüntü",source).arg(image.size().width()).arg(image.size().height()).arg(image.metadata().frameId));
-    }catch(const std::exception&){}
-    if(!editorSession_.frame && !drawingImage_){imageViewer_->clearImage("Bu kaynak için güncel kare yok.",editorSession_.busy());imageInfo_->setText("Görüntü yok.");}
-    // Resolve the final raster before uploading: do not bounce processed -> raw -> processed.
-    if(editorSession_.cycle)for(const auto& r:editorSession_.cycle->tools)
-        if(r.toolId==selectedToolId_ && r.state==ExecutionState::Done &&
-           (editorSession_.sourceFrames.isEmpty() || (editorSession_.frame && editorSession_.sourceForTool(context,r.toolId)==editorSession_.frame->metadata().sourceId))){
-            const auto processed=r.outputs.value("image");
-            if(processed.valid)if(const auto* image=std::get_if<ImageFrame>(&processed.data))
-                if(!image->processing().isEmpty())displayPreview=image->preview();
+    std::optional<ImageFrame> displayImage=drawingImage_ ? drawingImage_:editorSession_.frame;
+    QString missingInput;
+    if(!drawingImage_ && service_.activeRecipe())for(const auto& tool:service_.tools())if(tool.id==selectedToolId_) {
+        bool imageInput=false;for(const auto& port:inputPorts(tool.kind))if(port.id=="image")imageInput=true;
+        if(imageInput)try{displayImage=editorSession_.toolImage(context,tool.id);}catch(const std::exception& e){displayImage.reset();missingInput=QString::fromUtf8(e.what());}
+    }
+    // Only a current result may replace the input raster. Drawing always uses input coordinates.
+    if(!drawingImage_ && editorSession_.cycle && editorSession_.cycle->configId==editorSession_.signature(context))for(const auto& r:editorSession_.cycle->tools)
+        if(r.toolId==selectedToolId_ && r.state==ExecutionState::Done) {
+            const auto output=r.outputs.value("image");if(output.valid)if(const auto* frame=std::get_if<ImageFrame>(&output.data))displayImage=*frame;
         }
-    if(!displayPreview.isNull())imageViewer_->setPreviewPixels(displayPreview,editorRecipeId_+"|"+(editorSession_.frame ? editorSession_.frame->metadata().sourceId:QString{}));
+    if(displayImage){
+        const auto& image=*displayImage;
+        imageViewer_->setPreviewPixels(image.preview(),editorRecipeId_+"|"+image.metadata().sourceId+"|"+image.metadata().coordinateSystemId);
+        imageInfo_->setText(QString("%1 · %2 × %3 px · Frame %4").arg(drawingImage_ ? "Düzenleme: giriş görüntüsü":image.geometry().cropDepth()>0 ? "ROI kırpılmış görüntü":"Giriş / tam görüntü").arg(image.size().width()).arg(image.size().height()).arg(image.metadata().frameId));
+        refreshMatchOverlayView(context);
+    }else {imageViewer_->clearImage(missingInput.isEmpty() ? "Bu kaynak için güncel kare yok.":missingInput,editorSession_.busy());imageInfo_->setText("Görüntü yok. Kaynağı bağlayıp çalıştırın.");}
     if(!editorSession_.cycle){matchInfo_->clear();return;}
     if(editorSession_.frame){const auto evidence=editorSession_.cycle->industrialEvidence.value(editorSession_.frame->metadata().sourceId);
         if(evidence)imageInfo_->setText(imageInfo_->text()+QString("\n%1 • %2 | Profil %3 r%4 | actual exposure %5 µs / gain %6 | offset %7,%8")
@@ -188,7 +199,6 @@ void MainWindow::showExecutionResultView(const EditorContext& context) {
         }
         if(r.toolId==selectedToolId_ && (editorSession_.sourceFrames.isEmpty() || (editorSession_.frame && editorSession_.sourceForTool(context,r.toolId)==editorSession_.frame->metadata().sourceId))) {
             if(r.state==ExecutionState::Done)edgeProfile_->setDiagnostics(r.edgeDiagnostics);
-            const auto processed=r.outputs.value("image");if(r.state==ExecutionState::Done && processed.valid)if(const auto* image=std::get_if<ImageFrame>(&processed.data))if(!image->processing().isEmpty()){imageInfo_->setText(QString("İşlenmiş Gray8 • %1×%2 px • geometri korunur • %3").arg(image->size().width()).arg(image->size().height()).arg(QString::fromLatin1(image->processingId().toHex().left(12))));}
             QString annotation;if(r.outputs.contains("valuePx") || r.outputs.contains("widthPx") || (r.outputs.contains("linePx") || r.outputs.contains("circlePx")))annotation=r.message;annotation.replace(" • ","\n");
             // The world tracking status is already in Results. Avoid placing it
             // over the ROI frame/unit label at the image origin.
@@ -197,8 +207,15 @@ void MainWindow::showExecutionResultView(const EditorContext& context) {
             auto displayLines=r.lines;const auto pose=r.outputs.value("pose");
             if(r.state==ExecutionState::Done && pose.valid)if(const auto* actual=std::get_if<Pose2D>(&pose.data)) {
                 displayLines.append(QLineF(actual->position,actual->position+QPointF(std::cos(actual->angleRadians),std::sin(actual->angleRadians))*20));
-                annotation=QString("X %1 / Y %2 raw px\n+X angle %3 deg (Y-down)").arg(actual->position.x(),0,'f',2).arg(actual->position.y(),0,'f',2).arg(actual->angleRadians*180/std::numbers::pi,0,'f',2);
+                annotation=QString("X %1 / Y %2 görüntü px\n+X angle %3 deg (Y-down)").arg(actual->position.x(),0,'f',2).arg(actual->position.y(),0,'f',2).arg(actual->angleRadians*180/std::numbers::pi,0,'f',2);
             }
+            bool overlayMatches=false;
+            if(displayImage){const auto& m=displayImage->metadata();
+                auto matches=[&](const FrameMetadata& o){return o.sourceId==m.sourceId && o.frameId==m.frameId && o.cycleId==m.cycleId && o.coordinateSystemId==m.coordinateSystemId;};
+                if(r.overlayGeometry)overlayMatches=matches(r.overlayGeometry->origin);
+                else for(const auto& value:r.outputs)if(value.valid && value.port.type!=PortType::Image && value.port.unit=="px" && matches(value.origin))overlayMatches=true;
+            }
+            if(!overlayMatches)continue;
             imageViewer_->setToolOverlay(r.regions,r.points,displayLines,annotation,r.mask.pixels,r.mask.size,r.mask.origin,r.rejectedPoints,(r.outputs.contains("linePx") || r.outputs.contains("circlePx")));const auto codes=r.outputs.value("codes");if(codes.valid)if(const auto* list=std::get_if<CodeResults>(&codes.data))imageViewer_->setCodeOverlay(*list);
         }
     }

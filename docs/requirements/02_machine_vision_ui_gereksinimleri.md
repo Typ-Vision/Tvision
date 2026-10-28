@@ -335,12 +335,23 @@ Fırça ile işaretlenen bölgeler **result filtering mask** oluşturur; match m
 
 ## 15. ROI Editor
 
-CCUX-21 ilk işlem alanı: Ön işleme (PreProcess) grubundaki ROI aracı Image
-alır, aynı kaynak/koordinat sisteminde piksel hizalı dikdörtgen Region üretir.
-İsim, alan ve bağlar reçeteye kaydedilir; Region destekli tüketicide gerçek arama
-alanını sınırlar. Görüntü kırpılmaz. Kaynak/koordinat/boyut uyumsuzluğu yeniden
-çizim ister; Region portu olmayan araçlar destekliyormuş gibi sunulmaz. Viewer'ın
-geçici geometri denemesi reçete ROI'sinden ayrı adlandırılır.
+Ön işleme (PreProcess) grubundaki tek ROI aracı Image alır; girdinin
+koordinatlarında piksel hizalı dikdörtgen Region ve Image çıktıları üretir.
+Properties → **Görüntüyü ROI’ye kırp** reçetede saklanır, varsayılan kapalıdır ve
+busy sırasında değiştirilemez. Kapalıyken Image girdiyi aynen geçirir; açıkken
+yalnız seçili alanın gerçek rasterını üretir. Sonraki araçta Görüntü kaynağı
+olarak ROI/Image seçilir; mevcut bağlantılar mod değişiminde korunur.
+Region girdinin koordinatlarında kalır; aynı ROI'nin child Image çıktısıyla
+karıştırılması açık hatadır. Her tüketici kendi görüntüsünde ROI öğretir.
+
+Güncel ROI sonucu kapalıyken tam giriş + alanı, açıkken crop çıktısını gösterir.
+**Giriş görüntüsünde ROI çiz / düzenle** eylemi açıkça girdiye döner. Çizim/mod,
+kaynak veya üst araç değişimi eski sonuçları güncel göstermez; geometriye bağlı
+öğretim yeniden yapılır. Açık→kapalı→açık veya eski alana dönüş bu izni
+canlandırmaz. Nested crop ve ham/crop dalları ayrı kökenlerini korur; ham
+Runtime viewer child overlay'i doğrulanmış köken ötelemesiyle yerleştirir.
+Kaynak/koordinat/boyut uyumsuzluğu yeniden çizim ister. Viewer'ın geçici
+geometri denemesi reçete ROI'sinden ayrı adlandırılır.
 
 Şekiller: Rectangle, Circle, Ellipse, Polygon, Rotated Rectangle, Freehand.
 

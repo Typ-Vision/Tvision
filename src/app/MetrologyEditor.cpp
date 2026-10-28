@@ -65,7 +65,7 @@ MetrologyEditor::MetrologyEditor(const QString& kind,const QJsonObject& p,const 
     if(kind=="circle_fit"){ArcRoi g{{{100,100},30,50},0,360};if(!saved.isEmpty()){const auto r=ToolRoi::fromJson(saved);g=std::holds_alternative<Annulus>(r.geometry) ? ArcRoi{std::get<Annulus>(r.geometry),0,360}:std::get<ArcRoi>(r.geometry);}coords={{"cx",g.ring.centre.x()},{"cy",g.ring.centre.y()},{"inner",g.ring.innerRadius},{"outer",g.ring.outerRadius},{"start",g.startDegrees},{"sweep",g.sweepDegrees}};}
     else if(kind=="edge_pair"){ScanSegment g{{10,20},{100,20},4};if(!saved.isEmpty())g=std::get<ScanSegment>(ToolRoi::fromJson(saved).geometry);coords={{"ax",g.start.x()},{"ay",g.start.y()},{"bx",g.end.x()},{"by",g.end.y()},{"width",g.width}};}
     else {RotatedRectangle g{{100,100},{100,40},0};if(!saved.isEmpty())g=std::get<RotatedRectangle>(ToolRoi::fromJson(saved).geometry);coords={{"cx",g.centre.x()},{"cy",g.centre.y()},{"width",g.size.width()},{"height",g.size.height()},{"angle",g.angleDegrees}};}
-    for(auto i=coords.begin();i!=coords.end();++i){auto* s=new QDoubleSpinBox;s->setObjectName("mt_roi_"+i.key());s->setDecimals(9);s->setRange(-1e8,1e8);loadPrecisionInput(s,i->toDouble(),coordinateLength(i.key()),positiveExtent(i.key()));f->addRow(i.key()+((i.key()=="angle" || i.key()=="start" || i.key()=="sweep") ? " (deg)":((kind=="circle_fit" && p["mode"]=="calibrated") || (p["poseTracking"].toObject()["schemaVersion"]==2 || p["referenceBinding"].toObject()["mapping"]=="world-reference-v1") ? " (nominal world mm)":" (raw px)")),s);}
+    for(auto i=coords.begin();i!=coords.end();++i){auto* s=new QDoubleSpinBox;s->setObjectName("mt_roi_"+i.key());s->setDecimals(9);s->setRange(-1e8,1e8);loadPrecisionInput(s,i->toDouble(),coordinateLength(i.key()),positiveExtent(i.key()));f->addRow(i.key()+((i.key()=="angle" || i.key()=="start" || i.key()=="sweep") ? " (deg)":((kind=="circle_fit" && p["mode"]=="calibrated") || (p["poseTracking"].toObject()["schemaVersion"]==2 || p["referenceBinding"].toObject()["mapping"]=="world-reference-v1") ? " (nominal world mm)":" (görüntü px)")),s);}
     auto* apply=new QPushButton("Koordinatları uygula");apply->setObjectName("metrologyApplyRoi");apply->setEnabled(hasFrame);f->addRow(apply);
     connect(apply,&QPushButton::clicked,this,[this]{if(const auto roi=coordinateRoi();roi && onRoi)onRoi(*roi);});
     if(kind_=="circle_fit")for(const auto& key:{"start","sweep"}) {
@@ -74,6 +74,10 @@ MetrologyEditor::MetrologyEditor(const QString& kind,const QJsonObject& p,const 
         connect(spin,&QDoubleSpinBox::editingFinished,this,[this]{if(!original_["scanRoi"].toObject().isEmpty())if(const auto roi=coordinateRoi();roi && onRoi)onRoi(*roi);});
     }
     auto* hint=new QLabel(saved.isEmpty() ? "ROI öğretilmedi; çizim veya koordinatları uygulayın.":"ROI reçeteye bağlıdır. Tutamaçlar / Ctrl+Z / Escape desteklenir. Line genişlik ekseni destek yönü; yükseklik ekseni scan yönüdür.");hint->setWordWrap(true);f->addRow(hint);
+}
+void MetrologyEditor::setImageFrame(const QString& frameId,bool ready) {
+    frameId_=frameId;
+    for(const auto* name:{"metrologyDraw","metrologyApplyRoi"})if(auto* button=findChild<QPushButton*>(name))button->setEnabled(ready);
 }
 std::optional<ToolRoi> MetrologyEditor::coordinateRoi() const {
     try {
