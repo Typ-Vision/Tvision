@@ -1,6 +1,6 @@
 # Flow, combobox ve ROI güncelleme planı — EFR-PLAN-02
 
-28 Ekim 2026. **Yalnız plan; uygulama başlamadı.** Kullanıcının güncel kapsamı:
+28 Ekim 2026. **EFR-01 uygulandı; kalan kartlar plandır.** Kullanıcının güncel kapsamı:
 1) Flow sağ tıkta Remove Tool, 2) tekerlekle combobox değerinin değişmemesi,
 3) ROI'de isteğe bağlı gerçek görüntü kırpma. Template Match/θ ertelendi.
 [Shape Pose hızlandırma notu](shape-pose-performance-note.md) bağımsız inceleme
@@ -9,8 +9,8 @@ girdisidir. Eski U1–U4 tamamlanmış işleri yeniden açılmaz.
 Önerilen uygulama sırası: **EFR-01 → EFR-02 → EFR-03a-1 → EFR-03a-2 →
 EFR-03a-3 → EFR-03a-4 → EFR-03b → EFR-04**.
 Her kart ayrı görev ID'li commit/kapanış; ajanlar paralel çalışmaz. Sonraki
-uygulama kartı EFR-01'dir. Bu plan uygulama yapılmış veya üretim kabulü verilmiş
-anlamına gelmez. Üç applicationType aynı Editor/Runtime sözleşmesini kullanır.
+uygulama kartı EFR-02'dir. Kalan plan üretim kabulü verilmiş anlamına gelmez.
+Üç applicationType aynı Editor/Runtime sözleşmesini kullanır.
 
 ## Kaynak başlangıcı ve korunacak sözleşmeler
 
@@ -29,6 +29,13 @@ ilgili kapsam tekrar doğrulanmalı. UI algoritma/SDK çağırmaz; owned görün
 kaynak/frame/cycle kimliği, no-op/cache ve immutable Runtime korunur.
 
 ## EFR-01 — Flow sağ tıkta Remove Tool
+
+Uygulama/kabul kaydı: [EFR-01](../archive/2026-10-28-efr-01.md).
+Ortak UI komutu `removeEditorTool`, mevcut `ProjectService::removeTool/setTools`
+atomik doğrulamasını kullanır. Normal bağlantılar temizlenir; reference ve türetilmiş
+Variables/Result kaynakları eksik durumda kalır. Output Group'un Set Variables
+üreticisini silmek mevcut Publication doğrulamasıyla reddedilir; önce grupların
+bağı çözülmelidir. UI ret nedenini gösterir; tarif doğrulaması gevşetilmez.
 
 ### Davranış
 

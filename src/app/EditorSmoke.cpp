@@ -318,7 +318,7 @@ bool MainWindow::verifyExecution(const QString& artifacts) {
     for(int i=0;i<toolbox_->count();++i)if(toolbox_->item(i)->data(Qt::UserRole)=="edge_point")toolbox_->setCurrentRow(i);
     findChild<QPushButton*>("addTool")->click();
     const auto temporary=selectedToolId_;findChild<QPushButton*>("removeTool")->click();
-    check(selectedToolId_.isEmpty(),"delete clears selected tool");
+    check(selectedToolId_==service_.tools().last().id,"delete selects previous tool at end");
     for(const auto& tool:service_.tools())check(tool.id!=temporary,"UI temporary tool removed");
     selectTool(distance);runFlow();wait();check(editorSession_.cycle && editorSession_.cycle->state==ExecutionState::Done,"run after UI add/delete");service_.save();
     findChild<QTabWidget*>("editorTabs")->setCurrentIndex(0);QApplication::processEvents();grab().save(QDir(artifacts).filePath("step5-flow.png"));

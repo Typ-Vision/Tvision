@@ -4,8 +4,9 @@
 
 ## Devam noktası
 
-**[EFR-PLAN-02](archive/2026-10-28-efr-plan-02.md):** Tek ROI, tüm Image
-tüketicileri; 03a dört kart. Uygulama yok; sonraki EFR-01. Match/θ ertelendi.
+**[EFR-01](archive/2026-10-28-efr-01.md):** Ortak Remove Tool; Release/görsel hazır.
+`ui_editor_usability` HEAD'te de odak hatalı. Sonraki EFR-02;
+[plan](architecture/editor-flow-roi-update-plan.md). Match/θ ertelendi.
 
 **[DEV-DRIVE-01](archive/2026-10-28-dev-drive-01.md):** `D:/TVision`; build güncel,
 OpenCV geçti; CTest erken durduruldu (tam kabul değil).

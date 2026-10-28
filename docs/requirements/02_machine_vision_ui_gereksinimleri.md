@@ -500,6 +500,15 @@ Tool listesinde OK/FAIL/ERROR/SKIPPED/Disabled, execution time ve primary output
 
 Flow ortak Recipe Editor'ün parçasıdır; hem sıralı liste hem node görünümü sunulabilir. Tool'lar arasında gerçek veri bağlantıları ve typed input/output port'ları bulunur.
 
+Flow listesinin araç sağ tık menüsü sırasıyla Bir sıra yukarı, Bir sıra aşağı,
+ayırıcı ve Remove Tool içerir. Remove Tool tıklanan aracı hedefler ve Properties
+düğmesiyle aynı atomik komutu kullanır; ek onay istemez. Busy veya reçete/hedef
+değişimi işlemi engeller. Başka araç seçiliyse seçim korunur; seçili araç silinirse
+sonraki, yoksa önceki araç seçilir; boş listede Properties boş kalır. Silinen
+aracın Editor sonuç/cache ve çizim niyeti temizlenir; aktif Runtime snapshot'ı
+korunur. Bağımlılık doğrulamasının reddettiği silmede neden gösterilir ve reçete,
+seçim, dirty durumu korunur. Eksik kalan tüketici kaynağı geçerli sonuç sayılmaz.
+
 Örnek: Camera → Filter → Match. Match pose'u hem Tracking ROI/Blob'a hem Edge ROI'lerine referans olur; Edge_1 ve Edge_2 çıktıları Distance'a bağlanır. Bu dallanma tek sıra listede kaybolmamalıdır.
 
 Add/Delete/Move Node, Connect/Disconnect, Zoom/Fit, Undo/Redo ve Validate bulunur. Grafik döngüsel bağımlılığı ve eksik port'u işaretler. Uygulama türü başlangıç şablonunu belirler; flow editörü ortaktır.

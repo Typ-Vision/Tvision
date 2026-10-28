@@ -31,6 +31,7 @@ int main(int argc, char* argv[]) {
     const bool poseOnly=app.arguments().contains("--pose-tracking-smoke");
     const bool experimentalOnly=app.arguments().contains("--experimental-editor-smoke");
     const bool usabilityOnly=app.arguments().contains("--usability-smoke");
+    const bool flowRemovalOnly=app.arguments().contains("--flow-removal-smoke");
     const bool editorCamerasOnly=app.arguments().contains("--editor-camera-sessions-smoke");
     const bool runtimeCamerasOnly=app.arguments().contains("--runtime-camera-sessions-smoke");
     const bool responsivenessOnly=app.arguments().contains("--editor-responsiveness-probe");
@@ -38,12 +39,13 @@ int main(int argc, char* argv[]) {
     const bool failureOnly=app.arguments().contains("--runtime-failure-smoke");
     const bool visibilityOnly=app.arguments().contains("--runtime-visibility-smoke");
     const bool overlaysOnly=app.arguments().contains("--runtime-overlays-smoke");
-    const bool smoke = publicationOnly || endpointsOnly || resultOnly || assignmentsOnly || variablesOnly || overlaysOnly || visibilityOnly || restartOnly || failureOnly || responsivenessOnly || runtimeCamerasOnly || editorCamerasOnly || roiOnly || app.arguments().contains("--smoke-test") || circleOnly || geometryOnly || poseOnly || usabilityOnly || systemOnly || multiOnly || multiRuntimeOnly || experimentalOnly || recipeFieldsOnly;
+    const bool smoke = flowRemovalOnly || publicationOnly || endpointsOnly || resultOnly || assignmentsOnly || variablesOnly || overlaysOnly || visibilityOnly || restartOnly || failureOnly || responsivenessOnly || runtimeCamerasOnly || editorCamerasOnly || roiOnly || app.arguments().contains("--smoke-test") || circleOnly || geometryOnly || poseOnly || usabilityOnly || systemOnly || multiOnly || multiRuntimeOnly || experimentalOnly || recipeFieldsOnly;
     const QDir buildDir(smoke ? qEnvironmentVariable("VISIONFLOW_TEST_ARTIFACTS",QCoreApplication::applicationDirPath()):QCoreApplication::applicationDirPath());
     if(smoke)QDir().mkpath(buildDir.absolutePath());
     visionflow::MainWindow window(buildDir.filePath(smoke ? "ui-smoke.ini" : "../config/local.ui.ini"));
     window.show();
     if (smoke) QTimer::singleShot(100, &app, [&]{
+        if(flowRemovalOnly){bool valid=false;try{valid=window.verifyFlowRemoval(buildDir.absolutePath());}catch(const std::exception& e){QTextStream(stderr)<<e.what()<<'\n';}window.close();app.exit(valid?0:1);return;}
         if(publicationOnly){bool valid=false;try{valid=window.verifyPublicationUi(buildDir.absolutePath());}catch(const std::exception& e){QTextStream(stderr)<<e.what()<<'\n';}window.close();app.exit(valid?0:1);return;}
         if(endpointsOnly){bool valid=false;try{valid=window.verifyEndpointProfiles(buildDir.absolutePath());}catch(const std::exception& e){QTextStream(stderr)<<e.what()<<'\n';}window.close();app.exit(valid?0:1);return;}
         if(resultOnly){bool valid=false;try{valid=window.verifyResultUi(buildDir.absolutePath());}catch(const std::exception& e){QTextStream(stderr)<<e.what()<<'\n';}window.close();app.exit(valid?0:1);return;}

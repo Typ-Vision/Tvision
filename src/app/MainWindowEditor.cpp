@@ -144,7 +144,7 @@ QWidget* MainWindow::makeEditor() {
     graphInfo_=note("READY");auto* graphScroll=new QScrollArea;graphScroll->setWidgetResizable(true);graphScroll->setWidget(graphInfo_);graphLayout->addWidget(graphScroll,1);
     auto* validate=new QPushButton("Validate DAG");validate->setObjectName("validateGraph");graphLayout->addWidget(validate);connect(validate,&QPushButton::clicked,this,&MainWindow::refreshFlow);
     flowTools_=new QListWidget; flowTools_->setObjectName("flowTools"); flowTools_->setAccessibleName("Reçete tool listesi"); flowTools_->setMinimumWidth(200);
-    flowTools_->setToolTip("Sağ tık: bir sıra yukarı/aşağı. Yürütme sırasını DAG bağlantıları belirler.");
+    flowTools_->setToolTip("Sağ tık: bir sıra yukarı/aşağı veya Remove Tool. Yürütme sırasını DAG bağlantıları belirler.");
     flowTools_->setContextMenuPolicy(Qt::CustomContextMenu);
     connect(flowTools_,&QListWidget::customContextMenuRequested,this,&MainWindow::showFlowMenu);
     connect(flowTools_,&QListWidget::currentItemChanged,this,[this](QListWidgetItem* item){selectTool(item ? item->data(Qt::UserRole).toString() : "");});
@@ -174,9 +174,12 @@ void MainWindow::showFlowMenu(const QPoint& position) {
     auto* item=flowTools_->itemAt(position);
     if(!item || !service_.activeRecipe())return;
     const auto id=item->data(Qt::UserRole).toString(),recipe=editorRecipeId_;
+    if(service_.project().id+"/"+service_.activeRecipe()->id!=recipe)return;
+    const auto tools=service_.tools();
+    if(std::none_of(tools.begin(),tools.end(),[&](const auto& tool){return tool.id==id;}))return;
     const auto row=flowTools_->row(item);
     auto* menu=new QMenu(flowTools_);menu->setObjectName("flowMoveMenu");menu->setAttribute(Qt::WA_DeleteOnClose);
-    const bool idle=!editorSession_.busy();
+    const bool idle=!editorSession_.busy() && !editorCameraPendingExecution_;
     for(const int direction:{-1,1}) {
         auto* action=menu->addAction(direction<0 ? "Bir sıra yukarı":"Bir sıra aşağı");
         action->setObjectName(direction<0 ? "flowMoveUp":"flowMoveDown");
@@ -187,7 +190,31 @@ void MainWindow::showFlowMenu(const QPoint& position) {
             catch(const std::exception& e){displayError(QString::fromUtf8(e.what()));}
         });
     }
+    menu->addSeparator();
+    auto* remove=menu->addAction("Remove Tool");remove->setObjectName("flowRemoveTool");remove->setEnabled(idle);
+    connect(remove,&QAction::triggered,this,[this,id,recipe]{removeEditorTool(id,recipe);});
     menu->popup(flowTools_->viewport()->mapToGlobal(position));
+}
+void MainWindow::removeEditorTool(const QString& id,const QString& recipe) {
+    const auto* active=service_.activeRecipe();
+    if(editorSession_.busy() || editorCameraPendingExecution_ || !active || editorRecipeId_!=recipe || service_.project().id+"/"+active->id!=recipe)return;
+    const auto tools=service_.tools();
+    const auto it=std::find_if(tools.begin(),tools.end(),[&](const auto& tool){return tool.id==id;});
+    if(it==tools.end())return;
+    const auto row=std::distance(tools.begin(),it);
+    const auto context=editorContext();
+    // The service validates a candidate before committing. Failed removal must
+    // leave the selection, pending gesture and Editor results untouched.
+    try {service_.removeTool(id);}
+    catch(const std::exception& e){displayError("Araç silinemedi. Bağlı kaynakları/paketleri kontrol edin: "+QString::fromUtf8(e.what()));return;}
+    editorSession_.invalidateTool(context,id);
+    ++editorSession_.generation;invalidateMatch();
+    if(pendingDrawTool_==id || selectedToolId_==id) {
+        pendingDrawTool_.clear();pendingDrawRecipe_.clear();drawingImage_.reset();
+        imageViewer_->cancelRoi();imageViewer_->drawRegion(false);imageViewer_->resetRoiHistory();
+    }
+    if(selectedToolId_==id)selectedToolId_=row+1<tools.size() ? tools[row+1].id:row>0 ? tools[row-1].id:QString{};
+    refreshWorkspace();
 }
 void MainWindow::refreshEditor() {
     editor_observation::Scope observation(editor_observation::Editor);
@@ -662,7 +689,9 @@ void MainWindow::showToolPropertiesView(const EditorContext& context,const std::
     connect(description,&QLineEdit::textEdited,this,[this]{applyToolProperties();});
     connect(enabled,&QCheckBox::toggled,this,[this]{applyToolProperties();});
     auto* remove=new QPushButton("Remove Tool"); remove->setObjectName("removeTool"); layout->addWidget(remove);
-    connect(remove,&QPushButton::clicked,this,[this]{try {service_.removeTool(selectedToolId_); selectedToolId_.clear(); refreshWorkspace();} catch (const std::exception& e) {displayError(QString::fromUtf8(e.what()));}});
+    const auto removeRecipe=editorRecipeId_,removeId=tool.id;
+    remove->setEnabled(!editorSession_.busy() && !editorCameraPendingExecution_);
+    connect(remove,&QPushButton::clicked,this,[this,removeId,removeRecipe]{removeEditorTool(removeId,removeRecipe);});
     layout->addStretch();
     displayedProperties_=readToolProperties(tool);
 }

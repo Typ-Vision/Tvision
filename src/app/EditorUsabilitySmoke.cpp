@@ -476,6 +476,6 @@ bool MainWindow::verifyEditorUsability(const QString& artifacts) {
     check(box("anglePx")->isChecked() && box("status")->isChecked() && !box("valueMm")->isChecked(),"D3 Geometry mode/operation defaults refresh");box("valueMm")->click();
     propertiesBody_->findChild<QComboBox*>("gm_mode")->setCurrentText("calibrated");QApplication::processEvents();propertiesBody_->findChild<QComboBox*>("gm_operation")->setCurrentText("point_distance");QApplication::processEvents();
     check(box("valueMm")->isChecked() && box("anglePx")->isChecked() && !box("valuePx")->isChecked(),"D3 Geometry explicit selection survives mode/operation change");
-    service_.save();QTextStream(stdout)<<"D3 editor9 source identity and Geometry mode/operation checkbox acceptance passed.\n";return true;
+    service_.save();QTextStream(stdout)<<"D3 editor9 source identity and Geometry mode/operation checkbox acceptance passed.\n";return verifyFlowRemoval(artifacts);
 }
 }

@@ -65,6 +65,7 @@ public:
     bool verifyGeometry(const QString& artifacts);
     bool verifyPoseTracking(const QString& artifacts);
     bool verifyEditorUsability(const QString& artifacts);
+    bool verifyFlowRemoval(const QString& artifacts);
     bool verifyExperimentalEditor(const QString& artifacts);
     bool verifyCircle(const QString& artifacts);
     bool verifyCodeReading(const QString& artifacts);
@@ -159,6 +160,7 @@ private:
     void refreshFlow();
     void refreshFlowView(const EditorContext&,const std::optional<MeasurementEnvironment>&);
     void showFlowMenu(const QPoint& position);
+    void removeEditorTool(const QString& id,const QString& recipe);
     void prepareNewToolDrawing();
     bool setDrawingImage();
     QString pendingDrawTool_,pendingDrawRecipe_;

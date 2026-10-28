@@ -105,8 +105,9 @@ void MainWindow::refreshFlowView(const EditorContext& context,const std::optiona
         run->setText(source ? "Görüntü al" : "Run Tool");run->setEnabled(!selectedToolId_.isEmpty() && !editorSession_.busy() && !unavailable);
     }
     findChild<QPushButton*>("stopFlow")->setEnabled(editorSession_.busy() || !pendingDrawTool_.isEmpty() || imageViewer_->drawingActive() || editorCameras_.hasTargets() || editorCameras_.draining());
-    for(const auto name:{"teachPoseReference","clearPoseReference","runSelectedTool"})if(auto* button=findChild<QPushButton*>(name)) {
+    for(const auto name:{"teachPoseReference","clearPoseReference","runSelectedTool","removeTool"})if(auto* button=findChild<QPushButton*>(name)) {
         bool enabled=!editorSession_.busy();
+        if(QString(name)=="removeTool")enabled=enabled && !editorCameraPendingExecution_;
         if(QString(name)=="runSelectedTool" && service_.activeRecipe())for(const auto& t:service_.tools())if(t.id==selectedToolId_ && t.kind=="industrial_camera" && !t.parameters["sourceReference"].isObject())enabled=false;
         if(QString(name)=="teachPoseReference")enabled=enabled && editorSession_.frame.has_value();
         if(QString(name)=="clearPoseReference"){enabled=false;for(const auto& t:service_.tools())if(t.id==selectedToolId_)enabled=!editorSession_.busy() && (t.parameters.contains("poseTracking") || t.parameters.contains("referenceBinding"));}
