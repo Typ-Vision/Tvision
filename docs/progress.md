@@ -4,17 +4,18 @@
 
 ## Devam noktası
 
-**[EFR-01](archive/2026-10-28-efr-01.md):** Ortak Remove Tool; Release/görsel hazır.
-`ui_editor_usability` HEAD'te de odak hatalı. Sonraki EFR-02;
+**[EFR-02](archive/2026-10-28-efr-02.md):** Combo wheel; 2 CTest/Windows Qt geçti.
+Release geçti; OS wheel açık. Save odak hatası sürer.
+[EFR-01](archive/2026-10-28-efr-01.md) korunur. Sonraki EFR-03a-1;
 [plan](architecture/editor-flow-roi-update-plan.md). Match/θ ertelendi.
 
-**[DEV-DRIVE-01](archive/2026-10-28-dev-drive-01.md):** `D:/TVision`; build güncel,
-OpenCV geçti; CTest erken durduruldu (tam kabul değil).
+**[DEV-DRIVE-01](archive/2026-10-28-dev-drive-01.md):** `D:/TVision`;
+OpenCV geçti, CTest kısmi.
 
-[DOC-VAR-01](archive/2026-10-28-doc-var-01.md): [Değişken rehberi](variables-usage.md).
+[Değişken rehberi](variables-usage.md); [DOC-VAR-01](archive/2026-10-28-doc-var-01.md).
 
-**[COMM-37 tamam](archive/2026-10-28-comm-37.md):** UI 164/core 127 geçti;
-her birinde dış plaka skipped. Temel faz kapandı; cihaz varsa COMM-38.
+**[COMM-37](archive/2026-10-28-comm-37.md):** UI 164/core 127 geçti;
+dış plaka skipped. Faz kapandı; cihaz varsa COMM-38.
 [36](archive/2026-10-28-comm-36.md), [23](archive/2026-10-28-comm-23.md),
 [22](archive/2026-10-27-comm-22.md),
 [21](archive/2026-10-27-comm-21.md),
@@ -101,7 +102,7 @@ CCUX-14 fixture bunu kapatmaz. [CCUX planı](architecture/camera-setup/README.md
   [kanıt/korunan sınırlar](archive/2026-10-28-efr-plan-01.md).
   **MUI-04 özgün raster/reçete/ROI açık**; fiziksel/optik/mm kabulü açık.
 
-## Korunacak engeller ve kararlar
+## Engeller ve kararlar
 
 - **OECS native Unavailable**. ICM-04d gecikmiş command, Clear→Stop→Start sonrası
   yeni tetik olmadan **8/8 eski kare** üretti;

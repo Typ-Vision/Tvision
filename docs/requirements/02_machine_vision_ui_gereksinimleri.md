@@ -1,5 +1,16 @@
 # Endüstriyel Machine Vision Yazılımı — UI Sayfa ve Ekran Gereksinimleri
 
+## Combobox tekerlek davranışı
+
+Kapalı bütün combobox'larda odaktan bağımsız olarak dikey/yatay tekerlek ve
+trackpad seçimi/metni değiştirmez. Uygun en yakın üst kaydırma alanı bir kez
+kaydırılır; sınırdaysa uygun dış alana geçilir. Alan yoksa seçim korunur.
+Açık listede yalnız liste kayar; seçim tıklama veya Enter ile, iptal Escape
+ile yapılır. Klavye okları ve editable metin girişi korunur. Tekerlek reçete,
+ayar, dirty/revision, cache veya kamera komutu üretmez. Spinbox ve viewer
+wheel davranışları kendi mevcut kurallarını korur.
+[Merkezi politika ve kabul matrisi](../architecture/combo-wheel-policy.md).
+
 ## Çalışma süresince kamera bağlantısı
 
 Program/proje açılışı ve Runtime Load Recipe kamera bağlantısı kurmaz. Editor'da

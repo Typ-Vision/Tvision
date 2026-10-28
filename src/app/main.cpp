@@ -1,5 +1,6 @@
 #include <QApplication>
 #include "MainWindow.hpp"
+#include "ComboWheelPolicy.hpp"
 #include <QDir>
 #include <QFile>
 #include <QFontDatabase>
@@ -9,6 +10,7 @@
 
 int main(int argc, char* argv[]) {
     QApplication app(argc, argv);
+    visionflow::ComboWheelPolicy comboWheelPolicy(app);
     app.setOrganizationName("VisionFlow"); app.setApplicationName("VisionFlow"); app.setStyle("Fusion");
     // The offscreen Windows platform may not enumerate system fonts.
     if (QApplication::platformName()=="offscreen" || app.arguments().contains("--smoke-test") || (app.arguments().contains("--circle-smoke") || app.arguments().contains("--geometry-smoke")))
