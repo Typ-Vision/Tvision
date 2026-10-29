@@ -4,12 +4,12 @@
 
 ## Devam noktası
 
-**[COMM4-03](archive/2026-10-29-comm4-03.md) tamam:** kalıcı kimlik/CAS.
-ON171/OFF132 geçti; birer skipped. Sıradaki **COMM4-04**; v4 codec/server yok.
+**[COMM4-04](archive/2026-10-29-comm4-04.md) tamam:** station snapshot/CAS;
+hedefli ON5/OFF5, skipped0. Sıradaki **COMM4-05**; codec/server/Auto yok.
+[03 registry/kabul](archive/2026-10-29-comm4-03.md).
 Eski probe INI restore SEGFAULT açık; temiz girdide kabul.
 [Ölçüm](working-protocol.md)3/3: sayaç erişilemiyor.
-[EFR-04](archive/2026-10-29-efr-04.md): ON170/OFF131, birer skipped;
-Wheel açık, Match/θ ertelendi.
+[EFR-04](archive/2026-10-29-efr-04.md): Wheel açık, Match/θ ertelendi.
 
 [D:/TVision](archive/2026-10-28-dev-drive-01.md): OpenCV geçti; CTest kısmi.
 

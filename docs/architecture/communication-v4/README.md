@@ -2,7 +2,7 @@
 
 **Durum: sıralı uygulama sürüyor; hedef sistem henüz tamamlanmadı.**
 29 Ekim 2026. Kullanıcı seçimi: GPT-6.1 Sol / medium. Varsayılan oturum kapsamı
-tek karttır; ajanlar paralel çalışmaz. **Sonraki görev: [COMM4-04](cards/COMM4-04.md).**
+tek karttır; ajanlar paralel çalışmaz. **Sonraki görev: [COMM4-05](cards/COMM4-05.md).**
 
 **COMM4-01 tamam:** [güncel kaynak, test ve kart sahiplik haritası](source-map.md).
 **COMM4-02 tamam:** [wire fixture freeze](freeze-comm4-02.md). V4 üretim
@@ -10,6 +10,9 @@ codec/server henüz uygulanmadı; freeze yalnız D profilinde tasarım kabulüd�
 
 **COMM4-03 tamam:** [kalıcı kimlik registry ve store](identity-registry.md);
 station Runtime/listener entegrasyonu sonraki kartlardadır.
+
+**COMM4-04 tamam:** [station snapshot/CAS ve Runtime sınırı](station-activation.md).
+Kalıcı seçim üretim izni açmaz; listener/Auto/dispatch sonraki kartlardadır.
 
 ## Okuma ve kapsam
 
@@ -38,7 +41,7 @@ fiziksel PLC/robot ve dağıtım engelleri bu planla kapanmaz.
 | [01](cards/COMM4-01.md) | Güncel kaynak ve davranış envanteri — tamam | Yok |
 | [02](cards/COMM4-02.md) | Wire byte fixture ve sözleşme dondurma — tamam | 01 |
 | [03](cards/COMM4-03.md) | Kalıcı kimlik kataloğu — tamam | 02 |
-| [04](cards/COMM4-04.md) | Station domain ve immutable aktivasyon | 03 |
+| [04](cards/COMM4-04.md) | Station domain ve immutable aktivasyon — tamam | 03 |
 | [05](cards/COMM4-05.md) | Listener/prod yaşam döngüsü ayrımı | 04 |
 | [06](cards/COMM4-06.md) | Bounded binary codec/framer | 02,05 |
 | [07](cards/COMM4-07.md) | HELLO, session ve peer sahipliği | 03,06 |

@@ -34,6 +34,7 @@ public:
     bool deliveryPending() const;
     std::shared_ptr<std::atomic_bool> cancellation() const;
 private:
+    friend class StationRuntimeBoundary; // verify the existing coordinator/service pair at composition
     template<class F> auto diagnose(const QString& action,F&& operation,QJsonObject context={}) -> decltype(operation());
     void remember(RuntimeFailure,const QString&);
     void owner() const;

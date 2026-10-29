@@ -1,6 +1,7 @@
 # COMM4-04 — Station domain ve immutable reçete aktivasyonu
 
-Durum: planlandı, başlanmadı. Model: **GPT-6.1 Sol / medium**.
+Durum: tamamlandı — [kapanış ve kanıt](../../../archive/2026-10-29-comm4-04.md).
+Model: **GPT-6.1 Sol / medium**.
 Tek oturum kapsamı ve ortak kurallar [indekste](../README.md), kapanış
 kuralları [V0](../verification.md) içindedir.
 
@@ -15,7 +16,11 @@ Gerekli bölüm dışında bütün kartları/kalibrasyon geçmişini yükleme.
 
 Station başına active recipe revision, activation UUID, kaynak binding ve mode modeli oluştur. A/B değişimi idle/drained iken compare-and-swap; Editor selection aktif snapshotı değiştirmez.
 
-Yeni aday: StationDefinition/StationSnapshot/StationActivationService ve ilgili store/tests. Gerçek Runtime/recipe snapshot portlarına dar entegrasyon; sahiplik01 haritasında kesinleştirilir.
+Uygulanan sahiplik: `src/domain/StationDefinition.*`,
+`src/application/StationActivationService.*`, `StationRuntimeBoundary.*`,
+`src/persistence/StationActivationStore.*`, `tests/station_activation_test.cpp` ve
+CMake hedefi. Mevcut `RuntimeCoordinator.hpp` yalnız eşleşen service/coordinator
+çiftini doğrulayan friend sınırı taşır. [Port/store sözleşmesi](../station-activation.md).
 
 Gerçek/adayı kart başında source-map ve V0 coverage kurallarıyla kesinleştir.
 

@@ -28,6 +28,7 @@ target_link_libraries(match_benchmark PRIVATE visionflow_matching)
 add_library(visionflow_projects src/domain/Project.cpp src/domain/Coordinates.cpp src/domain/ToolDefinition.cpp src/domain/ToolGraph.cpp src/domain/ToolRegistry.cpp src/persistence/ProjectRepository.cpp src/application/ProjectService.cpp)
 target_sources(visionflow_projects PRIVATE src/application/BackendCapabilities.cpp)
 target_sources(visionflow_projects PRIVATE src/domain/StationIdentityRegistry.cpp src/application/StationIdentityRegistry.cpp src/persistence/StationIdentityStore.cpp)
+target_sources(visionflow_projects PRIVATE src/domain/StationDefinition.cpp src/application/StationActivationService.cpp src/persistence/StationActivationStore.cpp)
 target_sources(visionflow_projects PRIVATE src/domain/MeasurementSetupContract.cpp)
 target_sources(visionflow_projects PRIVATE src/domain/CommunicationValues.cpp src/domain/SpatialTransform.cpp)
 target_sources(visionflow_projects PRIVATE src/application/CommunicationWireCodec.cpp)
@@ -121,6 +122,7 @@ target_sources(visionflow_acquisition PRIVATE src/application/ProductionRecipeSe
 target_sources(visionflow_acquisition PRIVATE src/application/ProductionStore.cpp src/application/DeliveryStore.cpp src/application/RuntimeService.cpp)
 target_sources(visionflow_acquisition PRIVATE src/application/ExperimentalRuntime.cpp)
 target_sources(visionflow_acquisition PRIVATE src/application/RuntimeCoordinator.cpp src/application/RuntimeDiagnostics.cpp src/application/TriggerRouter.cpp)
+target_sources(visionflow_acquisition PRIVATE src/application/StationRuntimeBoundary.cpp)
 target_compile_definitions(visionflow_acquisition PRIVATE
   VISIONFLOW_DIAGNOSTIC_BUILD_TYPE="$<CONFIG>"
   VISIONFLOW_DIAGNOSTIC_UI=$<BOOL:${VISIONFLOW_BUILD_UI}>
@@ -167,6 +169,9 @@ target_sources(visionflow_acquisition PRIVATE src/application/PoseRoiService.cpp
 target_sources(visionflow_acquisition PRIVATE src/application/WorldTrackingService.cpp)
 if(BUILD_TESTING)
   add_executable(station_identity_registry_test tests/station_identity_registry_test.cpp)
+  add_executable(station_activation_test tests/station_activation_test.cpp)
+  target_link_libraries(station_activation_test PRIVATE visionflow_acquisition)
+  add_test(NAME station_activation_contract COMMAND station_activation_test)
   target_link_libraries(station_identity_registry_test PRIVATE visionflow_projects)
   add_test(NAME station_identity_registry_contract COMMAND station_identity_registry_test ${CMAKE_SOURCE_DIR}/tests/fixtures/communication-v4/identity-registry-v1.json)
   add_executable(output_visibility_preferences_test tests/output_visibility_preferences_test.cpp)

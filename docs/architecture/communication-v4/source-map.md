@@ -216,7 +216,7 @@ daraltılır. Bir sonraki kart otomatik başlatılmaz.
 | 01 | Bu source-map, plan/kart01, progress/archive | Yalnız envanter; C++ yok |
 | 02 | wire.md, verification.md | tests/fixtures/communication-v4/ golden byte/hex/PLC word tabloları; üretim codec yok |
 | 03 | domain identity, persistence/ProjectRepository, application/CommunicationProfiles; CMake projects | StationIdentityRegistry ve store/tests; legacy otomatik rewrite yok |
-| 04 | RuntimeCoordinator/RuntimeService snapshot sınırı | StationDefinition/Snapshot/ActivationService; domain + application/store/tests |
+| 04 tamam | RuntimeCoordinator/RuntimeService snapshot sınırı | StationDefinition/StationSnapshot, StationActivationService, StationRuntimeBoundary, FileStationActivationStore; station_activation_contract. [Port sözleşmesi](station-activation.md) |
 | 05 | MainWindowRuntime/Communication composition, endpoint.listen/stop, profiles | CommunicationServerLifecycle, StationRunController; UI sayfaları yok |
 | 06 | application/CommunicationWireCodec ve CMake projects/acquisition ayrımı | CommunicationV4Codec/Framer + tests; domain authority codec'e geçmez |
 | 07 | CommunicationTcpEndpoint peer/session/listen | CommunicationPeerSessionService; 03/06 handshake tests |
