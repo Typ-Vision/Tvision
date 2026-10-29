@@ -29,6 +29,10 @@ public:
     V4RequestIdentity requestIdentity(const QUuid& connection,const CommunicationV4Frame&) const;
     QUuid session() const {owner();return session_;}
     void setTriggerHandler(TriggerHandler handler){owner();trigger_=std::move(handler);}
+    // SELECT_RECIPE/SET_AUTO/STOP and exact control ACK. The application port
+    // returns nullopt for ACKs belonging to the production/calibration ledger.
+    using ControlHandler=std::function<std::optional<CommunicationV4Frame>(const V4RequestIdentity&,const CommunicationV4Frame&)>;
+    void setControlHandler(ControlHandler handler){owner();control_=std::move(handler);}
 private:
     void owner() const;
     quint32 identityReason(const IdentityCatalogue&,const CommunicationV4Header&) const;
@@ -36,6 +40,7 @@ private:
     StationIdentityStore& store_;
     Metadata metadata_;
     TriggerHandler trigger_;
+    ControlHandler control_;
     QUuid connection_,session_,peer_,epoch_,installation_;
     bool exact_=false;
     QThread* owner_=QThread::currentThread();

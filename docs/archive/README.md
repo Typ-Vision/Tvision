@@ -6,6 +6,7 @@ görev” ifadeleri yazıldıkları tarihe aittir.
 
 | Dönem / görev | Kayıt |
 | --- | --- |
+| 29 Ekim 2026 — COMM4-08a | [PLC reçete seçimi, Auto/Stop, durable kontrol portu ve ON/OFF kabulü](2026-10-29-comm4-08a.md) |
 | 29 Ekim 2026 — COMM4-08 | [Station atomik admission, durable intent/Runtime portu ve Release ON/OFF kabulü](2026-10-29-comm4-08.md) |
 | 29 Ekim 2026 — COMM4-07 | [HELLO/session otoritesi, peer sahipliği ve localhost ON/OFF kabulü](2026-10-29-comm4-07.md) |
 | 29 Ekim 2026 — COMM4-06 | [Bounded binary codec/framer, write queue ve tam Release ON/OFF kabulü](2026-10-29-comm4-06.md) |

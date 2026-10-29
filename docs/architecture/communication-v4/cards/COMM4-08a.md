@@ -1,6 +1,6 @@
 # COMM4-08a — PLC reçete seçimi ve Auto/Stop
 
-Durum: planlandı, başlanmadı. Model: **GPT-6.1 Sol / medium**.
+Durum: tamam; [port sözleşmesi](../station-control.md), [kapanış](../../../archive/2026-10-29-comm4-08a.md). Model: **GPT-6.1 Sol / medium**.
 Tek oturum, tek uygulayıcı. Önkoşul COMM4-08. Başlangıç paketi ve
 [indeks](../README.md), [contract S1/S4](../contract.md), [wire W2/W3/W5](../wire.md)
 okunur; diğer kartlar topluca yüklenmez.

@@ -2,7 +2,7 @@
 
 **Durum: sıralı uygulama sürüyor; hedef sistem henüz tamamlanmadı.**
 29 Ekim 2026. Kullanıcı seçimi: GPT-6.1 Sol / medium. Varsayılan oturum kapsamı
-tek karttır; ajanlar paralel çalışmaz. **Sonraki görev: [COMM4-08a](cards/COMM4-08a.md).**
+tek karttır; ajanlar paralel çalışmaz. **Sonraki görev: [COMM4-09](cards/COMM4-09.md).**
 
 **COMM4-01 tamam:** [güncel kaynak, test ve kart sahiplik haritası](source-map.md).
 **COMM4-02 tamam:** [wire fixture freeze](freeze-comm4-02.md).
@@ -27,6 +27,9 @@ Normal main catalogue manifest provider'ı henüz yok; station portu aşağıda0
 **COMM4-08 tamam:** [station admission ve mevcut Runtime adapter'ı](station-admission.md).
 Exact snapshot, atomik resource/durable-intent bariyeri ve session TRIGGER portu;
 normal main station/ledger/worker composition'ı sonraki entegrasyonları bekler.
+
+**COMM4-08a tamam:** [PLC reçete seçimi ve ortak Auto/Stop portu](station-control.md).
+Durable control port, generation fence ve exact kontrol ACK'i; gerçek disk ledger13'te.
 
 ## Okuma ve kapsam
 
@@ -60,7 +63,7 @@ fiziksel PLC/robot ve dağıtım engelleri bu planla kapanmaz.
 | [06](cards/COMM4-06.md) | Bounded binary codec/framer | 02,05 |
 | [07](cards/COMM4-07.md) | HELLO, session ve peer sahipliği — tamam | 03,06 |
 | [08](cards/COMM4-08.md) | İstasyon admission ve tetik yönlendirme — tamam | 04,07 |
-| [08a](cards/COMM4-08a.md) | PLC reçete seçimi, Auto/Stop ve yerel kontrol yarışı | 08 |
+| [08a](cards/COMM4-08a.md) | PLC reçete seçimi, Auto/Stop ve yerel kontrol yarışı — tamam | 08 |
 | [09](cards/COMM4-09.md) | Bağımsız istasyon yürütmesi | 08a |
 | [10](cards/COMM4-10.md) | Ortak kamera kaynak arbitrajı | 09 |
 | [11](cards/COMM4-11.md) | Sabit şablon ve typed assignment domain | 04 |

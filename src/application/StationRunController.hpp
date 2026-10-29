@@ -15,12 +15,14 @@ public:
     bool automatic() const;
     QUuid station() const {return station_;}
     QUuid activation() const {return activation_;}
+    quint64 controlGeneration() const {owner();return controlGeneration_;}
 private:
     friend class StationRuntimeAdmissionBoundary;
     void owner() const;
     StationRuntimeBoundary& boundary_;
     QUuid station_,activation_;
     bool auto_=false;
+    quint64 controlGeneration_=0;
     QThread* owner_=QThread::currentThread();
 };
 }

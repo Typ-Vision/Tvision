@@ -80,6 +80,11 @@ CommunicationV4Frame CommunicationPeerSessionService::handle(const QUuid& connec
             C::encode(r,V4Direction::Response);return r;
         }catch(...){return response(f,190,8);}
     }
+    if((f.header.kind==4 || f.header.kind==5 || f.header.kind==6 || f.header.kind==11) && control_){
+        std::optional<V4RequestIdentity> key;
+        try{key=requestIdentity(connection,f);}catch(...){return response(f,190,10);}
+        try{if(auto result=control_(*key,f))return *result;}catch(...){return response(f,190,8);}
+    }
     if(f.header.kind==10 && trigger_){
         std::optional<V4RequestIdentity> key;
         try{key=requestIdentity(connection,f);}catch(...){return response(f,190,10);}
