@@ -7,7 +7,7 @@ kapsamı kaynak okuyarak tamamla. MCP bağlantı hatasını boş arama sonucu sa
 
 # VisionFlow çalışma sürekliliği
 
-Her yeni oturumda `docs/progress.md` ve `README.md` dosyalarını oku; bu AGENTS ile birlikte kısa başlangıç paketidir. Kullanıcının güncel yönlendirmesi önceliklidir. Tamamlanmış adımları yeniden başlatma; güncel devam noktası progress'tedir.
+Her yeni oturumda `docs/progress.md` ve `README.md` dosyalarını oku; bu AGENTS ile birlikte kısa başlangıç paketidir. Kullanıcının güncel yönlendirmesi önceliklidir. Tamamlanmış adımları yeniden başlatma; güncel devam noktası progress'tedir. Görev başında [çalışma protokolünü](docs/working-protocol.md) bir kez oku; devir, doğrulama ve tüketim ölçümünde uygula.
 
 Ardından seçili görev kartını ve görevle ilgili gereksinim/sözleşme bölümlerini oku. Büyük belgelerde önce `rg -n` ile başlık veya görev ID'sini bul, gerekli bölümü aç. Bütün gereksinim, mimari veya arşiv dosyalarını başlangıçta topluca okuma; belirsizlik, çelişki veya katmanlar arası değişiklik varsa okumayı bağımlılıklara genişlet. Eski kanıt gerektiğinde progress'teki arşiv dizininden ilgili kaydı bul. Tarihsel “sıradaki görev” ifadeleri güncel sıra değildir.
 

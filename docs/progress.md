@@ -4,14 +4,15 @@
 
 ## Devam noktası
 
-**[EFR-04](archive/2026-10-29-efr-04.md):** Release ON 170/OFF 131 geçti;
-her birinde 1 skipped. Üç tür/crop, replay/Logs tamam.
-Sonraki: kullanıcı yönlendirmesi. [ROI](architecture/roi-crop-contract.md).
-[03a-4](archive/2026-10-29-efr-03a-4.md) core kanıtı korunur.
-OS wheel native açık; Save odak son tam UI'de geçti. Match/θ ertelendi.
+**[DOC-WORK-01](archive/2026-10-29-doc-work-01.md):**
+[Protokol](working-protocol.md); sonraki 3 kartta ölçüm.
 
-**[DEV-DRIVE-01](archive/2026-10-28-dev-drive-01.md):** `D:/TVision`;
-OpenCV geçti, CTest kısmi.
+**[EFR-04](archive/2026-10-29-efr-04.md):** Release ON 170/OFF 131,
+birer skipped; üç tür/crop/replay/Logs tamam. [ROI](architecture/roi-crop-contract.md),
+[03a-4](archive/2026-10-29-efr-03a-4.md). Native wheel açık;
+Save odak son tam UI'de geçti. Match/θ ertelendi.
+
+[D:/TVision](archive/2026-10-28-dev-drive-01.md): OpenCV geçti; CTest kısmi.
 
 [Değişken rehberi](variables-usage.md).
 
@@ -54,7 +55,7 @@ Tercihler repo TEMP/localhost ile doğrulandı; varsayılan TEMP kabulü açık.
 [INT-08 kanıtı](archive/2026-10-25-int-08.md): üç medyan aşımı ve fiziksel
 E2/mm/native açık; gerçek proje/reçete/kaynak/model gerekli.
 
-**[CCUX-23b-1–6 yazılım kabulü tamamlandı](archive/2026-10-24-ccux-23b-6.md).**
+**[CCUX-23b-1–6 yazılım tamam](archive/2026-10-24-ccux-23b-6.md).**
 Canlı proje/2448×2048 kabulü açık; fixture fiziksel kabul değildir.
 Kullanıcı plaka kalibrasyonunu başardı; bağımsız mm kabulü ayrıdır.
 
@@ -86,9 +87,9 @@ görüntü/mm kabulü değildir.
 temizleme hatası ve 7000 µs / 1 dB readback reddi açık. CCUX-15 bağımsız referans,
 tolerans/mm, lens/düzlem ve belgeli fiziksel kabulü tamamlanmadı.
 
-**[CCUX-14 tamam](archive/2026-10-22-ccux-14.md):** yazılım/görsel; fiziksel açık.
+**[CCUX-14](archive/2026-10-22-ccux-14.md):** yazılım/görsel tamam; fiziksel açık.
 
-CCUX-01–13 tamamlandı; [arşiv](archive/README.md).
+CCUX-01–13 tamam; [arşiv](archive/README.md).
 Kamera kimliği/profil, oturum drain, kalibrasyon izni, typed köken/hash,
 Editor binding ve immutable Runtime kararlarının [korunan ayrıntıları](archive/2026-10-26-comm-plan-01.md#önceki-kamera-özetinden-korunan-ayrıntılar).
 Restart üretim izni başlatmaz; PLC/robot çıkışı kapalı kalır.
