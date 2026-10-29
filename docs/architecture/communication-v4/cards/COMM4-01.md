@@ -1,6 +1,8 @@
 # COMM4-01 — Güncel kaynak ve davranış envanteri
 
-Durum: planlandı, başlanmadı. Model: **GPT-6.1 Sol / medium**.
+Durum: tamamlandı (yalnız kaynak/belge envanteri, 29 Ekim 2026).
+Model: **GPT-6.1 Sol / medium**. [Kaynak ve kart sahiplik haritası](../source-map.md),
+[kapanış ve doğrulama](../../../archive/2026-10-29-comm4-01.md).
 Tek oturum kapsamı ve ortak kurallar [indekste](../README.md), kapanış
 kuralları [V0](../verification.md) içindedir.
 
@@ -15,7 +17,7 @@ Gerekli bölüm dışında bütün kartları/kalibrasyon geçmişini yükleme.
 
 Tek loaded recipe, endpoint sahipliği, publication/terminal/ACK ve calibration servis sınırlarını güncel kaynakla haritala. Domain/application/transport/UI bağımlılıklarını ve gerçek CMake test adlarını kaydet; v2/v3 davranışlarını uygulanmış ile plan ayrımıyla işaretle.
 
-Gerçek: mevcut RuntimeCoordinator, CommunicationTcpEndpoint, PublicationService ve MainWindowCommunication/PublishDataEditor yolları kaynakta doğrulanacak. Sahiplik bu dizinde yeni source-map.md ve kart sahiplik tabloları; C++ değişikliği yok.
+Gerçek RuntimeCoordinator, CommunicationTcpEndpoint, PublicationService ve MainWindowCommunication/PublishDataEditor yolları [source-map](../source-map.md) ile doğrulandı. Sahiplik source-map ve içindeki kart sahiplik tablosu, bu kart/indeks ve zorunlu progress/arşiv kapanışıdır; C++ değişikliği yok.
 
 Gerçek/adayı kart başında source-map ve V0 coverage kurallarıyla kesinleştir.
 

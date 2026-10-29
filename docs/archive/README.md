@@ -6,6 +6,7 @@ görev” ifadeleri yazıldıkları tarihe aittir.
 
 | Dönem / görev | Kayıt |
 | --- | --- |
+| 29 Ekim 2026 — COMM4-01 | [Güncel kaynak, trigger→terminal→ACK ve kart sahiplik envanteri](2026-10-29-comm4-01.md) |
 | 29 Ekim 2026 — COMM4-PLAN-01 | [27 kartlı çok istasyon/tek TCP/robot kalibrasyon planı](2026-10-29-comm4-plan-01.md) |
 | 29 Ekim 2026 — DOC-WORK-01 | [Çalışma, doğrulama ve tüketim ölçüm protokolü](2026-10-29-doc-work-01.md) |
 | 29 Ekim 2026 — EFR-04 | [Üç tür ROI birleşik kabulü, tarihsel raster sınırı ve tam Release regresyonu](2026-10-29-efr-04.md) |

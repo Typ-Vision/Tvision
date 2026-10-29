@@ -4,11 +4,11 @@
 
 ## Devam noktası
 
-**[COMM4-PLAN-01](archive/2026-10-29-comm4-plan-01.md):**
-[Tek server/çok istasyon/robot planı](architecture/communication-v4/README.md).
-27 kart, Sol6.1/medium; sıradaki COMM4-01. Kod yok.
-
-[DOC-WORK-01](working-protocol.md): sonraki 3 kartta ölçüm.
+**[COMM4-01](archive/2026-10-29-comm4-01.md) tamam:**
+[Envanter](architecture/communication-v4/source-map.md).
+D kabulü; build/CTest yok. [Planda](architecture/communication-v4/README.md)
+sıradaki **COMM4-02**; v4 kodu/freeze yok.
+[Ölçüm](working-protocol.md)1/3: sayaç erişilemiyor.
 [EFR-04](archive/2026-10-29-efr-04.md): ON170/OFF131, birer skipped;
 Wheel açık, Match/θ ertelendi.
 
