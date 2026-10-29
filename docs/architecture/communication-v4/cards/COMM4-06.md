@@ -1,6 +1,8 @@
 # COMM4-06 — Bounded binary codec ve framer
 
-Durum: planlandı, başlanmadı. Model: **GPT-6.1 Sol / medium**.
+Durum: **tamamlandı — F yazılım kabulü**. Model: **GPT-6.1 Sol / medium**.
+Uygulanan [codec/framer portları](../binary-codec.md),
+[kapanış ve yeni ON/OFF kanıtı](../../../archive/2026-10-29-comm4-06.md).
 Tek oturum kapsamı ve ortak kurallar [indekste](../README.md), kapanış
 kuralları [V0](../verification.md) içindedir.
 

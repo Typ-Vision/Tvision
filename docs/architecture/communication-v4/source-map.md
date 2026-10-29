@@ -160,13 +160,14 @@ COMM4-18 araştırması,22–26 fixture/fiziksel kapı ayrımı halen gereklidir
 Otorite CMakeLists.txt'teki `add_executable/add_test` kayıtlarıdır; aşağıdakiler
 uygulanmış **test adlarıdır**, bu kartta koşulmuş sonuçlar değildir.
 Tam executable/source/arguments tablosu `build/comm4/COMM4-01/cmake-tests.json`.
-Yeni COMM4 test/hedef adları henüz seçilmedi; kart başında eklenecek.
+Yeni COMM4 test/hedef adları ilgili kartın uygulamasında eklenir.
 
 | Mevcut hedef / test kaynağı | CTest adı / argüman |
 | --- | --- |
 | runtime_coordinator_test / tests/runtime_coordinator_test.cpp | runtime_coordinator |
 | runtime_test / tests/runtime_test.cpp | runtime_persistence |
 | communication_wire_test / tests/communication_wire_test.cpp | communication_wire_contract |
+| communication_v4_codec_test / tests/communication_v4_codec_test.cpp | communication_v4_codec (COMM4-06) |
 | communication_values_test / tests/communication_values_test.cpp | communication_values_contract |
 | spatial_values_test / tests/spatial_values_test.cpp | spatial_values_contract |
 | publication_test / tests/publication_test.cpp | publication_contract |
@@ -218,7 +219,7 @@ daraltılır. Bir sonraki kart otomatik başlatılmaz.
 | 03 | domain identity, persistence/ProjectRepository, application/CommunicationProfiles; CMake projects | StationIdentityRegistry ve store/tests; legacy otomatik rewrite yok |
 | 04 tamam | RuntimeCoordinator/RuntimeService snapshot sınırı | StationDefinition/StationSnapshot, StationActivationService, StationRuntimeBoundary, FileStationActivationStore; station_activation_contract. [Port sözleşmesi](station-activation.md) |
 | 05 | main startup composition, legacy listen guards, StationRuntimeBoundary | CommunicationServerLifecycle/profile, CommunicationListenerOwnership, StationRunController ve communication_server_lifecycle_test; [uygulanan sınır](server-lifecycle.md), UI sayfaları değişmedi |
-| 06 | application/CommunicationWireCodec ve CMake projects/acquisition ayrımı | CommunicationV4Codec/Framer + tests; domain authority codec'e geçmez |
+| 06 | application/CommunicationV4Codec.hpp/cpp, tests/communication_v4_codec_test.cpp, CMake visionflow_projects | [Binary codec/framer/write queue](binary-codec.md); CTest communication_v4_codec; domain authority codec'e geçmez |
 | 07 | CommunicationTcpEndpoint peer/session/listen | CommunicationPeerSessionService; 03/06 handshake tests |
 | 08 | TriggerRouter.admit ve Coordinator.begin | StationAdmissionService; yürütme topolojisi09'da |
 | 08a | Coordinator start/stop/generation ve MainWindowRuntime local controls | StationControlService; UI/remote aynı komut portu |

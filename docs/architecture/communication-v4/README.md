@@ -2,11 +2,11 @@
 
 **Durum: sıralı uygulama sürüyor; hedef sistem henüz tamamlanmadı.**
 29 Ekim 2026. Kullanıcı seçimi: GPT-6.1 Sol / medium. Varsayılan oturum kapsamı
-tek karttır; ajanlar paralel çalışmaz. **Sonraki görev: [COMM4-06](cards/COMM4-06.md).**
+tek karttır; ajanlar paralel çalışmaz. **Sonraki görev: [COMM4-07](cards/COMM4-07.md).**
 
 **COMM4-01 tamam:** [güncel kaynak, test ve kart sahiplik haritası](source-map.md).
-**COMM4-02 tamam:** [wire fixture freeze](freeze-comm4-02.md). V4 üretim
-codec henüz uygulanmadı; freeze yalnız D profilinde tasarım kabulüdür.
+**COMM4-02 tamam:** [wire fixture freeze](freeze-comm4-02.md).
+Freeze D tasarım kabulüdür; bağımsız codec COMM4-06'da uygulandı.
 
 **COMM4-03 tamam:** [kalıcı kimlik registry ve store](identity-registry.md);
 station Runtime/listener entegrasyonu sonraki kartlardadır.
@@ -15,7 +15,10 @@ station Runtime/listener entegrasyonu sonraki kartlardadır.
 Kalıcı seçim üretim izni açmaz; listener/Auto/dispatch sonraki kartlardadır.
 
 **COMM4-05 tamam:** [process listener ve station Run sınırı](server-lifecycle.md).
-Startup listen, bağımsız Stop/drain ve bounded checkpoint; wire/dispatch henüz yok.
+Startup listen, bağımsız Stop/drain ve bounded checkpoint; listener codec'e henüz bağlı değil.
+
+**COMM4-06 tamam:** [bounded binary codec/framer ve write queue](binary-codec.md).
+F yazılım kabulü; listener entegrasyonu/session authority/dispatch henüz yok.
 
 ## Okuma ve kapsam
 

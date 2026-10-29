@@ -4,8 +4,8 @@
 
 ## Devam noktası
 
-**[COMM4-05](archive/2026-10-29-comm4-05.md) tamam:** listener/Run ayrımı;
-hedefli ON4/OFF4, skipped0. Sıradaki **COMM4-06**; codec/dispatch yok.
+**[COMM4-06](archive/2026-10-29-comm4-06.md) tamam:** codec/framer;
+ON174/OFF135,1'er skipped. Sıradaki **COMM4-07**; dispatch yok.
 [03 registry/kabul](archive/2026-10-29-comm4-03.md).
 Eski probe INI restore SEGFAULT açık; temiz girdide kabul.
 [Ölçüm](working-protocol.md)3/3: sayaç erişilemiyor.

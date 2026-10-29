@@ -6,6 +6,7 @@ görev” ifadeleri yazıldıkları tarihe aittir.
 
 | Dönem / görev | Kayıt |
 | --- | --- |
+| 29 Ekim 2026 — COMM4-06 | [Bounded binary codec/framer, write queue ve tam Release ON/OFF kabulü](2026-10-29-comm4-06.md) |
 | 29 Ekim 2026 — COMM4-05 | [Tek process listener, station Run/Stop drain ve bounded shutdown kabulü](2026-10-29-comm4-05.md) |
 | 29 Ekim 2026 — COMM4-04 | [Station immutable aktivasyon/CAS, Runtime drain ve pending metadata kabulü](2026-10-29-comm4-04.md) |
 | 29 Ekim 2026 — COMM4-03 | [Kalıcı kimlik registry, atomic CAS/store ve Release ON/OFF kabulü](2026-10-29-comm4-03.md) |
