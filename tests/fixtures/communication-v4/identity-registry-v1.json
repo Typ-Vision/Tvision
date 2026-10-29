@@ -1,0 +1,45 @@
+{
+  "payload": {
+    "schemaVersion": 1,
+    "installation": "11223344556677889900aabbccddeeff",
+    "catalogueRevision": "22334455667788990011aabbccddeeff",
+    "nextKey": "4",
+    "entries": [
+      {
+        "key": 1,
+        "category": 1,
+        "entity": "00112233445566778899aabbccddeeff",
+        "revision": "00000000000000000000000000000000",
+        "parent": "00000000000000000000000000000000",
+        "name": "Station 1",
+        "retired": false
+      },
+      {
+        "key": 2,
+        "category": 2,
+        "entity": "33445566778899001122aabbccddeeff",
+        "revision": "44556677889900112233aabbccddeeff",
+        "parent": "00000000000000000000000000000000",
+        "name": "Recipe A",
+        "retired": false
+      },
+      {
+        "key": 3,
+        "category": 4,
+        "entity": "55667788990011223344aabbccddeeff",
+        "revision": "00000000000000000000000000000000",
+        "parent": "00000000000000000000000000000000",
+        "name": "Retired camera",
+        "retired": true
+      }
+    ],
+    "epochs": [
+      {
+        "peer": "66778899001122334455aabbccddeeff",
+        "epoch": "77889900112233445566aabbccddeeff",
+        "retired": true
+      }
+    ]
+  },
+  "sha256": "d95b463a0ace2b05394d0eaf10c1ff2ffabb71d8330fa7f44499f59baf412068"
+}

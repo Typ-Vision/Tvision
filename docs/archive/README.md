@@ -6,6 +6,7 @@ görev” ifadeleri yazıldıkları tarihe aittir.
 
 | Dönem / görev | Kayıt |
 | --- | --- |
+| 29 Ekim 2026 — COMM4-03 | [Kalıcı kimlik registry, atomic CAS/store ve Release ON/OFF kabulü](2026-10-29-comm4-03.md) |
 | 29 Ekim 2026 — COMM4-02 | [Wire freeze, byte/PLC word fixture ve generic robot adapter sınırı](2026-10-29-comm4-02.md) |
 | 29 Ekim 2026 — COMM4-01 | [Güncel kaynak, trigger→terminal→ACK ve kart sahiplik envanteri](2026-10-29-comm4-01.md) |
 | 29 Ekim 2026 — COMM4-PLAN-01 | [27 kartlı çok istasyon/tek TCP/robot kalibrasyon planı](2026-10-29-comm4-plan-01.md) |

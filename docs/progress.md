@@ -4,10 +4,10 @@
 
 ## Devam noktası
 
-**[COMM4-02](archive/2026-10-29-comm4-02.md) tamam:**
-[Wire freeze](architecture/communication-v4/freeze-comm4-02.md),82 fixture.
-D kabulü; build/CTest yok. Sıradaki **COMM4-03**; v4 codec/server yok.
-[Ölçüm](working-protocol.md)2/3: sayaç erişilemiyor.
+**[COMM4-03](archive/2026-10-29-comm4-03.md) tamam:** kalıcı kimlik/CAS.
+ON171/OFF132 geçti; birer skipped. Sıradaki **COMM4-04**; v4 codec/server yok.
+Eski probe INI restore SEGFAULT açık; temiz girdide kabul.
+[Ölçüm](working-protocol.md)3/3: sayaç erişilemiyor.
 [EFR-04](archive/2026-10-29-efr-04.md): ON170/OFF131, birer skipped;
 Wheel açık, Match/θ ertelendi.
 

@@ -1,6 +1,7 @@
 # COMM4-03 — Kalıcı numeric kimlik kataloğu
 
-Durum: planlandı, başlanmadı. Model: **GPT-6.1 Sol / medium**.
+Durum: **tamamlandı — F yazılım kabulü**. [Kapanış](../../../archive/2026-10-29-comm4-03.md).
+Model: **GPT-6.1 Sol / medium**.
 Tek oturum kapsamı ve ortak kurallar [indekste](../README.md), kapanış
 kuralları [V0](../verification.md) içindedir.
 
@@ -15,7 +16,10 @@ Gerekli bölüm dışında bütün kartları/kalibrasyon geçmişini yükleme.
 
 Station/camera UUID ile recipe/template/model immutable revision kimliklerini never-reused uint32 wire keylere transactionally bağla. Catalogue snapshot revision ve retired key/epoch durumlarını kalıcılaştır.
 
-Yeni aday: StationIdentityRegistry domain/application/store dosyaları ve tests; gerçek store/schema/CMake yolları01 haritasından seçilir. Mevcut projeyi otomatik rewrite etme.
+Sahiplik: `src/domain/StationIdentityRegistry.*`, `src/application/StationIdentityRegistry.*`,
+`src/persistence/StationIdentityStore.*`, `tests/station_identity_registry_test.cpp`,
+`tests/fixtures/communication-v4/identity-registry-v1.json`, `CMakeLists.txt`.
+[Schema/port sözleşmesi](../identity-registry.md). Mevcut proje otomatik rewrite edilmez.
 
 Gerçek/adayı kart başında source-map ve V0 coverage kurallarıyla kesinleştir.
 
