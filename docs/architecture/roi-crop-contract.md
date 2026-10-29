@@ -393,3 +393,16 @@ kalibrasyon edit'inden sonra güncel kaynak çıktısı edinilmeden öğretim ya
 Yeni yazılım/görsel kanıt, korunan Save odak hatası ve sınırlar
 [EFR-03b kapanışında](../archive/2026-10-29-efr-03b.md) kayıtlıdır. EFR-04 birleşik
 kabul bu teslimde başlatılmadı.
+
+## EFR-04 — birleşik kabul sözleşmesi
+
+Üç applicationType için Run Flow, güncel child cache'inden Run Tool ve
+Save/reopen sonrası Runtime aynı koordinat anlamını taşır. Runtime rect/mod
+taslak edit'ini izlemez. `editor_flow_roi_acceptance` ortak senaryoyu iki mod,
+nested crop ve ham dal ile sınar; terminal Image geometry ve typed port codec'i
+raw/local ID, boyut, rect zinciri, dönüşüm, frame/cycle/evaluation kökenini
+korur. Yeni raster başka cycle'a aitse tarihsel overlay için kullanılamaz.
+Logs ve ortak terminal özeti rasterin mevcut olmadığını açıkça söyler.
+Eski root kayıtlarına crop scope eklenmez; replay piksel arşivleme, yeniden
+üretme, algoritma çalıştırma veya aktif snapshot oluşturma değildir.
+Yeni koşumlar ve açık regresyonlar [EFR-04 kapanışında](../archive/2026-10-29-efr-04.md) tutulur.

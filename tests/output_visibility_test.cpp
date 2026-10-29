@@ -50,7 +50,7 @@ int main(int argc, char** argv) {
     QCoreApplication app(argc, argv);
     try {
         const QMap<QString, QSet<QString>> table{
-            {"industrial_camera", {"image"}}, {"roi", {"region"}}, {"image_file", {"image"}}, {"webcam", {"image"}}, {"preprocess", {"image"}},
+            {"industrial_camera", {"image"}}, {"roi", {"region", "image"}}, {"image_file", {"image"}}, {"webcam", {"image"}}, {"preprocess", {"image"}},
             {"template_match", {"found", "score", "point"}}, {"blob", {"found", "count", "area"}},
             {"edge", {"found", "point"}}, {"calculate", {"value"}}, {"measurement", {"value", "pass"}},
             {"edge_point", {"found", "pointMm"}}, {"code_read", {"found", "codes", "accepted"}},
@@ -65,6 +65,8 @@ int main(int argc, char** argv) {
             auto partial = tool(i.key()); partial.parameters = {};
             check(OutputVisibilityPolicy::defaults(partial) == i.value(), "missing mode uses registry default");
         }
+        auto croppedRoi = tool("roi");croppedRoi.parameters["cropImage"] = true;
+        verifyCatalog(croppedRoi, {"region", "image"});
 
         const QStringList operations{"point_distance", "x_offset", "y_offset", "point_line_distance",
             "point_segment_distance", "line_angle", "line_intersection", "parallel_distance",

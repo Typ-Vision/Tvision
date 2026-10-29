@@ -4,10 +4,11 @@
 
 ## Devam noktası
 
-**[EFR-03b](archive/2026-10-29-efr-03b.md):** checkbox, viewer ve child overlay; Release/core 19 geçti, UI 5/6 (eski Save odak hatası).
-Sonraki **EFR-04** birleşik kabul; başlatılmadı. [ROI sözleşmesi](architecture/roi-crop-contract.md).
+**[EFR-04](archive/2026-10-29-efr-04.md):** Release ON 170/OFF 131 geçti;
+her birinde 1 skipped. Üç tür/crop, replay/Logs tamam.
+Sonraki: kullanıcı yönlendirmesi. [ROI](architecture/roi-crop-contract.md).
 [03a-4](archive/2026-10-29-efr-03a-4.md) core kanıtı korunur.
-OS wheel/Save odak açık; Match/θ ertelendi.
+OS wheel native açık; Save odak son tam UI'de geçti. Match/θ ertelendi.
 
 **[DEV-DRIVE-01](archive/2026-10-28-dev-drive-01.md):** `D:/TVision`;
 OpenCV geçti, CTest kısmi.

@@ -144,7 +144,7 @@ void MainWindow::refreshFlowView(const EditorContext& context,const std::optiona
 void MainWindow::showExecutionResult() {showExecutionResultView(editorContext());}
 void MainWindow::showExecutionResultView(const EditorContext& context) {
     if(drawingImage_ && imageViewer_->drawingActive()) {
-        try {const auto current=editorSession_.toolImage(context,selectedToolId_);if(current.contentId()!=drawingImage_->contentId() || current.processingId()!=drawingImage_->processingId())throw std::runtime_error("Drawing image changed");}
+        try {const auto current=editorSession_.toolImage(context,selectedToolId_);const auto& a=current.metadata();const auto& b=drawingImage_->metadata();if(current.contentId()!=drawingImage_->contentId() || current.processingId()!=drawingImage_->processingId() || current.geometry()!=drawingImage_->geometry() || a.sourceId!=b.sourceId || a.frameId!=b.frameId || a.cycleId!=b.cycleId)throw std::runtime_error("Drawing image changed");}
         catch(const std::exception&){imageViewer_->cancelRoi();imageViewer_->drawRegion(false);drawingImage_.reset();}
     }else drawingImage_.reset();
     edgeProfile_->setDiagnostics({});
@@ -162,8 +162,9 @@ void MainWindow::showExecutionResultView(const EditorContext& context) {
         }
     if(displayImage){
         const auto& image=*displayImage;
+        QString sourceLabel=image.metadata().sourceId;for(const auto& source:service_.tools())if(source.id==image.metadata().sourceId){sourceLabel=source.name;break;}
         imageViewer_->setPreviewPixels(image.preview(),editorRecipeId_+"|"+image.metadata().sourceId+"|"+image.metadata().coordinateSystemId);
-        imageInfo_->setText(QString("%1 · %2 × %3 px · Frame %4").arg(drawingImage_ ? "Düzenleme: giriş görüntüsü":image.geometry().cropDepth()>0 ? "ROI kırpılmış görüntü":"Giriş / tam görüntü").arg(image.size().width()).arg(image.size().height()).arg(image.metadata().frameId));
+        imageInfo_->setText(QString("%1 · %2 × %3 px · Frame %4 · bağlı kaynak: %5").arg(drawingImage_ ? "Düzenleme: giriş görüntüsü":image.geometry().cropDepth()>0 ? "ROI kırpılmış görüntü":!image.processing().isEmpty() ? "İşlenmiş görüntü":"Giriş / tam görüntü").arg(image.size().width()).arg(image.size().height()).arg(image.metadata().frameId,sourceLabel));
         refreshMatchOverlayView(context);
     }else {imageViewer_->clearImage(missingInput.isEmpty() ? "Bu kaynak için güncel kare yok.":missingInput,editorSession_.busy());imageInfo_->setText("Görüntü yok. Kaynağı bağlayıp çalıştırın.");}
     if(!editorSession_.cycle){matchInfo_->clear();return;}

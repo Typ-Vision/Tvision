@@ -172,3 +172,11 @@ korur. Yerel INI tercihi değildir; editor schema artırılmaz. Region input sco
 Image açık modda child scope taşır. Upstream geometri edit'i teaching bağlarını
 geçersizleştirir; UI yeniden öğretim ihtiyacını görünür kılar.
 [Kesin raster/codec/consumer sözleşmesi](roi-crop-contract.md).
+
+Terminal Image çıktısı yalnız imageInfo özetidir; child görüntüde sürümlü
+`imageGeometry` raw/local ID, raw/child boyut, rect zinciri ve offset'i taşır.
+Child typed port envelope schema 2 aynı strict scope'u ve frame/cycle/evaluation
+kökenini saklar. Eski root envelope schema 1'e geometri eklenmez. Okuyucu
+rect zincirini doğrulayarak identity/offset/boyut uyuşmazlığını reddeder;
+bu işlem raster üretmez. Logs geçmiş sonucu salt okunur gösterir ve rasterin
+arşivlenmediğini açıklar. Reçete veya terminal kök şemasında yeni artış yoktur.

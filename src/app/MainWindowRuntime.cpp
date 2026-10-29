@@ -72,6 +72,7 @@ QWidget* MainWindow::makeRuntime() {
 }
 QWidget* MainWindow::makeLogs() {
     auto* page=new QWidget;auto* layout=new QVBoxLayout(page);logStatus_=plain("Kalıcı çevrim kaydı yok.");layout->addWidget(logStatus_);
+    auto* rasterNotice=plain("Tarihsel sonuç / köken • Görüntü mevcut değil: raster arşivlenmez; geçmiş görüntü/overlay gösterilemez.");rasterNotice->setObjectName("logRasterNotice");layout->addWidget(rasterNotice);
     auto* back=new QPushButton("Runtime'a dön");back->setObjectName("returnToRuntime");layout->addWidget(back);connect(back,&QPushButton::clicked,this,[this]{selectPage("runtime");});
     auto* refresh=new QPushButton("Kayıtları yenile");refresh->setObjectName("refreshLogs");layout->addWidget(refresh);connect(refresh,&QPushButton::clicked,this,[this]{refreshLogs();});
     auto* exportCsv=new QPushButton("Seçili kayıt türünü dışa aktar (CSV)");exportCsv->setObjectName("exportLogsCsv");layout->addWidget(exportCsv);

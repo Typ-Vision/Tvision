@@ -32,6 +32,7 @@ int main(int argc,char** argv){QCoreApplication app(argc,argv);try{
  const QSet<QString> kinds{"roi","preprocess","template_match","blob","edge","code_read","pattern_pose","shape_pose","edge_point","edge_pair","line_fit","circle_fit","geometry_measurement"};
  QSet<QString> actual;for(const auto& d:ToolRegistry::entries())for(const auto& p:d.inputs)if(p.type==PortType::Image)actual.insert(d.kind);check(actual==kinds,"registry consumer matrix changed");
  for(const auto& kind:kinds)for(int mode=0;mode<4;++mode){
+  if(kind=="code_read" && !BackendCapabilities::get("zxing-reader").available){QTextStream(stderr)<<"Code Read raster acceptance unavailable: ZXing OFF\n";continue;}
   QTextStream(stderr)<<kind<<" mode "<<mode<<"\n";
   cv::Mat pixels(300,320,CV_8U,cv::Scalar(20));
   if(kind=="circle_fit")for(int y=0;y<pixels.rows;++y)for(int x=0;x<pixels.cols;++x)pixels.at<uchar>(y,x)=uchar(std::lround(128+100*std::erf((std::hypot(x-160.,y-152.)-40)/1.5)));

@@ -62,7 +62,7 @@ bool MainWindow::verifyMultiSource(const QString& artifacts){
     service_.createRecipe("Industrial source draft","",ApplicationType::Measurement);
     const auto industrial=service_.addTool("industrial_camera");refreshWorkspace();selectPage("editor");selectTool(industrial);
     check(findChild<QLabel*>("industrialSourceStatus") && !findChild<QPushButton*>("runSelectedTool")->isEnabled(),"Industrial draft clearly unavailable");
-    check(matchInfo_->text().isEmpty() && imageInfo_->text()=="Görüntü yok.","New industrial recipe clears previous results/frame labels");
+    check(matchInfo_->text().isEmpty() && imageInfo_->text().startsWith("Görüntü yok.") && !imageViewer_->hasImage() && !editorSession_.frame && !editorSession_.cycle,"New industrial recipe clears previous results/frame labels");
     // Offline registry fixture: no provider or synthetic acquisition is linked into the app.
     MeasurementCamera camera{{"ui-industrial"},"Sentetik offline kamera",{"gentl",{},DeviceIdentityConfidence::Unavailable,1,{}},PhysicalDeviceIdentity{"VF","Offline fixture","SYNTHETIC",DeviceIdentityConfidence::SerialReported}};
     GeometryDescriptor geometry;geometry.resolution={640,480};geometry.sensorRoi=QRect(0,0,640,480);geometry.binning=QSize(1,1);geometry.decimation=QSize(1,1);geometry.reverse=GeometryMirror{};geometry.complete=true;

@@ -30,6 +30,12 @@ QByteArray MainWindow::matchSignature() const {
 void MainWindow::invalidateMatch() {if(edgeProfile_)edgeProfile_->setDiagnostics({});editorSession_.invalidateResults(); if(imageViewer_)imageViewer_->setToolOverlay({},{});if (matchInfo_) matchInfo_->setText("Eşleştirme sonucu yok.");}
 void MainWindow::refreshMatchOverlay() {refreshMatchOverlayView(editorContext());}
 void MainWindow::refreshMatchOverlayView(const EditorContext& context) {
+    if(drawingImage_ && imageViewer_->drawingActive()){
+        try{const auto current=editorSession_.toolImage(context,selectedToolId_);const auto& a=current.metadata();const auto& b=drawingImage_->metadata();
+            if(current.contentId()==drawingImage_->contentId() && current.processingId()==drawingImage_->processingId() && current.geometry()==drawingImage_->geometry() && a.sourceId==b.sourceId && a.frameId==b.frameId && a.cycleId==b.cycleId)return;
+        }catch(const std::exception&){}
+        imageViewer_->cancelRoi();imageViewer_->drawRegion(false);drawingImage_.reset();
+    }
     if (editorSession_.matchOutcome && editorSession_.resultSignature!=matchSignature()) invalidateMatch();
     imageViewer_->onRoiEdited={};
     imageViewer_->setScanGuides({});

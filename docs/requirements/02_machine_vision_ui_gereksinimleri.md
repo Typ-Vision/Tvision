@@ -353,6 +353,14 @@ Runtime viewer child overlay'i doğrulanmış köken ötelemesiyle yerleştirir.
 Kaynak/koordinat/boyut uyumsuzluğu yeniden çizim ister. Viewer'ın geçici
 geometri denemesi reçete ROI'sinden ayrı adlandırılır.
 
+Üç applicationType aynı crop ve köken kurallarını kullanır. Editor Run Tool
+güncel Image cache'ini tüketir; Run Flow yeni edinimle çalışır. Kaydedilmiş
+Runtime snapshot'ı sonraki taslak mod/rect değişikliklerinden etkilenmez.
+Logs/restart geçmiş sonucu ve saklanmış kökeni gösterir; raster arşivlenmediği
+için **Görüntü mevcut değil** açıklaması görünür. Geçmiş crop/overlay çizilmez,
+güncel kare geçmiş sonucun arka planı olmaz. Eski kayıtların eksik crop
+kökeni tahmin edilmez. Replay algoritma/edinim veya üretim izni başlatmaz.
+
 Şekiller: Rectangle, Circle, Ellipse, Polygon, Rotated Rectangle, Freehand.
 
 Properties: X, Y, Width, Height, Radius, Rotation, point list ve Reference. Reference seçenekleri Absolute, Match Pose, Tool Output.

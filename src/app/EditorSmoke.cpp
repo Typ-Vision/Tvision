@@ -178,7 +178,8 @@ bool MainWindow::verifyWebcam(const QString& artifacts) {
     return true;
 }
 bool MainWindow::verifyEditor(const QString& artifacts) {
-    if (!service_.activeRecipe()) return false;
+    auto fail=[](int line){QTextStream(stderr)<<"Editor smoke checkpoint "<<line<<'\n';return false;};
+    if (!service_.activeRecipe()) return fail(__LINE__);
     const QString recipeId=service_.activeRecipe()->id;
     const QString fixture=QDir(artifacts).filePath("görüntü_ölçüm.png");
     QImage image(2592,1944,QImage::Format_RGB888); image.fill(QColor(51,102,153));
@@ -193,51 +194,51 @@ bool MainWindow::verifyEditor(const QString& artifacts) {
         painter.setPen(QColor("#edf4fb")); auto font=painter.font(); font.setPixelSize(52); painter.setFont(font);
         painter.drawText(210,340,"VisionFlow • 5 MP test görüntüsü");
     }
-    if (!image.save(fixture)) return false;
-    if (!loadEditorImage(fixture) || !editorSession_.frame || editorSession_.frame->size()!=image.size()) return false;
-    if (!editorSession_.frame->pixelText(0,0).contains("R:51 G:102 B:153")) return false;
+    if (!image.save(fixture)) return fail(__LINE__);
+    if (!loadEditorImage(fixture) || !editorSession_.frame || editorSession_.frame->size()!=image.size()) return fail(__LINE__);
+    if (!editorSession_.frame->pixelText(0,0).contains("R:51 G:102 B:153")) return fail(__LINE__);
     const auto sourceId=selectedToolId_;
     const QString invalid=QDir(artifacts).filePath("corrupt-image.png");
-    {QFile file(invalid); if (!file.open(QIODevice::WriteOnly)) return false; file.write("not an image");}
-    if (loadEditorImage(invalid) || !editorSession_.frame || service_.imageFilePath()!=fixture) return false;
+    {QFile file(invalid); if (!file.open(QIODevice::WriteOnly)) return fail(__LINE__); file.write("not an image");}
+    if (loadEditorImage(invalid) || !editorSession_.frame || service_.imageFilePath()!=fixture) return fail(__LINE__);
     for(int i=0;i<toolbox_->count();++i)if(toolbox_->item(i)->data(Qt::UserRole)=="template_match")toolbox_->setCurrentRow(i);
     findChild<QPushButton*>("addTool")->click();
-    const auto matchId=selectedToolId_; if (matchId==sourceId) return false;
-    auto* score=propertiesBody_->findChild<QDoubleSpinBox*>("minScore"); if (!score) return false;
+    const auto matchId=selectedToolId_; if (matchId==sourceId) return fail(__LINE__);
+    auto* score=propertiesBody_->findChild<QDoubleSpinBox*>("minScore"); if (!score) return fail(__LINE__);
     score->setValue(84.5);
-    auto* name=propertiesBody_->findChild<QLineEdit*>("toolName"); if (!name) return false;
-    name->setText("Match_Part"); if (!applyToolProperties()) return false;
-    name->setText(""); if (applyToolProperties()) return false;
-    saveProject(); if (!service_.dirty()) return false;
-    name->setText("Match_Part"); if (!applyToolProperties()) return false;
-    if (!service_.dirty() || service_.activeRecipe()->status!=RecipeStatus::Draft) return false;
+    auto* name=propertiesBody_->findChild<QLineEdit*>("toolName"); if (!name) return fail(__LINE__);
+    name->setText("Match_Part"); if (!applyToolProperties()) return fail(__LINE__);
+    name->setText(""); if (applyToolProperties()) return fail(__LINE__);
+    saveProject(); if (!service_.dirty()) return fail(__LINE__);
+    name->setText("Match_Part"); if (!applyToolProperties()) return fail(__LINE__);
+    if (!service_.dirty() || service_.activeRecipe()->status!=RecipeStatus::Draft) return fail(__LINE__);
+    selectTool(sourceId); if (!propertiesBody_->findChild<QPushButton*>("removeTool")) return fail(__LINE__);
     findChild<QAction*>("zoomIn")->trigger(); const auto zoom=imageViewer_->zoomFactor();
-    findChild<QAction*>("zoomOut")->trigger(); if (imageViewer_->zoomFactor()>=zoom) return false;
-    selectTool(sourceId); if (!propertiesBody_->findChild<QPushButton*>("removeTool")) return false;
+    findChild<QAction*>("zoomOut")->trigger(); if (imageViewer_->zoomFactor()>=zoom) return fail(__LINE__);
     imageViewer_->actualSize(); imageViewer_->centerOn(1000,900);
     const auto viewPoint=imageViewer_->mapFromScene(QPointF(1000,900));
     QMouseEvent move(QEvent::MouseMove,QPointF(viewPoint),QPointF(imageViewer_->viewport()->mapToGlobal(viewPoint)),Qt::NoButton,Qt::NoButton,Qt::NoModifier);
     QApplication::sendEvent(imageViewer_->viewport(),&move);
-    if (!pixelInfo_->text().contains("X:1000 Y:900")) return false;
+    if (!pixelInfo_->text().contains("X:1000 Y:900")) return fail(__LINE__);
     selectTool(matchId); service_.save(); service_.openProject(service_.path()); service_.selectRecipe(recipeId); imageBinding_.clear(); refreshWorkspace();
-    const auto tools=service_.tools(); if (tools.size()!=2 || tools[1].id!=matchId || tools[1].name!="Match_Part" || std::abs(tools[1].parameters["minScore"].toDouble()-0.845)>1e-9) return false;
-    if (!editorSession_.frame || editorSession_.frame->size()!=image.size()) return false;
+    const auto tools=service_.tools(); if (tools.size()!=2 || tools[1].id!=matchId || tools[1].name!="Match_Part" || std::abs(tools[1].parameters["minScore"].toDouble()-0.845)>1e-9) return fail(__LINE__);
+    if (!editorSession_.frame || editorSession_.frame->size()!=image.size()) return fail(__LINE__);
     selectTool(matchId); selectPage("editor"); imageViewer_->fitImage(); QApplication::processEvents();
     grab().save(QDir(artifacts).filePath("step3-editor.png"));
     // A different recipe must never inherit the previous recipe's frame.
     service_.selectRecipe(service_.project().recipes[0].id); refreshWorkspace();
-    if (editorSession_.frame || imageViewer_->hasImage()) return false;
+    if (editorSession_.frame || imageViewer_->hasImage()) return fail(__LINE__);
     service_.selectRecipe(recipeId); refreshWorkspace();
-    if (!editorSession_.frame || service_.dirty()) return false;
+    if (!editorSession_.frame || service_.dirty()) return fail(__LINE__);
     selectTool(sourceId); auto* enabled=propertiesBody_->findChild<QCheckBox*>("toolEnabled");
-    enabled->setChecked(false); if (imageViewer_->hasImage()) return false;
-    enabled->setChecked(true); if (!imageViewer_->hasImage()) return false;
+    enabled->setChecked(false); if (imageViewer_->hasImage()) return fail(__LINE__);
+    enabled->setChecked(true); if (!imageViewer_->hasImage()) return fail(__LINE__);
     service_.save(); refreshWorkspace(); selectTool(matchId);
-    {QFile file(fixture); if (!file.open(QIODevice::WriteOnly)) return false; file.write("broken after save");}
-    findChild<QAction*>("reloadImage")->trigger(); if (editorSession_.frame || imageViewer_->hasImage() || service_.dirty()) return false;
-    if (!image.save(fixture)) return false;
+    {QFile file(fixture); if (!file.open(QIODevice::WriteOnly)) return fail(__LINE__); file.write("broken after save");}
+    findChild<QAction*>("reloadImage")->trigger(); if (editorSession_.frame || imageViewer_->hasImage() || service_.dirty()) return fail(__LINE__);
+    if (!image.save(fixture)) return fail(__LINE__);
     findChild<QAction*>("reloadImage")->trigger();
-    if (!imageViewer_->hasImage() || !workspaceError_->isHidden() || service_.dirty()) return false;
+    if (!imageViewer_->hasImage() || !workspaceError_->isHidden() || service_.dirty()) return fail(__LINE__);
     QApplication::processEvents(); grab().save(QDir(artifacts).filePath("step3-editor.png")); return true;
 }
 bool MainWindow::verifyMeasurement(const QString& artifacts) {
@@ -388,6 +389,10 @@ bool MainWindow::verifyMatching(const QString& artifacts) {
     auto* imageInput=propertiesBody_->findChild<QComboBox*>("input_image");if(!imageInput)return failure(__LINE__);
     const auto sourceId=service_.tools()[0].id;const auto inputIndex=imageInput->findData(sourceId+"/image");if(inputIndex<1)return failure(__LINE__);
     imageInput->setCurrentIndex(inputIndex);
+    if(!service_.tools()[1].parameters["modelPng"].toString().isEmpty())return failure(__LINE__);
+    // Reconnecting an Image input cannot revive teaching invalidated by unbind.
+    beginRoi(true);commitRoi(QRect(700,650,64,64));imageViewer_->drawRegion(false);
+    if(!wait() || service_.tools()[1].parameters["modelPng"].toString().isEmpty())return failure(__LINE__);
     runMatch(); close(); if (!isVisible()) return failure(__LINE__);
     if (!wait() || !editorSession_.matchOutcome || !editorSession_.matchOutcome->accepted || editorSession_.matchOutcome->rectangle.topLeft()!=QPoint(700,650)) return failure(__LINE__);
     if(!editorSession_.references.contains(id) || editorSession_.references[id].second!=QPointF(731.5,681.5))return failure(__LINE__);
@@ -453,7 +458,7 @@ bool MainWindow::verifyPreprocessing(const QString& artifacts) {
     propertiesBody_->findChild<QPushButton*>("preprocessAdd")->click();auto* op=propertiesBody_->findChild<QComboBox*>("preprocessOperation");op->setCurrentIndex(op->findData("threshold"));
     auto* settings=dynamic_cast<PreprocessEditor*>(propertiesBody_->findChild<QWidget*>("preprocessSettings"));check(settings && settings->parameters()["steps"].toArray().size()==1,"preprocess step edit");
     runFlow();wait();check(editorSession_.cycle && editorSession_.cycle->state==ExecutionState::Done && editorSession_.frame && editorSession_.frame->processing().isEmpty(),"preprocess UI real flow raw frame");
-    bool output=false;for(const auto& r:editorSession_.cycle->tools)if(r.toolId==pre){const auto image=std::get<ImageFrame>(r.outputs["image"].data);output=image.processing().size()==1 && image.contentId()!=editorSession_.frame->contentId();}check(output && imageInfo_->text().contains("İşlenmiş Gray8"),"actual processed output displayed");
+    bool output=false;for(const auto& r:editorSession_.cycle->tools)if(r.toolId==pre){const auto image=std::get<ImageFrame>(r.outputs["image"].data);output=image.processing().size()==1 && image.contentId()!=editorSession_.frame->contentId();}check(output && imageInfo_->text().contains("İşlenmiş görüntü"),"actual processed output displayed");
     imageViewer_->zoomBy(1.2);const auto transform=imageViewer_->transform();const auto hash=editorSession_.frame->contentId();runExecution(pre);wait();check(editorSession_.cycle->partial && editorSession_.cycle->executedTools==QStringList{pre} && editorSession_.frame->contentId()==hash && imageViewer_->transform()==transform,"preprocess Run Tool preserves raw and zoom");
     resize(1400,900);horizontal_->setSizes({160,700,360});vertical_->setSizes({610,180});QApplication::processEvents();
     findChild<QScrollArea*>("propertiesScroll")->ensureWidgetVisible(settings);findChild<QScrollArea*>("propertiesScroll")->horizontalScrollBar()->setValue(0);QApplication::processEvents();grab().save(QDir(artifacts).filePath("preprocess-editor.png"));
@@ -563,6 +568,7 @@ bool MainWindow::verifyCircle(const QString& artifacts){
     service_.createProject("Circle UI","",QDir(artifacts).filePath("circle-ui-"+QUuid::createUuid().toString(QUuid::WithoutBraces)+".vfproject"),"file");service_.createRecipe("Circle","",ApplicationType::Measurement,"file");const auto source=service_.setImageFile(imagePath);refreshWorkspace();selectPage("editor");selectTool(source);runExecution(source);wait();check(editorSession_.frame.has_value(),"Circle UI actual acquisition");
     QListWidgetItem* item=nullptr;for(int i=0;i<toolbox_->count();++i)if(toolbox_->item(i)->data(Qt::UserRole)=="circle_fit")item=toolbox_->item(i);check(item,"Circle Toolbox");toolbox_->setCurrentItem(item);findChild<QPushButton*>("addTool")->click();const auto id=selectedToolId_;check(propertiesBody_->findChild<QComboBox*>("mt_mode")->currentText()=="calibrated","new Circle defaults to calibrated");propertiesBody_->findChild<QComboBox*>("mt_mode")->setCurrentText("pixel");auto* input=propertiesBody_->findChild<QComboBox*>("input_image");input->setCurrentIndex(input->findData(source+"/image"));
 
+    wait(); // Drain automatic new-tool drawing preparation before a numeric command.
     auto geometry=[&](double cx,double cy,double inner,double outer,double sweep){selectTool(id);for(const auto& v:QVector<QPair<QString,double>>{{"cx",cx},{"cy",cy},{"inner",inner},{"outer",outer},{"start",17.3},{"sweep",sweep}})propertiesBody_->findChild<QDoubleSpinBox*>("mt_roi_"+v.first)->setValue(v.second);propertiesBody_->findChild<QPushButton*>("metrologyApplyRoi")->click();wait();check(imageViewer_->roi().has_value(),"Circle numeric ROI commit");};
     geometry(96.25,95.75,34,46,360);auto before=imageViewer_->roi();imageViewer_->undoRoi();wait();check(!imageViewer_->roi(),"Circle undo bound ROI");geometry(96.25,95.75,34,46,360);check(imageViewer_->roi()==before,"Circle exact subpixel numeric restore");
     propertiesBody_->findChild<QComboBox*>("mt_polarity")->setCurrentIndex(propertiesBody_->findChild<QComboBox*>("mt_polarity")->findData("rising"));runFlow();wait();auto result=[&]()->ToolResult{check(editorSession_.cycle.has_value(),"Circle cycle");for(const auto& r:editorSession_.cycle->tools)if(r.toolId==id)return r;throw std::runtime_error("Circle result missing");};check(result().state==ExecutionState::Done && std::abs(std::get<double>(result().outputs["diameterPx"].data)-80)<.3,"Circle UI actual px");

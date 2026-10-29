@@ -109,6 +109,7 @@ int main(int argc, char* argv[]) {
         bool circleValid=false;
         if(metrologyValid)try{circleValid=window.verifyCircle(buildDir.absolutePath());}catch(const std::exception& error){QTextStream(stderr)<<error.what()<<'\n';}
         const bool valid=circleValid && metrologyValid && edgeValid && codesValid && preprocessValid && shellValid && workspaceValid && editorValid && matchingValid && executionValid && cameraValid && webcamValid && measurementValid && runtimeValid && window.verifySession();
+        if(!valid)QTextStream(stderr)<<"Smoke stages: shell="<<shellValid<<" workspace="<<workspaceValid<<" editor="<<editorValid<<" matching="<<matchingValid<<" execution="<<executionValid<<" camera="<<cameraValid<<" webcam="<<webcamValid<<" measurement="<<measurementValid<<" runtime="<<runtimeValid<<" preprocessing="<<preprocessValid<<" codes="<<codesValid<<" edge="<<edgeValid<<" metrology="<<metrologyValid<<" circle="<<circleValid<<'\n';
         window.close();
         QTextStream(stdout) << (valid ? "PASS" : "FAIL") << ": workspace, session restore, image viewer, ROI teaching, matching and persistence\n";
         app.exit(valid ? 0 : 1);

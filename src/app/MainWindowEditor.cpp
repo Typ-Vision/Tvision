@@ -133,9 +133,10 @@ QWidget* MainWindow::makeEditor() {
     auto* footer=new QHBoxLayout; pixelInfo_=note("Piksel: —"); zoomInfo_=note("Zoom: —"); footer->addWidget(pixelInfo_,1); footer->addWidget(zoomInfo_); imageLayout->addLayout(footer);
     imageViewer_->onZoom=[this](double zoom){zoomInfo_->setText(QString("Zoom: %1%").arg(zoom*100,0,'f',1)); pixelInfo_->setText("Piksel: —");};
     imageViewer_->onPixel=[this](QPoint pixel){
+        if(pixel.x()<0 || pixel.y()<0){pixelInfo_->setText("Piksel: —");return;}
         std::optional<ImageFrame> displayed=drawingImage_ ? drawingImage_:editorSession_.frame;
-        if(!drawingImage_){try{displayed=editorSession_.toolImage(editorContext(),selectedToolId_);}catch(const std::exception&){}
-            if(editorSession_.cycle && editorSession_.cycle->configId==editorSession_.signature(editorContext()))for(const auto& r:editorSession_.cycle->tools)if(r.toolId==selectedToolId_ && r.state==ExecutionState::Done){const auto output=r.outputs.value("image");if(output.valid)if(const auto* image=std::get_if<ImageFrame>(&output.data))displayed=*image;}}
+        if(!drawingImage_){const auto context=editorContext();try{displayed=editorSession_.toolImage(context,selectedToolId_);}catch(const std::exception&){}
+            if(editorSession_.cycle && editorSession_.cycle->configId==editorSession_.signature(context))for(const auto& r:editorSession_.cycle->tools)if(r.toolId==selectedToolId_ && r.state==ExecutionState::Done){const auto output=r.outputs.value("image");if(output.valid)if(const auto* image=std::get_if<ImageFrame>(&output.data))displayed=*image;}}
         pixelInfo_->setText(displayed && pixel.x()>=0 ? QString("X:%1 Y:%2 px  |  %3").arg(pixel.x()).arg(pixel.y()).arg(displayed->pixelText(pixel.x(),pixel.y())) : "Piksel: —");
     };
     imageViewer_->onImageClicked={};

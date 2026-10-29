@@ -17,6 +17,9 @@
 #include <QSettings>
 #include <QTextStream>
 #include <QTemporaryDir>
+#include <QTextEdit>
+#include <QTableWidget>
+#include <QLabel>
 #include <QThread>
 namespace visionflow {
 bool MainWindow::verifyRuntimeOverlays(const QString& artifacts){
@@ -63,6 +66,10 @@ bool MainWindow::verifyRuntimeOverlays(const QString& artifacts){
     for(const auto* item:runtimeViewer_->scene()->items())if(item->data(0)=="runtimeOverlay")check(item->type()!=QGraphicsLineItem::Type,"Independent points never joined into distance lines");
     showRuntimeResult();
     runtimeAction("stop");check(ids().isEmpty() && !runtimeViewer_->hasImage(),"Stop clears layers");
+    selectPage("logs");refreshLogs();check(logTable_->rowCount()>0,"Historical results available");logTable_->selectRow(0);QApplication::processEvents();
+    check(findChild<QLabel*>("logRasterNotice")->text().contains("Görüntü mevcut değil") && findChild<QTextEdit*>("logDetail")->toPlainText().contains("Görüntü mevcut değil"),"Logs explicitly reports unavailable historical raster");
+    check(!runtimeViewer_->hasImage() && ids().isEmpty() && !runtimeResult_,"Selecting historical result cannot restore raster or overlays");
+    for(const auto size:{QSize(1400,900),QSize(850,600)}){resize(size);QApplication::processEvents();check(grab().save(path+QString("/logs-no-raster-%1.png").arg(size.width())),"Historical raster notice screenshot");}
     QFile report(path+"/render.txt");check(report.open(QIODevice::WriteOnly),"Render report");QTextStream(&report)<<"800x500; 4 tools/source; 2 sources; scene items="<<count<<"; 20 refresh ms="<<elapsed<<"; legacy single 8192-point presentation ms="<<baseline<<"; collection 4x2048 points ms="<<denseMs<<"; dense scene items="<<denseItems<<"; checks="<<checks<<'\n';QTextStream(stdout)<<checks<<" Runtime overlay checks passed\n";return true;
 }
 }

@@ -46,3 +46,16 @@ sunulur. Görüntü sunum kimliği local coordinate ID içerir; aynı boyutta fa
 konum değişimi eski overlay/undo'yu taşımaz. Runtime ham görüntüsünde child
 layer'ları source/frame/cycle/root scope doğrulamasından sonra rootOffset
 farkıyla açıkça çevrilir; seçili child viewer local layer kullanır.
+Aktif çizim aynı content/processing/geometri ve source/frame/cycle girdisiyle
+yenilemede korunur; bu köken değişirse taslak iptal edilir. İşlenmiş görüntü
+etiketi ve bağlı kaynak adı gerçek seçili Image rasterını anlatır.
+
+## Tarihsel görüntü sınırı
+
+Terminal replay saklanan sonuç ve kökenin okunmasıdır. Image trace raster bytes
+taşımaz; crop için root/local coordinate ID, raw boyut, child boyut, rect zinciri,
+offset ve doğrulanan geometri kimliği saklanır. Frame/cycle ilişkisi terminal
+kaydıyla doğrulanır. Bu scope piksel veya yeniden çalıştırma izni üretmez.
+Logs görüntünün mevcut olmadığını açıkça belirtir; güncel kare geçmiş sonuca
+arka plan yapılmaz, geçmiş crop/overlay çizilmez. Scope taşımayan eski kayıt
+aynı sınırlı tarihsel bilgiyle okunur; crop dönüşümü tahmin edilmez.
