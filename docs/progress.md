@@ -4,13 +4,13 @@
 
 ## Devam noktası
 
-**[DOC-WORK-01](archive/2026-10-29-doc-work-01.md):**
-[Protokol](working-protocol.md); sonraki 3 kartta ölçüm.
+**[COMM4-PLAN-01](archive/2026-10-29-comm4-plan-01.md):**
+[Tek server/çok istasyon/robot planı](architecture/communication-v4/README.md).
+27 kart, Sol6.1/medium; sıradaki COMM4-01. Kod yok.
 
-**[EFR-04](archive/2026-10-29-efr-04.md):** Release ON 170/OFF 131,
-birer skipped; üç tür/crop/replay/Logs tamam. [ROI](architecture/roi-crop-contract.md),
-[03a-4](archive/2026-10-29-efr-03a-4.md). Native wheel açık;
-Save odak son tam UI'de geçti. Match/θ ertelendi.
+[DOC-WORK-01](working-protocol.md): sonraki 3 kartta ölçüm.
+[EFR-04](archive/2026-10-29-efr-04.md): ON170/OFF131, birer skipped;
+Wheel açık, Match/θ ertelendi.
 
 [D:/TVision](archive/2026-10-28-dev-drive-01.md): OpenCV geçti; CTest kısmi.
 

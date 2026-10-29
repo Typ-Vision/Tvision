@@ -1,0 +1,84 @@
+# COMM4 — Tek bağlantı, bağımsız istasyonlar ve robot kalibrasyonu
+
+**Durum: tasarım ve sıralı uygulama planı; uygulanmış ürün özelliği değildir.**
+29 Ekim 2026. Kullanıcı seçimi: GPT-6.1 Sol / medium. Varsayılan oturum kapsamı
+tek karttır; ajanlar paralel çalışmaz. **Sonraki görev: [COMM4-01](cards/COMM4-01.md).**
+
+## Okuma ve kapsam
+
+Başlangıç paketi AGENTS, `docs/progress.md`, kök README ve çalışma protokolüdür.
+Ardından bu indeks, [ortak sözleşme](contract.md), seçili kart ve yalnız kartın
+işaret ettiği [wire bölümü](wire.md) / [kabul matrisi](verification.md) okunur.
+Kartların tamamını her oturumda yüklemeyin.
+
+Hedef; uygulama açılışında tek TCP listener, aynı bağlantıda hedef istasyona
+tetik, istasyon başına aktif reçete/kamera ve kalıcı terminal sonuç+ACK akışıdır.
+Run/Auto ağın ömründen ayrıdır. Üç istasyon alt sınır örneğidir; tasarım sabit üçlü
+değildir. Set Variables ve doğrudan typed output ataması aynı sabit Number/Flag/
+Text/whole Pose şablonuna gider. Eye-to-hand ve eye-in-hand oturumları üretimden
+ayrı lease kullanır; robot hareket komutu kapsam dışıdır.
+
+Mevcut [v3 sözleşmesi](../communication/contract.md) ve
+[kullanımı](../communication/tcp-v3-usage.md) tarihsel/uygulanan baseline'dır.
+COMM4 hedefleri bunların uygulanmış olduğuna dair iddia oluşturmaz. Eski arşiv,
+dedup ve ACK kayıtları korunur. Native OECS/frame correlation, lens/bağımsız mm,
+fiziksel PLC/robot ve dağıtım engelleri bu planla kapanmaz.
+
+## Sıra ve durma kapıları
+
+| Kart | Tek sorumluluk | Önkoşul |
+| --- | --- | --- |
+| [01](cards/COMM4-01.md) | Güncel kaynak ve davranış envanteri | Yok |
+| [02](cards/COMM4-02.md) | Wire byte fixture ve sözleşme dondurma | 01 |
+| [03](cards/COMM4-03.md) | Kalıcı kimlik kataloğu | 02 |
+| [04](cards/COMM4-04.md) | Station domain ve immutable aktivasyon | 03 |
+| [05](cards/COMM4-05.md) | Listener/prod yaşam döngüsü ayrımı | 04 |
+| [06](cards/COMM4-06.md) | Bounded binary codec/framer | 02,05 |
+| [07](cards/COMM4-07.md) | HELLO, session ve peer sahipliği | 03,06 |
+| [08](cards/COMM4-08.md) | İstasyon admission ve tetik yönlendirme | 04,07 |
+| [08a](cards/COMM4-08a.md) | PLC reçete seçimi, Auto/Stop ve yerel kontrol yarışı | 08 |
+| [09](cards/COMM4-09.md) | Bağımsız istasyon yürütmesi | 08a |
+| [10](cards/COMM4-10.md) | Ortak kamera kaynak arbitrajı | 09 |
+| [11](cards/COMM4-11.md) | Sabit şablon ve typed assignment domain | 04 |
+| [12](cards/COMM4-12.md) | Immutable publication değerlendirmesi | 09,11 |
+| [13](cards/COMM4-13.md) | Kalıcı terminal ve exact ACK ledger | 07,12 |
+| [14](cards/COMM4-14.md) | Reconnect/retry/backpressure | 13 |
+| [15](cards/COMM4-15.md) | Transactional legacy migration | 03,14 |
+| [16](cards/COMM4-16.md) | Tek Communication UI | 05,10,14,15 |
+| [17](cards/COMM4-17.md) | Publish assignment UI | 11,12,16 |
+| [18](cards/COMM4-18.md) | Robot/optik araştırma ve 6D uygunluk kapısı | 01,02 |
+| [19](cards/COMM4-19.md) | Frame ve robot pose adapter sözleşmesi | 03,18 |
+| [20](cards/COMM4-20.md) | Kalibrasyon session ve lease | 10,19 |
+| [21](cards/COMM4-21.md) | SAMPLE pose/frame eşleştirme | 13,20 |
+| [22](cards/COMM4-22.md) | İki kurulum için aday solve | 18,21 |
+| [23](cards/COMM4-23.md) | Bağımsız validate ve atomik activate | 22 |
+| [24](cards/COMM4-24.md) | Kalibrasyon UI ve operatör akışı | 16,23 |
+| [25](cards/COMM4-25.md) | PLC/robot simulator ve dayanıklılık kabulü | 14,17,24 |
+| [26](cards/COMM4-26.md) | Entegre kapanış ve fiziksel kabul raporu | 25 |
+
+Kartlar listedeki sırayla uygulanır; önkoşul tablosu bağımlılığı açıklar,
+paralel ajan yetkisi vermez. COMM4-02 dondurulmadan codec/PLC uygulaması başlamaz.
+Toplam 27 kart vardır. COMM4-02 robot pose taşıma kabiliyetleri için 18'in dar
+protokol ön kontrolünü erkene alır; kapsamlı optik/solver araştırması 18'de kalır.
+Marka bilinmiyorsa generic quaternion adapter açıkça seçilir, controller uyumluluğu
+kanıtlanmış sayılmaz; sonradan gereken wire değişikliği yeni contract freeze ister.
+COMM4-18 eksik fiziksel bilgiyle yazılım arayüzlerini ve fixture araştırmasını
+ilerletebilir; gerçek solver/activation ve fiziksel kabul uygunluk kapısını
+atlayamaz. Gerekli veri yoksa 22–26 yazılım fixture kapsamı ve fiziksel blok ayrı
+raporlanır; fixture üretim uygunluğu doğurmaz.
+
+## Başlatma mesajı
+
+```text
+COMM4-01, docs/architecture/communication-v4/cards/COMM4-01.md.
+D:/TVision; GPT-6.1 Sol / medium; tek uygulayıcı, başka ajan açma.
+AGENTS ve working-protocol'u uygula. Kartın sahipliğinde çalış;
+kullanıcının README/prototypes değişikliklerini koru. Önce güncel kaynak,
+graph coverage ve baseline envanterini tamamla. Gerçek COMM4 uygulaması
+başlatma. Kapanış kaydı, progress ve arşiv indeksi, bağlam kontrolü ve
+tek COMM4-01 commit; push yok. Sonraki kartı otomatik başlatma.
+```
+
+Her kart kendi ID'siyle tek commit, tarihli kapanış kaydı ve progress güncellemesi
+ister. Bu planın hazırlanması kartların tamamlandığı anlamına gelmez. Gerçek dosya
+sahipliği COMM4-01'de netleşir; kartlardaki yeni sınıf/dosya adları açıkça adaydır.
