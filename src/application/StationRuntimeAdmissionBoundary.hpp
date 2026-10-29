@@ -3,8 +3,9 @@
 #include "StationRunController.hpp"
 
 namespace visionflow {
-// Adapter over the existing per-station Coordinator. Worker scheduling and
-// physical leases remain injected application responsibilities (COMM4-09/10).
+// Adapter over the existing per-station Coordinator. StationExecutionRegistry
+// supplies bounded worker reservation/dispatch; physical leases remain injected
+// application responsibilities (COMM4-10).
 class StationRuntimeAdmissionBoundary final:public StationAdmissionBoundary {
 public:
     using Manifest=std::function<std::optional<StationAdmissionSnapshot>(const QUuid&)>;

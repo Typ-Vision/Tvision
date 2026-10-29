@@ -1,6 +1,6 @@
 # COMM4-09 — Bağımsız istasyon yürütmesi
 
-Durum: planlandı, başlanmadı. Model: **GPT-6.1 Sol / medium**.
+Durum: tamamlandı. Model: **GPT-6.1 Sol / medium**.
 Tek oturum kapsamı ve ortak kurallar [indekste](../README.md), kapanış
 kuralları [V0](../verification.md) içindedir.
 
@@ -17,7 +17,10 @@ Tek shared Runtime davranışını station-owned execution context ve bounded wo
 
 Gerçek RuntimeService/Coordinator ve execution scheduler kaynakları01 haritasından; yeni aday StationExecutionRegistry. Kopya applicationType veya ikinci algoritma motoru yok.
 
-Gerçek/adayı kart başında source-map ve V0 coverage kurallarıyla kesinleştir.
+Kesinleşen sahiplik: `src/application/StationExecutionRegistry.hpp/.cpp`,
+`tests/station_execution_test.cpp`, CMake kayıtları ve mevcut admission adapter'ının
+composition açıklaması. [Uygulanan port sözleşmesi](../station-execution.md).
+Gerçek Runtime/Coordinator motoru korunur; [kapanış](../../../archive/2026-10-30-comm4-09.md).
 
 ## Kapsam dışı
 

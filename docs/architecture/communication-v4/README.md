@@ -2,7 +2,7 @@
 
 **Durum: sıralı uygulama sürüyor; hedef sistem henüz tamamlanmadı.**
 29 Ekim 2026. Kullanıcı seçimi: GPT-6.1 Sol / medium. Varsayılan oturum kapsamı
-tek karttır; ajanlar paralel çalışmaz. **Sonraki görev: [COMM4-09](cards/COMM4-09.md).**
+tek karttır; ajanlar paralel çalışmaz. **Sonraki görev: [COMM4-10](cards/COMM4-10.md).**
 
 **COMM4-01 tamam:** [güncel kaynak, test ve kart sahiplik haritası](source-map.md).
 **COMM4-02 tamam:** [wire fixture freeze](freeze-comm4-02.md).
@@ -30,6 +30,9 @@ normal main station/ledger/worker composition'ı sonraki entegrasyonları bekler
 
 **COMM4-08a tamam:** [PLC reçete seçimi ve ortak Auto/Stop portu](station-control.md).
 Durable control port, generation fence ve exact kontrol ACK'i; gerçek disk ledger13'te.
+
+**COMM4-09 tamam:** [bağımsız bounded istasyon yürütmesi](station-execution.md).
+Ortak Runtime motoru, station-local completion/drain ve kayıt/sink retry izolasyonu.
 
 ## Okuma ve kapsam
 
@@ -64,7 +67,7 @@ fiziksel PLC/robot ve dağıtım engelleri bu planla kapanmaz.
 | [07](cards/COMM4-07.md) | HELLO, session ve peer sahipliği — tamam | 03,06 |
 | [08](cards/COMM4-08.md) | İstasyon admission ve tetik yönlendirme — tamam | 04,07 |
 | [08a](cards/COMM4-08a.md) | PLC reçete seçimi, Auto/Stop ve yerel kontrol yarışı — tamam | 08 |
-| [09](cards/COMM4-09.md) | Bağımsız istasyon yürütmesi | 08a |
+| [09](cards/COMM4-09.md) | Bağımsız istasyon yürütmesi — tamam | 08a |
 | [10](cards/COMM4-10.md) | Ortak kamera kaynak arbitrajı | 09 |
 | [11](cards/COMM4-11.md) | Sabit şablon ve typed assignment domain | 04 |
 | [12](cards/COMM4-12.md) | Immutable publication değerlendirmesi | 09,11 |

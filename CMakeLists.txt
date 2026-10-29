@@ -128,6 +128,7 @@ target_sources(visionflow_acquisition PRIVATE src/application/StationRunControll
 target_sources(visionflow_acquisition PRIVATE src/application/CommunicationPeerSessionService.cpp)
 target_sources(visionflow_acquisition PRIVATE src/application/StationAdmissionService.cpp)
 target_sources(visionflow_acquisition PRIVATE src/application/StationRuntimeAdmissionBoundary.cpp)
+target_sources(visionflow_acquisition PRIVATE src/application/StationExecutionRegistry.cpp)
 target_sources(visionflow_acquisition PRIVATE src/application/StationControlService.cpp)
 target_compile_definitions(visionflow_acquisition PRIVATE
   VISIONFLOW_DIAGNOSTIC_BUILD_TYPE="$<CONFIG>"
@@ -183,6 +184,10 @@ if(BUILD_TESTING)
   target_link_libraries(communication_peer_session_test PRIVATE visionflow_acquisition)
   add_test(NAME communication_peer_session COMMAND communication_peer_session_test)
   add_executable(station_admission_test tests/station_admission_test.cpp)
+  add_executable(station_execution_test tests/station_execution_test.cpp)
+  target_link_libraries(station_execution_test PRIVATE visionflow_acquisition)
+  add_test(NAME station_execution_contract COMMAND station_execution_test)
+  set_tests_properties(station_execution_contract PROPERTIES TIMEOUT 45)
   add_executable(station_control_test tests/station_control_test.cpp)
   target_link_libraries(station_control_test PRIVATE visionflow_acquisition)
   add_test(NAME station_control_contract COMMAND station_control_test)

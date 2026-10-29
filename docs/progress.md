@@ -4,9 +4,9 @@
 
 ## Devam noktası
 
-**[COMM4-08a](archive/2026-10-29-comm4-08a.md) tamam:** Auto/Stop; ON/OFF10/10.
-Sıradaki **COMM4-09**; main/worker ve disk ledger13 açık.
-[03 registry/kabul](archive/2026-10-29-comm4-03.md).
+**[COMM4-09](archive/2026-10-30-comm4-09.md) tamam:** bağımsız yürütme.
+F ON178/OFF139 geçti; 1'er dış plaka skipped.
+Sıradaki **COMM4-10**; main/ledger13 açık.
 Eski probe INI restore SEGFAULT açık; temiz girdide kabul.
 [Ölçüm](working-protocol.md)3/3: sayaç erişilemiyor.
 [EFR-04](archive/2026-10-29-efr-04.md): Wheel açık, Match/θ ertelendi.
