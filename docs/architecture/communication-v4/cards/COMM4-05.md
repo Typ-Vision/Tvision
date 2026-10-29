@@ -1,6 +1,7 @@
 # COMM4-05 — Listener ve üretim yaşam döngüsünü ayır
 
-Durum: planlandı, başlanmadı. Model: **GPT-6.1 Sol / medium**.
+Durum: tamamlandı — [kapanış](../../../archive/2026-10-29-comm4-05.md).
+Model: **GPT-6.1 Sol / medium**. [Uygulanan lifecycle sınırı](../server-lifecycle.md).
 Tek oturum kapsamı ve ortak kurallar [indekste](../README.md), kapanış
 kuralları [V0](../verification.md) içindedir.
 

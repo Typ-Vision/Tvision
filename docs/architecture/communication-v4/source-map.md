@@ -217,7 +217,7 @@ daraltılır. Bir sonraki kart otomatik başlatılmaz.
 | 02 | wire.md, verification.md | tests/fixtures/communication-v4/ golden byte/hex/PLC word tabloları; üretim codec yok |
 | 03 | domain identity, persistence/ProjectRepository, application/CommunicationProfiles; CMake projects | StationIdentityRegistry ve store/tests; legacy otomatik rewrite yok |
 | 04 tamam | RuntimeCoordinator/RuntimeService snapshot sınırı | StationDefinition/StationSnapshot, StationActivationService, StationRuntimeBoundary, FileStationActivationStore; station_activation_contract. [Port sözleşmesi](station-activation.md) |
-| 05 | MainWindowRuntime/Communication composition, endpoint.listen/stop, profiles | CommunicationServerLifecycle, StationRunController; UI sayfaları yok |
+| 05 | main startup composition, legacy listen guards, StationRuntimeBoundary | CommunicationServerLifecycle/profile, CommunicationListenerOwnership, StationRunController ve communication_server_lifecycle_test; [uygulanan sınır](server-lifecycle.md), UI sayfaları değişmedi |
 | 06 | application/CommunicationWireCodec ve CMake projects/acquisition ayrımı | CommunicationV4Codec/Framer + tests; domain authority codec'e geçmez |
 | 07 | CommunicationTcpEndpoint peer/session/listen | CommunicationPeerSessionService; 03/06 handshake tests |
 | 08 | TriggerRouter.admit ve Coordinator.begin | StationAdmissionService; yürütme topolojisi09'da |

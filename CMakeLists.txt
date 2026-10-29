@@ -123,6 +123,7 @@ target_sources(visionflow_acquisition PRIVATE src/application/ProductionStore.cp
 target_sources(visionflow_acquisition PRIVATE src/application/ExperimentalRuntime.cpp)
 target_sources(visionflow_acquisition PRIVATE src/application/RuntimeCoordinator.cpp src/application/RuntimeDiagnostics.cpp src/application/TriggerRouter.cpp)
 target_sources(visionflow_acquisition PRIVATE src/application/StationRuntimeBoundary.cpp)
+target_sources(visionflow_acquisition PRIVATE src/application/StationRunController.cpp src/application/CommunicationServerLifecycle.cpp)
 target_compile_definitions(visionflow_acquisition PRIVATE
   VISIONFLOW_DIAGNOSTIC_BUILD_TYPE="$<CONFIG>"
   VISIONFLOW_DIAGNOSTIC_UI=$<BOOL:${VISIONFLOW_BUILD_UI}>
@@ -170,6 +171,9 @@ target_sources(visionflow_acquisition PRIVATE src/application/WorldTrackingServi
 if(BUILD_TESTING)
   add_executable(station_identity_registry_test tests/station_identity_registry_test.cpp)
   add_executable(station_activation_test tests/station_activation_test.cpp)
+  add_executable(communication_server_lifecycle_test tests/communication_server_lifecycle_test.cpp)
+  target_link_libraries(communication_server_lifecycle_test PRIVATE visionflow_acquisition)
+  add_test(NAME communication_server_lifecycle COMMAND communication_server_lifecycle_test)
   target_link_libraries(station_activation_test PRIVATE visionflow_acquisition)
   add_test(NAME station_activation_contract COMMAND station_activation_test)
   target_link_libraries(station_identity_registry_test PRIVATE visionflow_projects)

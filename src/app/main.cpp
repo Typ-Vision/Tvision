@@ -1,6 +1,9 @@
 #include <QApplication>
 #include "MainWindow.hpp"
 #include "ComboWheelPolicy.hpp"
+#include "application/CommunicationServerLifecycle.hpp"
+#include <QStandardPaths>
+#include <QDebug>
 #include <QDir>
 #include <QFile>
 #include <QFontDatabase>
@@ -44,6 +47,10 @@ int main(int argc, char* argv[]) {
     const bool smoke = flowRemovalOnly || publicationOnly || endpointsOnly || resultOnly || assignmentsOnly || variablesOnly || overlaysOnly || visibilityOnly || restartOnly || failureOnly || responsivenessOnly || runtimeCamerasOnly || editorCamerasOnly || roiOnly || app.arguments().contains("--smoke-test") || circleOnly || geometryOnly || poseOnly || usabilityOnly || systemOnly || multiOnly || multiRuntimeOnly || experimentalOnly || recipeFieldsOnly;
     const QDir buildDir(smoke ? qEnvironmentVariable("VISIONFLOW_TEST_ARTIFACTS",QCoreApplication::applicationDirPath()):QCoreApplication::applicationDirPath());
     if(smoke)QDir().mkpath(buildDir.absolutePath());
+    const QDir communicationDirectory(smoke ? buildDir.filePath("v4-machine") : QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation));
+    visionflow::CommunicationServerProfiles serverProfiles(communicationDirectory.filePath("communication-server-v4.json"));
+    visionflow::CommunicationServerLifecycle communicationServer(serverProfiles,communicationDirectory.filePath("communication-shutdown-v4.json"));
+    if(communicationServer.state()==visionflow::CommunicationServerState::Fault)qCritical()<<"V4 listener:"<<communicationServer.error();
     visionflow::MainWindow window(buildDir.filePath(smoke ? "ui-smoke.ini" : "../config/local.ui.ini"));
     window.show();
     if (smoke) QTimer::singleShot(100, &app, [&]{
@@ -114,5 +121,9 @@ int main(int argc, char* argv[]) {
         QTextStream(stdout) << (valid ? "PASS" : "FAIL") << ": workspace, session restore, image viewer, ROI teaching, matching and persistence\n";
         app.exit(valid ? 0 : 1);
     });
-    return app.exec();
+    const int exitCode=app.exec();
+    communicationServer.beginShutdown(2000);
+    while(!communicationServer.pollShutdown())app.processEvents(QEventLoop::AllEvents,5);
+    if(communicationServer.recoveryRequired())qCritical()<<"V4 shutdown requires recovery:"<<communicationServer.error();
+    return exitCode;
 }

@@ -13,6 +13,7 @@ public:
     StationRuntimeState state(const QUuid&) const;
     void load(const std::shared_ptr<const StationSnapshot>&);
 private:
+    friend class StationRunController;
     struct Binding {RuntimeService* runtime;RuntimeCoordinator* coordinator;};
     const Binding& binding(const QUuid&) const;
     QMap<QUuid,Binding> bindings_;

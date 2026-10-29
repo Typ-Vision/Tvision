@@ -1,4 +1,5 @@
 #include "CommunicationTcpEndpoint.hpp"
+#include "CommunicationListenerOwnership.hpp"
 #include "ProductionResultCodec.hpp"
 #include <QJsonArray>
 #include <QDateTime>
@@ -47,13 +48,14 @@ QVector<CommunicationTcpEndpoint::PublicationDelivery> CommunicationTcpEndpoint:
     require(mapped==enabled,"Every active publication group needs an explicit target");return result;
 }
 void CommunicationTcpEndpoint::listen(const CommunicationTcpOptions& o){
+    CommunicationListenerOwnership::requireLegacyAllowed();
     owner();require(!listening() && !watcher_ && !pending_ && outstanding_.isEmpty(),"TCP endpoint has active work");
     for(const auto& id:{o.workcell,o.project,o.endpoint,o.peer})require(!id.isEmpty() && id.size()<=128,"Explicit endpoint/peer identity required");
     require(o.inputs.size()<=64,"Input profile too large");for(const auto& input:o.inputs)require(input.maxAgeMs>0,"Input maxAge required");
     require(o.ackTimeoutMs>=100 && o.ackTimeoutMs<=60000 && o.retryCount>=0 && o.retryCount<=10,"Invalid retry policy");
     ledger_.requireNamespace({o.workcell,o.project,o.endpoint,o.peer,"namespace-check","namespace-check"});
     // No auto listen during construction/Load. An occupied v2/v3 profile is an error.
-    require(server_.listen(o.address,o.port),qPrintable(server_.errorString()));options_=o;restoreDelivery();timer_.start();
+    require(server_.listen(o.address,o.port),qPrintable(server_.errorString()));CommunicationListenerOwnership::observeLegacy(server_);options_=o;restoreDelivery();timer_.start();
 }
 QVector<DeliveryRecovery> CommunicationTcpEndpoint::inspectRecovery() const {
     owner();QVector<DeliveryRecovery> found;for(const auto& item:ledger_.recovery()){

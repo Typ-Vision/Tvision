@@ -1,4 +1,5 @@
 #include "PlcRuntimeSocket.hpp"
+#include "CommunicationListenerOwnership.hpp"
 #include "EditorSession.hpp"
 #include <QJsonDocument>
 #include <QRegularExpression>
@@ -70,9 +71,10 @@ QJsonObject PlcRuntimeSocket::status(const QString& type) const {
         {"measurementToolId",options_.measurementToolId}};
 }
 void PlcRuntimeSocket::listen(const PlcSocketOptions& options) {
+    CommunicationListenerOwnership::requireLegacyAllowed();
     owner();if(listening() || blocking() || (runtime_ && runtime_->busy()))throw std::runtime_error("PLC session/cycle already active.");
     if(options.ackTimeoutMs<100 || options.ackTimeoutMs>60000 || options.retryCount<0 || options.retryCount>10)throw std::runtime_error("ACK timeout 100..60000 ms; retries 0..10.");
-    options_=options;if(!server_.listen(options.address,options.port))throw std::runtime_error(server_.errorString().toUtf8().constData());
+    options_=options;if(!server_.listen(options.address,options.port))throw std::runtime_error(server_.errorString().toUtf8().constData());CommunicationListenerOwnership::observeLegacy(server_);
     session_=uuid();entries_.clear();fault_.clear();timer_.start();log("LISTEN "+options.address.toString()+":"+QString::number(port())+" session="+session_);
 }
 void PlcRuntimeSocket::stop(){owner();if(blocking() || working())throw std::runtime_error("Record the cycle and receive ACK before stopping the PLC session.");server_.close();timer_.stop();disconnectPeer();log("STOPPED");}
