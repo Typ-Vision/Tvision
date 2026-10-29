@@ -1,8 +1,13 @@
-# vf.socket/4 binary wire — dondurulmamış taslak
+# vf.socket/4 binary wire — COMM4-02 frozen baseline
 
-**COMM4-02 byte fixture incelemesi öncesinde uygulama/PLC sözleşmesi değildir.**
+**Contract revision `00434634-0002-4000-8000-202610290001`, 29 Ekim 2026.**
+[Freeze raporu](freeze-comm4-02.md) ve
+[golden manifest](../../../tests/fixtures/communication-v4/manifest.json) bu
+baseline'ı sabitler. Bu bir tasarım/fixture kabulüdür; çalışan v4 codec/server
+veya fiziksel PLC/robot uyumluluğu iddiası değildir. Değişen byte, enum, digest,
+metadata veya anlam yeni contract revision ve yeniden freeze gerektirir.
 Önceki 64-byte request / 128-byte response önerisi bu veri kümesine sığmaz.
-Bu taslak **her request 512, her response 1024 byte** kullanır; ek paket veya
+Bu baseline **her request 512, her response 1024 byte** kullanır; ek paket veya
 değişken uzunluklu frame yoktur. Text ve pose sayısı kapasite sınırıyla açıktır.
 Pickit uyumluluğu iddiası yoktur. Pickit'in fixed integer socket yaklaşımı yalnız
 esin kaynağıdır: [socket dokümanı](https://docs.pickit3d.com/en/latest/robots/robot-brands/socket_communication.html),
@@ -139,22 +144,26 @@ gereken calibration kendi SAMPLE body'sinde atomik taşır.
 | 120–123 | 4 | convention1 = right-handed/column/mm/quaternion-wxyz; contract-only2 |
 | 124–127 | 4 | reserved0 |
 
-Norm toleransı taslak1e-6; dışındaysa reject, içinde deterministik normalization
-ve q/-q canonical işaret (ilk nonzero bileşen pozitif) uygulanır. Fixture bu
-kararı dondurur. Contract-only2 yalnız BEGIN'de, numeric alanları0, frame alanları
+Norm `n=sqrt(((w*w+x*x)+y*y)+z*z)`; `abs(n-1)<=1e-6` kabul, n=0 veya finite
+olmayan ara değer reddedilir. Float64 round-to-nearest/ties-to-even, gösterilen
+sıra; FMA/reassociation yok. Kabul edilen q bileşenleri n'ye bölünür; ilk nonzero
+bileşen negatifse dördü de ters işaret alır. Tüm numeric signed zero +0 olur.
+Gönderen terminali canonical değerlerle seal eder; alıcı digest doğrularken
+byte'ları tekrar normalize etmez. SAMPLE fingerprint alınan ham request üzerindedir;
+aynı ID ile q/-q byte değişikliği de CONFLICT olur. Contract-only2 yalnız BEGIN'de, numeric alanları0, frame alanları
 zorunlu; SAMPLE/RESULT'ta yasaktır. Invalid whole pose tüm128 byte0 ve poseValid0.
 Geçerli identity pose açık validity1 ve frame kimlikleri taşır; missing'den ayrılır.
 
 ## W5 — Ortak operational response body (896 byte)
 
-ACCEPTED/TERMINAL/ACKED/STATE/STATUS/REJECT/PROTOCOL_ERROR aynı yerleşimi kullanır.
+ACCEPTED/TERMINAL/ACKED/STATE/STATUS_REPLY/REJECT/PROTOCOL_ERROR aynı yerleşimi kullanır.
 Unused alan0; terminalin Number/Flag/Text/Pose alanları fixed template'dir.
 
 | Offset | Byte | Alan |
 | --- | ---: | --- |
-| 128–143 | 16 | result UUID; nonterminal0 |
+| 128–143 | 16 | result UUID; TERMINAL/ACKED dışı0 |
 | 144–159 | 16 | cycle UUID; üretim dışı0 |
-| 160–191 | 32 | terminal SHA-256 digest; nonterminal0 |
+| 160–191 | 32 | terminal SHA-256 digest; TERMINAL/ACKED dışı0 |
 | 192–195 | 4 | execution:0 unknown,1 done,2 error,3 canceled |
 | 196–199 | 4 | decision:0 notEvaluated,1 OK,2 NOK |
 | 200–203 | 4 | resultValid0/1 |
@@ -173,7 +182,7 @@ Unused alan0; terminalin Number/Flag/Text/Pose alanları fixed template'dir.
 | 616–743 | 128 | whole PoseBlock |
 | 744–747 | 4 | detail UTF-8 byte count0..128 |
 | 748–875 | 128 | detail metni; artan alan0 |
-| 876–883 | 8 | yerel capture monotonic tick u64; yoksa0 |
+| 876–883 | 8 | yerel capture monotonic nanosecond tick u64; yoksa0 |
 | 884–887 | 4 | stationReady0/1 |
 | 888–891 | 4 | stationBusy0/1 |
 | 892–895 | 4 | pending delivery count u32 |
@@ -194,6 +203,13 @@ snapshot kimliklerini verir; STOPPED ilk yükleme yoksa0. Tek istasyon için nor
 pending terminal yanında en çok bir STOP/ABORT control terminal rezervi vardır;
 bunlar pending ACK yüzünden admission kapatma eylemini geciktirmez. Ayrı exact
 ACK kayıtları gerekir; global64 response limiti aşılmaz.
+Normal1 + control1 station sınırıdır, sınırsız STOP kuyruğu yoktur. Aynı key
+tekrarı mevcut kaydı döndürür; ikinci farklı control isteğinde rezerv doluysa
+RESOURCE_LIMIT, yeni admission yine hemen kapanır fakat ACCEPTED/durable terminal
+uydurulmaz. Üretim/örnek kontrol rezervini kullanamaz. Storage headroom normal
+kabul öncesi iki sabit terminal ve journal kaydına ayrılır; mevcut512MiB /
+10.000 kayıt /20MiB dosya sınırlarını büyütmez. Disk yazılamıyorsa RECORDING_ERROR
+ve admission kapalı; Stop/drain eylemi güvenli uygulama portunda sürer.
 SAMPLE terminalinde commandState CAPTURED veya CAPTURE_FAILED robotun capture
 beklemesini sonlandırabileceğini ifade eder; accepted/timeout/reject böyle izin
 oluşturmaz. SourceTime yerine local capture tick başka clock'la eşitlenmez.
@@ -224,9 +240,7 @@ CATALOG_REPLY:128 catalogueRevisionUUID16;144 category u32;148 numericKey u32;
 Category:1 station,2 recipeRevision,3 templateRevision,4 camera,
 5 intrinsicRevision,6 plateRevision,7 frameRevision,8 adapterRevision,
 9 acquisitionProfileRevision,10 solverPolicyRevision,11 referenceSetRevision,
-12 toleranceRevision,13 robotClock. Metadata formatı category'ye bağlı versioned
-fixed schema; henüz tanımlanmamış category mutating komutlarda kullanılamaz.
-COMM4-02 bu metadata byte şemalarını fixture'de **tamamlayıp dondurmadan geçmez**.
+12 toleranceRevision,13 robotClock. Metadata'nın dondurulmuş sabit şeması W6a'dadır.
 640 byte üstü intrinsic matrix/plate/image verisi bu yolla taşınmaz; local model
 catalogue otoritesidir, wire metadata yalnız sözleşme özeti/digest taşır. Name64
 üstü görünen ad için local ayrı display label gerekir; wire adı sessiz kısalmaz.
@@ -238,29 +252,107 @@ bloklanır, silent wrap/reuse yoktur. Katalog snapshot revision değişince peer
 yeniden exact revision okur; partial listeyle trigger kabul edilmez. Çakışma
 oluşturulması repository validation/transaction testinde reddedilir.
 
+## W6a — Sabit catalogue metadata (schemaVersion1)
+
+CATALOG_REPLY `metadataBytes=256`; metadata'nın göreli0–255 byte'ı kullanılır,
+256–639 sıfırdır. Aşağıdaki offset'ler **metadata başlangıcı272'ye görelidir**.
+Her kategori aynı ortak başlığı kullanır:0–3 schemaVersion u32=1,
+4–7 schemaBytes u32=256,8–39 contentDigest SHA256,40–71 dependenciesDigest SHA256.
+Digest'ler wire metadata'nın hash'i değildir: yerel katalogdaki immutable içerik
+ve dondurulmuş dependency manifest'inin saklı exact digest'idir. Görünür ad hash
+girdisi değildir; algoritma/şema sürümü içerik manifest'inde kayıtlıdır. Yerel
+byte manifest'i olmayan giriş mutating kullanım için uygun değildir. Yalnız
+özet taşınır; tam template ölçekleri, matrisler, plaka noktaları ve fiziksel
+toleranslar digest ile bağlanan yerel kayıtta kalır, peer'a gizlice türetilmez.
+
+Alanlar aksi yazılmadıkça u32 BE. `UUID`16 byte; tabloda yazılmayan her göreli
+byte (alanlar arasındaki boşluklar dahil) sıfırdır; böylece her kategori256 byte,
+ortak72 + atanmış alanlar + kalan reserved0, overlap olmadan tamamlanır.
+
+| Category | Göreli offset: alanlar |
+| --- | --- |
+|1 station|72 stationState;76 activeRecipeKey;80 activeTemplateKey;84 cameraCount;88 activationUUID;104 cameraSetRevisionUUID;120 remoteEnabled0/1;124–255 reserved132|
+|2 recipeRevision|72 applicationType (1 measurement,2 inspection,3 robotGuidance);76 requiredCameraCount;80 publicationTemplateKey;84–255 reserved172|
+|3 templateRevision|72 numberCount=16;76 flagCount=32;80 textCount=4;84 poseCount=1;88 textMaxBytes=64;92 numberEncoding=1 signed32;96 rounding=1 tiesToEven;100 poseConvention=1;104–255 reserved152|
+|4 camera|72 backend (0 unavailable,1 imageFile,2 webcam,3 industrial);76 acquisitionProfileKey;80 intrinsicKey;84 frameKey;88 capabilityBits (bit0 acquire,bit1 productionPermitted,bit2 calibrationPermitted; diğerleri0);92–255 reserved164|
+|5 intrinsicRevision|72 cameraKey;76 widthPixels;80 heightPixels;84 projection (1 pinhole,2 fisheye);88 distortion (0 none,1 BrownConrady,2 fisheye);92 calibrationEvidence0/1;96–255 reserved160|
+|6 plateRevision|72 geometry (1 planarGrid,2 explicit3DPoints);76 pointCount;80 unit=1 mm;84 physicalEvidence0/1;88–255 reserved168|
+|7 frameRevision|72 parentFrameKey (root0);76 convention=1;80 role (1 base,2 flange,3 tcp,4 camera,5 plate,6 other);84–255 reserved172|
+|8 adapterRevision|72 representation=1 genericQuaternionWXYZ;76 actualPoseKind (1 base_T_flange,2 base_T_tcp);80 convention=1;84 flangeTcpFrameKey (flange actual0);88 controllerVerified0/1;92–255 reserved164|
+|9 acquisitionProfileRevision|72 cameraKey;76 pixelFormat (1 Mono8);80 triggerMode (1 software,2 hardware);84 nativeProductionAllowed0/1;88–255 reserved168|
+|10 solverPolicyRevision|72 algorithm (0 unavailable,1 researchApprovedHandEye);76 modeMask (bit0 eyeToHand,bit1 eyeInHand, diğerleri0);80 softwareEvidence0/1;84–255 reserved172|
+|11 referenceSetRevision|72 referenceType (1 synthetic,2 physicalIndependent);76 unit=1 mm;80 independentEvidence0/1;84–255 reserved172|
+|12 toleranceRevision|72 translationUnit=1 mm;76 rotationUnit=2 radian;80 physicalApproval0/1;84–255 reserved172|
+|13 robotClock|72 unit=3 nanosecond;76 monotonic0/1;80 clockEpochUUID;96 synchronisedEvidence0/1;100–255 reserved156|
+
+Evidence/approval/capability bool'ları ölçüm sonucu değildir ve birbirinin yerine
+geçmez. Generic fixture tüm fiziksel kanıtları0 taşır. Algorithm1 ancak COMM4-18
+araştırması tamamlandığında yerel yetenek olabilir; bu freeze solver seçmez.
+Backend3 mevcut native engeli kaldırmaz. CameraCount1..32; active yüklenmemiş
+station'da recipe/template/activation/cameraSet0 ve cameraCount0; diğer durumlarda
+exact snapshot. Bir station kamera kümesi en çok32 kamera içerir; fazlası RESOURCE_LIMIT.
+Non-root frame parentUUID kendi parentFrameKey UUID'siyle exact; diğer kategorilerde
+parentUUID yerel sahip entity (recipe/template root ise0). Entry UUID/revision/key
+nonzero; istekte key0 o kategorinin ilk canlı kaydıdır, sonuç nextKey0 sonu belirtir.
+İlk expectedCatalogueRevision0 anlık revision keşfeder; takip sorguları exact revision
+ister. Liste ortasında değişirse STALE_CONFIG; peer listeyi yeniden okur. Bilinmeyen
+category INVALID_VALUE; bilinmeyen key UNKNOWN_KEY: echo category/key+catalogue
+revision+reason, entity/revision/name/metadata/nextKey0. Retired key geri dönmez.
+
+HELLO contract0 yalnız discovery; exact contract HELLO yenilenmeden mutation yok.
+Yeni HELLO yeni session üretir, durable identity değişmez. Enrollment controlling
+peer/epoch'u yerel kayıttan doğrular. Peer tam exact katalog snapshot'ını almadan
+mutating key göndermez; server her key/revision/dependency'yi ayrıca doğrular.
+RequestId0 bütün türlerde INVALID_VALUE; uint64 MAX geçerlidir, sonraki0 yasaktır.
+Global STATUS sayaç döndürür; stationReady/busy ve slotlar0; catalogue/HELLO dışında
+production-ready listesi yoktur. Operational STATUS_REPLY sorgu recipe alanları0
+olmasına rağmen mevcut snapshot'ı döndürür (W5); global snapshot0 kalır.
+CALIB_ABORT reasonCode W7 reason enum'udur. Global read-only/HELLO sentinel'leri
+dışında peer/epoch/session nonzero; calibration station snapshot hiç yüklenmemişse
+recipe/template/activation üçü birlikte0 olabilir, lease bu snapshot'ı dondurur.
+FlangeTcpRevisionKey0 yalnız actualPoseKind1; kind2 exact offset revision ister.
+sample robotClockKey, sequence ve camera/profile kimlikleri nonzero; robotSourceTime
+clock epoch içinde0 olabilir. Kaynak timestamp'i acquisition korelasyonu yapmaz.
+
 ## W7 — Digest, idempotency ve hatalar
 
-Terminal digest SHA256: header'dan stationKey, peerUUID, epochUUID, requestId,
-recipeKey, templateKey, activationUUID alanlarının **tablodaki byte sırasındaki
-birleşimi** + tüm896 body; digest160–191 hesap sırasında sıfırdır.
+Terminal digest SHA256 girdisi exact:
+`ASCII("vf.socket4.terminal/1") || 00 || frame[20:32] || frame[48:104] || body896`.
+Burada slice sonu hariçtir; sıralama stationKey, requestId, peerUUID, epochUUID,
+recipeKey, templateKey, activationUUID'dir. Body frame[128:1024]; frame160–191
+hesap sırasında32 sıfır byte'dır. Prefix22 byte, header68 byte, body896 byte:
+preimage986 byte. Server installation ledger namespace'idir; wire digest alanı değildir.
 Magic/version/kind/size/session/reserved header digest'e dahil değildir.
 Digest girdisi versioned prefix ASCII `vf.socket4.terminal/1` + NUL ile başlar.
 Terminal header kind111 olarak kalıcı seal edilir; reconnect yalnız session
 zarfını değiştirir. ACKED digest'i yeniden üretmez, saklı exact result digest'i
 echo eder. ACKED body'si yalnız resultUUID/digest/reason/state taşır; slotlar0.
 Duplicate terminal byte-for-byte saklı body ve stable header alanlarını döndürür.
-Fingerprint ayrı prefix `vf.socket4.request/1`+NUL; header'dan kind,stationKey,
-peerUUID,epochUUID,requestId,recipeKey,templateKey,activationUUID +384body kullanır.
+Fingerprint exact `ASCII("vf.socket4.request/1") || 00 || frame[8:12] ||
+frame[20:32] || frame[48:104] || frame[128:512]`: prefix21 + header72 + body384
+=477 byte. İki digest'te de session hariç; key'in command kind'i fingerprint'tedir.
+ACK kendi mutating intent'ini oluşturmaz, mevcut terminal key'ini exact kapatır.
+RECOVER de yeni fingerprint admission'ı yapmaz; saklı key'i okur. HELLO/STATUS/
+CATALOG_GET requestId yalnız korelasyondur, durable mutation dedup kaydı değildir.
+EPOCH_ROLLOVER drained durumda namespace değişimini atomik kaydeder; STATE reason0
+eski request/epoch'u echo eder. Aynı rollover key/body eski namespace tombstone'unda
+idempotent kalır, yeni epoch'un ilk request'i değildir; sıra0'a wrap yapılmaz.
 
-Reason taslak enum0 NONE,1 NOT_AUTO,2 STATION_BUSY,3 CAMERA_BUSY,4 STALE_CONFIG,
+Reason frozen enum0 NONE,1 NOT_AUTO,2 STATION_BUSY,3 CAMERA_BUSY,4 STALE_CONFIG,
 5 STALE_SESSION,6 CONFLICT,7 QUEUE_FULL,8 RECORDING_ERROR,9 RECOVERY_REQUIRED,
 10 UNKNOWN_KEY,11 INVALID_VALUE,12 UNSUPPORTED_VERSION,13 BAD_FRAME,
 14 ACK_MISMATCH,15 ACK_TIMEOUT,16 LEASE_MISMATCH,17 PHYSICAL_GATE_BLOCKED,
 18 PEER_BUSY,19 RETIRED_EPOCH,20 NOT_READY,21 CAPTURE_TIMEOUT,
-22 RESULT_INVALID,23 RESOURCE_LIMIT,24 CONTRACT_MISMATCH. commandState taslak0
+22 RESULT_INVALID,23 RESOURCE_LIMIT,24 CONTRACT_MISMATCH,25 REMOTE_DISABLED. commandState frozen0
 NONE,1 ACCEPTED,2 RUNNING,3 TERMINAL,4 ACK_COMMITTED,5 COLLECTING,6 CAPTURED,
 7 CAPTURE_FAILED,8 CANDIDATE,9 VALIDATED,10 ACTIVE,11 ABORTED,12 RECOVERY_REQUIRED.
-Enum kodları COMM4-02 fixture'de freeze edilir; etiketten numeric hash türetilmez.
+READY ayrı reason değildir: başarılı SET_AUTO terminali execution1/resultValid1,
+reason0, stationReady1 ve commandState3 taşır. Enum kodları sabittir; etiketten
+numeric hash türetilmez. ServerState0 NOT_CONFIGURED,1 LISTENING,2 PEER_CONNECTED,
+3 FAULT. StationState0 STOPPED,1 PREPARING,2 ARMED_MANUAL,3 ARMED_AUTO,4 RUNNING,
+5 DRAINING,6 BLOCKED. CalibrationState0 CREATED,1 COLLECTING,2 SOLVING,3 CANDIDATE,
+4 VALIDATING,5 VALIDATED,6 ACTIVE,7 FAILED,8 ABORTED. Bunlar commandState ile
+karıştırılmaz; operational body phase yalnız commandState'tir.
 
 ACK geç/duplicate gelebilir; exact kayıt varsa ACK commit idempotent'tir.
 Başka result/digest/epoch uyuşmaz ACK_MISMATCH, durumu değiştirmez. Request max
@@ -275,8 +367,9 @@ sonra sonuç belirsizse retry yeni capture oluşturmaz, recovery gerektirir.
 
 ## W8 — Freeze için zorunlu byte fixture kümesi
 
-COMM4-02 actual golden hex/bin dosyalarını, bağımsız PLC word tablosunu ve
-encode/decode expected değerlerini üretir. Bu taslak tek başına freeze değildir.
+[Fixture README](../../../tests/fixtures/communication-v4/README.md) binary/hex,
+bağımsız PLC word tablosu ve encode/decode expected değerlerinin girişidir.
+Fixture kabulü çalışan codec/framer, ledger veya fiziksel robot testi değildir.
 Fixture: tüm kinds; HELLO keşif/exact contract; station1/2/3; Number INT_MIN/MAX,
 negatif scale, ties-to-even/overflow; bit0/31; boş/geçerli64byte Unicode Text ve
 65byte reject; Pose identity/nontrivial/inverse/revision mismatch; SAMPLE full

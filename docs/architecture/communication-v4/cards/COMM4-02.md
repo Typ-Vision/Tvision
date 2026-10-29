@@ -1,6 +1,7 @@
 # COMM4-02 — Byte fixture ve wire sözleşmesini dondur
 
-Durum: planlandı, başlanmadı. Model: **GPT-6.1 Sol / medium**.
+Durum: tamamlandı — [freeze raporu](../freeze-comm4-02.md),
+[kapanış](../../../archive/2026-10-29-comm4-02.md). Model: **GPT-6.1 Sol / medium**.
 Tek oturum kapsamı ve ortak kurallar [indekste](../README.md), kapanış
 kuralları [V0](../verification.md) içindedir.
 

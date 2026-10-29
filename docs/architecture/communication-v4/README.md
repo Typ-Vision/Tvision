@@ -2,10 +2,11 @@
 
 **Durum: tasarım ve sıralı uygulama planı; uygulanmış ürün özelliği değildir.**
 29 Ekim 2026. Kullanıcı seçimi: GPT-6.1 Sol / medium. Varsayılan oturum kapsamı
-tek karttır; ajanlar paralel çalışmaz. **Sonraki görev: [COMM4-02](cards/COMM4-02.md).**
+tek karttır; ajanlar paralel çalışmaz. **Sonraki görev: [COMM4-03](cards/COMM4-03.md).**
 
 **COMM4-01 tamam:** [güncel kaynak, test ve kart sahiplik haritası](source-map.md).
-Bu kapanış yalnız envanterdir; v4 wire freeze ve uygulama henüz başlamadı.
+**COMM4-02 tamam:** [wire fixture freeze](freeze-comm4-02.md). V4 üretim
+codec/server henüz uygulanmadı; freeze yalnız D profilinde tasarım kabulüdür.
 
 ## Okuma ve kapsam
 
@@ -32,7 +33,7 @@ fiziksel PLC/robot ve dağıtım engelleri bu planla kapanmaz.
 | Kart | Tek sorumluluk | Önkoşul |
 | --- | --- | --- |
 | [01](cards/COMM4-01.md) | Güncel kaynak ve davranış envanteri — tamam | Yok |
-| [02](cards/COMM4-02.md) | Wire byte fixture ve sözleşme dondurma | 01 |
+| [02](cards/COMM4-02.md) | Wire byte fixture ve sözleşme dondurma — tamam | 01 |
 | [03](cards/COMM4-03.md) | Kalıcı kimlik kataloğu | 02 |
 | [04](cards/COMM4-04.md) | Station domain ve immutable aktivasyon | 03 |
 | [05](cards/COMM4-05.md) | Listener/prod yaşam döngüsü ayrımı | 04 |

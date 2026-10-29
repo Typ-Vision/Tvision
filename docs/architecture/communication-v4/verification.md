@@ -47,6 +47,19 @@ Tam F kabulünde `-R` kaldırılır. Başarısız testi ve komşularını düzel
 çalıştır; yeni gerekçe olmadan başarılı tam koşumu tekrar etme. Hedefli sonuç tam
 suite değildir. Yalnız belge planı için bu komutlar şimdi çalıştırılmaz.
 
+### COMM4-02 tasarım fixture kabulü
+
+[Fixture README](../../../tests/fixtures/communication-v4/README.md) ve
+[freeze raporu](freeze-comm4-02.md) frozen revision/manifest'i bağlar.
+`python tests/fixtures/communication-v4/verify.py` committed bin/hex/PLC word
+verisini independent width/hex arithmetic ve literal anchors ile kontrol eder;
+generator çağırmaz. Negatif frame'lerin beklenen ret nedeni sınırlı fixture oracle'ı
+ile denetlenir. Bu script CTest veya üretim codec/framer değildir. Stream split,
+deadline, backpressure ve kontrol rezervi fixture beklentileridir; gerçek socket,
+ledger/crash veya fiziksel davranış koşumu olarak raporlanamaz. Sonraki kartlar
+aynı fixture manifest'ini üretim uygulamasına karşı çalıştırır. Metadata256 byte
+şemaları W6a, enumlar W2/W7, digest exact slice'ları W7 otoritesidir.
+
 ## V2 — Davranış matrisi
 
 | Alan | Somut kabul senaryosu |

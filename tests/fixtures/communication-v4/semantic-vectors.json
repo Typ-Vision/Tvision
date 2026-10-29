@@ -1,0 +1,45 @@
+{
+  "number": [
+    {"name":"negative scale","input":"3","numerator":-3,"denominator":2,"offset":"0","expected":-4},
+    {"name":"positive tie even","input":"5","numerator":1,"denominator":2,"offset":"0","expected":2},
+    {"name":"positive tie odd","input":"7","numerator":1,"denominator":2,"offset":"0","expected":4},
+    {"name":"negative tie even","input":"-5","numerator":1,"denominator":2,"offset":"0","expected":-2},
+    {"name":"offset before rounding","input":"3","numerator":1,"denominator":2,"offset":"1","expected":2},
+    {"name":"min","input":"-2147483648","numerator":1,"denominator":1,"offset":"0","expected":-2147483648},
+    {"name":"max","input":"2147483647","numerator":1,"denominator":1,"offset":"0","expected":2147483647},
+    {"name":"overflow","input":"2147483648","numerator":1,"denominator":1,"offset":"0","expected":"INVALID_VALUE"},
+    {"name":"underflow","input":"-2147483649","numerator":1,"denominator":1,"offset":"0","expected":"INVALID_VALUE"}
+  ],
+  "quaternion": [
+    {"name":"identity","input":[1,0,0,0],"valid":true,"canonical":[1,0,0,0]},
+    {"name":"negative equivalent","input":[-0.5,-0.5,-0.5,-0.5],"valid":true,"canonical":[0.5,0.5,0.5,0.5]},
+    {"name":"near norm","input":[1.0000005,0,0,0],"valid":true,"canonical":[1,0,0,0]},
+    {"name":"outside norm","input":[1.000002,0,0,0],"valid":false},
+    {"name":"zero norm","input":[0,0,0,0],"valid":false},
+    {"name":"half turn sign","input":[0,-1,0,0],"valid":true,"canonical":[0,1,0,0]}
+  ],
+  "stream": [
+    {"name":"all_split_positions","frames":["trigger"],"bytes":512,"expected":"511 splits preserve one request; partial bytes do not dispatch"},
+    {"name":"four_coalesced","frames":["hello","trigger_station1","trigger_station2","trigger_station3"],"bytes":2048,"expected":"four complete frames; HELLO policy handled separately"},
+    {"name":"max_receive_buffer","frames":["trigger","trigger","trigger","trigger","trigger","trigger","trigger","trigger"],"bytes":4096,"expected":"two dispatch batches; next byte before drain disconnects"}
+  ],
+  "timing": [
+    {"firstByteMs":0,"lastByteMs":1999,"expected":"parse if complete"},
+    {"firstByteMs":0,"lastByteMs":2000,"expected":"deadline rejects, including complete frame"},
+    {"firstByteMs":0,"trickleAtMs":[500,1000,1500],"tickMs":2000,"expected":"disconnect; trickle does not reset deadline"}
+  ],
+  "limits": {"stations":32,"queuedResponses":64,"writeHighWaterBytes":65536,"receiveBufferBytes":4096,"readBytes":2048,"dispatchBatch":4,"retryMs":2000,"retriesAfterInitial":3,"normalPendingPerStation":1,"controlPendingPerStation":1},
+  "negativeSemantics": [
+    "65-byte UTF8 rejects before slot write, never truncates",
+    "target/source frame revision mismatch STALE_CONFIG",
+    "unknown numeric catalogue key UNKNOWN_KEY",
+    "retired epoch RETIRED_EPOCH; no automatic wrap",
+    "requestId=0 INVALID_VALUE for every kind",
+    "remote enable false REMOTE_DISABLED",
+    "normal pending blocks new normal command; STOP/ABORT one control reserve only",
+    "control reserve exhaustion closes admission immediately, returns RESOURCE_LIMIT, no false durable acceptance",
+    "wrong station/result/hash/epoch ACK_MISMATCH leaves every terminal pending",
+    "holdout is excluded from solve digest; candidate may precede fresh holdout",
+    "missing optional slots zero bytes; present 0/false/empty have validity bit 1"
+  ]
+}

@@ -4,11 +4,10 @@
 
 ## Devam noktası
 
-**[COMM4-01](archive/2026-10-29-comm4-01.md) tamam:**
-[Envanter](architecture/communication-v4/source-map.md).
-D kabulü; build/CTest yok. [Planda](architecture/communication-v4/README.md)
-sıradaki **COMM4-02**; v4 kodu/freeze yok.
-[Ölçüm](working-protocol.md)1/3: sayaç erişilemiyor.
+**[COMM4-02](archive/2026-10-29-comm4-02.md) tamam:**
+[Wire freeze](architecture/communication-v4/freeze-comm4-02.md),82 fixture.
+D kabulü; build/CTest yok. Sıradaki **COMM4-03**; v4 codec/server yok.
+[Ölçüm](working-protocol.md)2/3: sayaç erişilemiyor.
 [EFR-04](archive/2026-10-29-efr-04.md): ON170/OFF131, birer skipped;
 Wheel açık, Match/θ ertelendi.
 

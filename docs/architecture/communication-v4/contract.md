@@ -1,6 +1,7 @@
 # COMM4 hedef sistem sözleşmesi
 
-**Taslak.** Bu belge yeni davranışı tarif eder; v2/v3'ün bugün değiştiğini veya
+**Hedef sistem.** Wire alt sözleşmesi [COMM4-02 ile donduruldu](freeze-comm4-02.md);
+uygulama kartları sürer. Bu belge yeni davranışı tarif eder; v2/v3'ün bugün değiştiğini veya
 robot üretim desteği bulunduğunu söylemez. Binary ayrıntılar [wire](wire.md),
 kanıt kuralları [verification](verification.md) içindedir.
 
@@ -36,9 +37,8 @@ tüm istasyonlar STOPPED olabilir. STATUS/ACK/recovery/calibration kontrol kanal
 üretim Run'ından bağımsızdır; her komut ayrıca kendi yetkisini denetler.
 
 Run istasyonun immutable reçete ve kaynak kümesini hazırlar; Auto dış tetik
-admission'ını açar. Önerilen durumlar STOPPED → PREPARING → ARMED_MANUAL veya
-ARMED_AUTO; çalışma RUNNING, durma DRAINING, hata BLOCKED. UI adları freeze'de
-kesinleşir. Manuel tek cycle aynı admission portunu kullanır. Auto kapalı PLC
+admission'ını açar. Durumlar STOPPED → PREPARING → ARMED_MANUAL veya
+ARMED_AUTO; çalışma RUNNING, durma DRAINING, hata BLOCKED. Numeric durumlar wire W7'de sabittir. Manuel tek cycle aynı admission portunu kullanır. Auto kapalı PLC
 TRIGGER NOT_AUTO döner; listen ve ACK sürer. Stop yeni admission'ı atomik kapatır,
 çalışan acquisition/worker'ı belgeli drain/cancel ile bitirir, terminal ve pending
 teslimi korur. Process kapanışı bounded drain, disk checkpoint ve socket close
@@ -66,7 +66,7 @@ kontrol terminali için sınırlı ayrı kayıt rezervi kullanılır.
 Station kalıcı UUID ve never-reused numeric wire key, görünen ad, active recipe
 UUID/revision, activation UUID, camera bindings, mode/health ve station ledger
 taşır. En az üç, konfigüre limit dahil daha fazla station desteklenir. İlk sınır
-32 station; ürün limiti fixture freeze'de açık olur. Wire stationId=0 yalnız
+32 station; frozen wire limiti32'dir. Wire stationKey=0 yalnız
 global komutlardır. Başka station state'i UI seçiminden veya tek global loaded
 recipe'den türetilmez. Editor selection active recipe yerine geçmez.
 
@@ -252,11 +252,12 @@ giremez; aday sonrasında aynı lease içinde alınabilir. Capture cevabı camer
 sample/frame UUID ve originating command içerir. Tek kameralı üretim cevabı da
 cameraKey taşır; çok kameralı reçete kaynak kümesini activation kataloğundan okur.
 
-İlk wire PoseBlock quaternion taşır. Robot RX/RY/RZ kullanıyorsa COMM4-19 açık
-controller convention adapter'ını robot entegrasyon sınırına yerleştirir; robot
-tarafında dönüşüm mümkün değilse COMM4-02 dondurulmadan convention-tagged Euler
-wire gösterimi tasarlanmalıdır. Otomatik Euler varsayımı yapılmaz; bu karar için
-robot protokol kabiliyetleri COMM4-02 öncesi araştırma ön kontrolüne alınır.
+İlk wire PoseBlock yalnız generic quaternion-wxyz taşır. Marka/controller bilgisi
+yoktur; COMM4-02 [dar ön kontrolü](freeze-comm4-02.md) bu kapsamla freeze etti.
+Controller RX/RY/RZ/Euler/axis-angle dönüşümü COMM4-19'un açık robot entegrasyon
+adapter'ında, wire'a girmeden yapılır. Controller dönüşümü henüz kanıtlanmadı;
+generic peer bu dönüşümü yapamıyorsa o controller unsupported kalır. Euler'ı
+wire'a eklemek yeni contract revision/freeze ister. Otomatik convention yoktur.
 
 ## S8 — Solve, validate, activate
 

@@ -1,0 +1,1034 @@
+{
+  "contractRevision": "00434634-0002-4000-8000-202610290001",
+  "requestBytes": 512,
+  "responseBytes": 1024,
+  "metadata": {
+    "1": [
+      {
+        "name": "stationState",
+        "offset": 72,
+        "format": "I",
+        "value": 0
+      },
+      {
+        "name": "activeRecipeKey",
+        "offset": 76,
+        "format": "I",
+        "value": 11
+      },
+      {
+        "name": "activeTemplateKey",
+        "offset": 80,
+        "format": "I",
+        "value": 12
+      },
+      {
+        "name": "cameraCount",
+        "offset": 84,
+        "format": "I",
+        "value": 1
+      },
+      {
+        "name": "activation",
+        "offset": 88,
+        "format": "16s",
+        "value": "00112233445546778899aabb00000004"
+      },
+      {
+        "name": "cameraSetRevision",
+        "offset": 104,
+        "format": "16s",
+        "value": "00112233445546778899aabb00000014"
+      },
+      {
+        "name": "remoteEnabled",
+        "offset": 120,
+        "format": "I",
+        "value": 1
+      }
+    ],
+    "2": [
+      {
+        "name": "applicationType",
+        "offset": 72,
+        "format": "I",
+        "value": 1
+      },
+      {
+        "name": "requiredCameraCount",
+        "offset": 76,
+        "format": "I",
+        "value": 1
+      },
+      {
+        "name": "publicationTemplateKey",
+        "offset": 80,
+        "format": "I",
+        "value": 12
+      }
+    ],
+    "3": [
+      {
+        "name": "numberCount",
+        "offset": 72,
+        "format": "I",
+        "value": 16
+      },
+      {
+        "name": "flagCount",
+        "offset": 76,
+        "format": "I",
+        "value": 32
+      },
+      {
+        "name": "textCount",
+        "offset": 80,
+        "format": "I",
+        "value": 4
+      },
+      {
+        "name": "poseCount",
+        "offset": 84,
+        "format": "I",
+        "value": 1
+      },
+      {
+        "name": "textMaxBytes",
+        "offset": 88,
+        "format": "I",
+        "value": 64
+      },
+      {
+        "name": "numberEncoding",
+        "offset": 92,
+        "format": "I",
+        "value": 1
+      },
+      {
+        "name": "rounding",
+        "offset": 96,
+        "format": "I",
+        "value": 1
+      },
+      {
+        "name": "poseConvention",
+        "offset": 100,
+        "format": "I",
+        "value": 1
+      }
+    ],
+    "4": [
+      {
+        "name": "backend",
+        "offset": 72,
+        "format": "I",
+        "value": 0
+      },
+      {
+        "name": "acquisitionProfileKey",
+        "offset": 76,
+        "format": "I",
+        "value": 9
+      },
+      {
+        "name": "intrinsicKey",
+        "offset": 80,
+        "format": "I",
+        "value": 5
+      },
+      {
+        "name": "frameKey",
+        "offset": 84,
+        "format": "I",
+        "value": 7
+      },
+      {
+        "name": "capabilityBits",
+        "offset": 88,
+        "format": "I",
+        "value": 0
+      }
+    ],
+    "5": [
+      {
+        "name": "cameraKey",
+        "offset": 72,
+        "format": "I",
+        "value": 4
+      },
+      {
+        "name": "width",
+        "offset": 76,
+        "format": "I",
+        "value": 2448
+      },
+      {
+        "name": "height",
+        "offset": 80,
+        "format": "I",
+        "value": 2048
+      },
+      {
+        "name": "projection",
+        "offset": 84,
+        "format": "I",
+        "value": 1
+      },
+      {
+        "name": "distortion",
+        "offset": 88,
+        "format": "I",
+        "value": 1
+      },
+      {
+        "name": "calibrationEvidence",
+        "offset": 92,
+        "format": "I",
+        "value": 0
+      }
+    ],
+    "6": [
+      {
+        "name": "geometry",
+        "offset": 72,
+        "format": "I",
+        "value": 1
+      },
+      {
+        "name": "pointCount",
+        "offset": 76,
+        "format": "I",
+        "value": 49
+      },
+      {
+        "name": "unit",
+        "offset": 80,
+        "format": "I",
+        "value": 1
+      },
+      {
+        "name": "physicalEvidence",
+        "offset": 84,
+        "format": "I",
+        "value": 0
+      }
+    ],
+    "7": [
+      {
+        "name": "parentFrameKey",
+        "offset": 72,
+        "format": "I",
+        "value": 0
+      },
+      {
+        "name": "convention",
+        "offset": 76,
+        "format": "I",
+        "value": 1
+      },
+      {
+        "name": "role",
+        "offset": 80,
+        "format": "I",
+        "value": 1
+      }
+    ],
+    "8": [
+      {
+        "name": "representation",
+        "offset": 72,
+        "format": "I",
+        "value": 1
+      },
+      {
+        "name": "actualPoseKind",
+        "offset": 76,
+        "format": "I",
+        "value": 1
+      },
+      {
+        "name": "convention",
+        "offset": 80,
+        "format": "I",
+        "value": 1
+      },
+      {
+        "name": "flangeTcpFrameKey",
+        "offset": 84,
+        "format": "I",
+        "value": 0
+      },
+      {
+        "name": "controllerVerified",
+        "offset": 88,
+        "format": "I",
+        "value": 0
+      }
+    ],
+    "9": [
+      {
+        "name": "cameraKey",
+        "offset": 72,
+        "format": "I",
+        "value": 4
+      },
+      {
+        "name": "pixelFormat",
+        "offset": 76,
+        "format": "I",
+        "value": 1
+      },
+      {
+        "name": "triggerMode",
+        "offset": 80,
+        "format": "I",
+        "value": 1
+      },
+      {
+        "name": "nativeProductionAllowed",
+        "offset": 84,
+        "format": "I",
+        "value": 0
+      }
+    ],
+    "10": [
+      {
+        "name": "algorithm",
+        "offset": 72,
+        "format": "I",
+        "value": 0
+      },
+      {
+        "name": "modeMask",
+        "offset": 76,
+        "format": "I",
+        "value": 3
+      },
+      {
+        "name": "softwareEvidence",
+        "offset": 80,
+        "format": "I",
+        "value": 0
+      }
+    ],
+    "11": [
+      {
+        "name": "referenceType",
+        "offset": 72,
+        "format": "I",
+        "value": 1
+      },
+      {
+        "name": "unit",
+        "offset": 76,
+        "format": "I",
+        "value": 1
+      },
+      {
+        "name": "independentEvidence",
+        "offset": 80,
+        "format": "I",
+        "value": 0
+      }
+    ],
+    "12": [
+      {
+        "name": "translationUnit",
+        "offset": 72,
+        "format": "I",
+        "value": 1
+      },
+      {
+        "name": "rotationUnit",
+        "offset": 76,
+        "format": "I",
+        "value": 2
+      },
+      {
+        "name": "physicalApproval",
+        "offset": 80,
+        "format": "I",
+        "value": 0
+      }
+    ],
+    "13": [
+      {
+        "name": "unit",
+        "offset": 72,
+        "format": "I",
+        "value": 3
+      },
+      {
+        "name": "monotonic",
+        "offset": 76,
+        "format": "I",
+        "value": 1
+      },
+      {
+        "name": "clockEpoch",
+        "offset": 80,
+        "format": "16s",
+        "value": "00112233445546778899aabb00000046"
+      },
+      {
+        "name": "synchronisedEvidence",
+        "offset": 96,
+        "format": "I",
+        "value": 0
+      }
+    ]
+  },
+  "enums": {
+    "request": {
+      "HELLO": 1,
+      "STATUS": 2,
+      "CATALOG_GET": 3,
+      "SELECT_RECIPE": 4,
+      "SET_AUTO": 5,
+      "STOP": 6,
+      "TRIGGER": 10,
+      "ACK": 11,
+      "RECOVER": 12,
+      "CALIB_BEGIN": 20,
+      "CALIB_SAMPLE": 21,
+      "CALIB_SOLVE": 22,
+      "CALIB_VALIDATE": 23,
+      "CALIB_ACTIVATE": 24,
+      "CALIB_ABORT": 25,
+      "EPOCH_ROLLOVER": 30
+    },
+    "response": {
+      "HELLO_REPLY": 101,
+      "STATUS_REPLY": 102,
+      "CATALOG_REPLY": 103,
+      "ACCEPTED": 110,
+      "TERMINAL": 111,
+      "ACKED": 112,
+      "STATE": 113,
+      "REJECT": 190,
+      "PROTOCOL_ERROR": 191
+    },
+    "reason": {
+      "0": "NONE",
+      "1": "NOT_AUTO",
+      "2": "STATION_BUSY",
+      "3": "CAMERA_BUSY",
+      "4": "STALE_CONFIG",
+      "5": "STALE_SESSION",
+      "6": "CONFLICT",
+      "7": "QUEUE_FULL",
+      "8": "RECORDING_ERROR",
+      "9": "RECOVERY_REQUIRED",
+      "10": "UNKNOWN_KEY",
+      "11": "INVALID_VALUE",
+      "12": "UNSUPPORTED_VERSION",
+      "13": "BAD_FRAME",
+      "14": "ACK_MISMATCH",
+      "15": "ACK_TIMEOUT",
+      "16": "LEASE_MISMATCH",
+      "17": "PHYSICAL_GATE_BLOCKED",
+      "18": "PEER_BUSY",
+      "19": "RETIRED_EPOCH",
+      "20": "NOT_READY",
+      "21": "CAPTURE_TIMEOUT",
+      "22": "RESULT_INVALID",
+      "23": "RESOURCE_LIMIT",
+      "24": "CONTRACT_MISMATCH",
+      "25": "REMOTE_DISABLED"
+    },
+    "commandState": {
+      "0": "NONE",
+      "1": "ACCEPTED",
+      "2": "RUNNING",
+      "3": "TERMINAL",
+      "4": "ACK_COMMITTED",
+      "5": "COLLECTING",
+      "6": "CAPTURED",
+      "7": "CAPTURE_FAILED",
+      "8": "CANDIDATE",
+      "9": "VALIDATED",
+      "10": "ACTIVE",
+      "11": "ABORTED",
+      "12": "RECOVERY_REQUIRED"
+    },
+    "serverState": {
+      "0": "NOT_CONFIGURED",
+      "1": "LISTENING",
+      "2": "PEER_CONNECTED",
+      "3": "FAULT"
+    },
+    "stationState": {
+      "0": "STOPPED",
+      "1": "PREPARING",
+      "2": "ARMED_MANUAL",
+      "3": "ARMED_AUTO",
+      "4": "RUNNING",
+      "5": "DRAINING",
+      "6": "BLOCKED"
+    },
+    "calibrationState": {
+      "0": "CREATED",
+      "1": "COLLECTING",
+      "2": "SOLVING",
+      "3": "CANDIDATE",
+      "4": "VALIDATING",
+      "5": "VALIDATED",
+      "6": "ACTIVE",
+      "7": "FAILED",
+      "8": "ABORTED"
+    }
+  },
+  "cases": [
+    {
+      "name": "hello",
+      "bytes": 512,
+      "sha256": "c903eb1117d8b86bbc04ac4fbd7dfdbe18d55a1ea4d027903ed751920091928a",
+      "outcome": "valid",
+      "requestFingerprint": "baa12149bbd81290d02325eed830f43d867c4c5c7d1a069a1744fafedd7d611b"
+    },
+    {
+      "name": "status",
+      "bytes": 512,
+      "sha256": "b015ca5d109bd0ee486768fc8f967cfbc2a3c993f702f040819cf08c0c49b2df",
+      "outcome": "valid",
+      "requestFingerprint": "97cc7200f2a2fa02a4b560bd6edb89817e99fb669671c214f03ad213fe574c9f"
+    },
+    {
+      "name": "catalog_get",
+      "bytes": 512,
+      "sha256": "50c052e4298c3e98a165d6a552410e243efc5a09d7c6d804f0a267a960e3f8a4",
+      "outcome": "valid",
+      "requestFingerprint": "883f53ccdc8cbd622a5075f641119a893f2099fc2023ede8175acaaa241acea4"
+    },
+    {
+      "name": "select_recipe",
+      "bytes": 512,
+      "sha256": "f39a0a3350cf9edab07d553f0b6972c98c329a77844baa2c07fe4c680018676f",
+      "outcome": "valid",
+      "requestFingerprint": "7f2a56c74788ef9597399a86b4a4bea85a0464559e2a28278de161ec12387e92"
+    },
+    {
+      "name": "set_auto",
+      "bytes": 512,
+      "sha256": "bab65b888fa793ac06f307210d450302d91fa0a6a4007ee066962e94fe054746",
+      "outcome": "valid",
+      "requestFingerprint": "5b438a7fa3b4ec82bbc048353006bc0c84fd4c84822026b0fdd269bc21a216f6"
+    },
+    {
+      "name": "stop",
+      "bytes": 512,
+      "sha256": "4f2665c7bf8f2e2300f08c3383e19e98659b7f5cdd17c01b757c91bdab275285",
+      "outcome": "valid",
+      "requestFingerprint": "53741911db78e0c6e1e46a21926ae3d877fb94b16eb77f73cebbad7b3ab85f97"
+    },
+    {
+      "name": "trigger",
+      "bytes": 512,
+      "sha256": "68e9e7a8c87476bc30e9647814370cc32b0aa86f335db0830cfd4cff0beb08e0",
+      "outcome": "valid",
+      "requestFingerprint": "703fc500834ff20d4da1b23926cbe6bd45d57271f0896f1d38d959ac48e9fa99"
+    },
+    {
+      "name": "ack",
+      "bytes": 512,
+      "sha256": "8cf549dd62d3d0445ab268e59ef5c6113062d5da9bfbdd70907be32d8ada978e",
+      "outcome": "valid",
+      "requestFingerprint": "1596767f84e7e94eafd65695a899c40a489080c24dd83f50d1f29bfd27ed257a"
+    },
+    {
+      "name": "recover",
+      "bytes": 512,
+      "sha256": "d5b22c9a33dbc0c7d959bbebf0be5785fae15a53a70341fb977279bfb80c8c24",
+      "outcome": "valid",
+      "requestFingerprint": "89ad9f57a77eb330c5c7afc5cbc6831b20e1f024664abbfab7ea41848fd0fe26"
+    },
+    {
+      "name": "calib_begin",
+      "bytes": 512,
+      "sha256": "f105bf78282ef6aa9479fb04f62816743be0cb089dc33736abfc92839afe1b3b",
+      "outcome": "valid",
+      "requestFingerprint": "3ff2dd5cfad8827c10de515ac1008662836d3750d30eb428a07224c9d9feeca5"
+    },
+    {
+      "name": "calib_sample",
+      "bytes": 512,
+      "sha256": "51b6664f03e4669804f0e4d11129aa5fd88fbded8b7d8896c54a2691da0b0a4c",
+      "outcome": "valid",
+      "requestFingerprint": "c1536e568965b9c44162b9caa1cd5dca4b618de14561118014b0feb132d46066"
+    },
+    {
+      "name": "calib_solve",
+      "bytes": 512,
+      "sha256": "e866558637e15ba98cf2de84f4411f1c9056b8da8a379c86dc7fd0cd1b47eed8",
+      "outcome": "valid",
+      "requestFingerprint": "71346cc231fa573956c0d286fb5ceddfd6c34e1b7cd94488b657ed43b7ab72c5"
+    },
+    {
+      "name": "calib_validate",
+      "bytes": 512,
+      "sha256": "d8a05936331ad3cf8ba041935c80b58d753a580d8bc592963a54c03e6007a625",
+      "outcome": "valid",
+      "requestFingerprint": "2e8e10336d397cc44a3bdbd2801121972bcf4259895bda70ec01e222fa52f470"
+    },
+    {
+      "name": "calib_activate",
+      "bytes": 512,
+      "sha256": "9c5dca5bd8f6865ff478cca6f105c76c628289879978997e8d783eb9cf87aa11",
+      "outcome": "valid",
+      "requestFingerprint": "2617b7db04ac2063a44610f4a2c33e276e37bcd6cf0c226a42043a4c81698067"
+    },
+    {
+      "name": "calib_abort",
+      "bytes": 512,
+      "sha256": "60f8361c8eb21b143fb1b3766af4b4c115cb02714be17c284044ad06b8a9477a",
+      "outcome": "valid",
+      "requestFingerprint": "f7992176bac94ca8f0dcb294979cae42e82444eb35ee75a0825c5bf3b4a837b3"
+    },
+    {
+      "name": "epoch_rollover",
+      "bytes": 512,
+      "sha256": "2242e4808578158cd42ec55c501f0c851352287cf6a9c8790390c83969a8f539",
+      "outcome": "valid",
+      "requestFingerprint": "b8fadab52d9009576f937da90290d7982b655413d1c9eb42c8462bb84b6145c0"
+    },
+    {
+      "name": "hello_discovery",
+      "bytes": 512,
+      "sha256": "4919f9f7a64557c35d7d84da87eab163a1101cd02712b15e8d19bfe27a2bdaa1",
+      "outcome": "valid",
+      "requestFingerprint": "ed8065969abceccfa792b97abfb7a8db9831c7c31a0bc5de801c5530cc51a535"
+    },
+    {
+      "name": "trigger_station1",
+      "bytes": 512,
+      "sha256": "68e9e7a8c87476bc30e9647814370cc32b0aa86f335db0830cfd4cff0beb08e0",
+      "outcome": "valid",
+      "requestFingerprint": "703fc500834ff20d4da1b23926cbe6bd45d57271f0896f1d38d959ac48e9fa99"
+    },
+    {
+      "name": "trigger_station2",
+      "bytes": 512,
+      "sha256": "700033be1226f1f30f4f1afe2267f59183ebfc733e667c08c5e3d6e26b12f923",
+      "outcome": "valid",
+      "requestFingerprint": "f0c5b2209a596615f1aaae004f14640461ca42a3a76be07b1e6cb376ed28052b"
+    },
+    {
+      "name": "trigger_station3",
+      "bytes": 512,
+      "sha256": "e5206a279810e2028b1f01aecdaa82d01aa1b483f86d7446cc4760cbaa0782d2",
+      "outcome": "valid",
+      "requestFingerprint": "7177b486ac01a6b01c1bfffedab95fbec5cbd80331530c6a583b4d350a399f54"
+    },
+    {
+      "name": "request_0",
+      "bytes": 512,
+      "sha256": "90c26437e22a8207db1e808938b000112ddf87be9d603d7b04a8c5f8d7fe0eb3",
+      "outcome": "INVALID_VALUE",
+      "requestFingerprint": "68d9c4941d97c8f4476e72f2e557338420256d82b35c17e3c781e0895564c737"
+    },
+    {
+      "name": "request_9007199254740993",
+      "bytes": 512,
+      "sha256": "68e9e7a8c87476bc30e9647814370cc32b0aa86f335db0830cfd4cff0beb08e0",
+      "outcome": "valid",
+      "requestFingerprint": "703fc500834ff20d4da1b23926cbe6bd45d57271f0896f1d38d959ac48e9fa99"
+    },
+    {
+      "name": "request_18446744073709551615",
+      "bytes": 512,
+      "sha256": "fb9479282b146951a3d9ad30ebaf62cf3908da6918e4e0cb7edfb346eb4e7b5c",
+      "outcome": "valid",
+      "requestFingerprint": "66b51fe47ca468a9a488ad844df053e3e6d5da1661670f3f4f5d4b931b7561b4"
+    },
+    {
+      "name": "hello_reply",
+      "bytes": 1024,
+      "sha256": "50067b88a0c3536ce2098561e1023c34977d76c86c5f719be6ea7aa37f762e77",
+      "outcome": "valid"
+    },
+    {
+      "name": "status_reply",
+      "bytes": 1024,
+      "sha256": "ed5b9496f31e71fe971757d18988347b1b97191fe8130e5f99bc04fc5b5070f7",
+      "outcome": "valid"
+    },
+    {
+      "name": "accepted",
+      "bytes": 1024,
+      "sha256": "c11eea373f4c9d1fd342910701514f6887aac8854423aa90c879b401f7b6c1c4",
+      "outcome": "valid"
+    },
+    {
+      "name": "terminal",
+      "bytes": 1024,
+      "sha256": "b7c50e4f29b3aab34ad7841ae30b519e27355a122b0602337587e6dab526ddac",
+      "outcome": "valid",
+      "terminalDigest": "c3f2de82f08ff405510a071d03558996acf46918ca29044b5a12c93bfe0b4e45"
+    },
+    {
+      "name": "acked",
+      "bytes": 1024,
+      "sha256": "ada92315b7da7a1fbc9c963bc9af22eb3fec908312bf481ad46d7efaddaa2c1c",
+      "outcome": "valid"
+    },
+    {
+      "name": "state",
+      "bytes": 1024,
+      "sha256": "bf6e417626c4e49a337adf430657f7c8221ddf9300bcd075a61b1d630474224b",
+      "outcome": "valid"
+    },
+    {
+      "name": "reject",
+      "bytes": 1024,
+      "sha256": "9c7975dec4d4db269e6535b01ef5472a57a253867c560d4e0e6b7044fbfeda14",
+      "outcome": "valid"
+    },
+    {
+      "name": "protocol_error",
+      "bytes": 1024,
+      "sha256": "f57eae6799f6d8aefde5e47365ca9e0026bde119f0bb061700a5cea4c4043708",
+      "outcome": "valid"
+    },
+    {
+      "name": "catalog_category01",
+      "bytes": 1024,
+      "sha256": "212bee308d74de0ec5f75615b657541b319d7fb3d0b6aae4d5184798eb891c42",
+      "outcome": "valid"
+    },
+    {
+      "name": "catalog_category02",
+      "bytes": 1024,
+      "sha256": "64f1b12c002d5974241b5fbaf5f64a18b635d1a0c7a492ed59bef17c67acad85",
+      "outcome": "valid"
+    },
+    {
+      "name": "catalog_category03",
+      "bytes": 1024,
+      "sha256": "b63db256f4d861a499a194de371f9d77b40a50e71aae3cb347486167710dc9eb",
+      "outcome": "valid"
+    },
+    {
+      "name": "catalog_category04",
+      "bytes": 1024,
+      "sha256": "187b6c696a86a4097a9a9519a890305db3025188d9bad51102680698c3eaff06",
+      "outcome": "valid"
+    },
+    {
+      "name": "catalog_category05",
+      "bytes": 1024,
+      "sha256": "13acd04df231eca873f514bde889b623d4d8a1902f78ec9874be974ef426df66",
+      "outcome": "valid"
+    },
+    {
+      "name": "catalog_category06",
+      "bytes": 1024,
+      "sha256": "e9dac58e4e8f894610bdd5641d0bdc6417ec43022b13bb408759e0e140e0c423",
+      "outcome": "valid"
+    },
+    {
+      "name": "catalog_category07",
+      "bytes": 1024,
+      "sha256": "1db679c2297bb6bc9f78d684362f8e055849297b0b5a984f5bf91eac8650c36e",
+      "outcome": "valid"
+    },
+    {
+      "name": "catalog_category08",
+      "bytes": 1024,
+      "sha256": "c0d0fdec7c79c6f99910376c82419ccc3c74a297540a4386d08d4bea1cce234d",
+      "outcome": "valid"
+    },
+    {
+      "name": "catalog_category09",
+      "bytes": 1024,
+      "sha256": "42e5f5a7fe2fc495fc21aaccf92d83cc7d923b6b18162d1d8e03835065d985d3",
+      "outcome": "valid"
+    },
+    {
+      "name": "catalog_category10",
+      "bytes": 1024,
+      "sha256": "18c6e985bee14a377ebc38cff392952dccb35974d6ed6aa4ab140c4660dfad9d",
+      "outcome": "valid"
+    },
+    {
+      "name": "catalog_category11",
+      "bytes": 1024,
+      "sha256": "7d9c800a7ff5e0a10b408e1ee65e06e9dd1c1742a173c4c68480106724d6e302",
+      "outcome": "valid"
+    },
+    {
+      "name": "catalog_category12",
+      "bytes": 1024,
+      "sha256": "664845ab6d080db663d1eca89778303e76bba85d72de29762d4049394d5a742e",
+      "outcome": "valid"
+    },
+    {
+      "name": "catalog_category13",
+      "bytes": 1024,
+      "sha256": "686147a419c3f50ea21dae5a43a69454d4c1f68a88d20d764a48852534974f88",
+      "outcome": "valid"
+    },
+    {
+      "name": "ack_exact",
+      "bytes": 512,
+      "sha256": "872084ae9f3dbcefebc511a121fa2e6c5f9e91c2e413ff5d4b537e8bc7f5c107",
+      "outcome": "valid",
+      "requestFingerprint": "94a17628da17321a3a5cdd1ae074f4429da7646c9a037bae2d4e1671d9e1b329"
+    },
+    {
+      "name": "terminal_select_recipe",
+      "bytes": 1024,
+      "sha256": "e9915c814b9fb9bdd4302326cb9ac072b3e87377b8540a93b265ab82b0c5318a",
+      "outcome": "valid",
+      "terminalDigest": "a5e1d3490a423af42b382754fe96cfbadcfcce64c2331ee6da2143c21ed3dfcf"
+    },
+    {
+      "name": "terminal_set_auto",
+      "bytes": 1024,
+      "sha256": "e68ac57b4b02f2b5c1c94e8bff255549e938e406e12da4fa34a680adc13a7e2e",
+      "outcome": "valid",
+      "terminalDigest": "ebb123b6aed32bdeef90f03d4ae266f5d47e873b05901ad3fdca62e84dccd19d"
+    },
+    {
+      "name": "terminal_stop_control",
+      "bytes": 1024,
+      "sha256": "31575fe88d327963d16f690a9f342b07a732a8c7aee751e4e02731c9ef51ee9a",
+      "outcome": "valid",
+      "terminalDigest": "861774f458ce233bc16379a7b74c20a9cc5762f1395c28182f8d81f3ca9a4f44"
+    },
+    {
+      "name": "terminal_abort_control",
+      "bytes": 1024,
+      "sha256": "d226f1599ef49c7f5b58ef4b16f94a2ead20cb13fb3bdcc2a1b242e94b33b724",
+      "outcome": "valid",
+      "terminalDigest": "b746c4785da6298248617aaaec85692eee910722de2675e7a49fa7d035d37f12"
+    },
+    {
+      "name": "terminal_sample_holdout",
+      "bytes": 1024,
+      "sha256": "501d6aacde79e1b867bb0d9622d0186a1f557ece3b4a0753b55e00b02befdc2d",
+      "outcome": "valid",
+      "terminalDigest": "5107304fbebb060a305d8054678c441351334b0c408be0edc1b45567d103e46b"
+    },
+    {
+      "name": "calib_sample_holdout",
+      "bytes": 512,
+      "sha256": "b7949082dc20712ff255e523d2141aeae2406b4fe66629a998085b303ffd1998",
+      "outcome": "valid",
+      "requestFingerprint": "a4f4a806f54be203fd2ce9bd193612f2a20bb281c7c4cab7705ee840c9f83f49"
+    },
+    {
+      "name": "pose_identity",
+      "bytes": 1024,
+      "sha256": "f67d95f8c547d30987042316f597cd08c95879125f18e256d27b0233dd1508e6",
+      "outcome": "valid",
+      "terminalDigest": "ede0c4f08601ead262f377f2cd961aef1552021328177585f982ee2e63e362f7"
+    },
+    {
+      "name": "pose_inverse",
+      "bytes": 1024,
+      "sha256": "639524f2b946d2e9fe29648ae24b6fe73d2e5c211054c93c27cc29406765f7db",
+      "outcome": "valid",
+      "terminalDigest": "4f1748d966186332eba8e02396dfb85fba1bced435ba01e8d5639447b763300e"
+    },
+    {
+      "name": "pose_missing",
+      "bytes": 1024,
+      "sha256": "77cced4b19b0d2f69dbc2c4b2fb5511088f4774c3bb2fc7549a76fd2b93289f6",
+      "outcome": "valid",
+      "terminalDigest": "17afd5633e1cd024c348075e9558e5c00fffb7e3bfa72ad67b676cfd6f469445"
+    },
+    {
+      "name": "bad_flags",
+      "bytes": 512,
+      "sha256": "ccac1280b7702b898e1dd54cd64cb6e2566a58ecfd38676e621b31ef0f5cf65d",
+      "outcome": "BAD_FRAME",
+      "requestFingerprint": "703fc500834ff20d4da1b23926cbe6bd45d57271f0896f1d38d959ac48e9fa99"
+    },
+    {
+      "name": "bad_kind",
+      "bytes": 512,
+      "sha256": "fe2b0f2f534620e1caf6dc14bff0d78ec98fa2e0c5dd0d947ee59075ed06f6a3",
+      "outcome": "BAD_FRAME"
+    },
+    {
+      "name": "bad_reserved",
+      "bytes": 512,
+      "sha256": "08fcfbc7ac2cfa2e390b0522feb60997b12499b5f5d60504db5f061798acb1d7",
+      "outcome": "BAD_FRAME",
+      "requestFingerprint": "133a6b435de3d9311001d05a1f2e02996b0b9bf24ec67a03296164755f022e67"
+    },
+    {
+      "name": "bad_magic",
+      "bytes": 512,
+      "sha256": "bbb93aecc3e68fe06f6999b115a63a78422c0ef29051ba10810222060ed073f4",
+      "outcome": "BAD_FRAME",
+      "requestFingerprint": "703fc500834ff20d4da1b23926cbe6bd45d57271f0896f1d38d959ac48e9fa99"
+    },
+    {
+      "name": "bad_size",
+      "bytes": 512,
+      "sha256": "db00bad95eb5e081ab139f03f2b773970504499eede78afa48bc28abf49aafde",
+      "outcome": "BAD_FRAME",
+      "requestFingerprint": "703fc500834ff20d4da1b23926cbe6bd45d57271f0896f1d38d959ac48e9fa99"
+    },
+    {
+      "name": "bad_version",
+      "bytes": 512,
+      "sha256": "92101f078b4f387a84e0bff843dc4199668e2c698f0b74187c6ddbc0d2fb19a8",
+      "outcome": "UNSUPPORTED_VERSION",
+      "requestFingerprint": "703fc500834ff20d4da1b23926cbe6bd45d57271f0896f1d38d959ac48e9fa99"
+    },
+    {
+      "name": "stale_session",
+      "bytes": 512,
+      "sha256": "a7d172193b294c16b0eefe754788fb9853b65320f35a60e4d7493e7c3f4bfe5e",
+      "outcome": "STALE_SESSION",
+      "requestFingerprint": "703fc500834ff20d4da1b23926cbe6bd45d57271f0896f1d38d959ac48e9fa99"
+    },
+    {
+      "name": "stale_activation",
+      "bytes": 512,
+      "sha256": "a0f75c62fc0c7810b4d3314e2fc772b28d4f51a40f5d9d3c2c4d1291cd022af8",
+      "outcome": "STALE_CONFIG",
+      "requestFingerprint": "833debc84a1fd98700fba9c156739b239098a0f99ca40fe58a7522004bf3f893"
+    },
+    {
+      "name": "ack_wrong_hash",
+      "bytes": 512,
+      "sha256": "2239e38196fe416822e2c23888511a360398ee5a3124664e73d2cf334ca6be49",
+      "outcome": "ACK_MISMATCH",
+      "requestFingerprint": "e062f7515abab57b2cf0636cc0c670feee38ad8c1bf503f535f21b1fa93d129d"
+    },
+    {
+      "name": "ack_wrong_epoch",
+      "bytes": 512,
+      "sha256": "a7f078a1f6a4d607fa50a3cc4fddef3b8cc46ef5dada6bff2567d2f0385743dd",
+      "outcome": "ACK_MISMATCH",
+      "requestFingerprint": "4fe27eb22c4e334cb957bcfcdf34d864e1dea7ff68e3cb797299bdbafacccc3f"
+    },
+    {
+      "name": "ack_wrong_station",
+      "bytes": 512,
+      "sha256": "29f6143107405fe900a47bbf9b411fb1f5eabd2ef8ad9b87532c07b46f7cc3ed",
+      "outcome": "ACK_MISMATCH",
+      "requestFingerprint": "d968646f7e7b9d8ceaa6db69a4285b2f1d8e2de91e280c17adedbac68a62383c"
+    },
+    {
+      "name": "ack_wrong_result",
+      "bytes": 512,
+      "sha256": "fdbe14d2314f66ea1bbd7a2b814994ee43f588c49e5411797817d7376d3a6eee",
+      "outcome": "ACK_MISMATCH",
+      "requestFingerprint": "96789ebf25dded7146ecff250fdbf32fc2b57cce6a6aac1e60326b6490317626"
+    },
+    {
+      "name": "ack_wrong_activation",
+      "bytes": 512,
+      "sha256": "ce2d55f206f90c2cada0470208245dfbe62e1eac3fd84dfd5f2b2b0522f019a8",
+      "outcome": "ACK_MISMATCH",
+      "requestFingerprint": "0e512f1e3e60260706d215d632a3055476ece97d69f28d25def0e125cda0a6f9"
+    },
+    {
+      "name": "catalog_unknown_schema",
+      "bytes": 1024,
+      "sha256": "f1fed7eeb76b9bfe509fffcdffd0b5e35db348ddc592549f83a4e228411f5555",
+      "outcome": "INVALID_VALUE"
+    },
+    {
+      "name": "catalog_reserved",
+      "bytes": 1024,
+      "sha256": "fb3e8f76453fa043648eccb0f9ff4038251b2d16382f0be7a53e9565a001da2e",
+      "outcome": "BAD_FRAME"
+    },
+    {
+      "name": "bad_text65",
+      "bytes": 1024,
+      "sha256": "e4d1a7f8ef50a509d47a864efe21e4ed67ed893c1a315a9ca208c444a253841c",
+      "outcome": "INVALID_VALUE",
+      "terminalDigest": "4c047175ea722bcb2aa2c5fbc1590edfb98dd43dcd6f154fc538ccd134d7031e"
+    },
+    {
+      "name": "bad_utf8",
+      "bytes": 1024,
+      "sha256": "3ba49dfdef98720783ab4d44b74c791508d2afd4e2e9809076ed19ba60858f89",
+      "outcome": "INVALID_VALUE",
+      "terminalDigest": "709752ebf9532c20c28a0932066cb6566ec2427e5a4b355ef286c25442e3e749"
+    },
+    {
+      "name": "bad_text_padding",
+      "bytes": 1024,
+      "sha256": "0778fd462d515f07c5a56a57d59f848359cf88710eb4d3c43a445a6208f0e3c0",
+      "outcome": "BAD_FRAME",
+      "terminalDigest": "6b56bbc7444411666ded997426da3eaa168b3f2c29d1a94133b4bf2194f6b5b0"
+    },
+    {
+      "name": "bad_number_mask",
+      "bytes": 1024,
+      "sha256": "aec6983d126b1bdfa528117146cdfe80817476cc5d088b310e677a3d0beb17bd",
+      "outcome": "BAD_FRAME",
+      "terminalDigest": "204125df94ae62fc62d511bdedd5f701d7ce49ff7375b8687a54c30f5b8b01bc"
+    },
+    {
+      "name": "bad_pose_revision",
+      "bytes": 512,
+      "sha256": "7bbe99f93c2497c4cbb991e19a8b768df69883ef81ebd651ef27695389d2e535",
+      "outcome": "STALE_CONFIG",
+      "requestFingerprint": "f01ee24defa55676a33f449481cfcc34f79cf5e43f897609cdd865f5b084fe0f"
+    },
+    {
+      "name": "bad_pose_norm",
+      "bytes": 512,
+      "sha256": "e73c71a63872159b36e04c5a3e77e3d5c6e36363f9fec4579c6091285c7bb216",
+      "outcome": "INVALID_VALUE",
+      "requestFingerprint": "31eddc43d0ee933e9b93699cd3c6cf2f2c0f27b8a8c3810dd4fbb926e5579c5f"
+    },
+    {
+      "name": "bad_pose_nan",
+      "bytes": 512,
+      "sha256": "2109a2480202736795263b4c6bfbb8b1ee6060dff7c2ae36656412ced242b9fc",
+      "outcome": "INVALID_VALUE",
+      "requestFingerprint": "65292f164f41dd1a4b455255e722579b72bd454eb2143a878e0d2b0fc4e48dc5"
+    },
+    {
+      "name": "bad_pose_convention",
+      "bytes": 512,
+      "sha256": "47d837fcceb7d72abeffa61d1af64567e2becd6f4aad9d84a80426ebc237aa17",
+      "outcome": "INVALID_VALUE",
+      "requestFingerprint": "6cf135daeadd8eb6e8bff3443ad0b8a923c61d3a3c51caf3d19eb1f5f8e83768"
+    },
+    {
+      "name": "bad_sample_role",
+      "bytes": 512,
+      "sha256": "880d847a2a6a9733bfca4777a41f717aaa60ad395e3efab9131fd520effc077f",
+      "outcome": "INVALID_VALUE",
+      "requestFingerprint": "d8505f6ac52d0d83b27bdd834a1f5de7f102002d2f97347664a5d0e5e5d90893"
+    },
+    {
+      "name": "bad_signed_word_order",
+      "bytes": 1024,
+      "sha256": "9d349a1c8b7ea11db86b40f542d36edf02bf608e93925277d68ad2ac619c4a9b",
+      "outcome": "decoded 32768, not INT_MIN",
+      "terminalDigest": "25a552e68be6ccb175ac6da6c5b529bbe797e20c583d3f8fbf2b38c5974b4601"
+    },
+    {
+      "name": "bad_uuid_guid_order",
+      "bytes": 512,
+      "sha256": "90884f421d04e94efa528602d18a070c0da613ccf2deba06c2bbe84f7f1425da",
+      "outcome": "unknown peer, not canonical UUID",
+      "requestFingerprint": "1902ab2571d988bc25e8938ec6c59785f84128f32af961104f279c701d505d5e"
+    },
+    {
+      "name": "terminal_reconnect_session",
+      "bytes": 1024,
+      "sha256": "960111d46106c302519433ecb3cde9eaff5bc38a5a3ef4f3109bf259af006aa3",
+      "outcome": "valid",
+      "terminalDigest": "c3f2de82f08ff405510a071d03558996acf46918ca29044b5a12c93bfe0b4e45"
+    },
+    {
+      "name": "trigger_reconnect_session",
+      "bytes": 512,
+      "sha256": "a7d172193b294c16b0eefe754788fb9853b65320f35a60e4d7493e7c3f4bfe5e",
+      "outcome": "valid",
+      "requestFingerprint": "703fc500834ff20d4da1b23926cbe6bd45d57271f0896f1d38d959ac48e9fa99"
+    }
+  ]
+}
