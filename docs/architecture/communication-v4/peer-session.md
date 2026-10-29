@@ -34,10 +34,10 @@ değerleri double/JSON sayı dönüşümünden geçmez. Fingerprint codec'in fro
 session hariç hash'idir. Bu port durable intent/ACK ledger oluşturmaz.
 
 `authorize()` yalnız session katmanının sonucudur; station admission değildir.
-`handle()` bugün mutating komutları dispatch etmez: izinli olanlara `NOT_READY`,
-stale/wrong/retired olanlara ilgili ret döner. Tam katalog snapshot'ı, active
-recipe/activation, admission ve production gate kontrolleri08'in application
-router'ında ayrıca zorunludur. ACK/RECOVER/rollover'ın gerçek ledger işlemleri
+`handle()` COMM4-08 ile yalnız TRIGGER için explicit handler portuna sahiptir;
+[station admission](station-admission.md) ayrıca zorunludur. Handler yoksa izinli
+tetik `NOT_READY`, stale/wrong/retired session ilgili ret döner. Diğer mutating
+komutlar henüz `NOT_READY` döner. ACK/RECOVER/rollover'ın gerçek ledger işlemleri
 13/14'tedir. Remote Run/recipe/Auto/Stop bu kartta uygulanmadı.
 
 ## Salt okunur sorgu portları
@@ -67,8 +67,9 @@ Socket başına `CommunicationV4Framer` ve `CommunicationV4WriteQueue` kullanıl
 Read buffer4096, read2048 byte, batch4, queue64 frame, socket write high-water64KiB;
 partial deadline frozen2000ms'dir.25ms timer sessiz partial deadline'ı ve geride
 kalan batch'leri ilerletir. Byte'lar frame sınırında sıralı yazılır; saturation,
-bozuk frame veya socket hata yolu bağlantıyı kapatır. Bu kart accepted iş
-üretmediğinden queue taşması accepted cycle kaybetmez; durable replay13/14'tedir.
+bozuk frame veya socket hata yolu bağlantıyı kapatır. COMM4-07 kendi başına accepted
+iş üretmez. COMM4-08 handler'ı bağlandığında accepted intent disk portundadır;
+queue hatası onu silmez, durable replay adapter'ı13/14'tedir.
 Profildeki eski parser/ACK/bütçe alanları frozen codec limitlerini büyütmez;
 bu port frozen limitleri kullanır. Flush/write teslim veya ACK kanıtı değildir.
 

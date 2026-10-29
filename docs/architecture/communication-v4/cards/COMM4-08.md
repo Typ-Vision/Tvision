@@ -1,6 +1,8 @@
 # COMM4-08 — Station admission ve trigger yönlendirme
 
-Durum: planlandı, başlanmadı. Model: **GPT-6.1 Sol / medium**.
+Durum: tamamlandı — C yazılım kabulü. Model: **GPT-6.1 Sol / medium**.
+Uygulanan [admission/Runtime portu](../station-admission.md);
+[kapanış ve kanıt](../../../archive/2026-10-29-comm4-08.md).
 Tek oturum kapsamı ve ortak kurallar [indekste](../README.md), kapanış
 kuralları [V0](../verification.md) içindedir.
 

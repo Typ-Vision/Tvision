@@ -17,6 +17,7 @@ public:
     // Metadata must come from the immutable local manifest, never synthesized
     // from display names/registry UUIDs. Missing publication remains NOT_READY.
     using Metadata=std::function<QByteArray(const IdentityCatalogue&,const CatalogueEntry&)>;
+    using TriggerHandler=std::function<CommunicationV4Frame(const V4RequestIdentity&,const CommunicationV4Frame&)>;
     explicit CommunicationPeerSessionService(StationIdentityStore&,Metadata={});
     CommunicationPeerSessionService(const CommunicationPeerSessionService&)=delete;
     CommunicationPeerSessionService& operator=(const CommunicationPeerSessionService&)=delete;
@@ -27,12 +28,14 @@ public:
     CommunicationV4Frame handle(const QUuid& connection,const CommunicationV4Frame&);
     V4RequestIdentity requestIdentity(const QUuid& connection,const CommunicationV4Frame&) const;
     QUuid session() const {owner();return session_;}
+    void setTriggerHandler(TriggerHandler handler){owner();trigger_=std::move(handler);}
 private:
     void owner() const;
     quint32 identityReason(const IdentityCatalogue&,const CommunicationV4Header&) const;
     CommunicationV4Frame response(const CommunicationV4Frame&,quint32 kind,quint32 reason) const;
     StationIdentityStore& store_;
     Metadata metadata_;
+    TriggerHandler trigger_;
     QUuid connection_,session_,peer_,epoch_,installation_;
     bool exact_=false;
     QThread* owner_=QThread::currentThread();

@@ -80,8 +80,12 @@ CommunicationV4Frame CommunicationPeerSessionService::handle(const QUuid& connec
             C::encode(r,V4Direction::Response);return r;
         }catch(...){return response(f,190,8);}
     }
-    // Session permission is necessary, never sufficient for production. The
-    // next card consumes authorize() and performs station atomic admission.
+    if(f.header.kind==10 && trigger_){
+        std::optional<V4RequestIdentity> key;
+        try{key=requestIdentity(connection,f);}catch(...){return response(f,190,10);}
+        try{return trigger_(*key,f);}catch(...){return response(f,190,8);}
+    }
+    // Missing station composition never grants production permission.
     return response(f,190,20);
 }
 V4RequestIdentity CommunicationPeerSessionService::requestIdentity(const QUuid& connection,const CommunicationV4Frame& f) const {

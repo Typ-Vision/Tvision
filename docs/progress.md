@@ -4,8 +4,8 @@
 
 ## Devam noktası
 
-**[COMM4-07](archive/2026-10-29-comm4-07.md) tamam:** HELLO/session; ON/OFF8'er geçti.
-Sıradaki **COMM4-08**; dispatch/main metadata yok.
+**[COMM4-08](archive/2026-10-29-comm4-08.md) tamam:** admission; ON/OFF8'er geçti.
+Sıradaki **COMM4-08a**; main manifest/ledger/worker açık.
 [03 registry/kabul](archive/2026-10-29-comm4-03.md).
 Eski probe INI restore SEGFAULT açık; temiz girdide kabul.
 [Ölçüm](working-protocol.md)3/3: sayaç erişilemiyor.

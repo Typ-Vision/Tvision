@@ -16,6 +16,7 @@ public:
     QUuid station() const {return station_;}
     QUuid activation() const {return activation_;}
 private:
+    friend class StationRuntimeAdmissionBoundary;
     void owner() const;
     StationRuntimeBoundary& boundary_;
     QUuid station_,activation_;

@@ -221,7 +221,7 @@ daraltılır. Bir sonraki kart otomatik başlatılmaz.
 | 05 | main startup composition, legacy listen guards, StationRuntimeBoundary | CommunicationServerLifecycle/profile, CommunicationListenerOwnership, StationRunController ve communication_server_lifecycle_test; [uygulanan sınır](server-lifecycle.md), UI sayfaları değişmedi |
 | 06 | application/CommunicationV4Codec.hpp/cpp, tests/communication_v4_codec_test.cpp, CMake visionflow_projects | [Binary codec/framer/write queue](binary-codec.md); CTest communication_v4_codec; domain authority codec'e geçmez |
 | 07 | CommunicationServerLifecycle, main process composition; v3 endpoint ayrı | CommunicationPeerSessionService + bounded socket adapter ve communication_peer_session_test; [uygulanan sınır](peer-session.md), station/ledger dispatch yok |
-| 08 | TriggerRouter.admit ve Coordinator.begin | StationAdmissionService; yürütme topolojisi09'da |
+| 08 tamam | TriggerRouter.admit bariyerleri ve mevcut Coordinator.begin | StationAdmissionService + StationRuntimeAdmissionBoundary, session TRIGGER hook; station_admission_contract. [Port/sınırlar](station-admission.md); yürütme topolojisi09 ve gerçek durable adapter13'te |
 | 08a | Coordinator start/stop/generation ve MainWindowRuntime local controls | StationControlService; UI/remote aynı komut portu |
 | 09 | RuntimeService.execute, ProductionRecipeService, MultiSourceRuntimeService | StationExecutionRegistry; algoritma motoru kopyalanmaz |
 | 10 | CameraAcquisitionSessions/CameraWorkerSession physical lease | CameraLeaseArbiter; camera UUID/all-or-none, SDK yalnız port gerektirirse |
