@@ -1,5 +1,6 @@
 #include "CommunicationServerLifecycle.hpp"
 #include "CommunicationListenerOwnership.hpp"
+#include "CommunicationPeerSessionService.hpp"
 #include <QFile>
 #include <QSaveFile>
 #include <QJsonDocument>
@@ -57,7 +58,7 @@ void CommunicationServerProfiles::save(const CommunicationServerProfile& p) cons
     validate(p);atomicWrite(path_,{{"schema","visionflow.communication-server.v4/1"},{"enabled",p.enabled},{"address",p.address},{"port",p.port},{"peerPolicy",p.peerPolicy},
         {"parserDeadlineMs",p.parserDeadlineMs},{"ackTimeoutMs",p.ackTimeoutMs},{"retries",p.retries},{"maxStations",p.maxStations},{"maxQueuedResponses",p.maxQueuedResponses},{"writeHighWaterBytes",p.writeHighWaterBytes},{"maxReadBatch",p.maxReadBatch}});
 }
-CommunicationServerLifecycle::CommunicationServerLifecycle(const CommunicationServerProfiles& profiles,QString checkpoint):checkpointPath_(std::move(checkpoint)) {
+CommunicationServerLifecycle::CommunicationServerLifecycle(const CommunicationServerProfiles& profiles,QString checkpoint,CommunicationPeerSessionService* sessions):sessions_(sessions),checkpointPath_(std::move(checkpoint)) {
     QObject::connect(&server_,&QTcpServer::newConnection,&server_,[this]{acceptPeer();});server_.setMaxPendingConnections(1);
     try {const auto p=profiles.load();if(!p)return;maxStations_=p->maxStations;if(!p->enabled){state_=CommunicationServerState::Disabled;return;}
         CommunicationListenerOwnership::selectV4(server_);
@@ -65,13 +66,16 @@ CommunicationServerLifecycle::CommunicationServerLifecycle(const CommunicationSe
         generation_=QUuid::createUuid();state_=CommunicationServerState::Listening;
     }catch(const std::exception& e){error_=QString::fromUtf8(e.what());state_=CommunicationServerState::Fault;}
 }
-CommunicationServerLifecycle::~CommunicationServerLifecycle(){if(peer_)peer_->abort();server_.close();CommunicationListenerOwnership::releaseV4(server_);}
+CommunicationServerLifecycle::~CommunicationServerLifecycle(){if(peer_)peer_->abort();if(rejectedPeer_)rejectedPeer_->abort();server_.close();CommunicationListenerOwnership::releaseV4(server_);}
 void CommunicationServerLifecycle::owner() const {if(owner_!=QThread::currentThread())throw std::runtime_error("Server owner thread required");}
 CommunicationServerState CommunicationServerLifecycle::state() const {owner();if(state_==CommunicationServerState::Listening && peer_ && peer_->state()==QAbstractSocket::ConnectedState)return CommunicationServerState::PeerConnected;return state_;}
 void CommunicationServerLifecycle::acceptPeer() {
-    while(server_.hasPendingConnections()){auto* socket=server_.nextPendingConnection();if(peer_ || state_==CommunicationServerState::Closed){socket->abort();socket->deleteLater();continue;}
+    while(server_.hasPendingConnections()){auto* socket=server_.nextPendingConnection();if(peer_ || state_==CommunicationServerState::Closed){
+            if(sessions_ && peer_ && !rejectedPeer_ && state_!=CommunicationServerState::Closed){rejectedPeer_=socket;QObject::connect(socket,&QTcpSocket::disconnected,&server_,[this,socket]{if(rejectedPeer_==socket)rejectedPeer_.clear();socket->deleteLater();});attachCommunicationPeer(*socket,*sessions_);}
+            else{socket->abort();socket->deleteLater();}continue;}
         peer_=socket;socket->setReadBufferSize(65536);
         QObject::connect(socket,&QTcpSocket::disconnected,&server_,[this,socket]{if(peer_==socket)peer_.clear();socket->deleteLater();});
+        if(sessions_)attachCommunicationPeer(*socket,*sessions_);
     }
 }
 void CommunicationServerLifecycle::addStation(StationRunController& station) {
@@ -95,6 +99,6 @@ bool CommunicationServerLifecycle::pollShutdown() {
     if(!drained && shutdownTimer_.elapsed()<deadlineMs_)return false;
     recovery_=!drained;
     try{checkpoint();}catch(const std::exception& e){recovery_=true;error_=QString::fromUtf8(e.what());}
-    if(peer_)peer_->abort();server_.close();CommunicationListenerOwnership::releaseV4(server_);state_=CommunicationServerState::Closed;return true;
+    if(peer_)peer_->abort();if(rejectedPeer_)rejectedPeer_->abort();server_.close();CommunicationListenerOwnership::releaseV4(server_);state_=CommunicationServerState::Closed;return true;
 }
 }

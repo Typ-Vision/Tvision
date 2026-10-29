@@ -31,8 +31,9 @@ Dosya migration veya eski pending ledger temizleme yapılmaz.
 Bir peer socket'i ve bir pending connection sınırı vardır; ikinci peer mevcut
 peer'i değiştiremez. Socket read buffer64 KiB'dır. Listener generation bir kez
 oluşturulur, station Run/Auto/Stop veya activation A/B ile değişmez.
-`peer()` sonraki codec/session katmanının bağlanma portudur; bu kart byte okumaz,
-wire cevap üretmez, HELLO veya kimlik doğrulama uygulamaz. Profilde parser/ACK ve
+`peer()` codec/session katmanının bağlanma portudur;05 tek başına byte okumaz,
+wire cevap üretmez.07 [session portunu](peer-session.md) normal main'de bağlar.
+Profilde parser/ACK ve
 kuyruk bütçelerinin bulunması bu mekanizmaların uygulanmış olduğu anlamına gelmez.
 
 ## Station ve kapanış

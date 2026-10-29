@@ -2,6 +2,8 @@
 #include "MainWindow.hpp"
 #include "ComboWheelPolicy.hpp"
 #include "application/CommunicationServerLifecycle.hpp"
+#include "application/CommunicationPeerSessionService.hpp"
+#include "persistence/StationIdentityStore.hpp"
 #include <QStandardPaths>
 #include <QDebug>
 #include <QDir>
@@ -49,7 +51,11 @@ int main(int argc, char* argv[]) {
     if(smoke)QDir().mkpath(buildDir.absolutePath());
     const QDir communicationDirectory(smoke ? buildDir.filePath("v4-machine") : QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation));
     visionflow::CommunicationServerProfiles serverProfiles(communicationDirectory.filePath("communication-server-v4.json"));
-    visionflow::CommunicationServerLifecycle communicationServer(serverProfiles,communicationDirectory.filePath("communication-shutdown-v4.json"));
+    // Enrollment is explicit. Missing/corrupt registry stays fail-closed; startup
+    // never manufactures installation/peer/epoch identities.
+    visionflow::JsonStationIdentityStore communicationIdentities(communicationDirectory.filePath("communication-identities-v4.json"));
+    visionflow::CommunicationPeerSessionService communicationSessions(communicationIdentities);
+    visionflow::CommunicationServerLifecycle communicationServer(serverProfiles,communicationDirectory.filePath("communication-shutdown-v4.json"),&communicationSessions);
     if(communicationServer.state()==visionflow::CommunicationServerState::Fault)qCritical()<<"V4 listener:"<<communicationServer.error();
     visionflow::MainWindow window(buildDir.filePath(smoke ? "ui-smoke.ini" : "../config/local.ui.ini"));
     window.show();

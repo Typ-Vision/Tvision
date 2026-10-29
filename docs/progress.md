@@ -4,8 +4,8 @@
 
 ## Devam noktası
 
-**[COMM4-06](archive/2026-10-29-comm4-06.md) tamam:** codec/framer;
-ON174/OFF135,1'er skipped. Sıradaki **COMM4-07**; dispatch yok.
+**[COMM4-07](archive/2026-10-29-comm4-07.md) tamam:** HELLO/session; ON/OFF8'er geçti.
+Sıradaki **COMM4-08**; dispatch/main metadata yok.
 [03 registry/kabul](archive/2026-10-29-comm4-03.md).
 Eski probe INI restore SEGFAULT açık; temiz girdide kabul.
 [Ölçüm](working-protocol.md)3/3: sayaç erişilemiyor.

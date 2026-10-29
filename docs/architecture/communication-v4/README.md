@@ -2,7 +2,7 @@
 
 **Durum: sıralı uygulama sürüyor; hedef sistem henüz tamamlanmadı.**
 29 Ekim 2026. Kullanıcı seçimi: GPT-6.1 Sol / medium. Varsayılan oturum kapsamı
-tek karttır; ajanlar paralel çalışmaz. **Sonraki görev: [COMM4-07](cards/COMM4-07.md).**
+tek karttır; ajanlar paralel çalışmaz. **Sonraki görev: [COMM4-08](cards/COMM4-08.md).**
 
 **COMM4-01 tamam:** [güncel kaynak, test ve kart sahiplik haritası](source-map.md).
 **COMM4-02 tamam:** [wire fixture freeze](freeze-comm4-02.md).
@@ -15,10 +15,14 @@ station Runtime/listener entegrasyonu sonraki kartlardadır.
 Kalıcı seçim üretim izni açmaz; listener/Auto/dispatch sonraki kartlardadır.
 
 **COMM4-05 tamam:** [process listener ve station Run sınırı](server-lifecycle.md).
-Startup listen, bağımsız Stop/drain ve bounded checkpoint; listener codec'e henüz bağlı değil.
+Startup listen, bağımsız Stop/drain ve bounded checkpoint.
 
 **COMM4-06 tamam:** [bounded binary codec/framer ve write queue](binary-codec.md).
-F yazılım kabulü; listener entegrasyonu/session authority/dispatch henüz yok.
+F yazılım kabulü; dispatch sonraki kartlardadır.
+
+**COMM4-07 tamam:** [HELLO/session ve peer sahipliği](peer-session.md).
+Listener codec'e bağlı; discovery/exact negotiation ve stale/retired fence var.
+Station dispatch ve normal main catalogue manifest provider'ı henüz yok.
 
 ## Okuma ve kapsam
 
@@ -50,7 +54,7 @@ fiziksel PLC/robot ve dağıtım engelleri bu planla kapanmaz.
 | [04](cards/COMM4-04.md) | Station domain ve immutable aktivasyon — tamam | 03 |
 | [05](cards/COMM4-05.md) | Listener/prod yaşam döngüsü ayrımı — tamam | 04 |
 | [06](cards/COMM4-06.md) | Bounded binary codec/framer | 02,05 |
-| [07](cards/COMM4-07.md) | HELLO, session ve peer sahipliği | 03,06 |
+| [07](cards/COMM4-07.md) | HELLO, session ve peer sahipliği — tamam | 03,06 |
 | [08](cards/COMM4-08.md) | İstasyon admission ve tetik yönlendirme | 04,07 |
 | [08a](cards/COMM4-08a.md) | PLC reçete seçimi, Auto/Stop ve yerel kontrol yarışı | 08 |
 | [09](cards/COMM4-09.md) | Bağımsız istasyon yürütmesi | 08a |

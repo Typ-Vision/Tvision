@@ -7,6 +7,7 @@
 #include <optional>
 
 namespace visionflow {
+class CommunicationPeerSessionService;
 struct CommunicationServerProfile {
     bool enabled=false;
     QString address="127.0.0.1";
@@ -29,7 +30,7 @@ enum class CommunicationServerState {NotConfigured,Disabled,Listening,PeerConnec
 // Owner must outlive registered station controllers and explicitly shutdown before destroying them.
 class CommunicationServerLifecycle final {
 public:
-    CommunicationServerLifecycle(const CommunicationServerProfiles&,QString checkpointPath);
+    CommunicationServerLifecycle(const CommunicationServerProfiles&,QString checkpointPath,CommunicationPeerSessionService* sessions=nullptr);
     ~CommunicationServerLifecycle();
     CommunicationServerLifecycle(const CommunicationServerLifecycle&)=delete;
     CommunicationServerLifecycle& operator=(const CommunicationServerLifecycle&)=delete;
@@ -38,7 +39,7 @@ public:
     QString error() const {owner();return error_;}
     quint16 port() const {owner();return server_.serverPort();}
     QUuid listenerGeneration() const {owner();return generation_;}
-    QTcpSocket* peer() const {owner();return peer_;} // codec/session layer attaches in later cards
+    QTcpSocket* peer() const {owner();return peer_;}
     // Nonblocking bounded shutdown: caller polls on its normal event loop, controls remain online.
     void beginShutdown(int deadlineMs);
     bool pollShutdown(); // true after checkpoint attempt + socket close; false while draining
@@ -49,6 +50,8 @@ private:
     void checkpoint();
     QTcpServer server_;
     QPointer<QTcpSocket> peer_;
+    QPointer<QTcpSocket> rejectedPeer_;
+    CommunicationPeerSessionService* sessions_=nullptr; // outlives lifecycle
     QMap<QUuid,StationRunController*> stations_;
     QString checkpointPath_,error_;
     QUuid generation_;

@@ -1,6 +1,8 @@
 # COMM4-07 — HELLO session ve peer sahipliği
 
-Durum: planlandı, başlanmadı. Model: **GPT-6.1 Sol / medium**.
+Durum: C yazılım kabulü tamamlandı. Model: **GPT-6.1 Sol / medium**.
+Uygulanan [state/transport portu ve sınırlar](../peer-session.md),
+[kapanış ve ON/OFF kanıtı](../../../archive/2026-10-29-comm4-07.md).
 Tek oturum kapsamı ve ortak kurallar [indekste](../README.md), kapanış
 kuralları [V0](../verification.md) içindedir.
 
@@ -15,7 +17,10 @@ Gerekli bölüm dışında bütün kartları/kalibrasyon geçmişini yükleme.
 
 Explicit v4 HELLO contract revision ve kalıcı peer/epoch eşleşmesi kurar; connection session yenidir. Tek controlling peer, read-only catalogue/status ve stale session fence uygulanır.
 
-Gerçek endpoint composition01 haritasından; yeni aday CommunicationPeerSessionService ve handshake tests. Ledger API bağları dar tutulur.
+Sahiplik: `application/CommunicationPeerSessionService.hpp/.cpp`,
+`CommunicationServerLifecycle.hpp/.cpp`, `app/main.cpp` process composition'u,
+`tests/communication_peer_session_test.cpp`, CMake ve ilgili kapanış belgeleri.
+V3 endpoint ve ledger API değiştirilmedi; yeni service mevcut registry/codec'i tüketir.
 
 Gerçek/adayı kart başında source-map ve V0 coverage kurallarıyla kesinleştir.
 

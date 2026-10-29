@@ -220,7 +220,7 @@ daraltılır. Bir sonraki kart otomatik başlatılmaz.
 | 04 tamam | RuntimeCoordinator/RuntimeService snapshot sınırı | StationDefinition/StationSnapshot, StationActivationService, StationRuntimeBoundary, FileStationActivationStore; station_activation_contract. [Port sözleşmesi](station-activation.md) |
 | 05 | main startup composition, legacy listen guards, StationRuntimeBoundary | CommunicationServerLifecycle/profile, CommunicationListenerOwnership, StationRunController ve communication_server_lifecycle_test; [uygulanan sınır](server-lifecycle.md), UI sayfaları değişmedi |
 | 06 | application/CommunicationV4Codec.hpp/cpp, tests/communication_v4_codec_test.cpp, CMake visionflow_projects | [Binary codec/framer/write queue](binary-codec.md); CTest communication_v4_codec; domain authority codec'e geçmez |
-| 07 | CommunicationTcpEndpoint peer/session/listen | CommunicationPeerSessionService; 03/06 handshake tests |
+| 07 | CommunicationServerLifecycle, main process composition; v3 endpoint ayrı | CommunicationPeerSessionService + bounded socket adapter ve communication_peer_session_test; [uygulanan sınır](peer-session.md), station/ledger dispatch yok |
 | 08 | TriggerRouter.admit ve Coordinator.begin | StationAdmissionService; yürütme topolojisi09'da |
 | 08a | Coordinator start/stop/generation ve MainWindowRuntime local controls | StationControlService; UI/remote aynı komut portu |
 | 09 | RuntimeService.execute, ProductionRecipeService, MultiSourceRuntimeService | StationExecutionRegistry; algoritma motoru kopyalanmaz |
