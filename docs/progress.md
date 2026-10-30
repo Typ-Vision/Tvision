@@ -4,9 +4,9 @@
 
 ## Devam noktası
 
-**[COMM4-10](archive/2026-10-30-comm4-10.md) tamam:** ortak kamera lease.
-F ON179/OFF140 geçti; 1'er dış plaka skipped.
-Sıradaki **COMM4-11**; main/ledger13 açık.
+**[COMM4-11](archive/2026-10-30-comm4-11.md) tamam:** template/assignment.
+C ON/OFF7/7;86 assertion, skipped0.
+Sıradaki **COMM4-12**; evaluator/main/ledger13 açık.
 Probe INI restore SEGFAULT/UI INI birikimi açık; temiz girdide kabul.
 [DOC-WORK-02](archive/2026-10-30-doc-work-02.md); ölçüm3/3 erişilemiyor.
 [EFR-04](archive/2026-10-29-efr-04.md): Wheel açık, Match/θ ertelendi.

@@ -6,6 +6,7 @@ görev” ifadeleri yazıldıkları tarihe aittir.
 
 | Dönem / görev | Kayıt |
 | --- | --- |
+| 30 Ekim 2026 — COMM4-11 | [Sabit template/typed assignment domain, strict schema/no-op ve Release ON/OFF hedefli kabul](2026-10-30-comm4-11.md) |
 | 30 Ekim 2026 — DOC-WORK-02 | [Tekrar sınırı, temiz test girdisi, süre bildirimi ve sonuç/checkpoint kuralları](2026-10-30-doc-work-02.md) |
 | 30 Ekim 2026 — COMM4-10 | [Ortak UUID/fiziksel kamera lease, atomik küme, drain/fence ve tam ON/OFF kabulü](2026-10-30-comm4-10.md) |
 | 30 Ekim 2026 — COMM4-09 | [Bağımsız bounded istasyon yürütmesi, overlap/isolation ve tam ON/OFF kabulü](2026-10-30-comm4-09.md) |

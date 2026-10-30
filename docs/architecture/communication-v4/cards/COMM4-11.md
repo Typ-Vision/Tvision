@@ -1,6 +1,8 @@
 # COMM4-11 — Sabit template ve typed assignment modeli
 
-Durum: planlandı, başlanmadı. Model: **GPT-6.1 Sol / medium**.
+Durum: tamamlandı. Model: **GPT-6.1 Sol / medium**.
+Uygulama: [domain sözleşmesi](../publication-template.md).
+Kapanış: [COMM4-11](../../../archive/2026-10-30-comm4-11.md).
 Tek oturum kapsamı ve ortak kurallar [indekste](../README.md), kapanış
 kuralları [V0](../verification.md) içindedir.
 
