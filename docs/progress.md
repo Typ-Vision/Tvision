@@ -4,9 +4,9 @@
 
 ## Devam noktası
 
-**[COMM4-11](archive/2026-10-30-comm4-11.md) tamam:** template/assignment.
-C ON/OFF7/7;86 assertion, skipped0.
-Sıradaki **COMM4-12**; evaluator/main/ledger13 açık.
+**[COMM4-12](archive/2026-10-30-comm4-12.md) tamam.**
+C ON/OFF8/8;633 assertion;skip0;main/ledger13 açık.
+**Sonraki COMM4-13**; [11](archive/2026-10-30-comm4-11.md).
 Probe INI restore SEGFAULT/UI INI birikimi açık; temiz girdide kabul.
 [DOC-WORK-02](archive/2026-10-30-doc-work-02.md); ölçüm3/3 erişilemiyor.
 [EFR-04](archive/2026-10-29-efr-04.md): Wheel açık, Match/θ ertelendi.

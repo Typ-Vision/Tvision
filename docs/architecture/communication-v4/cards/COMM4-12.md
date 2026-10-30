@@ -1,6 +1,6 @@
 # COMM4-12 — Immutable publication değerlendirmesi
 
-Durum: planlandı, başlanmadı. Model: **GPT-6.1 Sol / medium**.
+Durum: tamamlandı. Model: **GPT-6.1 Sol / medium**.
 Tek oturum kapsamı ve ortak kurallar [indekste](../README.md), kapanış
 kuralları [V0](../verification.md) içindedir.
 
@@ -40,3 +40,6 @@ Teslim: Fixed slot evaluator ve conversion/provenance davranış testleri.
 V0 kapanışı zorunlu: kanıt `build/comm4/COMM4-12/`, tarihli arşiv kaydı,
 progress/arşiv indeksi, bağlam kontrolü ve tek **`COMM4-12: …`** commit; push yok.
 Sonraki: **COMM4-13**; kullanıcı yeni sıra vermedikçe aynı oturumda başlatma.
+
+Uygulama sınırı: [evaluator sözleşmesi](../publication-evaluation.md).
+Kapanış/kanıt: [30 Ekim 2026](../../../archive/2026-10-30-comm4-12.md).

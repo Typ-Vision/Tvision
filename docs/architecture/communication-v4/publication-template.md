@@ -11,7 +11,7 @@ bayrağı değişebilir; indeks byte düzenini belirler. Adlar 1–64 ASCII harf
 rounding tiesToEven olarak sabittir; signed32 rational scale/offset, pozitif
 denominator, sıfır olmayan scale ve sıralı signed32 aralık doğrulanır. Conversion
 `roundTiesToEven(source*scaleNumerator/scaleDenominator + offsetNumerator/offsetDenominator)`
-olarak tanımlıdır. Değer/overflow değerlendirmesi COMM4-12'ye aittir.
+olarak tanımlıdır. Değer/overflow değerlendirmesi [COMM4-12 evaluator'ındadır](publication-evaluation.md).
 
 Text limiti 1..64 UTF-8 byte'dır. `validatePublicationText` empty string'i kabul
 eder, 65 byte veya eşleşmeyen UTF-16 surrogate'ı reddeder; kesme/replacement yoktur.
@@ -31,7 +31,7 @@ kaynak, Flag Boolean, Text String, Pose SpatialTransform kabul eder; exact unit
 ve Pose frame/revision/adapter eşleşmesi aranır. Metre/mm dönüşümü veya projection
 gerekiyorsa açık typed adapter gerekir; Point2D/Pose2D whole Pose olamaz.
 Cycle/DAG/provenance, missing değer, signedness/overflow ve publication validity
-COMM4-12 evaluator'ının sorumluluğudur. Bu kart değer üretmez.
+[COMM4-12 evaluator'ının](publication-evaluation.md) sorumluluğudur. Bu kart değer üretmez.
 
 Template ve assignment JSON şemaları version1, exact key/type/count doğrular;
 bilinmeyen alan/schema reddedilir. Recipe opt-in `publicationV4` alanında yalnız
