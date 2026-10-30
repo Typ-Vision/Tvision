@@ -1,5 +1,6 @@
 #pragma once
 #include "CameraLifecycle.hpp"
+#include "CameraLeaseArbiter.hpp"
 #include "EditorSession.hpp"
 #include "domain/MeasurementSetupContract.hpp"
 #include "hardware/AcquisitionTiming.hpp"
@@ -7,7 +8,7 @@
 #include <mutex>
 
 namespace visionflow {
-enum class CameraLeaseUse { Calibration, Editor, Runtime, Preview };
+
 enum class PreviewAcquisitionKind { SequentialSingleFrame, NativeContinuous };
 struct CameraWorkerResult {
     bool success=false;
@@ -30,10 +31,12 @@ public:
     using Factory=std::function<std::unique_ptr<CameraWorkerBackend>()>;
     CameraWorkerSession(PhysicalDeviceIdentity,CameraLeaseUse,QString source,
                         FrameQueueMode,Factory,size_t capacity=2,
-                        PreviewAcquisitionKind kind=PreviewAcquisitionKind::SequentialSingleFrame);
+                        PreviewAcquisitionKind kind=PreviewAcquisitionKind::SequentialSingleFrame,
+                        CameraLeaseArbiter::Ticket lease={},QString cameraId={});
     ~CameraWorkerSession(); // cancels then joins; can block on an uninterruptible SDK
     CameraWorkerSession(const CameraWorkerSession&)=delete;
     CameraWorkerSession& operator=(const CameraWorkerSession&)=delete;
+    CameraLeaseArbiter::Ticket lease() const {owner();return lease_;}
     void submit(CameraOperation,int timeoutMs=5000);
     bool poll(); // delivers completion on controller owner thread
     // Invalidates/cancels immediately. After the pending command drains, submit
@@ -54,7 +57,7 @@ private:
     void run(Factory);
     void releaseLease();
     const std::thread::id owner_=std::this_thread::get_id();
-    QByteArray leaseKey_;
+    CameraLeaseArbiter::Ticket lease_;
     PreviewAcquisitionKind kind_;
     bool previewCompatible_=false;
     bool leaseHeld_=true;

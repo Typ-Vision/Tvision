@@ -273,7 +273,11 @@ for(auto use:{CameraLeaseUse::Preview,CameraLeaseUse::Editor,CameraLeaseUse::Run
 // Normal OECS cameras take the experimental path, never the webcam probe.
 {
     namespace of=oecs_experimental_fixture;
-    auto r=of::request();const auto path=dir.filePath("oecs.vfproject");ProjectService project;project.createProject("OECS verify","",path,"file");project.save();
+    auto r=of::request();
+    // This fixture is a different camera from the intentionally quarantined native fixture.
+    // UUID ownership must not be reused for a different physical device.
+    r.camera.id={"oecs-verification-camera"};r.setup.camera=r.camera.id;r.profile.camera=r.camera.id;
+    const auto path=dir.filePath("oecs.vfproject");ProjectService project;project.createProject("OECS verify","",path,"file");project.save();
     MeasurementWorkspace teaching(path,project.project().id,[]{return true;});teaching.replace({{r.camera},{r.setup},{r.profile}});auto& active=teaching.calibrations();const SetupReference ref{r.camera.id,r.setup.id,1};active.setOperational(ref.camera,ref.setup);
     const auto hardware=of::state();hardware->pixels.fill(char(20));for(int y=0;y<2048;++y)for(int x=120;x<520;++x)hardware->pixels[y*2448+x]=char(220);
     IndependentCaptureRequest request;request.origin=SourceOrigin::CameraAcquired;request.camera=r.camera;request.setup=r.setup;request.profile=r.profile;request.policy=CalibrationCapturePolicy::Automatic;request.timeoutMs=3000;

@@ -16,21 +16,24 @@ işlerine taşınmaz. `IndustrialExecutionInputs.sessions/sessionContext/session
 yalnız bellek içi uygulama bağımlılığıdır; reçete veya admission alanı değildir.
 
 Context ID işlem sahibini, generation hazırlanmış kaynak kümesini tanımlar.
-Her prepare önceki generation'ı iptal eder. Kimlik kamera/setup/profile kayıtlarını
+Pending edinim varken prepare reddedilir; önce Stop/close ve gerçek drain gerekir.
+Kabul edilen prepare önceki generation'ı iptal eder. Kimlik kamera/setup/profile kayıtlarını
 (isim hariç), revision/geometri, rota/backend, provider bileşimi ve edinim
 politikasını kapsar. Sağlıklı exact eşleşme tekrar keşif, DLL hash/load, open veya
 configure yapmaz. Profil/rota değişimi eski worker tamamen drain olduktan sonra
 yeni worker açar. Kaynak kaldırma son kullanıcısı kalmayan kamerayı kapatır.
 
 Durumlar kaynak bazında Opening → Configuring → Ready → Capturing → Ready;
-çıkışta Closing → Closed, hatada Fault/drain'dir. Hazırlık farklı kameralarda
-kısmen başarılı olabilir; `sources` hata ayrımını, `allReady()` bütün hedeflerin
-hazır olmasını belirtir. Runtime bütünlük/rollback politikası CCUX-22d'de bağlanır.
+çıkışta Closing → Closed, hatada Fault/drain'dir. COMM4-10 ile bir context'in kamera kümesi açılmadan atomik
+ayrılır; çakışma `resourceReason=3` CAMERA_BUSY döner. Hazırlık hatasında bütün
+küme retire edilir ve kaynaklar Fault olur; kısmi Ready kalmaz. `sources` hata
+ayrımını, `allReady()` bütün hedeflerin hazır olmasını belirtir.
 Retry açık yeni prepare komutudur; otomatik yeniden bağlanma yoktur.
 
 ## Edinim ve çok kaynak
 
-Mevcut global worker lease kaydı vendor/model/serial başına tek sahibi korur;
+[Ortak CameraLeaseArbiter](../communication-v4/camera-leases.md) kamera UUID ve
+exact vendor/model/serial anahtarlarını tek registry'de korur;
 Camera Manager, preview ve başka context'ler aynı cihazı alamaz. Aynı context'te
 aynı fiziksel kamera ve exact ayarları kullanan kaynaklar tek worker paylaşır.
 Çelişen profiller hazırlıktan önce reddedilir. Her kamera için en fazla bir

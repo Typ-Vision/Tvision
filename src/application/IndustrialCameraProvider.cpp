@@ -76,10 +76,10 @@ std::unique_ptr<CameraWorkerSession> CameraProviderFactory::configure(const Indu
     request.validate();const auto caps=capabilities(request.device);
     require(injected_ && caps.open && caps.configure,"Industrial configuration backend unavailable.");
     return std::make_unique<CameraWorkerSession>(request.device.identity,use,request.sourceId,FrameQueueMode::ProductionFifo,
-        [provider=injected_,request]{return std::make_unique<CheckedBackend>(provider,request,true);});
+        [provider=injected_,request]{return std::make_unique<CheckedBackend>(provider,request,true);},2,PreviewAcquisitionKind::SequentialSingleFrame,CameraLeaseArbiter::Ticket{},request.camera.id.value);
 }
 std::unique_ptr<CameraWorkerSession> CameraProviderFactory::open(const IndustrialCameraRequest& request,
-    CameraLeaseUse use,FrameQueueMode mode,size_t capacity) const {
+    CameraLeaseUse use,FrameQueueMode mode,size_t capacity,CameraLeaseArbiter::Ticket lease) const {
     request.validate();const auto caps=capabilities(request.device);
     require(injected_ && caps.open && caps.configure,"Industrial backend unavailable; no admitted native factory.");
     require(mode==FrameQueueMode::PreviewLatest ? caps.preview : caps.softwareTrigger,
@@ -89,6 +89,6 @@ std::unique_ptr<CameraWorkerSession> CameraProviderFactory::open(const Industria
             "Preview and software capture require separate profile/session admission.");
     return std::make_unique<CameraWorkerSession>(request.device.identity,use,request.sourceId,mode,
         [provider=injected_,request]{return std::make_unique<CheckedBackend>(provider,request);},capacity,
-        mode==FrameQueueMode::PreviewLatest && caps.continuous ? PreviewAcquisitionKind::NativeContinuous : PreviewAcquisitionKind::SequentialSingleFrame);
+        mode==FrameQueueMode::PreviewLatest && caps.continuous ? PreviewAcquisitionKind::NativeContinuous : PreviewAcquisitionKind::SequentialSingleFrame,std::move(lease),request.camera.id.value);
 }
 }

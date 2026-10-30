@@ -37,7 +37,7 @@ void matrix(QJsonArray& rows){
 }
 void partialAndLate(){
     {Fixture f("rollback",5);f.probes[f.requests[2].device.identity.serial]->failConfigure=true;Setup s(f);RuntimeService r(s.archive(),"",identity(),{},{},{},[&](const Recipe&){return s.set;});RuntimeCoordinator c(r);c.load(s.recipe(),s.directory.path());c.start();settle(c,r);
-        check(c.state()==RuntimeState::Fault && r.records().isEmpty(),"Partial prepare cannot enter Running or create a result");for(const auto& p:f.probes)check(p->opens==1 && p->closes==1,"Partial failure rolls back every camera");
+        check(c.state()==RuntimeState::Fault && r.records().isEmpty(),"Partial prepare cannot enter Running or create a result");int opened=0;for(const auto& p:f.probes){check(p->opens<=1 && p->closes==p->opens,"Partial failure drains every opened camera");opened+=p->opens;}check(opened>0 && opened<5,"First preparation failure prevents further camera opens");
         f.probes[f.requests[2].device.identity.serial]->failConfigure=false;c.start();settle(c,r);check(c.state()==RuntimeState::Running && f.first()->opens==2,"Explicit Run retries whole set");c.stop();settle(c,r);}
     {Fixture f("late-open-runtime");Setup s(f);RuntimeService r(s.archive(),"",identity(),{},{},{},[&](const Recipe&){return s.set;});RuntimeCoordinator c(r);c.load(s.recipe(),s.directory.path());Gate gate;f.first()->openGate=gate.promise.get_future().share();
         c.start();until([&]{return f.first()->openEntered.load();});c.stop();check(c.state()==RuntimeState::Stopping && r.camerasPending(),"Starting Stop retains pending lease");

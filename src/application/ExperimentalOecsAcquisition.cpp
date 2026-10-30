@@ -103,19 +103,19 @@ QString ExperimentalOecsAcquisition::installedRuntime(){return "C:/Program Files
 bool ExperimentalOecsAcquisition::available(const DiscoveredDevice& device,const QString& dll){
     return supported(device.identity) && oecsSdkBindingCompiled() && QFileInfo(dll).isAbsolute() && QFileInfo(dll).isFile();
 }
-std::unique_ptr<CameraWorkerSession> ExperimentalOecsAcquisition::open(const IndustrialCameraRequest& request,const QString& dll,ApiFactory api){
+std::unique_ptr<CameraWorkerSession> ExperimentalOecsAcquisition::open(const IndustrialCameraRequest& request,const QString& dll,ApiFactory api,CameraLeaseArbiter::Ticket lease){
     request.validate();require(supported(request.device.identity),"OECS device unsupported");
     require(QFileInfo(dll).isAbsolute() && bool(api),"Absolute OECS runtime and API required");
     require(request.profile.requested.trigger==TriggerSettings{true,"FrameBurstStart","Software"},"FrameBurstStart profile required");
     return std::make_unique<CameraWorkerSession>(request.device.identity,CameraLeaseUse::Editor,request.sourceId,FrameQueueMode::PreviewLatest,
-        [request,dll,api=std::move(api)]{return std::make_unique<Backend>(request,dll,api);},1);
+        [request,dll,api=std::move(api)]{return std::make_unique<Backend>(request,dll,api);},1,PreviewAcquisitionKind::SequentialSingleFrame,std::move(lease),request.camera.id.value);
 }
-std::unique_ptr<CameraWorkerSession> ExperimentalOecsAcquisition::openCalibration(const IndustrialCameraRequest& request,const QString& dll,ApiFactory api){
+std::unique_ptr<CameraWorkerSession> ExperimentalOecsAcquisition::openCalibration(const IndustrialCameraRequest& request,const QString& dll,ApiFactory api,CameraLeaseArbiter::Ticket lease){
     request.validate();require(supported(request.device.identity),"Calibration device unsupported");
     require(QFileInfo(dll).isAbsolute() && bool(api),"Absolute OECS runtime and API required");
     require(request.profile.requested.trigger==TriggerSettings{true,"FrameBurstStart","Software"},"FrameBurstStart profile required");
     return std::make_unique<CameraWorkerSession>(request.device.identity,CameraLeaseUse::Calibration,request.sourceId,FrameQueueMode::PreviewLatest,
-        [request,dll,api=std::move(api)]{return std::make_unique<Backend>(request,dll,api);},1);
+        [request,dll,api=std::move(api)]{return std::make_unique<Backend>(request,dll,api);},1,PreviewAcquisitionKind::SequentialSingleFrame,std::move(lease),request.camera.id.value);
 }
 void ExperimentalOecsAcquisition::save(const AcquiredFrame& frame,const QString& path){
     const auto& image=frame.image;auto evidence=image.metadata().experimentalAcquisition;

@@ -140,6 +140,17 @@ struct CameraAcquisitionSessions::Core {
             live(c,generation,token,deadline);
             QMap<QString,QVector<IndustrialCameraRequest>> groups;
             for(const auto& r:requests)groups[physicalKey(r)].append(r);
+            QVector<CameraLeaseTarget> targets;QVector<CameraLeaseArbiter::Ticket> reusable;
+            for(const auto& r:requests)targets.append({r.camera.id.value,*r.camera.physical});
+            for(const auto& [key,e]:s.entries)if(!e->closing)reusable.append(e->worker->lease());
+            auto reservation=CameraLeaseArbiter::reserve(c->status.context,in.leaseUse,targets,reusable);
+            if(reservation.reason){
+                for(const auto& key:groups.keys())phase(c,generation,key,AcquisitionSessionState::Fault,"CAMERA_BUSY");
+                std::lock_guard lock(mutex);c->status.resourceReason=3;c->status.preparing=false;c->status.drained=s.entries.empty();return snapshotLocked(*c);
+            }
+            auto ticketFor=[&](const QString& key){for(const auto& ticket:reservation.leases)
+                if(ticket->physicalKey()==key)return ticket;
+                return CameraLeaseArbiter::Ticket{};};
             QStringList removed;
             for(auto& [key,e]:s.entries)if(!groups.contains(key)){retire(*e);removed.append(key);}
             for(const auto& key:removed)waitRelease(s,key,c,generation,token,deadline);
@@ -164,8 +175,8 @@ struct CameraAcquisitionSessions::Core {
                             require(!in.admittedDevices.contains(source.sourceId) || in.admittedDevices[source.sourceId]==r.device,"Runtime camera/backend differs from admission");}
                         auto entry=std::make_unique<Entry>();entry->request=r;entry->config=config;entry->hint=hint;entry->factory=in.factory;entry->experimental=experimental;entry->backend=backend;
                         if(experimental){const auto dll=backend?backend->runtime:ExperimentalOecsAcquisition::installedRuntime();const auto api=backend?backend->api:ExperimentalOecsAcquisition::ApiFactory(makeOecsCApi);
-                            entry->worker=in.leaseUse==CameraLeaseUse::Calibration?ExperimentalOecsAcquisition::openCalibration(r,dll,api):ExperimentalOecsAcquisition::open(r,dll,api);
-                        }else entry->worker=in.factory.open(r,in.leaseUse,FrameQueueMode::ProductionFifo,1);
+                            entry->worker=in.leaseUse==CameraLeaseUse::Calibration?ExperimentalOecsAcquisition::openCalibration(r,dll,api,ticketFor(key)):ExperimentalOecsAcquisition::open(r,dll,api,ticketFor(key));
+                        }else entry->worker=in.factory.open(r,in.leaseUse,FrameQueueMode::ProductionFifo,1,ticketFor(key));
                         s.entries[key]=std::move(entry);auto& e=*s.entries[key];
                         command(e,CameraOperation::Connect,CameraState::Connected,c,generation,token,deadline);
                         phase(c,generation,key,AcquisitionSessionState::Configuring);
@@ -173,7 +184,11 @@ struct CameraAcquisitionSessions::Core {
                         command(e,CameraOperation::Start,CameraState::Streaming,c,generation,token,deadline);
                     }
                     live(c,generation,token,deadline);phase(c,generation,key,AcquisitionSessionState::Ready,{},s.entries[key].get());
-                }catch(const std::exception& e){if(s.entries.contains(key))retire(*s.entries[key]);phase(c,generation,key,AcquisitionSessionState::Fault,QString::fromUtf8(e.what()));}
+                }catch(const std::exception& e){
+                    for(auto& [held,entry]:s.entries)retire(*entry);
+                    for(const auto& held:groups.keys())phase(c,generation,held,AcquisitionSessionState::Fault,QString::fromUtf8(e.what()));
+                    break;
+                }
             }
             live(c,generation,token,deadline);
             std::lock_guard lock(mutex);c->status.preparing=false;c->status.drained=s.entries.empty();c->status.clean=s.clean;return snapshotLocked(*c);
@@ -207,9 +222,9 @@ struct CameraAcquisitionSessions::Core {
             std::lock_guard lock(mutex);require(c->status.generation==generation && !token->load() && !(cancel && cancel->load()),"Retired acquisition completion");
             c->busy.erase(key);for(auto& source:c->status.sources)if(source.physicalKey==key)source.state=AcquisitionSessionState::Ready;
             return {std::move(image),std::move(evidence)};
-        }catch(const std::exception& e){if(entry)retire(*entry);phase(c,generation,key,AcquisitionSessionState::Fault,QString::fromUtf8(e.what()));
+        }catch(const std::exception& e){for(auto& [held,e]:s.entries)retire(*e);phase(c,generation,key,AcquisitionSessionState::Fault,QString::fromUtf8(e.what()));
             std::lock_guard lock(mutex);if(c->status.generation==generation)c->busy.erase(key);throw;
-        }catch(...){if(entry)retire(*entry);phase(c,generation,key,AcquisitionSessionState::Fault,"Unknown acquisition failure");
+        }catch(...){for(auto& [held,e]:s.entries)retire(*e);phase(c,generation,key,AcquisitionSessionState::Fault,"Unknown acquisition failure");
             std::lock_guard lock(mutex);if(c->status.generation==generation)c->busy.erase(key);throw;}
     }
     void beginClose(const std::shared_ptr<SharedContext>& c,int budget,const std::shared_ptr<std::promise<AcquisitionContextClose>>& waiter={}){
@@ -248,10 +263,10 @@ std::future<AcquisitionContextStatus> CameraAcquisitionSessions::prepare(const Q
     require(!id.trimmed().isEmpty() && timeout>0 && timeout<=60000,"Invalid preparation context/budget");validateTargets(original,requests,experimental);
     auto in=original;in.sessions.reset();in.sessionContext.clear();in.sessionGeneration=0;
     const auto timing=AcquisitionTiming::current();Deadline deadline(timeout);std::lock_guard lock(core_->mutex);require(!core_->stopping,"Camera session service shutting down");
-    auto c=core_->contextLocked(id);require(!c->status.closing || c->status.drained,"Drain previous context before preparing again");
+    auto c=core_->contextLocked(id);require(c->busy.empty(),"Drain pending acquisition before preparing again");require(!c->status.closing || c->status.drained,"Drain previous context before preparing again");
     require(c->status.generation==0 || c->use==in.leaseUse,"Context lease use changed; choose a new context ID");c->use=in.leaseUse;
     c->cancel->store(true);c->cancel=std::make_shared<std::atomic_bool>(false);auto token=c->cancel;const auto generation=++c->status.generation;
-    c->status.closing=false;c->status.preparing=true;c->status.drained=false;c->status.sources.clear();c->closeDeadline.reset();c->busy.clear();
+    c->status.resourceReason=0;c->status.closing=false;c->status.preparing=true;c->status.drained=false;c->status.sources.clear();c->closeDeadline.reset();c->busy.clear();
     for(const auto& r:requests)c->status.sources[r.sourceId]={AcquisitionSessionState::Opening,r,physicalKey(r),{},{},{}};
     return core_->postLocked<AcquisitionContextStatus>([core=core_,c,generation,token,in,requests=std::move(requests),experimental,deadline,backend,timing]{
         AcquisitionTimingBinding binding(timing);AcquisitionTimingSpan span("sessions.prepare");return core->prepare(c,generation,token,in,requests,experimental,deadline,backend);});

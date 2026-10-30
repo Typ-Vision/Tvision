@@ -146,7 +146,8 @@ attempt<10.000; tombstone'lar bütçeye dahildir ve sessiz eviction yoktur.
 | [CalibrationCapture.cpp](../../../src/application/CalibrationCapture.cpp) | Legacy recipe Image File/Webcam adapter ile acquire/configuration/setup. Industrial capture'ı bu legacy kola ekleme varsayımı yapılmamalı. |
 | [IndependentCalibrationCapture.hpp](../../../src/application/IndependentCalibrationCapture.hpp) | IndependentCalibrationSession; saved camera/setup request, prepareCamera, worker job/run, owner-thread accept/stop; yeni hedef eski taslağı retire eder. Industrial güncel giriş noktası adayı. |
 | [CameraAcquisitionSessions.hpp](../../../src/application/CameraAcquisitionSessions.hpp), [cpp](../../../src/application/CameraAcquisitionSessions.cpp) | Context/generation, shared future prepare/acquire/close/shutdown; SDK hardware worker'da, UI await etmez. Experimental context production admission taşımaz. |
-| [CameraWorkerSession.hpp](../../../src/application/CameraWorkerSession.hpp), [cpp](../../../src/application/CameraWorkerSession.cpp) | Process-local physical vendor/model/serial exclusive lease; cleanup hatası quarantine. V4 camera UUID/order/all-or-none station arbiter değildir; ikinci rakip lease registry kurmadan bütünleştirilmeli. |
+| [CameraLeaseArbiter.hpp](../../../src/application/CameraLeaseArbiter.hpp), [cpp](../../../src/application/CameraLeaseArbiter.cpp) | COMM4-10 ortak UUID/fiziksel anahtar rezervasyonu; atomik küme, owner/use/generation diagnostics ve quarantine. [Lease sözleşmesi](camera-leases.md). |
+| [CameraWorkerSession.hpp](../../../src/application/CameraWorkerSession.hpp), [cpp](../../../src/application/CameraWorkerSession.cpp) | COMM4-10 CameraLeaseArbiter Ticket claim; UUID + physical alias exclusive, gerçek join sonrası release, cleanup hatası quarantine. |
 | [CalibrationWizardSession.hpp](../../../src/application/CalibrationWizardSession.hpp), [ActiveCalibrationService.hpp](../../../src/application/ActiveCalibrationService.hpp), [ScopedActiveCalibration.hpp](../../../src/application/ScopedActiveCalibration.hpp) | Immutable scan/calculation jobs, planar model catalog ve scoped saveAndUse/availability API'leri. Robot holdout report/candidate/activation sözleşmesi bu API'lerin varlığından çıkarılamaz; 18'de içerik audit'i genişler. |
 | [CalibrationStudyStore.cpp](../../../src/application/CalibrationStudyStore.cpp) | Legacy chessboard-only test study, decoded image SHA/provenance,≤4 MiB QSaveFile + lock. Durable robot sample ledger değildir. |
 | [CalibrationWizard.hpp](../../../src/app/CalibrationWizard.hpp), [CalibrationOverview.cpp](../../../src/app/CalibrationOverview.cpp) | UI application session/workspace/save-use portlarını tüketir. Robot workspace adayı; mevcut çalışma plaka/mm akışı 6D hand-eye değildir. |
@@ -182,6 +183,7 @@ Yeni COMM4 test/hedef adları ilgili kartın uygulamasında eklenir.
 | production_recipe_test / tests/production_recipe_test.cpp | production_recipe_contract |
 | multi_source_production_test / tests/multi_source_production_test.cpp | multi_source_production_contract |
 | camera_acquisition_sessions_test / tests/camera_acquisition_sessions_test.cpp | camera_acquisition_sessions_contract (report path) |
+| camera_lease_arbiter_test / tests/camera_lease_arbiter_test.cpp | camera_lease_arbiter_contract (report path); COMM4-10 |
 | camera_worker_test / tests/camera_worker_test.cpp | camera_worker_lease_contract; camera_worker_stress (--stress) |
 | runtime_camera_sessions_test / tests/runtime_camera_sessions_test.cpp | runtime_camera_sessions_contract (report path) |
 | calibration_camera_sessions_test / tests/calibration_camera_sessions_test.cpp | calibration_camera_sessions_contract |
@@ -224,7 +226,7 @@ daraltılır. Bir sonraki kart otomatik başlatılmaz.
 | 08 tamam | TriggerRouter.admit bariyerleri ve mevcut Coordinator.begin | StationAdmissionService + StationRuntimeAdmissionBoundary, session TRIGGER hook; station_admission_contract. [Port/sınırlar](station-admission.md); yürütme topolojisi09 ve gerçek durable adapter13'te |
 | 08a | Coordinator start/stop/generation ve MainWindowRuntime local controls | StationControlService; UI/remote aynı komut portu |
 | 09 tamam | RuntimeService.execute, RuntimeCoordinator.finish | StationExecutionRegistry.hpp/.cpp; station_execution_contract; [bounded worker ve isolation portu](station-execution.md); algoritma motoru kopyalanmaz |
-| 10 | CameraAcquisitionSessions/CameraWorkerSession physical lease | CameraLeaseArbiter; camera UUID/all-or-none, SDK yalnız port gerektirirse |
+| 10 | CameraAcquisitionSessions/CameraWorkerSession ortak lease | [CameraLeaseArbiter](camera-leases.md); UUID+physical all-or-none, provider Ticket, drain/diagnostics — tamam |
 | 11 | PublicationConfig, SpatialTransform, PublicationService model girişleri | PublicationTemplate/SlotAssignment domain; UI yok |
 | 12 | PublicationService capture/dependency/requireCurrent/evaluate | Fixed-slot evaluator; aynı immutable provenance |
 | 13 | ProductionResultCodec/ProductionStore/DeliveryStore journal | Station-keyed ledger adapter; arşiv/dedup silinmez |

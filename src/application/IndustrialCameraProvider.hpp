@@ -50,7 +50,7 @@ public:
     IndustrialCameraCapabilities capabilities(const DiscoveredDevice&) const;
     std::unique_ptr<CameraWorkerSession> configure(const IndustrialCameraRequest&,CameraLeaseUse) const;
     std::unique_ptr<CameraWorkerSession> open(const IndustrialCameraRequest&,CameraLeaseUse,
-                                             FrameQueueMode,size_t capacity=2) const;
+                                             FrameQueueMode,size_t capacity=2,CameraLeaseArbiter::Ticket lease={}) const;
     std::unique_ptr<CameraWorkerSession> resolveOpen(IndustrialCameraRequest,const IndustrialDiscoverySnapshot&,
         const std::optional<TransportLocator>&,CameraLeaseUse,FrameQueueMode,size_t capacity=2) const;
 private:

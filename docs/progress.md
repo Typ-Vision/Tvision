@@ -4,10 +4,10 @@
 
 ## Devam noktası
 
-**[COMM4-09](archive/2026-10-30-comm4-09.md) tamam:** bağımsız yürütme.
-F ON178/OFF139 geçti; 1'er dış plaka skipped.
-Sıradaki **COMM4-10**; main/ledger13 açık.
-Eski probe INI restore SEGFAULT açık; temiz girdide kabul.
+**[COMM4-10](archive/2026-10-30-comm4-10.md) tamam:** ortak kamera lease.
+F ON179/OFF140 geçti; 1'er dış plaka skipped.
+Sıradaki **COMM4-11**; main/ledger13 açık.
+Probe INI restore SEGFAULT/UI INI birikimi açık; temiz girdide kabul.
 [Ölçüm](working-protocol.md)3/3: sayaç erişilemiyor.
 [EFR-04](archive/2026-10-29-efr-04.md): Wheel açık, Match/θ ertelendi.
 

@@ -6,30 +6,29 @@
 
 namespace visionflow {
 namespace {
-std::mutex leasesMutex;
-QSet<QByteArray> leases;
 void require(bool value,const char* message){if(!value)throw std::runtime_error(message);}
 }
 CameraWorkerSession::CameraWorkerSession(PhysicalDeviceIdentity identity,CameraLeaseUse use,
-    QString source,FrameQueueMode mode,Factory factory,size_t capacity,PreviewAcquisitionKind kind)
+    QString source,FrameQueueMode mode,Factory factory,size_t capacity,PreviewAcquisitionKind kind,CameraLeaseArbiter::Ticket lease,QString cameraId)
     :kind_(kind),previewCompatible_(mode==FrameQueueMode::PreviewLatest && capacity==1),lifecycle_(std::move(source),mode,capacity) {
     identity.validate();require(identity.usable(),"Camera lease requires exact physical identity.");
     require(use==CameraLeaseUse::Calibration || use==CameraLeaseUse::Editor || use==CameraLeaseUse::Runtime || use==CameraLeaseUse::Preview,"Invalid camera lease use.");
     require(bool(factory),"Camera worker factory missing.");
-    leaseKey_=QJsonDocument(QJsonArray{identity.vendor,identity.model,identity.serial}).toJson(QJsonDocument::Compact);
-    {std::lock_guard lock(leasesMutex);require(!leases.contains(leaseKey_),"Camera busy: exclusive process-local lease held.");leases.insert(leaseKey_);}
+    if(!lease){auto reservation=CameraLeaseArbiter::reserve(cameraId.isEmpty()?CameraLeaseArbiter::physicalKey(identity):cameraId,use,{{cameraId,identity}});
+        require(!reservation.reason,"CAMERA_BUSY: exclusive process-local lease held");lease=reservation.leases.first();}
+    CameraLeaseArbiter::claim(lease,identity,use,cameraId);lease_=std::move(lease);
     timing_=AcquisitionTiming::current();if(timing_.request.isEmpty())timing_=AcquisitionTiming::request("camera-worker");
     if(!timing_.request.isEmpty())timing_.session=AcquisitionTiming::nextId();
     try {job_=jobs_.begin(SessionJob::Connection);worker_=std::thread([this,factory=std::move(factory)]() mutable {run(std::move(factory));});}
-    catch(...){releaseLease();throw;}
+    catch(...){clean_=true;releaseLease();throw;}
 }
 void CameraWorkerSession::owner() const {require(std::this_thread::get_id()==owner_,"Camera session accessed outside owner thread.");}
-void CameraWorkerSession::releaseLease(){std::lock_guard lock(leasesMutex);if(leaseHeld_){leases.remove(leaseKey_);leaseHeld_=false;}}
+void CameraWorkerSession::releaseLease(){if(leaseHeld_){CameraLeaseArbiter::drained(lease_,clean_);lease_.reset();leaseHeld_=false;}}
 CameraWorkerSession::~CameraWorkerSession(){
     AcquisitionTimingBinding binding(timing_);AcquisitionTimingSpan timing("session.close-and-join");
     // Owner lifetime must outlast this join; no detached callback captures UI/session.
     requestShutdown();if(worker_.joinable())worker_.join();
-    if(clean_)releaseLease();
+    releaseLease();
     jobs_.finish(job_);
     timing.finish(clean_?"success":"error");
 }

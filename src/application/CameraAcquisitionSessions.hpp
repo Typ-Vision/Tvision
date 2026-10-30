@@ -14,6 +14,7 @@ struct AcquisitionSourceStatus {
 struct AcquisitionContextStatus {
     QString context;
     quint64 generation=0;
+    quint32 resourceReason=0; // W7 CAMERA_BUSY=3; no terminal/implicit queue
     AcquisitionSessionState state=AcquisitionSessionState::Closed;
     QMap<QString,AcquisitionSourceStatus> sources;
     bool preparing=false,closing=false,drained=true,clean=true,closeBudgetExceeded=false;

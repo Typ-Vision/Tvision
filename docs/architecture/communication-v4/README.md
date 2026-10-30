@@ -2,7 +2,7 @@
 
 **Durum: sıralı uygulama sürüyor; hedef sistem henüz tamamlanmadı.**
 29 Ekim 2026. Kullanıcı seçimi: GPT-6.1 Sol / medium. Varsayılan oturum kapsamı
-tek karttır; ajanlar paralel çalışmaz. **Sonraki görev: [COMM4-10](cards/COMM4-10.md).**
+tek karttır; ajanlar paralel çalışmaz. **Sonraki görev: [COMM4-11](cards/COMM4-11.md).**
 
 **COMM4-01 tamam:** [güncel kaynak, test ve kart sahiplik haritası](source-map.md).
 **COMM4-02 tamam:** [wire fixture freeze](freeze-comm4-02.md).
@@ -33,6 +33,9 @@ Durable control port, generation fence ve exact kontrol ACK'i; gerçek disk ledg
 
 **COMM4-09 tamam:** [bağımsız bounded istasyon yürütmesi](station-execution.md).
 Ortak Runtime motoru, station-local completion/drain ve kayıt/sink retry izolasyonu.
+
+**COMM4-10 tamam:** [ortak UUID/fiziksel kamera lease portu](camera-leases.md).
+Atomik küme, provider claim, gerçek drain ve sahiplik diagnostics.
 
 ## Okuma ve kapsam
 
@@ -68,7 +71,7 @@ fiziksel PLC/robot ve dağıtım engelleri bu planla kapanmaz.
 | [08](cards/COMM4-08.md) | İstasyon admission ve tetik yönlendirme — tamam | 04,07 |
 | [08a](cards/COMM4-08a.md) | PLC reçete seçimi, Auto/Stop ve yerel kontrol yarışı — tamam | 08 |
 | [09](cards/COMM4-09.md) | Bağımsız istasyon yürütmesi — tamam | 08a |
-| [10](cards/COMM4-10.md) | Ortak kamera kaynak arbitrajı | 09 |
+| [10](cards/COMM4-10.md) | Ortak kamera kaynak arbitrajı — tamam | 09 |
 | [11](cards/COMM4-11.md) | Sabit şablon ve typed assignment domain | 04 |
 | [12](cards/COMM4-12.md) | Immutable publication değerlendirmesi | 09,11 |
 | [13](cards/COMM4-13.md) | Kalıcı terminal ve exact ACK ledger | 07,12 |

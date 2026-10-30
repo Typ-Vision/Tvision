@@ -48,11 +48,10 @@ void reconciliationAndExecution(){
 void partialAndLease(){
     Fixture f("multi",5);auto service=std::make_shared<CameraAcquisitionSessions>();f.probes[f.requests[2].device.identity.serial]->failConfigure=true;
     auto status=take(service->prepare("runtime",f.inputs,f.requests,false));check(!status.allReady() && status.sources[f.requests[2].sourceId].state==AcquisitionSessionState::Fault,"partial preparation reports source failure");
-    for(int i=0;i<5;++i)if(i!=2)check(status.sources[f.requests[i].sourceId].state==AcquisitionSessionState::Ready,"other cameras remain individually ready");
+    for(int i=0;i<5;++i)check(status.sources[f.requests[i].sourceId].state==AcquisitionSessionState::Fault,"all cameras rollback on preparation failure");
     rejects([&]{service->acquire("runtime",status.generation,f.requests[2],"bad","bad",3000);});
-    auto other=take(service->prepare("other-context",f.inputs,{f.requests[0]},false));check(!other.allReady() && f.first()->opens==1,"another context cannot steal lease");
-    check(take(service->close("other-context")).clean && take(service->close("runtime")).clean,"rollback all prepared cameras");
-    for(const auto& probe:f.probes)check(probe->opens==1 && probe->closes==1 && !probe->wrongThread,"five camera rollback and affinity");
+    check(take(service->close("runtime")).clean,"rollback all prepared cameras");
+    for(const auto& probe:f.probes)check(probe->opens<=1 && probe->closes==probe->opens && !probe->wrongThread,"five camera rollback and affinity");
     auto outside=f.inputs.factory.open(f.requests[0],CameraLeaseUse::Calibration,FrameQueueMode::ProductionFifo,1);
     auto busy=take(service->prepare("editor",f.inputs,{f.requests[0]},false));check(!busy.allReady(),"external settings/preview/calibration worker lease blocks service");outside.reset();
     auto retry=take(service->prepare("editor",f.inputs,{f.requests[0]},false));check(retry.allReady(),"explicit retry after external lease release");check(take(service->close("editor")).clean && service->shutdown().get().clean,"lease shutdown");

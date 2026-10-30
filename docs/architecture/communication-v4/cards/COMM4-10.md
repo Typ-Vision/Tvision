@@ -1,6 +1,6 @@
 # COMM4-10 — Kamera sahipliği ve acquisition admission
 
-Durum: planlandı, başlanmadı. Model: **GPT-6.1 Sol / medium**.
+Durum: tamamlandı. [Kapanış ve kabul](../../../archive/2026-10-30-comm4-10.md). Model: **GPT-6.1 Sol / medium**.
 Tek oturum kapsamı ve ortak kurallar [indekste](../README.md), kapanış
 kuralları [V0](../verification.md) içindedir.
 

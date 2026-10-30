@@ -170,7 +170,7 @@ std::unique_ptr<CameraSettingsSession> CameraSettingsService::open(MeasurementEn
     session->worker_=std::make_unique<CameraWorkerSession>(r.device.identity,CameraLeaseUse::Editor,r.sourceId,FrameQueueMode::ProductionFifo,
         [provider=factory.injected_,r,repo,e,shared=session->shared_,fault,runtime,api]{
             auto backend=provider?provider->createSettings(r.camera,r.device):OecsCameraSettings::create(r.device,runtime,api);
-            return std::make_unique<Transaction>(std::move(backend),r,repo,e,shared,fault);});
+            return std::make_unique<Transaction>(std::move(backend),r,repo,e,shared,fault);},2,PreviewAcquisitionKind::SequentialSingleFrame,CameraLeaseArbiter::Ticket{},r.camera.id.value);
     return session;
 }
 }
