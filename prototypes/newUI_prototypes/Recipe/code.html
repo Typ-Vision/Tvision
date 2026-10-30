@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+
+<html class="h-full" lang="tr"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>VisionFlow Studio — Recipe Editor</title>
+<!-- Tailwind CSS v3 with Forms & Container Plugins -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Tailwind Configuration -->
+<script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#eff6ff',
+              100: '#dbeafe',
+              500: '#3b82f6',
+              600: '#2563eb',
+              700: '#1d4ed8',
+            },
+            surface: {
+              50: '#f8fafc',
+              100: '#f1f5f9',
+              200: '#e2e8f0',
+              300: '#cbd5e1',
+              700: '#334155',
+              800: '#1e293b',
+              900: '#0f172a',
+            }
+          },
+          fontFamily: {
+            mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace'],
+            sans: ['Inter', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+<!-- Custom Styles for Precision Industrial CAD UI -->
+<style data-purpose="custom-scrollbar">
+    ::-webkit-scrollbar {
+      width: 5px;
+      height: 5px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #f1f5f9;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+  </style>
+<style data-purpose="micro-interactions">
+    .canvas-roi-box {
+      box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.9), 0 0 20px rgba(37, 99, 235, 0.25);
+    }
+    .status-dot-pulse {
+      animation: pulse-ring 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+    @keyframes pulse-ring {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(1.15); }
+    }
+  </style>
+</head>
+<body class="h-full bg-slate-100 text-slate-800 font-sans text-xs antialiased overflow-hidden flex flex-col select-none">
+<!-- BEGIN: ApplicationTopBar -->
+<header class="bg-white border-b border-slate-200 h-10 flex items-center justify-between px-3 z-30 flex-shrink-0" data-purpose="top-window-bar">
+<div class="flex items-center space-x-4">
+<!-- App Brand Logo & Name -->
+<div class="flex items-center space-x-2">
+<div class="w-6 h-6 rounded bg-blue-600 text-white flex items-center justify-center font-black text-xs shadow-sm shadow-blue-500/30">
+          VF
+        </div>
+<div class="flex items-baseline space-x-1.5">
+<span class="font-bold text-sm tracking-tight text-slate-900">VisionFlow</span>
+<span class="text-[10px] uppercase font-semibold text-slate-400 tracking-wider">Studio 2025</span>
+</div>
+</div>
+<!-- Native Desktop Style Menus -->
+<nav class="hidden md:flex items-center space-x-1 text-slate-600 text-xs pl-2 border-l border-slate-200">
+<button class="px-2 py-1 rounded hover:bg-slate-100 hover:text-slate-900 transition-colors">Dosya</button>
+<button class="px-2 py-1 rounded hover:bg-slate-100 hover:text-slate-900 transition-colors">Düzenle</button>
+<button class="px-2 py-1 rounded hover:bg-slate-100 hover:text-slate-900 transition-colors">Görünüm</button>
+<button class="px-2 py-1 rounded hover:bg-slate-100 hover:text-slate-900 transition-colors font-medium text-blue-600">Reçete</button>
+<button class="px-2 py-1 rounded hover:bg-slate-100 hover:text-slate-900 transition-colors">Çalıştır</button>
+<button class="px-2 py-1 rounded hover:bg-slate-100 hover:text-slate-900 transition-colors">Araçlar</button>
+<button class="px-2 py-1 rounded hover:bg-slate-100 hover:text-slate-900 transition-colors">Yardım</button>
+</nav>
+</div>
+<!-- Active Recipe Status Badge -->
+<div class="flex items-center space-x-2 text-slate-600">
+<div class="flex items-center space-x-1.5 px-2.5 py-0.5 rounded-full bg-slate-100 border border-slate-200">
+<span class="w-2 h-2 rounded-full bg-amber-500"></span>
+<span class="text-[11px] text-slate-600">Proje: <strong class="text-slate-800 font-medium">Test123</strong></span>
+<span class="text-slate-300">/</span>
+<span class="text-[11px] text-slate-800 font-semibold">defect</span>
+<span class="text-[9px] bg-amber-100 text-amber-800 font-semibold px-1 rounded uppercase tracking-wider">Taslak (v1.0)</span>
+</div>
+<!-- Quick Actions -->
+<div class="flex items-center space-x-1 pl-2">
+<button class="p-1 rounded text-slate-500 hover:bg-slate-100 hover:text-slate-700" title="Geri Al (Ctrl+Z)">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M3 10h10a5 5 0 015 5v2M3 10l6 6m-6-6l6-6" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+</button>
+<button class="p-1 rounded text-slate-500 hover:bg-slate-100 hover:text-slate-700" title="Yenile (Ctrl+Y)">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M21 10h-10a5 5 0 00-5 5v2m15-7l-6 6m6-6l-6-6" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+</button>
+</div>
+</div>
+</header>
+<!-- END: ApplicationTopBar -->
+<!-- BEGIN: RecipeActionToolbar -->
+<section class="bg-white border-b border-slate-200 h-11 px-3 flex items-center justify-between shadow-xs flex-shrink-0" data-purpose="recipe-actions-bar">
+<div class="flex items-center space-x-2">
+<!-- Recipe Library Selector -->
+<button class="inline-flex items-center space-x-1.5 px-3 py-1.5 text-xs font-medium text-slate-700 bg-slate-50 border border-slate-200 rounded-md hover:bg-slate-100 active:bg-slate-200 transition-colors shadow-xs">
+<svg class="w-3.5 h-3.5 text-slate-500" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+<span>Reçeteler</span>
+</button>
+<!-- Save Button -->
+<button class="inline-flex items-center space-x-1.5 px-3 py-1.5 text-xs font-medium text-slate-700 bg-slate-50 border border-slate-200 rounded-md hover:bg-slate-100 active:bg-slate-200 transition-colors shadow-xs">
+<svg class="w-3.5 h-3.5 text-slate-500" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+<span>Kaydet</span>
+<span class="text-[10px] text-slate-400 font-mono">⌘S</span>
+</button>
+<div class="h-5 w-px bg-slate-200 mx-1"></div>
+<!-- Run Flow (Akışı Çalıştır) - Primary CTA -->
+<button class="inline-flex items-center space-x-1.5 px-3.5 py-1.5 text-xs font-semibold text-white bg-blue-600 rounded-md hover:bg-blue-700 active:bg-blue-800 transition-all shadow-xs shadow-blue-500/20">
+<svg class="w-3.5 h-3.5 fill-current" viewbox="0 0 24 24"><path d="M8 5v14l11-7z"></path></svg>
+<span>Akışı Çalıştır</span>
+</button>
+<!-- Run Tool (Aracı Test Et) -->
+<button class="inline-flex items-center space-x-1.5 px-3 py-1.5 text-xs font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-md hover:bg-blue-100 active:bg-blue-200 transition-colors">
+<svg class="w-3.5 h-3.5 text-blue-600" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path><path d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+<span>Aracı Test Et</span>
+</button>
+<!-- Stop Execution Button -->
+<button class="inline-flex items-center space-x-1 px-2.5 py-1.5 text-xs font-medium text-rose-700 bg-rose-50 border border-rose-200 rounded-md hover:bg-rose-100 transition-colors">
+<span class="w-2.5 h-2.5 rounded-sm bg-rose-600 inline-block mr-1"></span>
+<span>Durdur</span>
+</button>
+</div>
+<!-- Toggle & Secondary Options -->
+<div class="flex items-center space-x-4">
+<label class="flex items-center space-x-2 cursor-pointer text-xs text-slate-600 hover:text-slate-900 select-none">
+<input checked="" class="w-3.5 h-3.5 text-blue-600 rounded border-slate-300 focus:ring-blue-500" type="checkbox"/>
+<span>Açıklamaları Göster</span>
+</label>
+<div class="h-5 w-px bg-slate-200"></div>
+<!-- Status Indicator -->
+<div class="flex items-center space-x-2 text-xs">
+<span class="inline-flex items-center px-2 py-0.5 rounded-md font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1.5"></span>
+          Çevrim İçi
+        </span>
+</div>
+</div>
+</section>
+<!-- END: RecipeActionToolbar -->
+<!-- BEGIN: MainWorkbenchArea -->
+<main class="flex-1 flex overflow-hidden min-h-0 bg-slate-100" data-purpose="workbench-grid">
+<!-- BEGIN: LeftPrimaryNavigationRail -->
+<aside class="w-14 bg-white border-r border-slate-200 flex flex-col items-center py-3 justify-between flex-shrink-0" data-purpose="primary-sidebar-rail">
+<!-- Top Group Apps -->
+<div class="flex flex-col items-center space-y-3 w-full">
+<!-- Dashboard Item -->
+<button class="w-10 h-10 rounded-lg flex items-center justify-center text-slate-500 hover:bg-slate-100 hover:text-slate-800 transition-colors group relative" title="Gösterge Paneli">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"></path></svg>
+</button>
+<!-- Project Manager -->
+<button class="w-10 h-10 rounded-lg flex items-center justify-center text-slate-500 hover:bg-slate-100 hover:text-slate-800 transition-colors group relative" title="Proje Yöneticisi">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"></path></svg>
+</button>
+<!-- Recipe Editor (Active State) -->
+<button class="w-10 h-10 rounded-lg flex items-center justify-center bg-blue-50 text-blue-600 relative border border-blue-100 shadow-xs" title="Reçete Editörü (Aktif)">
+<span class="absolute -left-0.5 top-2 bottom-2 w-1 bg-blue-600 rounded-r"></span>
+<svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+</button>
+<!-- Camera Manager -->
+<button class="w-10 h-10 rounded-lg flex items-center justify-center text-slate-500 hover:bg-slate-100 hover:text-slate-800 transition-colors" title="Kamera Yöneticisi">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"></path></svg>
+</button>
+<!-- Runtime Execution -->
+<button class="w-10 h-10 rounded-lg flex items-center justify-center text-slate-500 hover:bg-slate-100 hover:text-slate-800 transition-colors" title="Runtime (Canlı Yürütme)">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"></path></svg>
+</button>
+</div>
+<!-- Bottom Settings & System Apps -->
+<div class="flex flex-col items-center space-y-2 w-full pt-3 border-t border-slate-200">
+<button class="w-10 h-10 rounded-lg flex items-center justify-center text-slate-500 hover:bg-slate-100 hover:text-slate-800 transition-colors" title="Tanılama &amp; Loglar">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"></path></svg>
+</button>
+<button class="w-10 h-10 rounded-lg flex items-center justify-center text-slate-500 hover:bg-slate-100 hover:text-slate-800 transition-colors" title="Kullanıcılar">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"></path></svg>
+</button>
+<button class="w-10 h-10 rounded-lg flex items-center justify-center text-slate-500 hover:bg-slate-100 hover:text-slate-800 transition-colors" title="Ayarlar">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"></path><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"></path></svg>
+</button>
+</div>
+</aside>
+<!-- END: LeftPrimaryNavigationRail -->
+<!-- BEGIN: ToolPaletteToolbox -->
+<aside class="w-64 bg-white border-r border-slate-200 flex flex-col flex-shrink-0" data-purpose="toolbox-panel">
+<!-- Search Toolbox Header -->
+<div class="p-2.5 border-b border-slate-200">
+<div class="flex items-center justify-between mb-2">
+<span class="text-[11px] font-bold text-slate-500 tracking-wider uppercase">Araç Kutusu (Toolbox)</span>
+<span class="text-[10px] text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded font-mono">v2.4</span>
+</div>
+<div class="relative">
+<input class="w-full pl-7 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-md text-xs placeholder:text-slate-400 focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-all" placeholder="Araç ara... (Ctrl+K)" type="text"/>
+<svg class="w-3.5 h-3.5 text-slate-400 absolute left-2 top-2" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+</div>
+</div>
+<!-- Toolbox Categories Tree -->
+<div class="flex-1 overflow-y-auto px-2 py-2 space-y-3" data-purpose="toolbox-tree">
+<!-- 1. Görüntü Edinimi (Acquisition) -->
+<div>
+<button class="w-full flex items-center justify-between py-1 text-slate-800 font-semibold text-xs hover:text-blue-600 group">
+<span class="flex items-center space-x-1.5">
+<svg class="w-3.5 h-3.5 text-slate-400 group-hover:text-blue-600 transition-transform transform group-hover:translate-x-0.5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M19 9l-7 7-7-7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+<span>📷 Görüntü Edinimi</span>
+</span>
+<span class="text-[10px] font-normal text-slate-400">3</span>
+</button>
+<div class="ml-4 mt-1 pl-2 border-l border-slate-200 space-y-0.5">
+<div class="flex items-center justify-between px-2 py-1.5 rounded-md bg-blue-50 text-blue-700 font-medium cursor-pointer border border-blue-100">
+<span>Image File</span>
+<span class="w-1.5 h-1.5 rounded-full bg-blue-600"></span>
+</div>
+<div class="px-2 py-1.5 rounded-md hover:bg-slate-50 text-slate-600 cursor-pointer transition-colors">Webcam</div>
+<div class="px-2 py-1.5 rounded-md hover:bg-slate-50 text-slate-600 cursor-pointer transition-colors">Industrial Camera (GigE)</div>
+</div>
+</div>
+<!-- 2. Ön İşleme (Preprocess) -->
+<div>
+<button class="w-full flex items-center justify-between py-1 text-slate-800 font-semibold text-xs hover:text-blue-600 group">
+<span class="flex items-center space-x-1.5">
+<svg class="w-3.5 h-3.5 text-slate-400 group-hover:text-blue-600 transition-transform transform group-hover:translate-x-0.5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M19 9l-7 7-7-7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+<span>⚙️ Ön İşleme</span>
+</span>
+<span class="text-[10px] font-normal text-slate-400">4</span>
+</button>
+<div class="ml-4 mt-1 pl-2 border-l border-slate-200 space-y-0.5">
+<div class="px-2 py-1 rounded-md hover:bg-slate-50 text-slate-600 cursor-pointer transition-colors">ROI Kırpma / Maske</div>
+<div class="flex items-center justify-between px-2 py-1 rounded-md hover:bg-slate-50 text-slate-700 font-medium cursor-pointer transition-colors">
+<span>Preprocess (Gaussian)</span>
+<span class="text-[9px] bg-slate-100 text-slate-500 px-1 rounded">Aktif</span>
+</div>
+<div class="px-2 py-1 rounded-md hover:bg-slate-50 text-slate-600 cursor-pointer transition-colors">Grayscale Dönüşüm</div>
+<div class="px-2 py-1 rounded-md hover:bg-slate-50 text-slate-600 cursor-pointer transition-colors">Morfolojik Filtreler</div>
+</div>
+</div>
+<!-- 3. Tespit (Detection) - Active Category -->
+<div>
+<button class="w-full flex items-center justify-between py-1 text-blue-700 font-semibold text-xs">
+<span class="flex items-center space-x-1.5">
+<svg class="w-3.5 h-3.5 text-blue-600" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M19 9l-7 7-7-7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+<span>🔍 Tespit &amp; Analiz</span>
+</span>
+<span class="text-[10px] font-semibold text-blue-600 bg-blue-50 px-1 rounded">3</span>
+</button>
+<div class="ml-4 mt-1 pl-2 border-l border-blue-200 space-y-0.5">
+<div class="flex items-center justify-between px-2 py-1.5 rounded-md bg-blue-600 text-white font-semibold cursor-pointer shadow-xs shadow-blue-500/20">
+<span class="flex items-center space-x-1.5">
+<span class="w-2 h-2 rounded-full bg-white"></span>
+<span>Blob (Kusur Tespiti)</span>
+</span>
+<span class="text-[10px] font-mono text-blue-100">#3</span>
+</div>
+<div class="px-2 py-1.5 rounded-md hover:bg-slate-50 text-slate-600 cursor-pointer transition-colors">Code Read (1D/2D Barkod)</div>
+<div class="px-2 py-1.5 rounded-md hover:bg-slate-50 text-slate-600 cursor-pointer transition-colors">OCR Karakter Tanıma</div>
+</div>
+</div>
+<!-- 4. Eşleştirme (Matching) -->
+<div>
+<button class="w-full flex items-center justify-between py-1 text-slate-800 font-semibold text-xs hover:text-blue-600 group">
+<span class="flex items-center space-x-1.5">
+<svg class="w-3.5 h-3.5 text-slate-400 group-hover:text-blue-600" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M9 5l7 7-7 7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+<span>📐 Eşleştirme</span>
+</span>
+<span class="text-[10px] font-normal text-slate-400">3</span>
+</button>
+<div class="ml-4 mt-1 pl-2 border-l border-slate-200 space-y-0.5 hidden">
+<div class="px-2 py-1 rounded hover:bg-slate-50 text-slate-600 cursor-pointer">Template Match</div>
+<div class="px-2 py-1 rounded hover:bg-slate-50 text-slate-600 cursor-pointer">Pattern Pose</div>
+<div class="px-2 py-1 rounded hover:bg-slate-50 text-slate-600 cursor-pointer">Shape Pose</div>
+</div>
+</div>
+<!-- 5. Ölçüm (Measurement) -->
+<div>
+<button class="w-full flex items-center justify-between py-1 text-slate-800 font-semibold text-xs hover:text-blue-600 group">
+<span class="flex items-center space-x-1.5">
+<svg class="w-3.5 h-3.5 text-slate-400 group-hover:text-blue-600" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M19 9l-7 7-7-7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+<span>📏 Ölçüm</span>
+</span>
+<span class="text-[10px] font-normal text-slate-400">3</span>
+</button>
+<div class="ml-4 mt-1 pl-2 border-l border-slate-200 space-y-0.5">
+<div class="px-2 py-1 rounded-md hover:bg-slate-50 text-slate-600 cursor-pointer transition-colors">Measurement (Mesafe)</div>
+<div class="px-2 py-1 rounded-md hover:bg-slate-50 text-slate-600 cursor-pointer transition-colors">Edge Point</div>
+<div class="px-2 py-1 rounded-md hover:bg-slate-50 text-slate-600 cursor-pointer transition-colors">Geometry Measurement</div>
+</div>
+</div>
+</div>
+<!-- Add New Tool Action Footer -->
+<div class="p-2 border-t border-slate-200 bg-slate-50/60">
+<button class="w-full flex items-center justify-center space-x-1.5 py-1.5 px-3 bg-white hover:bg-slate-100 border border-slate-300 rounded-md font-medium text-slate-700 shadow-2xs transition-colors">
+<svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M12 4v16m8-8H4" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+<span>Yeni Araç Ekle</span>
+</button>
+</div>
+</aside>
+<!-- END: ToolPaletteToolbox -->
+<!-- BEGIN: CentralWorkspaceArea -->
+<div class="flex-1 flex flex-col min-w-0 bg-slate-200/70" data-purpose="viewport-and-pipeline-center">
+<!-- Viewport Header Toolbar -->
+<div class="bg-white border-b border-slate-200 px-3 py-1.5 flex items-center justify-between flex-shrink-0" data-purpose="viewport-meta-toolbar">
+<div class="flex items-center space-x-3">
+<span class="font-medium text-slate-700 flex items-center space-x-1.5">
+<span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+<span>Ham Görüntü</span>
+</span>
+<span class="text-slate-300">|</span>
+<span class="font-mono text-[11px] text-slate-500">512 × 512 px</span>
+<span class="text-slate-300">•</span>
+<span class="text-[11px] text-slate-400 font-mono" title="Frame Hash ID">Frame: e92ca70c-b01e-4d43-9cc0-245f93279832</span>
+</div>
+<!-- View Controls -->
+<div class="flex items-center space-x-1">
+<button class="px-2.5 py-1 text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded hover:bg-slate-50 active:bg-slate-100 transition-colors shadow-2xs">
+            Görüntü Aç
+          </button>
+<button class="px-2.5 py-1 text-xs font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded hover:bg-blue-100 transition-colors">
+            Ekrana Sığdır
+          </button>
+<button class="px-2 py-1 text-xs text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded">
+            1:1 Gerçek
+          </button>
+<div class="h-4 w-px bg-slate-200 mx-1"></div>
+<button class="p-1 rounded text-slate-500 hover:bg-slate-100 hover:text-slate-800" title="Izgara Göster/Gizle">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16M10 4v16M16 4v16M4 4h16v16H4V4z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+</button>
+<button class="p-1 rounded text-slate-500 hover:bg-slate-100 hover:text-slate-800" title="Daha fazla seçenek">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+</button>
+</div>
+</div>
+<!-- Main Inspection Canvas Container -->
+<div class="flex-1 relative flex items-center justify-center p-3 overflow-hidden bg-slate-900/5 select-none" data-purpose="canvas-viewport">
+<!-- Background Grid Pattern for CAD feel -->
+<div class="absolute inset-0 opacity-40 pointer-events-none" style="background-image: radial-gradient(#cbd5e1 1px, transparent 1px); background-size: 16px 16px;"></div>
+<!-- Vision Inspection Stage Frame -->
+<div class="relative bg-black rounded-lg shadow-xl overflow-hidden border border-slate-300 max-h-full max-w-full aspect-square flex items-center justify-center group" style="width: 530px; height: 530px;">
+<!-- Inspection Raw Image -->
+<img alt="Rice defect machine vision inspection capture" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDNKcDSIZmXjyyBuAyTDrH0G12e64pDhnkXvR-Sgb5NEStRsZI6beH08dhIJaubor1qZmVW3bnH1rvDqTfh6FJpuMDt3zLXjRRD6AuYZDOpFAfGlmz6mhgtWr7frhHwhL98vBWWKq5u5BvKxAjE8QOlECGwDc_Kkhs1B8oY_QQdUrOJa6nDM9Rzuh7SOgT1wVV1LQfR3JA0rwwFj1oWgQrOhpE-FW_NFfInCj1DMjoUM0ijcWMrWWEEhQ"/>
+<!-- Interactive Machine Vision ROI Overlay -->
+<div class="absolute inset-6 pointer-events-none border-2 border-blue-500/90 rounded-sm canvas-roi-box">
+<!-- ROI Dimension Banner -->
+<div class="absolute -top-6 left-0 bg-blue-600 text-white font-mono text-[10px] px-2 py-0.5 rounded-t-sm shadow-xs flex items-center space-x-1.5">
+<span>ROI #1 (Blob Zone)</span>
+<span class="opacity-75">• [468 × 468]</span>
+</div>
+<!-- Resize Handles for UI Feel -->
+<div class="w-2.5 h-2.5 bg-white border-2 border-blue-600 absolute -top-1.5 -left-1.5 rounded-xs shadow-xs"></div>
+<div class="w-2.5 h-2.5 bg-white border-2 border-blue-600 absolute -top-1.5 -right-1.5 rounded-xs shadow-xs"></div>
+<div class="w-2.5 h-2.5 bg-white border-2 border-blue-600 absolute -bottom-1.5 -left-1.5 rounded-xs shadow-xs"></div>
+<div class="w-2.5 h-2.5 bg-white border-2 border-blue-600 absolute -bottom-1.5 -right-1.5 rounded-xs shadow-xs"></div>
+<div class="w-2.5 h-2.5 bg-white border-2 border-blue-600 absolute -top-1.5 left-1/2 -translate-x-1/2 rounded-xs shadow-xs"></div>
+<div class="w-2.5 h-2.5 bg-white border-2 border-blue-600 absolute -bottom-1.5 left-1/2 -translate-x-1/2 rounded-xs shadow-xs"></div>
+<!-- Simulated Defect Blob Annotations in Canvas -->
+<div class="absolute top-[26%] left-[34%] w-10 h-7 border border-emerald-400 bg-emerald-400/20 rounded-full flex items-center justify-center">
+<span class="w-1.5 h-1.5 bg-emerald-400 rounded-full"></span>
+<span class="absolute -bottom-4 bg-slate-900/80 text-emerald-300 font-mono text-[8px] px-1 rounded">OK</span>
+</div>
+<div class="absolute top-[52%] left-[64%] w-8 h-8 border border-rose-500 bg-rose-500/25 rounded-md flex items-center justify-center">
+<span class="w-1.5 h-1.5 bg-rose-500 rounded-full animate-ping"></span>
+<span class="absolute -bottom-4 bg-rose-900/90 text-white font-mono text-[8px] px-1 rounded font-bold shadow-xs">KUSUR #4</span>
+</div>
+<div class="absolute bottom-[28%] left-[22%] w-11 h-6 border border-emerald-400 bg-emerald-400/20 rounded-full flex items-center justify-center">
+<span class="w-1.5 h-1.5 bg-emerald-400 rounded-full"></span>
+<span class="absolute -bottom-4 bg-slate-900/80 text-emerald-300 font-mono text-[8px] px-1 rounded">OK</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Canvas Info & Coordinate Status Footer -->
+<div class="bg-white border-t border-slate-200 px-3 py-1.5 flex items-center justify-between flex-shrink-0 text-slate-600" data-purpose="canvas-footer-bar">
+<!-- Live Cursor Coordinates & Pixel Value -->
+<div class="flex items-center space-x-4 font-mono text-[11px]">
+<div class="flex items-center space-x-1.5">
+<span class="text-slate-400">Piksel:</span>
+<span class="text-slate-800 font-medium">X: 284, Y: 196</span>
+</div>
+<div class="flex items-center space-x-1.5">
+<span class="text-slate-400">Yoğunluk:</span>
+<span class="text-slate-800 font-medium">142 (8-bit Gri)</span>
+</div>
+<div class="flex items-center space-x-1.5">
+<span class="text-slate-400">Tespit Sayısı:</span>
+<span class="px-1.5 py-0.2 rounded bg-blue-100 text-blue-700 font-sans font-semibold text-[10px]">74 Nesne</span>
+</div>
+</div>
+<!-- Zoom Controls -->
+<div class="flex items-center space-x-2">
+<button class="w-5 h-5 flex items-center justify-center rounded border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-600 font-mono font-bold">-</button>
+<span class="font-mono text-[11px] text-slate-700 font-semibold w-14 text-center">106.1%</span>
+<button class="w-5 h-5 flex items-center justify-center rounded border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-600 font-mono font-bold">+</button>
+<input class="w-16 h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600" max="400" min="10" type="range" value="106"/>
+</div>
+</div>
+<!-- BEGIN: BottomDrawerPipeline -->
+<section class="h-44 bg-white border-t border-slate-200 flex flex-col flex-shrink-0" data-purpose="pipeline-and-results-dock">
+<!-- Tabs Header -->
+<div class="flex items-center justify-between px-2 border-b border-slate-200 bg-slate-50/70">
+<div class="flex items-center space-x-1">
+<button class="px-3 py-1.5 text-xs font-semibold text-blue-700 border-b-2 border-blue-600 bg-white">
+              Bağlantılar (DAG Akışı)
+            </button>
+<button class="px-3 py-1.5 text-xs font-medium text-slate-600 hover:text-slate-900 border-b-2 border-transparent">
+              Sonuçlar (Results)
+            </button>
+<button class="px-3 py-1.5 text-xs font-medium text-slate-600 hover:text-slate-900 border-b-2 border-transparent">
+              Kenar Profili
+            </button>
+<button class="px-3 py-1.5 text-xs font-medium text-slate-600 hover:text-slate-900 border-b-2 border-transparent">
+              Değişkenler (Variables)
+            </button>
+<button class="px-3 py-1.5 text-xs font-medium text-slate-600 hover:text-slate-900 border-b-2 border-transparent">
+              Log Konsolu
+            </button>
+<button class="px-3 py-1.5 text-xs font-medium text-slate-600 hover:text-slate-900 border-b-2 border-transparent">
+              Haberleşme (PLC/TCP)
+            </button>
+<button class="px-3 py-1.5 text-xs font-medium text-slate-600 hover:text-slate-900 border-b-2 border-transparent">
+              Tanılama
+            </button>
+</div>
+<div class="flex items-center space-x-2 pr-2">
+<span class="inline-flex items-center text-[11px] text-emerald-700 font-medium">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1 status-dot-pulse"></span>
+              DAG Geçerli • READY
+            </span>
+<button class="px-2 py-1 text-[11px] font-medium text-slate-700 bg-white border border-slate-300 rounded hover:bg-slate-50 shadow-2xs">
+              Validate DAG
+            </button>
+</div>
+</div>
+<!-- Tab Body: Flow Pipeline Visualization & Steps -->
+<div class="flex-1 p-3 overflow-x-auto flex items-center justify-between bg-slate-50/30">
+<!-- Flow Nodes Pipeline Cards -->
+<div class="flex items-center space-x-2">
+<!-- Node 1 -->
+<div class="bg-white border border-slate-200 rounded-lg p-2.5 shadow-2xs min-w-[155px]">
+<div class="flex items-center justify-between mb-1">
+<span class="font-bold text-slate-800 text-[11px]">Image_File_1</span>
+<span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+</div>
+<div class="text-[10px] text-slate-500">Image File • READY</div>
+<div class="mt-2 text-[9px] font-mono bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded">OUT: .image</div>
+</div>
+<!-- Connector Arrow -->
+<svg class="w-5 h-5 text-slate-400 flex-shrink-0" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M14 5l7 7m0 0l-7 7m7-7H3" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+<!-- Node 2 -->
+<div class="bg-white border border-slate-200 rounded-lg p-2.5 shadow-2xs min-w-[155px]">
+<div class="flex items-center justify-between mb-1">
+<span class="font-bold text-slate-800 text-[11px]">Preprocess_1</span>
+<span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+</div>
+<div class="text-[10px] text-slate-500">Gaussian Blur (3x3)</div>
+<div class="mt-2 text-[9px] font-mono bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded">OUT: .processed_img</div>
+</div>
+<!-- Connector Arrow -->
+<svg class="w-5 h-5 text-slate-400 flex-shrink-0" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M14 5l7 7m0 0l-7 7m7-7H3" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+<!-- Node 3 (Selected/Active) -->
+<div class="bg-blue-50 border-2 border-blue-500 rounded-lg p-2.5 shadow-xs min-w-[165px]">
+<div class="flex items-center justify-between mb-1">
+<span class="font-bold text-blue-900 text-[11px] flex items-center">
+<span class="w-1.5 h-1.5 bg-blue-600 rounded-full mr-1.5"></span>
+                  Blob_1
+                </span>
+<span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+</div>
+<div class="text-[10px] text-blue-700 font-medium">Blob Analizi • READY</div>
+<div class="mt-2 flex items-center space-x-1">
+<span class="text-[9px] font-mono bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded">OUT: .blobs[]</span>
+<span class="text-[9px] font-mono bg-emerald-100 text-emerald-800 px-1 py-0.5 rounded">74 adet</span>
+</div>
+</div>
+<!-- Connector Arrow -->
+<svg class="w-5 h-5 text-slate-300 flex-shrink-0" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M14 5l7 7m0 0l-7 7m7-7H3" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+<!-- Node 4 -->
+<div class="bg-white border border-dashed border-slate-300 rounded-lg p-2.5 min-w-[155px] opacity-75">
+<div class="flex items-center justify-between mb-1">
+<span class="font-medium text-slate-700 text-[11px]">Set Variables_1</span>
+<span class="w-2 h-2 rounded-full bg-slate-300"></span>
+</div>
+<div class="text-[10px] text-slate-500">PLC Register Map</div>
+<div class="mt-2 text-[9px] font-mono bg-slate-100 text-slate-400 px-1.5 py-0.5 rounded">OUT: DB100.DBW0</div>
+</div>
+</div>
+<!-- Pipeline Mini Execution Summary -->
+<div class="bg-white border border-slate-200 rounded-lg p-2 text-right text-[11px] flex-shrink-0 ml-4 hidden lg:block">
+<div class="text-slate-400 text-[10px]">Son Yürütme Süresi</div>
+<div class="font-mono font-bold text-slate-800 text-sm">18.4 ms</div>
+<div class="text-[10px] text-emerald-600 font-medium">Tüm adımlar PASS</div>
+</div>
+</div>
+</section>
+<!-- END: BottomDrawerPipeline -->
+</div>
+<!-- END: CentralWorkspaceArea -->
+<!-- BEGIN: RightInspectorPropertiesSidebar -->
+<aside class="w-80 bg-white border-l border-slate-200 flex flex-col flex-shrink-0" data-purpose="properties-panel">
+<!-- Properties Header -->
+<div class="px-4 py-3 border-b border-slate-200 flex items-center justify-between bg-slate-50/50">
+<div>
+<span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Özellikler (Properties)</span>
+<h2 class="text-sm font-bold text-slate-800">Blob_1 — Blob Analizi</h2>
+</div>
+<button class="p-1 rounded text-slate-400 hover:text-slate-700 hover:bg-slate-100" title="Araç menüsü">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+</button>
+</div>
+<!-- Properties Form Fields (Scrollable) -->
+<div class="flex-1 overflow-y-auto p-4 space-y-4 text-xs" data-purpose="properties-form">
+<!-- Tool Name Field -->
+<div>
+<label class="block font-medium text-slate-700 mb-1">Araç Adı (Name)</label>
+<input class="w-full px-2.5 py-1.5 border border-slate-300 rounded-md text-xs font-mono font-semibold text-slate-900 focus:ring-1 focus:ring-blue-500 focus:border-blue-500" type="text" value="Blob_1"/>
+</div>
+<!-- Description Field -->
+<div>
+<label class="block font-medium text-slate-700 mb-1">Açıklama (Description)</label>
+<input class="w-full px-2.5 py-1.5 border border-slate-300 rounded-md text-xs text-slate-700 placeholder:text-slate-400 focus:ring-1 focus:ring-blue-500 focus:border-blue-500" type="text" value="Pirinç tanesi kırık ve kusur tespiti"/>
+</div>
+<!-- Active/Enabled Toggle Switch -->
+<div class="flex items-center justify-between p-2.5 bg-slate-50 border border-slate-200 rounded-lg">
+<div>
+<span class="font-semibold text-slate-800 block text-xs">Aracı Etkinleştir</span>
+<span class="text-[11px] text-slate-500">Akış çalıştırılırken hesaplanır</span>
+</div>
+<label class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox"/>
+<div class="w-9 h-5 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-600"></div>
+</label>
+</div>
+<!-- Input Source Selector -->
+<div>
+<label class="block font-medium text-slate-700 mb-1">Görüntü Kaynağı (Image Source)</label>
+<select class="w-full px-2.5 py-1.5 border border-slate-300 rounded-md text-xs font-mono text-slate-800 focus:ring-1 focus:ring-blue-500 focus:border-blue-500 bg-white">
+<option selected="">Preprocess_1.image</option>
+<option>Image_File_1.raw</option>
+<option>ROI_Crop_1.cropped</option>
+</select>
+</div>
+<!-- Run Tool Direct Button -->
+<button class="w-full py-2 px-3 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-md font-semibold text-xs transition-colors flex items-center justify-center space-x-1.5 shadow-2xs">
+<svg class="w-4 h-4 fill-current" viewbox="0 0 24 24"><path d="M8 5v14l11-7z"></path></svg>
+<span>Bu Aracı Şimdi Test Et (Run Tool)</span>
+</button>
+<div class="h-px bg-slate-200 my-2"></div>
+<!-- Algorithm Parameters Section Header -->
+<div class="flex items-center justify-between">
+<span class="text-[11px] font-bold uppercase tracking-wider text-slate-500">Parametre Ayarları</span>
+<span class="text-[10px] text-blue-600 font-medium cursor-pointer hover:underline">Varsayılan</span>
+</div>
+<!-- Threshold Slider + Number Box -->
+<div>
+<div class="flex items-center justify-between mb-1">
+<label class="font-medium text-slate-700">Eşikleme (Threshold 8-bit)</label>
+<input class="w-16 px-1.5 py-0.5 border border-slate-300 rounded text-right font-mono text-xs font-bold text-slate-900 focus:ring-1 focus:ring-blue-500" max="255" min="0" type="number" value="112"/>
+</div>
+<input class="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600" max="255" min="0" type="range" value="112"/>
+<div class="flex justify-between text-[10px] text-slate-400 font-mono mt-0.5">
+<span>0 (Karanlık)</span>
+<span>128</span>
+<span>255 (Aydınlık)</span>
+</div>
+</div>
+<!-- Target Polarity -->
+<div>
+<label class="block font-medium text-slate-700 mb-1">Nesne Polaritesi</label>
+<select class="w-full px-2.5 py-1.5 border border-slate-300 rounded-md text-xs text-slate-800 focus:ring-1 focus:ring-blue-500 focus:border-blue-500 bg-white">
+<option selected="">Açık Nesneler (&gt; eşik değeri)</option>
+<option>Koyu Nesneler (&lt; eşik değeri)</option>
+<option>Her İkisi (Açık ve Koyu)</option>
+</select>
+</div>
+<!-- Connectivity Mode (Komşuluk) -->
+<div>
+<label class="block font-medium text-slate-700 mb-1">Piksel Komşuluğu (Connectivity)</label>
+<div class="grid grid-cols-2 gap-2">
+<button class="py-1.5 px-3 border border-slate-200 rounded-md text-center text-xs font-medium text-slate-600 hover:bg-slate-50 transition-colors">
+              4-Bağlantılı
+            </button>
+<button class="py-1.5 px-3 border-2 border-blue-600 bg-blue-50/60 rounded-md text-center text-xs font-bold text-blue-700 shadow-2xs">
+              8-Bağlantılı
+            </button>
+</div>
+</div>
+<!-- Area Filters -->
+<div class="grid grid-cols-2 gap-3">
+<div>
+<label class="block font-medium text-slate-700 mb-1">Min Alan (px²)</label>
+<input class="w-full px-2.5 py-1.5 border border-slate-300 rounded-md font-mono text-xs" type="text" value="1 px²"/>
+</div>
+<div>
+<label class="block font-medium text-slate-700 mb-1">Max Alan (px²)</label>
+<input class="w-full px-2.5 py-1.5 bg-slate-100 border border-slate-200 rounded-md font-mono text-xs text-slate-400" disabled="" type="text" value="Sınırsız (∞)"/>
+</div>
+</div>
+<!-- Boundary Rejection Checkbox -->
+<div class="space-y-2 pt-1">
+<label class="flex items-start space-x-2 cursor-pointer select-none">
+<input checked="" class="mt-0.5 w-3.5 h-3.5 text-blue-600 rounded border-slate-300 focus:ring-blue-500" type="checkbox"/>
+<span class="text-xs text-slate-700 font-medium">ROI sınırına temas eden nesneleri reddet</span>
+</label>
+<label class="flex items-start space-x-2 cursor-pointer select-none">
+<input checked="" class="mt-0.5 w-3.5 h-3.5 text-blue-600 rounded border-slate-300 focus:ring-blue-500" type="checkbox"/>
+<span class="text-xs text-slate-700 font-medium">İç delikleri otomatik doldur (Hole Filling)</span>
+</label>
+</div>
+<!-- Defect Criteria Classification -->
+<div class="p-3 bg-slate-50 border border-slate-200 rounded-lg">
+<div class="flex items-center justify-between mb-1.5">
+<span class="font-bold text-slate-800 text-xs">Karar Kuralı (PASS/FAIL)</span>
+<span class="text-[10px] text-emerald-700 font-semibold bg-emerald-100 px-1.5 py-0.5 rounded">Toleransta</span>
+</div>
+<p class="text-[11px] text-slate-500 leading-snug">
+            Tespit edilen blob sayısı &gt; 80 ise veya eksen oranı &lt; 0.4 ise parçayı REDdet.
+          </p>
+</div>
+</div>
+<!-- Footer Apply/Revert in Property Sidebar -->
+<div class="p-3 border-t border-slate-200 bg-slate-50 flex items-center justify-end space-x-2 flex-shrink-0">
+<button class="px-3 py-1.5 rounded-md border border-slate-300 text-slate-700 hover:bg-slate-100 text-xs font-medium transition-colors">
+          Sıfırla
+        </button>
+<button class="px-4 py-1.5 rounded-md bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-xs font-bold shadow-xs transition-colors">
+          Uygula
+        </button>
+</div>
+</aside>
+<!-- END: RightInspectorPropertiesSidebar -->
+</main>
+<!-- END: MainWorkbenchArea -->
+<!-- BEGIN: SystemStatusBar -->
+<footer class="bg-white border-t border-slate-200 h-7 px-3 flex items-center justify-between text-[11px] text-slate-600 select-none z-30 flex-shrink-0" data-purpose="industrial-status-bar">
+<!-- Hardware & Communication Links Status -->
+<div class="flex items-center space-x-4">
+<!-- Overall Execution State -->
+<div class="flex items-center space-x-1.5 font-medium text-slate-800">
+<span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+<span>Hazır — Tool yürütmesi: <span class="font-mono text-blue-600">Run Flow / Results</span></span>
+</div>
+<div class="h-3.5 w-px bg-slate-200"></div>
+<!-- Camera Link -->
+<div class="flex items-center space-x-1.5 text-slate-700">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+<span>Kamera: <strong class="font-medium">Basler GigE acA1920 (60 FPS)</strong></span>
+</div>
+<div class="h-3.5 w-px bg-slate-200"></div>
+<!-- PLC Status -->
+<div class="flex items-center space-x-1.5 text-slate-700">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+<span>PLC: <strong class="font-medium">Siemens S7-1500 (192.168.1.10)</strong></span>
+</div>
+<div class="h-3.5 w-px bg-slate-200"></div>
+<!-- Robot Status -->
+<div class="flex items-center space-x-1.5 text-slate-500">
+<span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+<span>Robot: <span class="italic">KUKA KRC4 (Simülasyon Modu)</span></span>
+</div>
+</div>
+<!-- System Performance Metrics -->
+<div class="flex items-center space-x-3 font-mono text-[10px] text-slate-500">
+<span>CPU: 8%</span>
+<span>RAM: 1.4 GB</span>
+<span class="text-slate-300">|</span>
+<span class="text-slate-700 font-semibold font-sans">VisionFlow Core 4.12.0</span>
+</div>
+</footer>
+<!-- END: SystemStatusBar -->
+</body></html>

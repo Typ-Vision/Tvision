@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+
+<html class="h-full" lang="tr"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>VisionFlow Studio — Recipe Editor</title>
+<!-- Tailwind CSS v3 with Forms & Container Plugins -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Tailwind Configuration -->
+<script id="tailwind-config">
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#eff6ff',
+              100: '#dbeafe',
+              500: '#3b82f6',
+              600: '#2563eb',
+              700: '#1d4ed8',
+            },
+            surface: {
+              50: '#f8fafc',
+              100: '#f1f5f9',
+              200: '#e2e8f0',
+              300: '#cbd5e1',
+              700: '#334155',
+              800: '#1e293b',
+              900: '#0f172a',
+            }
+          },
+          fontFamily: {
+            mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace'],
+            sans: ['Inter', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+<!-- Custom Styles for Precision Industrial CAD UI -->
+<style data-purpose="custom-scrollbar">
+    ::-webkit-scrollbar {
+      width: 5px;
+      height: 5px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #f1f5f9;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+  </style>
+<style data-purpose="micro-interactions">
+    .canvas-roi-box {
+      box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.9), 0 0 20px rgba(37, 99, 235, 0.25);
+    }
+    .status-dot-pulse {
+      animation: pulse-ring 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+    @keyframes pulse-ring {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(1.15); }
+    }
+  </style>
+<meta content="web_dashboard" name="shell-type"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/></head>
+<body class="h-full bg-slate-100 text-slate-800 font-sans text-xs antialiased overflow-hidden flex flex-col select-none">
+<!-- BEGIN: ApplicationTopBar -->
+<header class="bg-white border-b border-slate-200 h-10 flex items-center justify-between px-3 z-30 flex-shrink-0" data-purpose="top-window-bar">
+<div class="flex items-center space-x-4">
+<!-- App Brand Logo & Name -->
+<div class="flex items-center space-x-2">
+<div class="w-6 h-6 rounded bg-blue-600 text-white flex items-center justify-center font-black text-xs shadow-sm shadow-blue-500/30">
+          VF
+        </div>
+<div class="flex items-baseline space-x-1.5">
+<span class="font-bold text-sm tracking-tight text-slate-900">VisionFlow</span>
+<span class="text-[10px] uppercase font-semibold text-slate-400 tracking-wider">Studio 2025</span>
+</div>
+</div>
+<!-- Native Desktop Style Menus -->
+<nav class="hidden md:flex items-center space-x-1 text-slate-600 text-xs pl-2 border-l border-slate-200">
+<button class="px-2 py-1 rounded hover:bg-slate-100 hover:text-slate-900 transition-colors">Dosya</button>
+<button class="px-2 py-1 rounded hover:bg-slate-100 hover:text-slate-900 transition-colors">Düzenle</button>
+<button class="px-2 py-1 rounded hover:bg-slate-100 hover:text-slate-900 transition-colors">Görünüm</button>
+<button class="px-2 py-1 rounded hover:bg-slate-100 hover:text-slate-900 transition-colors font-medium text-blue-600">Reçete</button>
+<button class="px-2 py-1 rounded hover:bg-slate-100 hover:text-slate-900 transition-colors">Çalıştır</button>
+<button class="px-2 py-1 rounded hover:bg-slate-100 hover:text-slate-900 transition-colors">Araçlar</button>
+<button class="px-2 py-1 rounded hover:bg-slate-100 hover:text-slate-900 transition-colors">Yardım</button>
+</nav>
+</div>
+<!-- Active Recipe Status Badge -->
+<div class="flex items-center space-x-2 text-slate-600">
+<div class="flex items-center space-x-1.5 px-2.5 py-0.5 rounded-full bg-slate-100 border border-slate-200">
+<span class="w-2 h-2 rounded-full bg-amber-500"></span>
+<span class="text-[11px] text-slate-600">Proje: <strong class="text-slate-800 font-medium">Test123</strong></span>
+<span class="text-slate-300">/</span>
+<span class="text-[11px] text-slate-800 font-semibold">defect</span>
+<span class="text-[9px] bg-amber-100 text-amber-800 font-semibold px-1 rounded uppercase tracking-wider">Taslak (v1.0)</span>
+</div>
+<!-- Quick Actions -->
+<div class="flex items-center space-x-1 pl-2">
+<button class="p-1 rounded text-slate-500 hover:bg-slate-100 hover:text-slate-700" title="Geri Al (Ctrl+Z)">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M3 10h10a5 5 0 015 5v2M3 10l6 6m-6-6l6-6" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+</button>
+<button class="p-1 rounded text-slate-500 hover:bg-slate-100 hover:text-slate-700" title="Yenile (Ctrl+Y)">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M21 10h-10a5 5 0 00-5 5v2m15-7l-6 6m6-6l-6-6" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+</button>
+</div>
+</div>
+</header>
+<!-- END: ApplicationTopBar -->
+<!-- BEGIN: RecipeActionToolbar -->
+<section class="bg-white border-b border-slate-200 h-11 px-3 flex items-center justify-between shadow-xs flex-shrink-0" data-purpose="recipe-actions-bar">
+<div class="flex items-center space-x-2">
+<!-- Recipe Library Selector -->
+<button class="inline-flex items-center space-x-1.5 px-3 py-1.5 text-xs font-medium text-slate-700 bg-slate-50 border border-slate-200 rounded-md hover:bg-slate-100 active:bg-slate-200 transition-colors shadow-xs">
+<svg class="w-3.5 h-3.5 text-slate-500" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+<span class="">Reçeteler</span>
+</button>
+<!-- Save Button -->
+<button class="inline-flex items-center space-x-1.5 px-3 py-1.5 text-xs font-medium text-slate-700 bg-slate-50 border border-slate-200 rounded-md hover:bg-slate-100 active:bg-slate-200 transition-colors shadow-xs">
+<svg class="w-3.5 h-3.5 text-slate-500" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+<span class="">Kaydet</span>
+<span class="text-[10px] text-slate-400 font-mono">⌘S</span>
+</button>
+<div class="h-5 w-px bg-slate-200 mx-1"></div>
+<!-- Run Flow (Akışı Çalıştır) - Primary CTA -->
+<button class="inline-flex items-center space-x-1.5 px-3.5 py-1.5 text-xs font-semibold text-white bg-blue-600 rounded-md hover:bg-blue-700 active:bg-blue-800 transition-all shadow-xs shadow-blue-500/20">
+<svg class="w-3.5 h-3.5 fill-current" viewbox="0 0 24 24"><path d="M8 5v14l11-7z"></path></svg>
+<span class="">Akışı Çalıştır</span>
+</button>
+<!-- Run Tool (Aracı Test Et) -->
+<button class="inline-flex items-center space-x-1.5 px-3 py-1.5 text-xs font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-md hover:bg-blue-100 active:bg-blue-200 transition-colors">
+<svg class="w-3.5 h-3.5 text-blue-600" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path><path d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+<span class="">Aracı Test Et</span>
+</button>
+<!-- Stop Execution Button -->
+<button class="inline-flex items-center space-x-1 px-2.5 py-1.5 text-xs font-medium text-rose-700 bg-rose-50 border border-rose-200 rounded-md hover:bg-rose-100 transition-colors">
+<span class="w-2.5 h-2.5 rounded-sm bg-rose-600 inline-block mr-1"></span>
+<span class="">Durdur</span>
+</button>
+</div>
+<!-- Toggle & Secondary Options -->
+<div class="flex items-center space-x-4">
+<label class="flex items-center space-x-2 cursor-pointer text-xs text-slate-600 hover:text-slate-900 select-none">
+<input checked="" class="w-3.5 h-3.5 text-blue-600 rounded border-slate-300 focus:ring-blue-500" type="checkbox"/>
+<span class="">Açıklamaları Göster</span>
+</label>
+<div class="h-5 w-px bg-slate-200"></div>
+<!-- Status Indicator -->
+<div class="flex items-center space-x-2 text-xs">
+<span class="inline-flex items-center px-2 py-0.5 rounded-md font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1.5"></span>
+          Çevrim İçi
+        </span>
+</div>
+</div>
+</section>
+<!-- END: RecipeActionToolbar -->
+<!-- BEGIN: MainWorkbenchArea -->
+<main class="flex-1 flex overflow-hidden min-h-0 bg-slate-100" data-purpose="workbench-grid"><div class="flex flex-col w-full h-full overflow-hidden select-none">
+<!-- Context / Sub-Header Ribbon -->
+<div class="bg-surface-container-lowest border-b border-surface-container-highest px-3 py-1.5 flex items-center justify-between flex-shrink-0 z-20 shadow-xs">
+<div class="flex items-center space-x-3 min-w-0">
+<div class="w-7 h-7 rounded bg-primary text-on-primary flex items-center justify-center font-bold shadow-xs">
+<span class="material-symbols-outlined text-base">straighten</span>
+</div>
+<div class="flex flex-col min-w-0">
+<div class="flex items-center space-x-2">
+<span class="font-headline-sm text-headline-sm text-on-surface uppercase tracking-wide truncate">Kalibrasyon ve Optik Matrisi (Calibration &amp; Optics)</span>
+<span class="inline-flex items-center px-1.5 py-0.2 rounded bg-secondary-fixed text-on-secondary-fixed font-label-sm text-label-sm font-semibold tracking-tight">Doğrulandı (Valid)</span>
+</div>
+<div class="flex items-center space-x-2 font-body-sm text-body-sm text-tertiary">
+<span>Proje: <strong class="text-on-surface font-semibold">Test123</strong></span>
+<span>•</span>
+<span>Aktif Kamera: <strong class="text-on-surface font-semibold">CAM_01</strong> (Basler GigE acA1920-50gm)</span>
+<span>•</span>
+<span class="inline-flex items-center space-x-1 text-secondary font-medium">
+<span class="w-1.5 h-1.5 rounded-full bg-secondary"></span>
+<span>Kalibre Edildi (OpenCV Zhang Modeli)</span>
+</span>
+</div>
+</div>
+</div>
+<!-- Actions Ribbon -->
+<div class="flex items-center space-x-1.5 flex-shrink-0">
+<button class="inline-flex items-center space-x-1 px-2.5 py-1 rounded bg-surface-container-low hover:bg-surface-container text-on-surface font-body-sm text-body-sm transition-colors shadow-xs">
+<span class="material-symbols-outlined text-sm text-primary">auto_fix_high</span>
+<span>Sihirbaz</span>
+</button>
+<button class="inline-flex items-center space-x-1 px-2.5 py-1 rounded bg-surface-container-low hover:bg-surface-container text-on-surface font-body-sm text-body-sm transition-colors shadow-xs">
+<span class="material-symbols-outlined text-sm text-tertiary">photo_camera</span>
+<span>Kare Yakala (Snap)</span>
+</button>
+<button class="inline-flex items-center space-x-1 px-2.5 py-1 rounded bg-surface-container-low hover:bg-surface-container text-on-surface font-body-sm text-body-sm transition-colors shadow-xs">
+<span class="material-symbols-outlined text-sm text-tertiary">upload_file</span>
+<span>Görsel Yükle</span>
+</button>
+<div class="h-4 w-px bg-surface-container-highest mx-0.5"></div>
+<button class="inline-flex items-center space-x-1 px-3 py-1 rounded bg-primary hover:bg-primary-container text-on-primary font-headline-sm text-headline-sm transition-colors shadow-xs">
+<span class="material-symbols-outlined text-sm">verified</span>
+<span>Optik Profili Kaydet &amp; Uygula</span>
+</button>
+<div class="h-4 w-px bg-surface-container-highest mx-0.5"></div>
+<button class="p-1 rounded text-tertiary hover:text-on-surface hover:bg-surface-container-low transition-colors" title="Rapor Al (PDF/CSV)">
+<span class="material-symbols-outlined text-base">description</span>
+</button>
+<button class="p-1 rounded text-tertiary hover:text-error hover:bg-surface-container-low transition-colors" title="Kalibrasyonu Sıfırla">
+<span class="material-symbols-outlined text-base">restart_alt</span>
+</button>
+</div>
+</div>
+<!-- Main Tri-Pane Calibration Workbench -->
+<div class="flex-1 flex overflow-hidden min-h-0 bg-surface">
+<!-- LEFT PANEL: Calibration Methods & Pattern Parameters -->
+<aside class="w-80 md:w-[350px] bg-surface-container-lowest border-r border-surface-container-highest flex flex-col flex-shrink-0 z-10 shadow-xs">
+<!-- Panel Header -->
+<div class="h-8 bg-surface-container-low border-b border-surface-container-highest px-3 flex items-center justify-between">
+<span class="font-headline-sm text-headline-sm text-on-surface flex items-center space-x-1.5">
+<span class="material-symbols-outlined text-sm text-primary">tune</span>
+<span>Hedef &amp; Optik Parametreleri</span>
+</span>
+<span class="font-label-sm text-label-sm text-tertiary">v2.4.1</span>
+</div>
+<div class="flex-1 overflow-y-auto p-2.5 space-x-0 space-y-3.5">
+<!-- Section 1: Calibration Target Method Selection -->
+<div class="space-y-1.5">
+<label class="font-headline-sm text-body-sm text-on-surface block uppercase tracking-wider">Kalibrasyon Yöntemi</label>
+<div class="grid grid-cols-1 gap-1.5">
+<!-- Checkerboard Card (Active) -->
+<div class="p-2 rounded bg-surface-container-low border-l-4 border-primary shadow-xs cursor-pointer hover:bg-surface-container transition-colors">
+<div class="flex items-center justify-between">
+<span class="font-headline-sm text-body-sm text-primary flex items-center space-x-1.5">
+<span class="material-symbols-outlined text-base">grid_on</span>
+<span>Satranç Tahtası (Checkerboard)</span>
+</span>
+<span class="font-label-sm text-label-sm bg-primary-fixed text-on-primary-fixed font-semibold px-1 rounded">Önerilen</span>
+</div>
+<p class="font-body-sm text-body-sm text-tertiary mt-1">OpenCV/Zhang optimizasyonu. Köşe tespiti, eğrilik ve distorsiyon analizi.</p>
+</div>
+<!-- Circle Grid Card -->
+<div class="p-2 rounded bg-surface-container-lowest hover:bg-surface-container-low border border-surface-container-high cursor-pointer transition-colors">
+<div class="flex items-center justify-between">
+<span class="font-body-lg text-body-sm text-on-surface flex items-center space-x-1.5">
+<span class="material-symbols-outlined text-base text-tertiary">blur_on</span>
+<span>Nokta Matrisi (Circle / Dot Grid)</span>
+</span>
+<span class="font-label-sm text-label-sm text-tertiary">Simetrik</span>
+</div>
+<p class="font-body-sm text-body-sm text-tertiary mt-0.5">Yüksek kontrastlı yuvarlak hedeflerle merkez ağırlık analizi.</p>
+</div>
+<!-- 2-Point Manual Scale -->
+<div class="p-2 rounded bg-surface-container-lowest hover:bg-surface-container-low border border-surface-container-high cursor-pointer transition-colors">
+<div class="flex items-center justify-between">
+<span class="font-body-lg text-body-sm text-on-surface flex items-center space-x-1.5">
+<span class="material-symbols-outlined text-base text-tertiary">space_dashboard</span>
+<span>2 Nokta / Manuel Mesafe Ölçeği</span>
+</span>
+</div>
+<p class="font-body-sm text-body-sm text-tertiary mt-0.5">İki bilinen işaret noktası arası doğrusal ölçekleme (Hızlı mod).</p>
+</div>
+<!-- Hand-Eye Robot Transformation -->
+<div class="p-2 rounded bg-surface-container-lowest hover:bg-surface-container-low border border-surface-container-high cursor-pointer transition-colors">
+<div class="flex items-center justify-between">
+<span class="font-body-lg text-body-sm text-on-surface flex items-center space-x-1.5">
+<span class="material-symbols-outlined text-base text-tertiary">precision_manufacturing</span>
+<span>CAD / Robot El-Göz Eşleme</span>
+</span>
+<span class="font-label-sm text-label-sm text-tertiary">KUKA Link</span>
+</div>
+<p class="font-body-sm text-body-sm text-tertiary mt-0.5">Flanş ve zemin koordinat dönüşüm matrisi (Eye-in-Hand / To-Base).</p>
+</div>
+</div>
+</div>
+<!-- Section 2: Pattern Geometry Parameters -->
+<div class="space-y-2 pt-1 border-t border-surface-container-high">
+<label class="font-headline-sm text-body-sm text-on-surface block uppercase tracking-wider">Hedef Desen Parametreleri</label>
+<div class="grid grid-cols-2 gap-2">
+<div>
+<span class="font-body-sm text-body-sm text-tertiary block mb-0.5">Kare Genişliği (Pitch)</span>
+<div class="flex items-center rounded bg-surface border border-outline-variant px-2 py-1 shadow-xs">
+<input class="w-full bg-transparent font-label-md text-label-md text-on-surface focus:outline-none" type="text" value="10.00"/>
+<span class="font-label-sm text-label-sm text-tertiary ml-1">mm</span>
+</div>
+</div>
+<div>
+<span class="font-body-sm text-body-sm text-tertiary block mb-0.5">İç Köşe Izgarası</span>
+<div class="flex items-center rounded bg-surface border border-outline-variant px-2 py-1 shadow-xs">
+<input class="w-full bg-transparent font-label-md text-label-md text-on-surface focus:outline-none" type="text" value="9 x 6"/>
+<span class="font-label-sm text-label-sm text-tertiary ml-1">K</span>
+</div>
+</div>
+</div>
+<div class="pt-1 space-y-2">
+<div class="flex items-center justify-between">
+<span class="font-body-md text-body-md text-on-surface">Sub-pixel Köşe İyileştirme</span>
+<span class="font-label-sm text-label-sm font-semibold text-primary">0.01 px</span>
+</div>
+<div class="w-full bg-surface-container-high rounded h-1.5 overflow-hidden">
+<div class="bg-primary h-1.5 rounded" style="width: 85%;"></div>
+</div>
+<div class="flex items-center justify-between text-body-sm font-body-sm text-tertiary">
+<span>Hızlı (0.1 px)</span>
+<span>Ultra Hassas (0.005 px)</span>
+</div>
+</div>
+<div class="flex items-center justify-between p-2 rounded bg-surface-container-low shadow-xs">
+<div class="flex flex-col">
+<span class="font-body-md text-body-md text-on-surface font-medium">Otomatik Desen Bulma</span>
+<span class="font-body-sm text-body-sm text-tertiary">Kare akışında deseni dinamik kilitler</span>
+</div>
+<label class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox"/>
+<div class="w-7 h-4 bg-surface-container-highest peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-secondary"></div>
+</label>
+</div>
+</div>
+<!-- Section 3: Distortion Correction Mode -->
+<div class="space-y-2 pt-1 border-t border-surface-container-high">
+<label class="font-headline-sm text-body-sm text-on-surface block uppercase tracking-wider">Distorsiyon &amp; Optik Düzeltme</label>
+<div>
+<span class="font-body-sm text-body-sm text-tertiary block mb-1">Düzeltme Modeli</span>
+<select class="w-full bg-surface border border-outline-variant font-body-md text-body-md text-on-surface rounded p-1.5 focus:outline-none">
+<option selected="">Radyal + Teğetsel (Brown-Conrady Modeli)</option>
+<option>Yalnızca Radyal (Basit fıçı/yastık)</option>
+<option>Balıkgözü (Fisheye Equidistant)</option>
+<option>Polinomyal Perspektif (Homografi Matrisi)</option>
+</select>
+</div>
+<div class="p-2 rounded bg-surface-container-low flex items-center justify-between shadow-xs">
+<div class="flex flex-col">
+<span class="font-body-md text-body-md text-on-surface font-medium">Undistort Canlı Çıkış</span>
+<span class="font-body-sm text-body-sm text-tertiary">Önizlemede eğriliği anında gider</span>
+</div>
+<label class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox"/>
+<div class="w-7 h-4 bg-surface-container-highest peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-secondary"></div>
+</label>
+</div>
+<div class="bg-surface-container-low p-2 rounded flex items-center space-x-2">
+<span class="material-symbols-outlined text-primary text-base">lens</span>
+<div class="min-w-0">
+<div class="font-headline-sm text-body-sm text-on-surface">C-Mount 16mm Optik Profil</div>
+<div class="font-body-sm text-body-sm text-tertiary">Diyafram: f/4.0 • Polarizör Filtre Açık</div>
+</div>
+</div>
+</div>
+</div>
+</aside>
+<!-- CENTER PANEL: Calibration Viewport & Visual Target Inspection -->
+<main class="flex-1 flex flex-col min-w-0 bg-surface overflow-hidden relative">
+<!-- Viewport Tool Ribbon -->
+<div class="h-9 bg-surface-container-lowest border-b border-surface-container-highest px-3 flex items-center justify-between flex-shrink-0 z-10 shadow-xs">
+<!-- Live vs Captured Toggle -->
+<div class="flex items-center space-x-1 bg-surface-container-low p-0.5 rounded">
+<button class="px-2 py-0.5 rounded font-headline-sm text-body-sm text-on-primary bg-primary shadow-xs flex items-center space-x-1">
+<span class="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span>
+<span>Canlı Akış</span>
+</button>
+<button class="px-2 py-0.5 rounded font-body-md text-body-sm text-tertiary hover:text-on-surface transition-colors">
+<span>Dondurulmuş Kare (#04)</span>
+</button>
+</div>
+<!-- Overlays & Inspection Tools -->
+<div class="flex items-center space-x-1">
+<button class="px-1.5 py-1 rounded hover:bg-surface-container-low text-tertiary hover:text-on-surface" title="Ekrana Sığdır">
+<span class="material-symbols-outlined text-base">fit_screen</span>
+</button>
+<button class="px-1.5 py-1 rounded hover:bg-surface-container-low text-tertiary hover:text-on-surface" title="1:1 Gerçek Boyut">
+<span class="material-symbols-outlined text-base">zoom_in_map</span>
+</button>
+<div class="h-3.5 w-px bg-surface-container-highest mx-0.5"></div>
+<button class="px-2 py-0.5 rounded bg-primary-fixed text-on-primary-fixed font-label-md text-label-md flex items-center space-x-1">
+<span class="material-symbols-outlined text-xs">grid_goldenratio</span>
+<span>Kılavuz Izgarası</span>
+</button>
+<button class="px-2 py-0.5 rounded bg-secondary-fixed text-on-secondary-fixed font-label-md text-label-md flex items-center space-x-1">
+<span class="material-symbols-outlined text-xs">open_in_full</span>
+<span>3D Eksenler (XYZ)</span>
+</button>
+<button class="px-2 py-0.5 rounded hover:bg-surface-container-low text-tertiary hover:text-on-surface font-label-md text-label-md flex items-center space-x-1">
+<span class="material-symbols-outlined text-xs">thermostat</span>
+<span>Distorsiyon Haritası</span>
+</button>
+</div>
+<!-- Zoom Control -->
+<div class="flex items-center space-x-1 text-tertiary font-label-md text-label-md">
+<button class="w-5 h-5 flex items-center justify-center rounded hover:bg-surface-container-low text-on-surface">
+<span class="material-symbols-outlined text-sm">remove</span>
+</button>
+<span class="px-1 font-semibold text-on-surface">100.0%</span>
+<button class="w-5 h-5 flex items-center justify-center rounded hover:bg-surface-container-low text-on-surface">
+<span class="material-symbols-outlined text-sm">add</span>
+</button>
+</div>
+</div>
+<!-- Main Visual Calibration Canvas Area -->
+<div class="flex-1 bg-surface-container-low relative overflow-hidden flex items-center justify-center p-3 select-none">
+<!-- Background Precision CAD Grid Pattern -->
+<div class="absolute inset-0 opacity-15 pointer-events-none" style="background-image: radial-gradient(circle, #737686 1px, transparent 1px); background-size: 16px 16px;"></div>
+<!-- The Calibration Target Canvas Window -->
+<div class="relative bg-surface-container-lowest rounded-md shadow-md overflow-hidden max-w-full max-h-full aspect-[4/3] flex items-center justify-center border border-surface-container-high">
+<!-- Visual Industrial Checkerboard Plate SVG Simulation with Detected Points -->
+<svg class="w-full h-full object-contain" fill="none" viewbox="0 0 800 600" xmlns="http://www.w3.org/2000/svg">
+<!-- Background Plate with Machined Metal Texture Tone -->
+<rect fill="#E9EEF4" height="600" width="800"></rect>
+<rect fill="#F4F7FA" height="500" rx="8" stroke="#D1DBE5" stroke-width="2" width="660" x="70" y="50"></rect>
+<!-- Checkerboard Calibration Plate Squares (10x7 Grid with 9x6 Inner Corners) -->
+<g transform="translate(130, 90)">
+<!-- Checkerboard Rectangles -->
+<!-- Row 0 -->
+<rect fill="#1E293B" height="60" width="54" x="0" y="0"></rect><rect fill="#FFFFFF" height="60" width="54" x="54" y="0"></rect><rect fill="#1E293B" height="60" width="54" x="108" y="0"></rect><rect fill="#FFFFFF" height="60" width="54" x="162" y="0"></rect><rect fill="#1E293B" height="60" width="54" x="216" y="0"></rect><rect fill="#FFFFFF" height="60" width="54" x="270" y="0"></rect><rect fill="#1E293B" height="60" width="54" x="324" y="0"></rect><rect fill="#FFFFFF" height="60" width="54" x="378" y="0"></rect><rect fill="#1E293B" height="60" width="54" x="432" y="0"></rect><rect fill="#FFFFFF" height="60" width="54" x="486" y="0"></rect>
+<!-- Row 1 -->
+<rect fill="#FFFFFF" height="60" width="54" x="0" y="60"></rect><rect fill="#1E293B" height="60" width="54" x="54" y="60"></rect><rect fill="#FFFFFF" height="60" width="54" x="108" y="60"></rect><rect fill="#1E293B" height="60" width="54" x="162" y="60"></rect><rect fill="#FFFFFF" height="60" width="54" x="216" y="60"></rect><rect fill="#1E293B" height="60" width="54" x="270" y="60"></rect><rect fill="#FFFFFF" height="60" width="54" x="324" y="60"></rect><rect fill="#1E293B" height="60" width="54" x="378" y="60"></rect><rect fill="#FFFFFF" height="60" width="54" x="432" y="60"></rect><rect fill="#1E293B" height="60" width="54" x="486" y="60"></rect>
+<!-- Row 2 -->
+<rect fill="#1E293B" height="60" width="54" x="0" y="120"></rect><rect fill="#FFFFFF" height="60" width="54" x="54" y="120"></rect><rect fill="#1E293B" height="60" width="54" x="108" y="120"></rect><rect fill="#FFFFFF" height="60" width="54" x="162" y="120"></rect><rect fill="#1E293B" height="60" width="54" x="216" y="120"></rect><rect fill="#FFFFFF" height="60" width="54" x="270" y="120"></rect><rect fill="#1E293B" height="60" width="54" x="324" y="120"></rect><rect fill="#FFFFFF" height="60" width="54" x="378" y="120"></rect><rect fill="#1E293B" height="60" width="54" x="432" y="120"></rect><rect fill="#FFFFFF" height="60" width="54" x="486" y="120"></rect>
+<!-- Row 3 -->
+<rect fill="#FFFFFF" height="60" width="54" x="0" y="180"></rect><rect fill="#1E293B" height="60" width="54" x="54" y="180"></rect><rect fill="#FFFFFF" height="60" width="54" x="108" y="180"></rect><rect fill="#1E293B" height="60" width="54" x="162" y="180"></rect><rect fill="#FFFFFF" height="60" width="54" x="216" y="180"></rect><rect fill="#1E293B" height="60" width="54" x="270" y="180"></rect><rect fill="#FFFFFF" height="60" width="54" x="324" y="180"></rect><rect fill="#1E293B" height="60" width="54" x="378" y="180"></rect><rect fill="#FFFFFF" height="60" width="54" x="432" y="180"></rect><rect fill="#1E293B" height="60" width="54" x="486" y="180"></rect>
+<!-- Row 4 -->
+<rect fill="#1E293B" height="60" width="54" x="0" y="240"></rect><rect fill="#FFFFFF" height="60" width="54" x="54" y="240"></rect><rect fill="#1E293B" height="60" width="54" x="108" y="240"></rect><rect fill="#FFFFFF" height="60" width="54" x="162" y="240"></rect><rect fill="#1E293B" height="60" width="54" x="216" y="240"></rect><rect fill="#FFFFFF" height="60" width="54" x="270" y="240"></rect><rect fill="#1E293B" height="60" width="54" x="324" y="240"></rect><rect fill="#FFFFFF" height="60" width="54" x="378" y="240"></rect><rect fill="#1E293B" height="60" width="54" x="432" y="240"></rect><rect fill="#FFFFFF" height="60" width="54" x="486" y="240"></rect>
+<!-- Row 5 -->
+<rect fill="#FFFFFF" height="60" width="54" x="0" y="300"></rect><rect fill="#1E293B" height="60" width="54" x="54" y="300"></rect><rect fill="#FFFFFF" height="60" width="54" x="108" y="300"></rect><rect fill="#1E293B" height="60" width="54" x="162" y="300"></rect><rect fill="#FFFFFF" height="60" width="54" x="216" y="300"></rect><rect fill="#1E293B" height="60" width="54" x="270" y="300"></rect><rect fill="#FFFFFF" height="60" width="54" x="324" y="300"></rect><rect fill="#1E293B" height="60" width="54" x="378" y="300"></rect><rect fill="#FFFFFF" height="60" width="54" x="432" y="300"></rect><rect fill="#1E293B" height="60" width="54" x="486" y="300"></rect>
+<!-- Row 6 -->
+<rect fill="#1E293B" height="60" width="54" x="0" y="360"></rect><rect fill="#FFFFFF" height="60" width="54" x="54" y="360"></rect><rect fill="#1E293B" height="60" width="54" x="108" y="360"></rect><rect fill="#FFFFFF" height="60" width="54" x="162" y="360"></rect><rect fill="#1E293B" height="60" width="54" x="216" y="360"></rect><rect fill="#FFFFFF" height="60" width="54" x="270" y="360"></rect><rect fill="#1E293B" height="60" width="54" x="324" y="360"></rect><rect fill="#FFFFFF" height="60" width="54" x="378" y="360"></rect><rect fill="#1E293B" height="60" width="54" x="432" y="360"></rect><rect fill="#FFFFFF" height="60" width="54" x="486" y="360"></rect>
+<!-- Connected Corner Graph Lines (Subpixel Tracking Flow) -->
+<polyline opacity="0.75" points="54,60 108,60 162,60 216,60 270,60 324,60 378,60 432,60 486,60" stroke="#0053db" stroke-dasharray="2,2" stroke-width="1.5"></polyline>
+<polyline opacity="0.75" points="54,120 108,120 162,120 216,120 270,120 324,120 378,120 432,120 486,120" stroke="#006a61" stroke-dasharray="2,2" stroke-width="1.5"></polyline>
+<polyline opacity="0.75" points="54,180 108,180 162,180 216,180 270,180 324,180 378,180 432,180 486,180" stroke="#0053db" stroke-dasharray="2,2" stroke-width="1.5"></polyline>
+<polyline opacity="0.75" points="54,240 108,240 162,240 216,240 270,240 324,240 378,240 432,240 486,240" stroke="#006a61" stroke-dasharray="2,2" stroke-width="1.5"></polyline>
+<polyline opacity="0.75" points="54,300 108,300 162,300 216,300 270,300 324,300 378,300 432,300 486,300" stroke="#0053db" stroke-dasharray="2,2" stroke-width="1.5"></polyline>
+<polyline opacity="0.75" points="54,360 108,360 162,360 216,360 270,360 324,360 378,360 432,360 486,360" stroke="#006a61" stroke-dasharray="2,2" stroke-width="1.5"></polyline>
+<!-- Detected Corner Crosshairs (Sample Selection across rows) -->
+<!-- Row 1 Corners -->
+<circle cx="54" cy="60" fill="#0053db" r="4"></circle><circle cx="108" cy="60" fill="#22c55e" r="3"></circle><circle cx="162" cy="60" fill="#22c55e" r="3"></circle><circle cx="216" cy="60" fill="#22c55e" r="3"></circle><circle cx="270" cy="60" fill="#22c55e" r="3"></circle><circle cx="324" cy="60" fill="#22c55e" r="3"></circle><circle cx="378" cy="60" fill="#22c55e" r="3"></circle><circle cx="432" cy="60" fill="#22c55e" r="3"></circle><circle cx="486" cy="60" fill="#22c55e" r="3"></circle>
+<!-- Row 2 Corners -->
+<circle cx="54" cy="120" fill="#22c55e" r="3"></circle><circle cx="108" cy="120" fill="#22c55e" r="3"></circle><circle cx="162" cy="120" fill="#22c55e" r="3"></circle><circle cx="216" cy="120" fill="#22c55e" r="3"></circle><circle cx="270" cy="120" fill="#22c55e" r="3"></circle><circle cx="324" cy="120" fill="#22c55e" r="3"></circle><circle cx="378" cy="120" fill="#22c55e" r="3"></circle><circle cx="432" cy="120" fill="#22c55e" r="3"></circle><circle cx="486" cy="120" fill="#22c55e" r="3"></circle>
+<!-- Row 3 Corners -->
+<circle cx="54" cy="180" fill="#22c55e" r="3"></circle><circle cx="108" cy="180" fill="#22c55e" r="3"></circle><circle cx="162" cy="180" fill="#22c55e" r="3"></circle><circle cx="216" cy="180" fill="#22c55e" r="3"></circle><circle cx="270" cy="180" fill="#22c55e" r="3"></circle><circle cx="324" cy="180" fill="#22c55e" r="3"></circle><circle cx="378" cy="180" fill="#22c55e" r="3"></circle><circle cx="432" cy="180" fill="#22c55e" r="3"></circle><circle cx="486" cy="180" fill="#22c55e" r="3"></circle>
+<!-- Row 4 Corners -->
+<circle cx="54" cy="240" fill="#22c55e" r="3"></circle><circle cx="108" cy="240" fill="#22c55e" r="3"></circle><circle cx="162" cy="240" fill="#22c55e" r="3"></circle><circle cx="216" cy="240" fill="#22c55e" r="3"></circle><circle cx="270" cy="240" fill="#22c55e" r="3"></circle><circle cx="324" cy="240" fill="#22c55e" r="3"></circle><circle cx="378" cy="240" fill="#22c55e" r="3"></circle><circle cx="432" cy="240" fill="#22c55e" r="3"></circle><circle cx="486" cy="240" fill="#22c55e" r="3"></circle>
+<!-- Row 5 Corners -->
+<circle cx="54" cy="300" fill="#22c55e" r="3"></circle><circle cx="108" cy="300" fill="#22c55e" r="3"></circle><circle cx="162" cy="300" fill="#22c55e" r="3"></circle><circle cx="216" cy="300" fill="#22c55e" r="3"></circle><circle cx="270" cy="300" fill="#22c55e" r="3"></circle><circle cx="324" cy="300" fill="#22c55e" r="3"></circle><circle cx="378" cy="300" fill="#22c55e" r="3"></circle><circle cx="432" cy="300" fill="#22c55e" r="3"></circle><circle cx="486" cy="300" fill="#22c55e" r="3"></circle>
+<!-- Row 6 Corners -->
+<circle cx="54" cy="360" fill="#22c55e" r="3"></circle><circle cx="108" cy="360" fill="#22c55e" r="3"></circle><circle cx="162" cy="360" fill="#22c55e" r="3"></circle><circle cx="216" cy="360" fill="#22c55e" r="3"></circle><circle cx="270" cy="360" fill="#22c55e" r="3"></circle><circle cx="324" cy="360" fill="#22c55e" r="3"></circle><circle cx="378" cy="360" fill="#22c55e" r="3"></circle><circle cx="432" cy="360" fill="#22c55e" r="3"></circle><circle cx="486" cy="360" fill="#22c55e" r="3"></circle>
+<!-- 3D Optical Axes Gizmo at World Origin (Corner 0,0) -->
+<g transform="translate(54, 60)">
+<!-- X Axis (Red) -->
+<line stroke="#DC2626" stroke-linecap="round" stroke-width="3" x1="0" x2="65" y1="0" y2="0"></line>
+<polygon fill="#DC2626" points="65,0 57,-4 57,4"></polygon>
+<text fill="#DC2626" font-family="monospace" font-size="11" font-weight="bold" x="70" y="4">X (Dünya)</text>
+<!-- Y Axis (Green) -->
+<line stroke="#16A34A" stroke-linecap="round" stroke-width="3" x1="0" x2="0" y1="0" y2="65"></line>
+<polygon fill="#16A34A" points="0,65 -4,57 4,57"></polygon>
+<text fill="#16A34A" font-family="monospace" font-size="11" font-weight="bold" x="5" y="72">Y (Dünya)</text>
+<!-- Z Axis (Blue Optical Normal Vector) -->
+<line stroke="#2563EB" stroke-linecap="round" stroke-width="3" x1="0" x2="-35" y1="0" y2="-35"></line>
+<polygon fill="#2563EB" points="-35,-35 -26,-34 -34,-26"></polygon>
+<text fill="#2563EB" font-family="monospace" font-size="11" font-weight="bold" x="-70" y="-38">Z (Optik)</text>
+<!-- Origin Node Dot -->
+<circle cx="0" cy="0" fill="#FFFFFF" r="5" stroke="#0F172A" stroke-width="2"></circle>
+</g>
+</g>
+<!-- Region of Interest ROI Border Overlay -->
+<rect fill="none" height="320" rx="2" stroke="#2563EB" stroke-dasharray="6,4" stroke-width="1.5" width="460" x="170" y="140"></rect>
+<text fill="#2563EB" font-family="monospace" font-size="10" font-weight="bold" x="175" y="156">ROI: KALİBRASYON_ALANI [1920x1200]</text>
+</svg>
+<!-- Top-Left Viewport Floating Telemetry Pill -->
+<div class="absolute top-2 left-2 bg-surface-container-lowest/90 backdrop-blur-sm px-2 py-1 rounded shadow-xs flex items-center space-x-2 border border-surface-container-high">
+<span class="w-2 h-2 rounded-full bg-secondary"></span>
+<span class="font-label-md text-label-md text-on-surface font-semibold">KAMERA: CAM_01 (1920×1200 @ 60 FPS)</span>
+</div>
+<!-- Top-Right Viewport Status Pill -->
+<div class="absolute top-2 right-2 bg-secondary-fixed text-on-secondary-fixed px-2.5 py-1 rounded shadow-xs flex items-center space-x-1.5 font-label-md text-label-md font-semibold">
+<span class="material-symbols-outlined text-sm">check_circle</span>
+<span>DESEN TESPİT EDİLDİ: 54 / 54 Köşe Noktası</span>
+</div>
+<!-- Bottom Viewport Metrics Strip -->
+<div class="absolute bottom-2 inset-x-2 bg-inverse-surface/90 backdrop-blur-sm text-inverse-on-surface px-3 py-1.5 rounded flex items-center justify-between font-label-md text-label-md shadow-xs">
+<div class="flex items-center space-x-4">
+<span class="flex items-center space-x-1.5">
+<span class="text-tertiary-fixed-dim">Reprojection RMS Hatası:</span>
+<strong class="text-secondary-container font-mono">0.082 px</strong>
+<span class="text-secondary-fixed text-[9px] font-semibold bg-secondary/30 px-1 rounded">&lt; 0.15 px Mükemmel</span>
+</span>
+<span>•</span>
+<span class="flex items-center space-x-1.5">
+<span class="text-tertiary-fixed-dim">Optik Çözünürlük:</span>
+<strong class="text-on-primary-container font-mono">1 px = 0.01250 mm</strong>
+<span class="text-tertiary-fixed-dim">(80.00 px/mm)</span>
+</span>
+</div>
+<div class="flex items-center space-x-3 text-tertiary-fixed-dim">
+<span>Sensör Sıcaklığı: 38.4°C</span>
+<span>•</span>
+<span>Pozlama: 12.5 ms</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Bottom Calibration Multi-pose Strip Drawer (Yakalanan Kalibrasyon Kareleri) -->
+<div class="h-32 bg-surface-container-lowest border-t border-surface-container-highest p-2 flex flex-col flex-shrink-0 z-10">
+<div class="flex items-center justify-between mb-1.5">
+<div class="flex items-center space-x-2">
+<span class="font-headline-sm text-body-sm text-on-surface">Çoklu Açı &amp; Poz Yakalama Havuzu</span>
+<span class="font-label-sm text-label-sm text-tertiary bg-surface-container px-1.5 py-0.5 rounded">6/10 Poz Aktif • Önerilen min: 8</span>
+</div>
+<span class="font-body-sm text-body-sm text-tertiary">Kalibrasyon hassasiyeti için deseni farklı açılarda eğiniz</span>
+</div>
+<div class="flex-1 flex items-center space-x-2 overflow-x-auto pb-1">
+<!-- Thumbnail Pose 1 -->
+<div class="h-full w-24 bg-surface-container-low rounded p-1 flex flex-col justify-between border-2 border-primary cursor-pointer hover:bg-surface-container transition-all flex-shrink-0 shadow-xs">
+<div class="flex items-center justify-between">
+<span class="font-label-sm text-label-sm font-semibold text-primary">#01 Düz</span>
+<span class="material-symbols-outlined text-xs text-secondary">check_circle</span>
+</div>
+<div class="h-9 w-full bg-surface-container-highest rounded flex items-center justify-center">
+<span class="material-symbols-outlined text-tertiary text-lg">grid_4x4</span>
+</div>
+<span class="font-label-sm text-label-sm text-on-surface font-mono">0.072 px</span>
+</div>
+<!-- Thumbnail Pose 2 -->
+<div class="h-full w-24 bg-surface-container-low rounded p-1 flex flex-col justify-between border border-surface-container-high cursor-pointer hover:bg-surface-container transition-all flex-shrink-0">
+<div class="flex items-center justify-between">
+<span class="font-label-sm text-label-sm font-semibold text-on-surface">#02 Eğim X</span>
+<span class="material-symbols-outlined text-xs text-secondary">check_circle</span>
+</div>
+<div class="h-9 w-full bg-surface-container-highest rounded flex items-center justify-center">
+<span class="material-symbols-outlined text-tertiary text-lg">view_in_ar</span>
+</div>
+<span class="font-label-sm text-label-sm text-on-surface font-mono">0.089 px</span>
+</div>
+<!-- Thumbnail Pose 3 -->
+<div class="h-full w-24 bg-surface-container-low rounded p-1 flex flex-col justify-between border border-surface-container-high cursor-pointer hover:bg-surface-container transition-all flex-shrink-0">
+<div class="flex items-center justify-between">
+<span class="font-label-sm text-label-sm font-semibold text-on-surface">#03 Eğim Y</span>
+<span class="material-symbols-outlined text-xs text-secondary">check_circle</span>
+</div>
+<div class="h-9 w-full bg-surface-container-highest rounded flex items-center justify-center">
+<span class="material-symbols-outlined text-tertiary text-lg">view_in_ar</span>
+</div>
+<span class="font-label-sm text-label-sm text-on-surface font-mono">0.081 px</span>
+</div>
+<!-- Thumbnail Pose 4 (Selected View) -->
+<div class="h-full w-24 bg-surface-container-high rounded p-1 flex flex-col justify-between border-2 border-secondary cursor-pointer flex-shrink-0 shadow-xs">
+<div class="flex items-center justify-between">
+<span class="font-label-sm text-label-sm font-semibold text-secondary">#04 Yakın</span>
+<span class="material-symbols-outlined text-xs text-secondary">check_circle</span>
+</div>
+<div class="h-9 w-full bg-surface-container-highest rounded flex items-center justify-center">
+<span class="material-symbols-outlined text-primary text-lg">crop_free</span>
+</div>
+<span class="font-label-sm text-label-sm text-on-surface font-mono font-bold">0.082 px</span>
+</div>
+<!-- Thumbnail Pose 5 -->
+<div class="h-full w-24 bg-surface-container-low rounded p-1 flex flex-col justify-between border border-surface-container-high cursor-pointer hover:bg-surface-container transition-all flex-shrink-0">
+<div class="flex items-center justify-between">
+<span class="font-label-sm text-label-sm font-semibold text-on-surface">#05 Köşe 1</span>
+<span class="material-symbols-outlined text-xs text-secondary">check_circle</span>
+</div>
+<div class="h-9 w-full bg-surface-container-highest rounded flex items-center justify-center">
+<span class="material-symbols-outlined text-tertiary text-lg">grid_4x4</span>
+</div>
+<span class="font-label-sm text-label-sm text-on-surface font-mono">0.095 px</span>
+</div>
+<!-- Thumbnail Pose 6 -->
+<div class="h-full w-24 bg-surface-container-low rounded p-1 flex flex-col justify-between border border-surface-container-high cursor-pointer hover:bg-surface-container transition-all flex-shrink-0">
+<div class="flex items-center justify-between">
+<span class="font-label-sm text-label-sm font-semibold text-on-surface">#06 Köşe 2</span>
+<span class="material-symbols-outlined text-xs text-secondary">check_circle</span>
+</div>
+<div class="h-9 w-full bg-surface-container-highest rounded flex items-center justify-center">
+<span class="material-symbols-outlined text-tertiary text-lg">grid_4x4</span>
+</div>
+<span class="font-label-sm text-label-sm text-on-surface font-mono">0.087 px</span>
+</div>
+<!-- Add New Pose CTA -->
+<button class="h-full w-28 rounded border border-dashed border-outline-variant bg-surface-container-lowest hover:bg-surface-container-low flex flex-col items-center justify-center space-y-1 text-primary hover:text-primary-container transition-colors flex-shrink-0 shadow-xs">
+<span class="material-symbols-outlined text-xl">add_a_photo</span>
+<span class="font-label-sm text-label-sm font-semibold">+ Poz Ekle</span>
+</button>
+</div>
+</div>
+</main>
+<!-- RIGHT PANEL: Calibration Results, Error Analysis & Real-World Matrix -->
+<aside class="w-80 md:w-[350px] bg-surface-container-lowest border-l border-surface-container-highest flex flex-col flex-shrink-0 z-10 shadow-xs">
+<!-- Panel Header -->
+<div class="h-8 bg-surface-container-low border-b border-surface-container-highest px-3 flex items-center justify-between">
+<span class="font-headline-sm text-headline-sm text-on-surface flex items-center space-x-1.5">
+<span class="material-symbols-outlined text-sm text-secondary">analytics</span>
+<span>Analiz &amp; Dönüşüm Matrisi</span>
+</span>
+<span class="font-label-sm text-label-sm text-secondary font-semibold">Optimum</span>
+</div>
+<div class="flex-1 overflow-y-auto p-2.5 space-y-3">
+<!-- Card 1: Optical Scale & Spatial Geometry -->
+<div class="p-2.5 rounded bg-surface-container-low space-y-2 shadow-xs">
+<div class="flex items-center justify-between">
+<span class="font-headline-sm text-body-sm text-on-surface uppercase tracking-wide">Ölçüm Ölçeği &amp; Çözünürlük</span>
+<span class="material-symbols-outlined text-primary text-base">square_foot</span>
+</div>
+<div class="bg-surface-container-lowest p-2 rounded shadow-xs text-center">
+<div class="font-label-sm text-label-sm text-tertiary uppercase tracking-wider">1 Piksel Eşdeğeri</div>
+<div class="font-headline-lg text-headline-lg text-primary font-bold tracking-tight">0.01250 mm</div>
+<div class="font-label-md text-label-md text-secondary font-semibold">80.000 Piksel / mm</div>
+</div>
+<div class="grid grid-cols-2 gap-1.5 pt-1 font-body-sm text-body-sm">
+<div class="bg-surface-container-lowest p-1.5 rounded">
+<span class="text-tertiary block text-[10px]">Görüş Alanı (FOV)</span>
+<span class="font-label-md text-label-md text-on-surface font-semibold">24.00 × 15.00 mm</span>
+</div>
+<div class="bg-surface-container-lowest p-1.5 rounded">
+<span class="text-tertiary block text-[10px]">Çalışma Mesafesi (WD)</span>
+<span class="font-label-md text-label-md text-on-surface font-semibold">185.0 mm</span>
+</div>
+<div class="bg-surface-container-lowest p-1.5 rounded col-span-2 flex items-center justify-between">
+<span class="text-tertiary text-[10px]">Odak Uzaklığı / Optik</span>
+<span class="font-label-md text-label-md text-on-surface font-semibold">f = 16.0 mm (C-Mount Lens)</span>
+</div>
+</div>
+</div>
+<!-- Card 2: Error Distribution & RMS Quality -->
+<div class="p-2.5 rounded bg-surface-container-low space-y-2 shadow-xs">
+<div class="flex items-center justify-between">
+<span class="font-headline-sm text-body-sm text-on-surface uppercase tracking-wide">Hata Dağılımı (RMS Quality)</span>
+<span class="inline-flex items-center px-1.5 py-0.5 rounded bg-secondary-fixed text-on-secondary-fixed font-label-sm text-label-sm font-semibold">Yüksek Doğruluk</span>
+</div>
+<div class="grid grid-cols-2 gap-2">
+<div class="bg-surface-container-lowest p-2 rounded shadow-xs">
+<span class="font-body-sm text-body-sm text-tertiary block">Ortalama RMS</span>
+<span class="font-headline-md text-headline-md text-secondary font-bold font-mono">0.082 px</span>
+<span class="font-label-sm text-label-sm text-tertiary block">Hedef: &lt; 0.150 px</span>
+</div>
+<div class="bg-surface-container-lowest p-2 rounded shadow-xs">
+<span class="font-body-sm text-body-sm text-tertiary block">Maksimum Hata</span>
+<span class="font-headline-md text-headline-md text-on-surface font-bold font-mono">0.141 px</span>
+<span class="font-label-sm text-label-sm text-tertiary block">Köşe #48 kenar</span>
+</div>
+</div>
+<!-- Mini Reprojection Error Scatter / Bar Sparkline -->
+<div class="bg-surface-container-lowest p-2 rounded shadow-xs">
+<div class="flex items-center justify-between font-label-sm text-label-sm text-tertiary mb-1">
+<span>Poz Başına RMS Dağılımı (px)</span>
+<span>Hedef Eşik: 0.15 px</span>
+</div>
+<!-- SVG Mini Chart -->
+<svg class="w-full h-9" fill="none" viewbox="0 0 200 36">
+<!-- Grid line for threshold -->
+<line stroke="#dc2626" stroke-dasharray="2,2" stroke-width="1" x1="0" x2="200" y1="12" y2="12"></line>
+<!-- Bars for poses 1-6 -->
+<rect fill="#006a61" height="17" rx="2" width="16" x="15" y="19"></rect>
+<rect fill="#006a61" height="21" rx="2" width="16" x="45" y="15"></rect>
+<rect fill="#006a61" height="19" rx="2" width="16" x="75" y="17"></rect>
+<rect fill="#0053db" height="20" rx="2" width="16" x="105" y="16"></rect>
+<rect fill="#006a61" height="22" rx="2" width="16" x="135" y="14"></rect>
+<rect fill="#006a61" height="21" rx="2" width="16" x="165" y="15"></rect>
+</svg>
+<div class="flex justify-between font-label-sm text-label-sm text-tertiary px-2 font-mono">
+<span>P1</span><span>P2</span><span>P3</span><span>P4</span><span>P5</span><span>P6</span>
+</div>
+</div>
+</div>
+<!-- Card 3: Camera Intrinsic & Distortion Matrix -->
+<div class="p-2.5 rounded bg-surface-container-low space-y-2 shadow-xs">
+<div class="flex items-center justify-between">
+<span class="font-headline-sm text-body-sm text-on-surface uppercase tracking-wide">İntrinsik Optik Matrisi</span>
+<span class="font-label-sm text-label-sm text-tertiary font-mono">OpenCV Format</span>
+</div>
+<div class="bg-surface-container-lowest p-2 rounded shadow-xs space-y-1.5">
+<span class="font-body-sm text-body-sm text-tertiary block font-semibold">K Kamera Matrisi (Piksel Odak &amp; Merkez)</span>
+<div class="grid grid-cols-2 gap-1.5 font-label-sm text-label-sm font-mono">
+<div class="bg-surface-container-low p-1 rounded">fx: <strong class="text-on-surface">1284.52</strong></div>
+<div class="bg-surface-container-low p-1 rounded">fy: <strong class="text-on-surface">1284.18</strong></div>
+<div class="bg-surface-container-low p-1 rounded">cx: <strong class="text-on-surface">960.25</strong></div>
+<div class="bg-surface-container-low p-1 rounded">cy: <strong class="text-on-surface">600.12</strong></div>
+</div>
+<span class="font-body-sm text-body-sm text-tertiary block font-semibold pt-1">Distorsiyon Vektörü [k1, k2, p1, p2]</span>
+<div class="grid grid-cols-2 gap-1.5 font-label-sm text-label-sm font-mono">
+<div class="bg-surface-container-low p-1 rounded">k1: <strong class="text-on-surface">-0.0841</strong></div>
+<div class="bg-surface-container-low p-1 rounded">k2: <strong class="text-on-surface">0.0120</strong></div>
+<div class="bg-surface-container-low p-1 rounded">p1: <strong class="text-on-surface">0.0004</strong></div>
+<div class="bg-surface-container-low p-1 rounded">p2: <strong class="text-on-surface">-0.0002</strong></div>
+</div>
+</div>
+</div>
+<!-- Card 4: Quick Distance Verification Tool -->
+<div class="p-2.5 rounded bg-surface-container-low space-y-2 shadow-xs">
+<div class="flex items-center justify-between">
+<span class="font-headline-sm text-body-sm text-on-surface uppercase tracking-wide">İki Nokta Ölçüm Doğrulama Testi</span>
+<button class="px-1.5 py-0.5 rounded bg-primary text-on-primary font-label-sm text-label-sm hover:bg-primary-container">Nokta Seç</button>
+</div>
+<div class="bg-surface-container-lowest p-2 rounded shadow-xs space-y-1 font-body-sm text-body-sm">
+<div class="flex items-center justify-between text-tertiary">
+<span>Nokta 1: <strong class="text-on-surface font-mono">X:240, Y:180</strong></span>
+<span>Nokta 2: <strong class="text-on-surface font-mono">X:640, Y:180</strong></span>
+</div>
+<div class="flex items-center justify-between pt-1 border-t border-surface-container-high">
+<span class="text-on-surface font-medium">Hesaplanan Gerçek Mesafe:</span>
+<span class="font-label-md text-label-md font-bold text-secondary font-mono">5.000 mm</span>
+</div>
+<div class="flex items-center justify-between text-[11px] text-tertiary">
+<span>Referans Blok Değeri: <strong class="text-on-surface">5.000 mm</strong></span>
+<span class="text-secondary font-semibold">Hata: 0.000 mm (0.00%)</span>
+</div>
+</div>
+</div>
+</div>
+</aside>
+</div>
+</div></main>
+<!-- END: MainWorkbenchArea -->
+<!-- BEGIN: SystemStatusBar -->
+<footer class="bg-white border-t border-slate-200 h-7 px-3 flex items-center justify-between text-[11px] text-slate-600 select-none z-30 flex-shrink-0" data-purpose="industrial-status-bar">
+<!-- Hardware & Communication Links Status -->
+<div class="flex items-center space-x-4">
+<!-- Overall Execution State -->
+<div class="flex items-center space-x-1.5 font-medium text-slate-800">
+<span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+<span class="">Hazır — Tool yürütmesi: <span class="font-mono text-blue-600">Run Flow / Results</span></span>
+</div>
+<div class="h-3.5 w-px bg-slate-200"></div>
+<!-- Camera Link -->
+<div class="flex items-center space-x-1.5 text-slate-700">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+<span class="">Kamera: <strong class="font-medium">Basler GigE acA1920 (60 FPS)</strong></span>
+</div>
+<div class="h-3.5 w-px bg-slate-200"></div>
+<!-- PLC Status -->
+<div class="flex items-center space-x-1.5 text-slate-700">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+<span class="">PLC: <strong class="font-medium">Siemens S7-1500 (192.168.1.10)</strong></span>
+</div>
+<div class="h-3.5 w-px bg-slate-200"></div>
+<!-- Robot Status -->
+<div class="flex items-center space-x-1.5 text-slate-500">
+<span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+<span class="">Robot: <span class="italic">KUKA KRC4 (Simülasyon Modu)</span></span>
+</div>
+</div>
+<!-- System Performance Metrics -->
+<div class="flex items-center space-x-3 font-mono text-[10px] text-slate-500">
+<span class="">CPU: 8%</span>
+<span class="">RAM: 1.4 GB</span>
+<span class="text-slate-300">|</span>
+<span class="text-slate-700 font-semibold font-sans">VisionFlow Core 4.12.0</span>
+</div>
+</footer>
+<!-- END: SystemStatusBar -->
+</body></html>

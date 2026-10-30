@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+
+<html class="h-full" lang="tr"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>VisionFlow Studio — Recipe Editor</title>
+<!-- Tailwind CSS v3 with Forms & Container Plugins -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Tailwind Configuration -->
+<script id="tailwind-config">
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#eff6ff',
+              100: '#dbeafe',
+              500: '#3b82f6',
+              600: '#2563eb',
+              700: '#1d4ed8',
+            },
+            surface: {
+              50: '#f8fafc',
+              100: '#f1f5f9',
+              200: '#e2e8f0',
+              300: '#cbd5e1',
+              700: '#334155',
+              800: '#1e293b',
+              900: '#0f172a',
+            }
+          },
+          fontFamily: {
+            mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace'],
+            sans: ['Inter', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+<!-- Custom Styles for Precision Industrial CAD UI -->
+<style data-purpose="custom-scrollbar">
+    ::-webkit-scrollbar {
+      width: 5px;
+      height: 5px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #f1f5f9;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+  </style>
+<style data-purpose="micro-interactions">
+    .canvas-roi-box {
+      box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.9), 0 0 20px rgba(37, 99, 235, 0.25);
+    }
+    .status-dot-pulse {
+      animation: pulse-ring 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+    @keyframes pulse-ring {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(1.15); }
+    }
+  </style>
+<meta content="web_dashboard" name="shell-type"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/></head>
+<body class="h-full bg-slate-100 text-slate-800 font-sans text-xs antialiased overflow-hidden flex flex-col select-none">
+<!-- BEGIN: ApplicationTopBar -->
+<header class="bg-white border-b border-slate-200 h-10 flex items-center justify-between px-3 z-30 flex-shrink-0" data-purpose="top-window-bar">
+<div class="flex items-center space-x-4">
+<!-- App Brand Logo & Name -->
+<div class="flex items-center space-x-2">
+<div class="w-6 h-6 rounded bg-blue-600 text-white flex items-center justify-center font-black text-xs shadow-sm shadow-blue-500/30">
+          VF
+        </div>
+<div class="flex items-baseline space-x-1.5">
+<span class="font-bold text-sm tracking-tight text-slate-900">VisionFlow</span>
+<span class="text-[10px] uppercase font-semibold text-slate-400 tracking-wider">Studio 2025</span>
+</div>
+</div>
+<!-- Native Desktop Style Menus -->
+<nav class="hidden md:flex items-center space-x-1 text-slate-600 text-xs pl-2 border-l border-slate-200">
+<button class="px-2 py-1 rounded hover:bg-slate-100 hover:text-slate-900 transition-colors">Dosya</button>
+<button class="px-2 py-1 rounded hover:bg-slate-100 hover:text-slate-900 transition-colors">Düzenle</button>
+<button class="px-2 py-1 rounded hover:bg-slate-100 hover:text-slate-900 transition-colors">Görünüm</button>
+<button class="px-2 py-1 rounded hover:bg-slate-100 hover:text-slate-900 transition-colors font-medium text-blue-600">Reçete</button>
+<button class="px-2 py-1 rounded hover:bg-slate-100 hover:text-slate-900 transition-colors">Çalıştır</button>
+<button class="px-2 py-1 rounded hover:bg-slate-100 hover:text-slate-900 transition-colors">Araçlar</button>
+<button class="px-2 py-1 rounded hover:bg-slate-100 hover:text-slate-900 transition-colors">Yardım</button>
+</nav>
+</div>
+<!-- Active Recipe Status Badge -->
+<div class="flex items-center space-x-2 text-slate-600">
+<div class="flex items-center space-x-1.5 px-2.5 py-0.5 rounded-full bg-slate-100 border border-slate-200">
+<span class="w-2 h-2 rounded-full bg-amber-500"></span>
+<span class="text-[11px] text-slate-600">Proje: <strong class="text-slate-800 font-medium">Test123</strong></span>
+<span class="text-slate-300">/</span>
+<span class="text-[11px] text-slate-800 font-semibold">defect</span>
+<span class="text-[9px] bg-amber-100 text-amber-800 font-semibold px-1 rounded uppercase tracking-wider">Taslak (v1.0)</span>
+</div>
+<!-- Quick Actions -->
+<div class="flex items-center space-x-1 pl-2">
+<button class="p-1 rounded text-slate-500 hover:bg-slate-100 hover:text-slate-700" title="Geri Al (Ctrl+Z)">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M3 10h10a5 5 0 015 5v2M3 10l6 6m-6-6l6-6" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+</button>
+<button class="p-1 rounded text-slate-500 hover:bg-slate-100 hover:text-slate-700" title="Yenile (Ctrl+Y)">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M21 10h-10a5 5 0 00-5 5v2m15-7l-6 6m6-6l-6-6" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+</button>
+</div>
+</div>
+</header>
+<!-- END: ApplicationTopBar -->
+<!-- BEGIN: RecipeActionToolbar -->
+<section class="bg-white border-b border-slate-200 h-11 px-3 flex items-center justify-between shadow-xs flex-shrink-0" data-purpose="recipe-actions-bar">
+<div class="flex items-center space-x-2">
+<!-- Recipe Library Selector -->
+<button class="inline-flex items-center space-x-1.5 px-3 py-1.5 text-xs font-medium text-slate-700 bg-slate-50 border border-slate-200 rounded-md hover:bg-slate-100 active:bg-slate-200 transition-colors shadow-xs">
+<svg class="w-3.5 h-3.5 text-slate-500" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+<span class="">Reçeteler</span>
+</button>
+<!-- Save Button -->
+<button class="inline-flex items-center space-x-1.5 px-3 py-1.5 text-xs font-medium text-slate-700 bg-slate-50 border border-slate-200 rounded-md hover:bg-slate-100 active:bg-slate-200 transition-colors shadow-xs">
+<svg class="w-3.5 h-3.5 text-slate-500" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+<span class="">Kaydet</span>
+<span class="text-[10px] text-slate-400 font-mono">⌘S</span>
+</button>
+<div class="h-5 w-px bg-slate-200 mx-1"></div>
+<!-- Run Flow (Akışı Çalıştır) - Primary CTA -->
+<button class="inline-flex items-center space-x-1.5 px-3.5 py-1.5 text-xs font-semibold text-white bg-blue-600 rounded-md hover:bg-blue-700 active:bg-blue-800 transition-all shadow-xs shadow-blue-500/20">
+<svg class="w-3.5 h-3.5 fill-current" viewbox="0 0 24 24"><path d="M8 5v14l11-7z"></path></svg>
+<span class="">Akışı Çalıştır</span>
+</button>
+<!-- Run Tool (Aracı Test Et) -->
+<button class="inline-flex items-center space-x-1.5 px-3 py-1.5 text-xs font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-md hover:bg-blue-100 active:bg-blue-200 transition-colors">
+<svg class="w-3.5 h-3.5 text-blue-600" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path><path d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+<span class="">Aracı Test Et</span>
+</button>
+<!-- Stop Execution Button -->
+<button class="inline-flex items-center space-x-1 px-2.5 py-1.5 text-xs font-medium text-rose-700 bg-rose-50 border border-rose-200 rounded-md hover:bg-rose-100 transition-colors">
+<span class="w-2.5 h-2.5 rounded-sm bg-rose-600 inline-block mr-1"></span>
+<span class="">Durdur</span>
+</button>
+</div>
+<!-- Toggle & Secondary Options -->
+<div class="flex items-center space-x-4">
+<label class="flex items-center space-x-2 cursor-pointer text-xs text-slate-600 hover:text-slate-900 select-none">
+<input checked="" class="w-3.5 h-3.5 text-blue-600 rounded border-slate-300 focus:ring-blue-500" type="checkbox"/>
+<span class="">Açıklamaları Göster</span>
+</label>
+<div class="h-5 w-px bg-slate-200"></div>
+<!-- Status Indicator -->
+<div class="flex items-center space-x-2 text-xs">
+<span class="inline-flex items-center px-2 py-0.5 rounded-md font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1.5"></span>
+          Çevrim İçi
+        </span>
+</div>
+</div>
+</section>
+<!-- END: RecipeActionToolbar -->
+<!-- BEGIN: MainWorkbenchArea -->
+<main class="flex-1 flex overflow-hidden min-h-0 bg-slate-100" data-purpose="workbench-grid"><div class="flex flex-col w-full h-full overflow-hidden bg-surface text-on-surface">
+<!-- Sub-Header: Screen Title & Industrial Action Ribbon -->
+<div class="bg-surface-container-lowest px-4 py-2.5 flex flex-wrap items-center justify-between gap-3 shadow-xs flex-shrink-0">
+<div class="flex flex-wrap items-center gap-3">
+<div class="flex items-center gap-2">
+<div class="w-2.5 h-2.5 rounded-full bg-secondary animate-ping"></div>
+<h1 class="font-headline-sm text-headline-sm text-on-surface uppercase tracking-tight">Runtime (Canlı Üretim &amp; Denetim)</h1>
+</div>
+<div class="h-4 w-px bg-outline-variant"></div>
+<!-- Meta Information Badges -->
+<div class="flex items-center gap-1.5 flex-wrap">
+<span class="px-2 py-0.5 rounded bg-surface-container text-on-surface-variant font-label-sm text-label-sm">Proje: <strong class="font-semibold text-on-surface">Test123</strong></span>
+<span class="px-2 py-0.5 rounded bg-surface-container text-on-surface-variant font-label-sm text-label-sm">Reçete: <strong class="font-semibold text-on-surface">defect / Defect Inspection (v1.0 DRAFT)</strong></span>
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-surface-container-high text-secondary font-label-sm text-label-sm font-semibold">
+<span class="w-1.5 h-1.5 rounded-full bg-secondary"></span>
+          PLC Senkronize
+        </span>
+</div>
+</div>
+<!-- Machine Control Operational Buttons -->
+<div class="flex items-center gap-2">
+<!-- Kaynağı Doğrula -->
+<button class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded bg-surface-container-low text-on-surface hover:bg-surface-container transition-colors font-body-sm text-body-sm shadow-xs active:scale-95" title="Kamera ve sensör kaynaklarını kontrol et">
+<span class="material-symbols-outlined text-sm text-primary">fact_check</span>
+<span>Kaynağı Doğrula</span>
+</button>
+<!-- Sürekli Çalıştır (Run) -->
+<button class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded bg-secondary text-on-secondary hover:brightness-110 active:scale-95 transition-all font-body-sm text-body-sm font-semibold shadow-xs" id="btn-run">
+<span class="material-symbols-outlined text-sm">play_arrow</span>
+<span>Sürekli Çalıştır (Run)</span>
+</button>
+<!-- Tek Çevrim -->
+<button class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded bg-surface-container-low text-primary hover:bg-surface-container transition-colors font-body-sm text-body-sm active:scale-95 shadow-xs">
+<span class="material-symbols-outlined text-sm">step</span>
+<span>Tek Çevrim</span>
+</button>
+<!-- Durdur -->
+<button class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded bg-error text-on-error hover:brightness-110 active:scale-95 transition-all font-body-sm text-body-sm font-semibold shadow-xs" id="btn-stop">
+<span class="material-symbols-outlined text-sm">stop</span>
+<span>Durdur</span>
+</button>
+<div class="h-4 w-px bg-outline-variant"></div>
+<!-- Logs / CSV -->
+<button class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded bg-surface-container text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high transition-colors font-body-sm text-body-sm shadow-xs">
+<span class="material-symbols-outlined text-sm">download</span>
+<span>Logs / CSV</span>
+</button>
+<!-- TCP Senkronizasyon Durumu -->
+<div class="flex items-center gap-1.5 px-2 py-1 rounded bg-surface-container-high text-on-surface-variant font-label-sm text-label-sm">
+<span class="w-2 h-2 rounded-full bg-secondary"></span>
+<span class="font-medium text-secondary">TCP v3: Aktif</span>
+</div>
+</div>
+</div>
+<!-- Main Multi-Pane Workbench -->
+<div class="flex-1 flex overflow-hidden min-h-0 p-2 gap-2 bg-surface">
+<!-- Left & Center: Live Camera Feed & Connected Pipelines -->
+<div class="flex-1 flex flex-col min-w-0 gap-2">
+<!-- Live Vision Viewport Canvas -->
+<div class="flex-1 bg-surface-container-lowest rounded flex flex-col overflow-hidden shadow-xs relative">
+<!-- Canvas Top HUD Toolbar -->
+<div class="bg-surface-container-low px-3 py-1.5 flex items-center justify-between flex-shrink-0">
+<div class="flex items-center gap-3">
+<span class="font-label-md text-label-md font-semibold text-on-surface flex items-center gap-1">
+<span class="material-symbols-outlined text-sm text-secondary">videocam</span>
+              CAM_01: Canlı Akış (Basler GigE acA1920)
+            </span>
+<span class="px-1.5 py-0.5 rounded bg-surface-container-high text-on-surface-variant font-label-sm text-label-sm">Frame #14,821</span>
+<span class="px-1.5 py-0.5 rounded bg-surface-container-high text-on-surface-variant font-label-sm text-label-sm">59.8 FPS</span>
+<span class="px-1.5 py-0.5 rounded bg-surface-container-high text-on-surface-variant font-label-sm text-label-sm">Pozlama: 125 µs</span>
+</div>
+<!-- Viewport Zoom Controls -->
+<div class="flex items-center gap-1">
+<button class="px-2 py-0.5 rounded text-on-surface-variant hover:bg-surface-container font-label-sm text-label-sm">1:1</button>
+<button class="px-2 py-0.5 rounded bg-primary-fixed text-on-primary-fixed font-label-sm text-label-sm font-semibold">Sığdır</button>
+<button class="px-2 py-0.5 rounded text-on-surface-variant hover:bg-surface-container font-label-sm text-label-sm">100%</button>
+<div class="h-3 w-px bg-outline-variant mx-1"></div>
+<button class="p-1 rounded text-on-surface-variant hover:bg-surface-container" title="Ekranı Büyüt">
+<span class="material-symbols-outlined text-xs">fullscreen</span>
+</button>
+</div>
+</div>
+<!-- Simulated Visual Inspection Canvas -->
+<div class="relative flex-1 bg-slate-900 flex items-center justify-center overflow-hidden">
+<!-- Industrial PCB Under Automated Optical Inspection -->
+<img class="w-full h-full object-cover opacity-90" data-alt="High precision industrial automated optical inspection top down macro view of a printed circuit board with green solder mask, copper traces, SMD capacitors, microcontrollers and surface mounted components under clean neutral factory lighting." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDNTf29SliIJRujJe8AvjV_br-uKLBGUVjJqLAq_74BH9LTbYF0ejOTal-VC2WoJP7hzT5S6Kc7FI0fGkDG9As31AfeblUgJCfwnNxnu3M2WEirgAkpkXPUkLl8RfE3meppIyQqM-SV1nsVaAnq_kCR5cfE7xv4hyBzfUzR5wNaJc33PKdAm9sThni_EEiV5S3I5RuAQ9C6w9xOZ-yiFP-T3PWE_XyoQuvL3Uq8LlPa"/>
+<!-- Target Search Vector Overlays / Inspection Mask Layer -->
+<svg class="absolute inset-0 w-full h-full pointer-events-none" preserveaspectratio="none" viewbox="0 0 1000 600">
+<!-- Inspection Area Grid Graticule -->
+<line opacity="0.3" stroke="#006a61" stroke-dasharray="4,4" stroke-width="0.5" x1="0" x2="1000" y1="300" y2="300"></line>
+<line opacity="0.3" stroke="#006a61" stroke-dasharray="4,4" stroke-width="0.5" x1="500" x2="500" y1="0" y2="600"></line>
+<!-- PASS ROI: IC Microcontroller -->
+<rect fill="none" height="230" rx="4" stroke="#006a61" stroke-width="2" width="230" x="220" y="140"></rect>
+<rect fill="#006a61" height="22" rx="2" width="165" x="220" y="118"></rect>
+<text fill="#ffffff" font-family="JetBrains Mono" font-size="11" font-weight="600" x="226" y="133">PASS: STM32F407 (99.4%)</text>
+<circle cx="335" cy="255" fill="#89f5e7" r="4"></circle>
+<!-- FAIL ROI: Solder Bridge Short Circuit Anomaly -->
+<rect fill="rgba(186, 26, 26, 0.15)" height="150" rx="4" stroke="#ba1a1a" stroke-width="2.5" width="190" x="580" y="240"></rect>
+<rect fill="#ba1a1a" height="25" rx="2" width="220" x="580" y="215"></rect>
+<text fill="#ffffff" font-family="JetBrains Mono" font-size="11" font-weight="700" x="586" y="232">FAIL #4: SOLDER BRIDGE KUSURU</text>
+<!-- Defect pointer pin -->
+<line stroke="#ba1a1a" stroke-width="2" x1="680" x2="720" y1="315" y2="360"></line>
+<circle cx="680" cy="315" fill="#ba1a1a" r="6"></circle>
+<circle cx="680" cy="315" fill="none" r="14" stroke="#ba1a1a" stroke-dasharray="3,3" stroke-width="1.5"></circle>
+<!-- Code Reader Scan Bounding Area -->
+<polygon fill="none" points="120,440 280,440 270,520 110,520" stroke="#2563eb" stroke-dasharray="4,2" stroke-width="1.5"></polygon>
+<rect fill="#2563eb" height="18" rx="2" width="140" x="110" y="525"></rect>
+<text fill="#ffffff" font-family="JetBrains Mono" font-size="10" x="116" y="538">2D Matrix: VF-9941</text>
+</svg>
+<!-- Large Decision Overlay HUD: Prominent Industrial State Banner -->
+<div class="absolute top-4 right-4 bg-error text-on-error px-4 py-2.5 rounded shadow-lg flex items-center gap-3 backdrop-blur-sm bg-opacity-95">
+<span class="material-symbols-outlined text-2xl animate-pulse">cancel</span>
+<div>
+<div class="font-label-sm text-label-sm uppercase tracking-wider text-error-container">Son Çevrim Kararı</div>
+<div class="font-headline-md text-headline-md font-bold tracking-tight">RED (FAIL) — PİSTON AKTİF</div>
+</div>
+</div>
+<!-- Bottom Coordinates Telemetry HUD Floating Bar -->
+<div class="absolute bottom-2 inset-x-3 bg-inverse-surface/90 text-inverse-on-surface px-3 py-1 rounded flex items-center justify-between font-label-sm text-label-sm backdrop-blur-xs">
+<div class="flex items-center gap-4">
+<span>X: <strong class="text-secondary-fixed">680.4 px</strong></span>
+<span>Y: <strong class="text-secondary-fixed">315.2 px</strong></span>
+<span>Piksel Gri Değeri: <strong class="text-secondary-fixed">241 (8-bit)</strong></span>
+<span>Kusur Alanı: <strong class="text-error-container">42 px²</strong></span>
+</div>
+<div class="flex items-center gap-3">
+<span class="text-primary-fixed-dim">Toplam Muayene Süresi: 16.4 ms</span>
+<span class="w-2 h-2 rounded-full bg-secondary"></span>
+</div>
+</div>
+</div>
+</div>
+<!-- Connected Hardware Cameras & Acquisition Pipelines Status Grid -->
+<div class="bg-surface-container-lowest rounded p-3 shadow-xs flex-shrink-0">
+<div class="flex items-center justify-between mb-2">
+<span class="font-label-md text-label-md font-bold text-on-surface uppercase flex items-center gap-1.5">
+<span class="material-symbols-outlined text-sm text-primary">camera_alt</span>
+            Kamera ve Veri Kaynakları Durum Çizelgesi
+          </span>
+<span class="font-label-sm text-label-sm text-on-surface-variant">2 Cihaz Tanımlı</span>
+</div>
+<div class="w-full overflow-x-auto">
+<table class="w-full text-left font-body-sm text-body-sm">
+<thead class="bg-surface-container text-on-surface-variant font-label-sm text-label-sm">
+<tr>
+<th class="p-1.5 rounded-l">Kaynak / Kamera</th>
+<th class="p-1.5">Model / Denetim Görevi</th>
+<th class="p-1.5">Bağlantı &amp; Hazırlık</th>
+<th class="p-1.5">Çevrim Hızı</th>
+<th class="p-1.5">Son Tetikleme</th>
+<th class="p-1.5 text-right rounded-r">İşlemler</th>
+</tr>
+</thead>
+<tbody class="divide-y-0">
+<tr class="hover:bg-surface-container-low transition-colors">
+<td class="p-1.5 font-medium text-on-surface flex items-center gap-1.5">
+<span class="w-2 h-2 rounded-full bg-secondary"></span>
+                  CAM_01 (Basler acA1920-50gm)
+                </td>
+<td class="p-1.5 text-on-surface-variant">STM32 Kartı &amp; Lehim Muayenesi</td>
+<td class="p-1.5">
+<span class="inline-flex items-center px-1.5 py-0.5 rounded bg-surface-container-high text-secondary font-label-sm text-label-sm font-semibold">Canlı Akışta</span>
+</td>
+<td class="p-1.5 font-label-sm text-label-sm">60.0 FPS</td>
+<td class="p-1.5 font-label-sm text-label-sm text-on-surface-variant">14:32:05.112</td>
+<td class="p-1.5 text-right">
+<button class="px-2 py-0.5 rounded bg-surface-container hover:bg-surface-container-high font-label-sm text-label-sm text-primary">Önizle</button>
+<button class="px-2 py-0.5 rounded bg-surface-container hover:bg-surface-container-high font-label-sm text-label-sm text-on-surface-variant ml-1">Sıfırla</button>
+</td>
+</tr>
+<tr class="hover:bg-surface-container-low transition-colors">
+<td class="p-1.5 font-medium text-on-surface flex items-center gap-1.5">
+<span class="w-2 h-2 rounded-full bg-tertiary-container"></span>
+                  CAM_02 (USB3 dart daA1600-60uc)
+                </td>
+<td class="p-1.5 text-on-surface-variant">Barkod &amp; Lazer Seri No Doğrulama</td>
+<td class="p-1.5">
+<span class="inline-flex items-center px-1.5 py-0.5 rounded bg-surface-container text-on-surface-variant font-label-sm text-label-sm">Beklemede (Tetik Bekliyor)</span>
+</td>
+<td class="p-1.5 font-label-sm text-label-sm text-on-surface-variant">--</td>
+<td class="p-1.5 font-label-sm text-label-sm text-on-surface-variant">14:32:04.980</td>
+<td class="p-1.5 text-right">
+<button class="px-2 py-0.5 rounded bg-surface-container hover:bg-surface-container-high font-label-sm text-label-sm text-primary">Önizle</button>
+<button class="px-2 py-0.5 rounded bg-surface-container hover:bg-surface-container-high font-label-sm text-label-sm text-on-surface-variant ml-1">Tetik Gönder</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+<!-- Right Column: Industrial KPI Stats, Active Tool Decision Stream & Real-time Console -->
+<div class="w-80 lg:w-96 flex flex-col gap-2 flex-shrink-0">
+<!-- High-Impact KPI Statistics Mosaic -->
+<div class="bg-surface-container-lowest rounded p-3 shadow-xs">
+<div class="flex items-center justify-between mb-2">
+<span class="font-label-md text-label-md font-bold text-on-surface uppercase flex items-center gap-1">
+<span class="material-symbols-outlined text-sm text-primary">monitoring</span>
+            Vardiya Üretim İstatistikleri
+          </span>
+<button class="text-on-surface-variant hover:text-on-surface" title="Sayaçları Sıfırla">
+<span class="material-symbols-outlined text-xs">restart_alt</span>
+</button>
+</div>
+<div class="grid grid-cols-2 gap-2">
+<!-- Total Inspected -->
+<div class="bg-surface-container-low p-2 rounded">
+<div class="font-label-sm text-label-sm text-on-surface-variant uppercase">Toplam Muayene</div>
+<div class="font-headline-md text-headline-md font-bold text-on-surface">12,480 <span class="font-body-sm text-body-sm font-normal text-on-surface-variant">ad.</span></div>
+<div class="font-label-sm text-label-sm text-secondary font-medium">Hız: 218 parça/dak</div>
+</div>
+<!-- Cycle Time -->
+<div class="bg-surface-container-low p-2 rounded">
+<div class="font-label-sm text-label-sm text-on-surface-variant uppercase">Döngü Süresi</div>
+<div class="font-headline-md text-headline-md font-bold text-primary">16.4 <span class="font-body-sm text-body-sm font-normal text-on-surface-variant">ms</span></div>
+<div class="font-label-sm text-label-sm text-on-surface-variant">Hedef: &lt; 25.0 ms</div>
+</div>
+<!-- PASS Card -->
+<div class="bg-surface-container-high p-2 rounded">
+<div class="font-label-sm text-label-sm text-secondary uppercase font-semibold">PASS (Sağlam)</div>
+<div class="font-headline-md text-headline-md font-bold text-secondary">12,194</div>
+<div class="w-full bg-surface-container-low rounded-full h-1.5 mt-1 overflow-hidden">
+<div class="bg-secondary h-1.5 rounded-full" style="width: 97.7%;"></div>
+</div>
+<div class="font-label-sm text-label-sm text-secondary font-bold text-right mt-0.5">%97.71</div>
+</div>
+<!-- FAIL Card -->
+<div class="bg-error-container p-2 rounded">
+<div class="font-label-sm text-label-sm text-on-error-container uppercase font-bold">FAIL (Kusurlu)</div>
+<div class="font-headline-md text-headline-md font-bold text-error">286</div>
+<div class="w-full bg-surface-container-lowest rounded-full h-1.5 mt-1 overflow-hidden">
+<div class="bg-error h-1.5 rounded-full" style="width: 2.29%;"></div>
+</div>
+<div class="font-label-sm text-label-sm text-error font-bold text-right mt-0.5">%2.29</div>
+</div>
+</div>
+</div>
+<!-- Active Tool Results & Parametric Outputs -->
+<div class="bg-surface-container-lowest rounded p-3 shadow-xs flex-1 flex flex-col min-h-0">
+<div class="flex items-center justify-between mb-2">
+<span class="font-label-md text-label-md font-bold text-on-surface uppercase flex items-center gap-1">
+<span class="material-symbols-outlined text-sm text-primary">account_tree</span>
+            Aktif Reçete Araç Çıktıları
+          </span>
+<span class="px-1.5 py-0.5 rounded bg-surface-container font-label-sm text-label-sm text-on-surface-variant">5 Adım</span>
+</div>
+<!-- Tool Tree Execution List -->
+<div class="flex-1 overflow-y-auto space-y-1.5 pr-1 font-body-sm text-body-sm">
+<!-- Step 1: Image Acquisition -->
+<div class="p-2 rounded bg-surface-container-low flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="w-1.5 h-1.5 rounded-full bg-secondary"></span>
+<div>
+<div class="font-medium text-on-surface">1. Image_Acquisition</div>
+<div class="font-label-sm text-label-sm text-on-surface-variant">Basler GigE acA1920 (Mono8)</div>
+</div>
+</div>
+<div class="text-right">
+<span class="px-1.5 py-0.5 rounded bg-surface-container-high text-secondary font-label-sm text-label-sm font-semibold">OK</span>
+<div class="font-label-sm text-label-sm text-on-surface-variant mt-0.5">4.1 ms</div>
+</div>
+</div>
+<!-- Step 2: Preprocess -->
+<div class="p-2 rounded bg-surface-container-low flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="w-1.5 h-1.5 rounded-full bg-secondary"></span>
+<div>
+<div class="font-medium text-on-surface">2. Preprocess</div>
+<div class="font-label-sm text-label-sm text-on-surface-variant">Gaussian Blur 3x3 + Sobel Edge</div>
+</div>
+</div>
+<div class="text-right">
+<span class="px-1.5 py-0.5 rounded bg-surface-container-high text-secondary font-label-sm text-label-sm font-semibold">OK</span>
+<div class="font-label-sm text-label-sm text-on-surface-variant mt-0.5">1.8 ms</div>
+</div>
+</div>
+<!-- Step 3: Blob Defect Detection (FAIL) -->
+<div class="p-2 rounded bg-error-container flex flex-col gap-1">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="w-1.5 h-1.5 rounded-full bg-error"></span>
+<span class="font-semibold text-on-error-container">3. Blob_1 (Kusur Tespiti)</span>
+</div>
+<span class="px-1.5 py-0.5 rounded bg-error text-on-error font-label-sm text-label-sm font-bold">FAIL</span>
+</div>
+<div class="font-label-sm text-label-sm text-on-error-container pl-3.5">
+              1 kusur tespit edildi: Kısa devre lehim köprüsü (Alan: 42 px² &gt; Eşik: 15 px²)
+            </div>
+<div class="font-label-sm text-label-sm text-right text-error font-medium">Yürütme: 5.6 ms</div>
+</div>
+<!-- Step 4: Code Reader -->
+<div class="p-2 rounded bg-surface-container-low flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="w-1.5 h-1.5 rounded-full bg-secondary"></span>
+<div>
+<div class="font-medium text-on-surface">4. Code_Reader (DataMatrix)</div>
+<div class="font-label-sm text-label-sm text-on-surface-variant font-mono">S/N: VF-2025-9941</div>
+</div>
+</div>
+<div class="text-right">
+<span class="px-1.5 py-0.5 rounded bg-surface-container-high text-secondary font-label-sm text-label-sm font-semibold">OK</span>
+<div class="font-label-sm text-label-sm text-on-surface-variant mt-0.5">3.2 ms</div>
+</div>
+</div>
+<!-- Step 5: PLC Reject Signal Output -->
+<div class="p-2 rounded bg-surface-container-high flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="w-1.5 h-1.5 rounded-full bg-primary"></span>
+<div>
+<div class="font-medium text-on-surface">5. PLC Sinyal Çıkışı (I/O)</div>
+<div class="font-label-sm text-label-sm text-on-surface-variant">Dijital Çıkış: Q0.2 Piston Tetiklendi</div>
+</div>
+</div>
+<div class="text-right">
+<span class="px-1.5 py-0.5 rounded bg-primary text-on-primary font-label-sm text-label-sm font-semibold">GÖNDERİLDİ</span>
+<div class="font-label-sm text-label-sm text-on-surface-variant mt-0.5">1.7 ms</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Real-time Event Console & Diagnostic Logger -->
+<div class="bg-surface-container-lowest rounded p-3 shadow-xs h-48 flex flex-col min-h-0">
+<!-- Log Panel Header & Tabs -->
+<div class="flex items-center justify-between pb-1.5 border-b-0">
+<div class="flex items-center gap-1 font-label-sm text-label-sm">
+<button class="px-2 py-0.5 rounded bg-primary-fixed text-on-primary-fixed font-semibold">Canlı Çevrim Logları</button>
+<button class="px-2 py-0.5 rounded text-on-surface-variant hover:bg-surface-container">Hatalar (2)</button>
+<button class="px-2 py-0.5 rounded text-on-surface-variant hover:bg-surface-container">Telemetri</button>
+</div>
+<button class="text-on-surface-variant hover:text-on-surface" title="Konsolu Temizle">
+<span class="material-symbols-outlined text-xs">clear_all</span>
+</button>
+</div>
+<!-- Terminal Output Streams -->
+<div class="flex-1 bg-surface-container-lowest p-2 overflow-y-auto font-label-sm text-label-sm space-y-1">
+<div class="text-on-surface-variant">
+<span class="text-outline">14:32:05.112</span> [CYCLE #14821] Tetik alındı (PLC Sensör B1)
+          </div>
+<div class="text-secondary font-medium">
+<span class="text-outline">14:32:05.116</span> [CAM_01] Kare yakalandı (acA1920, 1920x1200)
+          </div>
+<div class="text-on-surface-variant">
+<span class="text-outline">14:32:05.122</span> [PREPROCESS] Filtre matrisi tamamlandı (1.8 ms)
+          </div>
+<div class="text-error font-semibold">
+<span class="text-outline">14:32:05.128</span> [DEFECT] Kusur bulundu: Lehim köprüsü X:680 Y:315
+          </div>
+<div class="text-primary font-medium">
+<span class="text-outline">14:32:05.130</span> [PLC] Reddetme sinyali iletildi (Q0.2: HIGH, 20ms Darbe)
+          </div>
+<div class="text-on-surface-variant">
+<span class="text-outline">14:32:05.132</span> [CYCLE #14821] Tamamlandı. Toplam: 16.4 ms — RED
+          </div>
+</div>
+</div>
+</div>
+</div>
+<!-- Interactive Simulator Script -->
+<script>
+    (function initRuntimeSimulator() {
+      const runBtn = document.getElementById('btn-run');
+      const stopBtn = document.getElementById('btn-stop');
+      let isRunning = true;
+
+      if (runBtn && stopBtn) {
+        runBtn.addEventListener('click', () => {
+          isRunning = true;
+          runBtn.classList.add('brightness-110');
+          runBtn.innerHTML = '<span class="material-symbols-outlined text-sm">play_arrow</span><span>Çalışıyor...</span>';
+        });
+
+        stopBtn.addEventListener('click', () => {
+          isRunning = false;
+          runBtn.classList.remove('brightness-110');
+          runBtn.innerHTML = '<span class="material-symbols-outlined text-sm">play_arrow</span><span>Sürekli Çalıştır (Run)</span>';
+        });
+      }
+    })();
+  </script>
+</div></main>
+<!-- END: MainWorkbenchArea -->
+<!-- BEGIN: SystemStatusBar -->
+<footer class="bg-white border-t border-slate-200 h-7 px-3 flex items-center justify-between text-[11px] text-slate-600 select-none z-30 flex-shrink-0" data-purpose="industrial-status-bar">
+<!-- Hardware & Communication Links Status -->
+<div class="flex items-center space-x-4">
+<!-- Overall Execution State -->
+<div class="flex items-center space-x-1.5 font-medium text-slate-800">
+<span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+<span class="">Hazır — Tool yürütmesi: <span class="font-mono text-blue-600">Run Flow / Results</span></span>
+</div>
+<div class="h-3.5 w-px bg-slate-200"></div>
+<!-- Camera Link -->
+<div class="flex items-center space-x-1.5 text-slate-700">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+<span class="">Kamera: <strong class="font-medium">Basler GigE acA1920 (60 FPS)</strong></span>
+</div>
+<div class="h-3.5 w-px bg-slate-200"></div>
+<!-- PLC Status -->
+<div class="flex items-center space-x-1.5 text-slate-700">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+<span class="">PLC: <strong class="font-medium">Siemens S7-1500 (192.168.1.10)</strong></span>
+</div>
+<div class="h-3.5 w-px bg-slate-200"></div>
+<!-- Robot Status -->
+<div class="flex items-center space-x-1.5 text-slate-500">
+<span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+<span class="">Robot: <span class="italic">KUKA KRC4 (Simülasyon Modu)</span></span>
+</div>
+</div>
+<!-- System Performance Metrics -->
+<div class="flex items-center space-x-3 font-mono text-[10px] text-slate-500">
+<span class="">CPU: 8%</span>
+<span class="">RAM: 1.4 GB</span>
+<span class="text-slate-300">|</span>
+<span class="text-slate-700 font-semibold font-sans">VisionFlow Core 4.12.0</span>
+</div>
+</footer>
+<!-- END: SystemStatusBar -->
+</body></html>
