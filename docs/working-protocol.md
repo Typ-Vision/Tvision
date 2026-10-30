@@ -1,6 +1,6 @@
 # VisionFlow çalışma protokolü
 
-DOC-WORK-01 · 29 Ekim 2026. Amaç, kabul kalitesini koruyarak bağlamı,
+DOC-WORK-02 · 30 Ekim 2026. Amaç, kabul kalitesini koruyarak bağlamı,
 tekrarları ve görev devri maliyetini azaltmaktır. Kullanıcının güncel talimatı,
 AGENTS ve seçili kartın zorunlu kabulü önceliklidir. Bu belge bir oturumda bir
 kez okunur; ajan mesajına veya her araç çağrısına tekrar kopyalanmaz.
@@ -17,6 +17,11 @@ kapsam dışı işler ve kabul komutları. Dosyalar keşifle netleşecekse ilk a
 bunu belirlesin. Belirsizlik çözmek için okuma kapsamını gerektiği kadar genişlet.
 Yapısal keşifte mevcut graph/coverage kuralları aynen geçerlidir; tasarruf için
 coverage, kaynak fallback veya kritik çağrı zinciri doğrulaması atlanmaz.
+
+İlk işlem mevcut checkpoint, aktif süreç ve kanıt envanterini kontrol etmektir.
+Bitmiş koşumu çalışan sayma; süreç kimliğini ve son log/exit bilgisini doğrula.
+Kaynak/test/config/girdi eşleşmesi doğrulanan başarıları devral; yalnız eksik
+veya değişiklikten etkilenen kabulü planla. Bu kontrol bitmeden aynı koşumu açma.
 
 ## 2. Tek uygulayıcı, kısa devir
 
@@ -61,6 +66,21 @@ hata veya kanıtın güncelliğine ilişkin belirsizlik yoksa başarılı koşum
 tekrarlama. Kapsam dışı hata varsa kökenini ve kabul üzerindeki etkisini
 belgele; testleri kapatma, doğrulamayı gevşetme veya sessizce kapsamı büyütme.
 
+Aynı hata veya timeout ikinci kez görülürse tam suite'i tekrar başlatma.
+Başarısız testi ve gerekli fixture'larını izole et; girdi, süreç, ortam ve log
+kanıtlarıyla nedeni araştır. Yeni koşumdan önce değişen koşulu veya sınanacak
+somut hipotezi kaydet. Hedefli düzeltme doğrulandıktan sonra kartın zorunlu tam
+kabulünü yap. Sürenin uzaması tek başına tekrar gerekçesi veya timeout artırma
+izni değildir; neden çözülemiyorsa açık engeli kaydet, başarı beyan etme.
+
+Her bağımsız kabul koşumu temiz, göreve/koşuma özel test ayarları ve çıktı
+dizinleri kullanır. Aynı koşumun fixture hazırlığı ile testleri ortak girdiyi
+paylaşır; test ortasında gerekli fixture verisini silme. Birikmiş INI/tercih
+verisi yeni koşuma taşınmaz; mevcut kanıtı üzerine yazmadan yedekle. Kullanıcı
+`config/local.ui.ini` dosyasına dokunma. Başlangıç girdisini (yok/temiz/fixture),
+fixture kimliğini ve gereken hash'leri kaydet. Kalıcılık/restore senaryosu eski
+durum gerektiriyorsa bunu açık fixture olarak kur ve temiz koşumdan ayır.
+
 Eski kanıt ancak aynı ilgili kaynak, test, yapılandırma ve girdilerle eşleşmesi
 kontrol edilirse devralınır; kaynağı ve kontrol yöntemi yazılır. Eski koşumu
 yeni test gibi sunma. Sadece tarih veya commit ID'si eşleşmesi tek başına
@@ -78,12 +98,29 @@ yerine bitiş/hata bildirimi bekle. Platformun süre sınırlarına ve zorunlu
 ilerleme bildirimlerine uy. Bu bildirimler kısa olsun; yalnız bekliyor olmak
 için yeni kod, log veya geçmiş sohbet incelemesi başlatma.
 
+15 dakikayı bulan görevde en geç bu eşikte kapsamı, kalan işi ve gerekçeli
+tahmini süreyi bildir. Uzun build/tam kabul koşumunun beklenen süresini mümkünse
+başlatmadan belirt. 30 dakikada görev sürüyorsa uzama nedenini, eldeki kanıtı ve
+bir sonraki somut adımı bildir; uzun sürüyorsa sonraki her 30 dakikada bu hesabı
+yenile. Bunlar daha sık zorunlu ilerleme bildirimlerinin yerine geçmez.
+Eşikler otomatik durma veya kabulü atlama sınırı değildir; süre aşımı yeni test
+tekrarını otomatik başlatmaz. Gerçek süreyi bilmiyorsan tahmin uydurma.
+
 ## 5. Kesintide işi yeniden keşfetme
 
 Uzun build/test başlamadan, önemli aşama bitince veya devir öncesinde
 `build/<görev>/checkpoint.md` dosyasını güncelle. Kısa görevde ayrı dosya
 gerekmez; kapanış kaydı yeterlidir. Kalıcı proje kararı ilgili repo
 sözleşmesine yazılır; yalnız build altındaki kontrol noktasına bırakılmaz.
+
+Build/test koşumunu yöneten komut veya wrapper her tamamlanmada (başarı, hata,
+timeout, iptal) sonuç kaydını ve checkpoint'in ilgili alanlarını otomatik
+güncellemelidir: komut, kaynak/test/config/girdi kimliği, başlangıç/bitiş,
+exit/sonuç, sayılar ve log yolu. Sonuç bilinmiyorsa açıkça bilinmiyor/kesildi
+yaz; çalışıyor kaydını bırakma. Kullanılan süreç aracı bu kaydı üretemiyorsa
+ajan tamamlanma çıktısını alınca, başka koşuma geçmeden kaydı günceller ve
+otomasyon eksikliğini açık bırakır. Kayıt tamamlanmadan zincirleme retry yapma.
+Otomatik sonuç kaydı, kartın belge/commit kapanışı tamamlandı anlamına gelmez.
 
 ```text
 Görev / durum: çalışıyor | kesildi | tamamlandı

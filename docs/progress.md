@@ -8,7 +8,7 @@
 F ON179/OFF140 geçti; 1'er dış plaka skipped.
 Sıradaki **COMM4-11**; main/ledger13 açık.
 Probe INI restore SEGFAULT/UI INI birikimi açık; temiz girdide kabul.
-[Ölçüm](working-protocol.md)3/3: sayaç erişilemiyor.
+[DOC-WORK-02](archive/2026-10-30-doc-work-02.md); ölçüm3/3 erişilemiyor.
 [EFR-04](archive/2026-10-29-efr-04.md): Wheel açık, Match/θ ertelendi.
 
 [D:/TVision](archive/2026-10-28-dev-drive-01.md): OpenCV geçti; CTest kısmi.
