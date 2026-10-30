@@ -1,6 +1,7 @@
 # COMM4-14 — Reconnect retry ve socket backpressure
 
-Durum: planlandı, başlanmadı. Model: **GPT-6.1 Sol / medium**.
+Durum: tamamlandı. Model: **GPT-6.1 Sol / medium**.
+Kabul: [COMM4-14 kapanışı](../../../archive/2026-10-30-comm4-14.md).
 Tek oturum kapsamı ve ortak kurallar [indekste](../README.md), kapanış
 kuralları [V0](../verification.md) içindedir.
 

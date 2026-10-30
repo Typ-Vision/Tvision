@@ -67,6 +67,7 @@ sonraki kart kendi başlangıcında coverage ve güncelliği tekrar doğrular.
 | [ProductionRecipeService.cpp](../../../src/application/ProductionRecipeService.cpp), [MultiSourceRuntimeService.cpp](../../../src/application/MultiSourceRuntimeService.cpp) | Completion lease/ticket/hash doğrulaması, terminal freeze ve persist callback. MultiSource finish (80–100) aynı reçetenin dallarını bir terminale bağlar. İkinci station motoru olarak kopyalanmamalı. |
 | [ProductionStore.cpp](../../../src/application/ProductionStore.cpp), [DeliveryStore.hpp](../../../src/application/DeliveryStore.hpp), [cpp](../../../src/application/DeliveryStore.cpp) | Append-only QSaveFile arşiv + hash zincirli delivery journal, namespace retirement, exact payload/ACK, recovery. Execution/network/Run yetkisi vermez. Gerçek disk bütçesi aşağıdadır. |
 | [StationDeliveryLedger.hpp](../../../src/application/StationDeliveryLedger.hpp), [cpp](../../../src/application/StationDeliveryLedger.cpp) | COMM4-13: ortak archive bütçesinde station-keyed immutable journal; admission/control adapter'ları, sealed terminal/recovery ve exact ACK. [Composition sınırı](station-delivery-ledger.md); normal main entegrasyonu sonraki kartlarda. |
+| [StationDeliveryScheduler.hpp](../../../src/application/StationDeliveryScheduler.hpp), [cpp](../../../src/application/StationDeliveryScheduler.cpp) | COMM4-14: station FIFO/round-robin, bounded shared socket, partial offset ve ledger replay/2s/3retry alarmı. PeerConnection gerçek transportu kullanır; `setDeliveryLedger` ACK/RECOVER ve otomatik replay'i bağlar. [Ömür/diagnostics sınırı](station-delivery-scheduler.md). |
 | [ProjectRepository.hpp](../../../src/persistence/ProjectRepository.hpp), [cpp](../../../src/persistence/ProjectRepository.cpp) | Persistence portu: proje encode/load/save; recipe definition ve kimlikleri. save (97–106) QSaveFile/direct fallback kapalı,≤16 MiB. V4 transaction migration yeni iştir. |
 | [SpatialTransform.hpp](../../../src/domain/SpatialTransform.hpp) | Domain FrameRef + revision, mm Float64 translation, quaternion wxyz; right-handed column-vector T_target_source, exact frame composition. Frame revision bugün int; v4 immutable UUID/numeric catalogue dönüşümü ayrıca tasarlanmalı. Robot controller adapter'ı değildir. |
 | [MainWindow.hpp](../../../src/app/MainWindow.hpp), [MainWindowRuntime.cpp](../../../src/app/MainWindowRuntime.cpp) | UI composition: tek runtime_/runtimeCoordinator_; loadRuntime (109–121) oluşturur. Run dalı startRuntimeTcp (264) çağırır. Yerel production izinleri restore edilmez. |
@@ -182,6 +183,7 @@ Yeni COMM4 test/hedef adları ilgili kartın uygulamasında eklenir.
 | plc_socket_test / tests/plc_socket_test.cpp | plc_socket_runtime |
 | delivery_store_test / tests/delivery_store_test.cpp | delivery_store_contract |
 | station_delivery_ledger_test / tests/station_delivery_ledger_test.cpp | station_delivery_ledger_contract; COMM4-13 |
+| station_delivery_scheduler_test / tests/station_delivery_scheduler_test.cpp | station_delivery_scheduler_contract; COMM4-14 |
 | delivery_recovery_test / tests/delivery_recovery_test.cpp | delivery_recovery_contract |
 | delivery_retry_test / tests/delivery_retry_test.cpp | delivery_retry_contract |
 | production_recipe_test / tests/production_recipe_test.cpp | production_recipe_contract |
@@ -234,7 +236,7 @@ daraltılır. Bir sonraki kart otomatik başlatılmaz.
 | 11 | PublicationConfig/SpatialTransform baseline; yeni PublicationTemplate.hpp/.cpp | Tamam: PublicationTemplate/SlotAssignment domain, publication_template_test / publication_template_contract; UI yok |
 | 12 | PublicationService capture/dependency/requireCurrent/evaluate | Fixed-slot evaluator; aynı immutable provenance |
 | 13 | ProductionResultCodec/ProductionStore/DeliveryStore journal | StationDeliveryLedger + admission/control adapter'ları ve station_delivery_ledger_contract; [uygulanan sınır](station-delivery-ledger.md) |
-| 14 | Endpoint send/replay/tickDelivery | Shared-socket fair station scheduler; ledger otoritesi |
+| 14 | StationDeliveryScheduler + PeerConnection | Uygulandı: shared-socket fair station scheduler; ledger otoritesi; main composition sonraki kartlarda |
 | 15 | persistence/ProjectRepository, CommunicationProfiles, DeliveryStore | CommunicationMigrationPlanner/Transaction; immutable backup+manifest |
 | 16 | MainWindowCommunication/MainWindowRuntime, PublishDataEditor sınırı | Station table/view model + tek Communication; legacy data korunur |
 | 17 | PublishDataEditor typed bundle seçicisi | Slot assignment/direct-output model; machine template vs recipe yetkisi |

@@ -4,9 +4,9 @@
 
 ## Devam noktası
 
-**[COMM4-13](archive/2026-10-30-comm4-13.md) tamam.**
-F ON182/OFF143 geçti; skip1+1; main açık.
-**Sonraki COMM4-14**; [12](archive/2026-10-30-comm4-12.md).
+**[COMM4-14](archive/2026-10-30-comm4-14.md) tamam.**
+F ON183/OFF144 geçti; skip1+1; main açık.
+**Sonraki COMM4-15**; [13](archive/2026-10-30-comm4-13.md).
 Probe INI restore SEGFAULT/UI INI birikimi açık; temiz girdide kabul.
 [DOC-WORK-02](archive/2026-10-30-doc-work-02.md); ölçüm3/3 erişilemiyor.
 [EFR-04](archive/2026-10-29-efr-04.md): Wheel açık, Match/θ ertelendi.

@@ -6,6 +6,7 @@
 #include <optional>
 
 namespace visionflow {
+class StationDeliveryLedger;
 // Transport session is deliberately absent from the durable request namespace.
 struct V4RequestIdentity {
     QUuid installation, peer, epoch, station;
@@ -33,6 +34,8 @@ public:
     // returns nullopt for ACKs belonging to the production/calibration ledger.
     using ControlHandler=std::function<std::optional<CommunicationV4Frame>(const V4RequestIdentity&,const CommunicationV4Frame&)>;
     void setControlHandler(ControlHandler handler){owner();control_=std::move(handler);}
+    void setDeliveryLedger(StationDeliveryLedger* ledger){owner();ledger_=ledger;}
+    StationDeliveryLedger* deliveryLedger() const {owner();return ledger_;}
 private:
     void owner() const;
     quint32 identityReason(const IdentityCatalogue&,const CommunicationV4Header&) const;
@@ -41,6 +44,7 @@ private:
     Metadata metadata_;
     TriggerHandler trigger_;
     ControlHandler control_;
+    StationDeliveryLedger* ledger_=nullptr; // application-owned; outlives connections
     QUuid connection_,session_,peer_,epoch_,installation_;
     bool exact_=false;
     QThread* owner_=QThread::currentThread();

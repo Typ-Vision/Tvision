@@ -54,8 +54,8 @@ Caller station barriers'a `pending(station)` bilgisini bağlar ve mevcut
 StationExecutionRegistry completion sink'inde authoritative terminali `seal` eder.
 Terminal verisini üretmek, Runtime/activation history reconciliation ve normal
 main manifest/station/worker composition bu adapter'ın görevi değildir.
-Main'de tüm v4 production akışı henüz etkin değildir; retry/fair scheduling14,
-UI/composition sonraki kartlardadır. Yazılım fixture fiziksel kabul değildir.
+Main'de tüm v4 production akışı henüz etkin değildir; [retry/fair scheduler](station-delivery-scheduler.md)
+COMM4-14'te uygulanmıştır. UI/composition sonraki kartlardadır. Yazılım fixture fiziksel kabul değildir.
 
 `station_delivery_ledger_contract`: gerçek dosya store'u,100 duplicate admission,
 restart capture0, her write öncesi/sonrası fault, torn journal, yazılamayan

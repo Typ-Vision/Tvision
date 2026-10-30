@@ -133,6 +133,7 @@ target_sources(visionflow_acquisition PRIVATE src/application/StationRuntimeAdmi
 target_sources(visionflow_acquisition PRIVATE src/application/StationExecutionRegistry.cpp)
 target_sources(visionflow_acquisition PRIVATE src/application/StationControlService.cpp)
 target_sources(visionflow_acquisition PRIVATE src/application/StationDeliveryLedger.cpp)
+target_sources(visionflow_acquisition PRIVATE src/application/StationDeliveryScheduler.cpp)
 target_compile_definitions(visionflow_acquisition PRIVATE
   VISIONFLOW_DIAGNOSTIC_BUILD_TYPE="$<CONFIG>"
   VISIONFLOW_DIAGNOSTIC_UI=$<BOOL:${VISIONFLOW_BUILD_UI}>
@@ -181,6 +182,9 @@ if(BUILD_TESTING)
   add_executable(station_delivery_ledger_test tests/station_delivery_ledger_test.cpp)
   target_link_libraries(station_delivery_ledger_test PRIVATE visionflow_acquisition)
   add_test(NAME station_delivery_ledger_contract COMMAND station_delivery_ledger_test)
+  add_executable(station_delivery_scheduler_test tests/station_delivery_scheduler_test.cpp)
+  target_link_libraries(station_delivery_scheduler_test PRIVATE visionflow_acquisition)
+  add_test(NAME station_delivery_scheduler_contract COMMAND station_delivery_scheduler_test)
   add_executable(fixed_slot_publication_test tests/fixed_slot_publication_test.cpp)
   target_link_libraries(fixed_slot_publication_test PRIVATE visionflow_projects)
   add_test(NAME fixed_slot_publication_contract COMMAND fixed_slot_publication_test)

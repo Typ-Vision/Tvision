@@ -1,4 +1,5 @@
 #include "CommunicationPeerSessionService.hpp"
+#include "StationDeliveryScheduler.hpp"
 #include <QElapsedTimer>
 #include <QPointer>
 #include <QTimer>
@@ -85,6 +86,9 @@ CommunicationV4Frame CommunicationPeerSessionService::handle(const QUuid& connec
         try{key=requestIdentity(connection,f);}catch(...){return response(f,190,10);}
         try{if(auto result=control_(*key,f))return *result;}catch(...){return response(f,190,8);}
     }
+    if((f.header.kind==11 || f.header.kind==12) && ledger_){
+        try{if(auto result=ledger_->handle(requestIdentity(connection,f),f))return *result;}catch(...){return response(f,190,8);}
+    }
     if(f.header.kind==10 && trigger_){
         std::optional<V4RequestIdentity> key;
         try{key=requestIdentity(connection,f);}catch(...){return response(f,190,10);}
@@ -102,7 +106,7 @@ V4RequestIdentity CommunicationPeerSessionService::requestIdentity(const QUuid& 
 namespace {
 class PeerConnection final : public QObject {
 public:
-    PeerConnection(QTcpSocket& socket,CommunicationPeerSessionService& service):QObject(&socket),socket_(socket),service_(service){
+    PeerConnection(QTcpSocket& socket,CommunicationPeerSessionService& service):QObject(&socket),socket_(socket),service_(service),queue_(service.deliveryLedger()){
         accepted_=service_.open(id_);socket_.setReadBufferSize(4096);clock_.start();timer_.setInterval(25);
         connect(&socket_,&QTcpSocket::readyRead,this,[this]{pump();});
         connect(&socket_,&QTcpSocket::bytesWritten,this,[this]{write();});
@@ -111,20 +115,27 @@ public:
     }
     ~PeerConnection(){service_.close(id_);}
 private:
-    void write(){try{while(true){const auto bytes=queue_.pendingBytes(socket_.bytesToWrite());if(bytes.isEmpty())break;const auto n=socket_.write(bytes.data(),bytes.size());if(n<0)throw std::runtime_error("V4 socket write");if(!n)break;queue_.consumeWritten(n);}if(closing_ && !queue_.queuedBytes())socket_.disconnectFromHost();}catch(...){socket_.abort();}}
+    void write(){try{while(true){const auto bytes=queue_.pendingBytes(socket_.bytesToWrite());if(bytes.isEmpty())break;const auto n=socket_.write(bytes.data(),bytes.size());if(n<0)throw std::runtime_error("V4 socket write");if(!n)break;queue_.consumeWritten(n,clock_.elapsed());}if(closing_ && !queue_.queuedBytes())socket_.disconnectFromHost();}catch(...){socket_.abort();}}
     void pump(){
         if(socket_.state()!=QAbstractSocket::ConnectedState)return;
         try{
             if(!accepted_ && clock_.elapsed()>=2000){socket_.abort();return;}
             framer_.tick(clock_.elapsed());if(closing_)return;
+            if(accepted_)queue_.tick(clock_.elapsed(),service_.session(),[this](const auto& frame){return service_.authorize(id_,frame)==0;},socket_.bytesToWrite());
+            write();
+            if(!queue_.canRead(socket_.bytesToWrite()))return;
             const auto bytes=socket_.read(qMin<qint64>(socket_.bytesAvailable(),2048));
             const auto frames=framer_.feed(bytes,clock_.elapsed());
-            for(const auto& frame:frames){if(!queue_.enqueue(service_.handle(id_,frame)))throw std::runtime_error("V4 response queue full");if(!accepted_){closing_=true;break;}}
+            for(const auto& frame:frames){
+                const auto response=service_.handle(id_,frame);
+                if(accepted_ && frame.header.kind==1)queue_.bindSession(service_.session());
+                if(!queue_.enqueue(response))throw std::runtime_error("V4 response queue full");if(!accepted_){closing_=true;break;}
+            }
             write();
         }catch(...){socket_.abort();}
     }
     QTcpSocket& socket_;CommunicationPeerSessionService& service_;QUuid id_=QUuid::createUuid();
-    CommunicationV4Framer framer_;CommunicationV4WriteQueue queue_;QElapsedTimer clock_;QTimer timer_;bool accepted_=false,closing_=false;
+    CommunicationV4Framer framer_;StationDeliveryScheduler queue_;QElapsedTimer clock_;QTimer timer_;bool accepted_=false,closing_=false;
 };
 }
 void attachCommunicationPeer(QTcpSocket& socket,CommunicationPeerSessionService& service){new PeerConnection(socket,service);}
