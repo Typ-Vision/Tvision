@@ -37,6 +37,11 @@ void CommunicationListenerOwnership::observeLegacy(QTcpServer& server) {
     legacyListeners.removeIf([](const auto& p){return p.isNull();});
     if(!legacyListeners.contains(&server))legacyListeners.append(&server);
 }
+void CommunicationListenerOwnership::requireMigrationAllowed() {
+    compositionOwner();
+    if(v4Selection && v4Selection->isListening())throw std::runtime_error("Stop v4 listener before migration/rollback");
+    for(const auto& legacy:legacyListeners)if(legacy && legacy->isListening())throw std::runtime_error("Stop legacy listeners before migration/rollback");
+}
 void CommunicationServerProfiles::validate(const CommunicationServerProfile& p) {
     if(QHostAddress(p.address).isNull() || !p.port || p.peerPolicy!="single-trusted-local-network"
        || p.parserDeadlineMs<10 || p.parserDeadlineMs>60000 || p.ackTimeoutMs<10 || p.ackTimeoutMs>60000

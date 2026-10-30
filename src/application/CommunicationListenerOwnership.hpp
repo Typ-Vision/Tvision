@@ -9,5 +9,6 @@ public:
     static void releaseV4(QTcpServer&);
     static void requireLegacyAllowed();
     static void observeLegacy(QTcpServer&);
+    static void requireMigrationAllowed();
 };
 }

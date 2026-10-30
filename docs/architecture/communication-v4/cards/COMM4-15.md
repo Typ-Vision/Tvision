@@ -1,6 +1,8 @@
 # COMM4-15 — Transactional legacy migration
 
-Durum: planlandı, başlanmadı. Model: **GPT-6.1 Sol / medium**.
+Durum: tamamlandı; Profil F yazılım kabulü geçti. Model: **GPT-6.1 Sol / medium**.
+Uygulama ve rollback sözleşmesi [migration](../migration.md), kanıt/sınırlar
+[kapanış kaydı](../../../archive/2026-10-30-comm4-15.md) içindedir.
 Tek oturum kapsamı ve ortak kurallar [indekste](../README.md), kapanış
 kuralları [V0](../verification.md) içindedir.
 

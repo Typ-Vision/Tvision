@@ -134,6 +134,7 @@ target_sources(visionflow_acquisition PRIVATE src/application/StationExecutionRe
 target_sources(visionflow_acquisition PRIVATE src/application/StationControlService.cpp)
 target_sources(visionflow_acquisition PRIVATE src/application/StationDeliveryLedger.cpp)
 target_sources(visionflow_acquisition PRIVATE src/application/StationDeliveryScheduler.cpp)
+target_sources(visionflow_acquisition PRIVATE src/application/CommunicationMigration.cpp)
 target_compile_definitions(visionflow_acquisition PRIVATE
   VISIONFLOW_DIAGNOSTIC_BUILD_TYPE="$<CONFIG>"
   VISIONFLOW_DIAGNOSTIC_UI=$<BOOL:${VISIONFLOW_BUILD_UI}>
@@ -179,6 +180,9 @@ target_sources(visionflow_acquisition PRIVATE src/application/ReferenceService.c
 target_sources(visionflow_acquisition PRIVATE src/application/PoseRoiService.cpp src/vision/RectangleMask.cpp)
 target_sources(visionflow_acquisition PRIVATE src/application/WorldTrackingService.cpp)
 if(BUILD_TESTING)
+  add_executable(communication_migration_test tests/communication_migration_test.cpp)
+  target_link_libraries(communication_migration_test PRIVATE visionflow_acquisition)
+  add_test(NAME communication_migration_contract COMMAND communication_migration_test)
   add_executable(station_delivery_ledger_test tests/station_delivery_ledger_test.cpp)
   target_link_libraries(station_delivery_ledger_test PRIVATE visionflow_acquisition)
   add_test(NAME station_delivery_ledger_contract COMMAND station_delivery_ledger_test)

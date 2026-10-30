@@ -2,7 +2,7 @@
 
 **Durum: sıralı uygulama sürüyor; hedef sistem henüz tamamlanmadı.**
 29 Ekim 2026. Kullanıcı seçimi: GPT-6.1 Sol / medium. Varsayılan oturum kapsamı
-tek karttır; ajanlar paralel çalışmaz. **Sonraki görev: [COMM4-15](cards/COMM4-15.md).**
+tek karttır; ajanlar paralel çalışmaz. **Sonraki görev: [COMM4-16](cards/COMM4-16.md).**
 
 **COMM4-01 tamam:** [güncel kaynak, test ve kart sahiplik haritası](source-map.md).
 **COMM4-02 tamam:** [wire fixture freeze](freeze-comm4-02.md).
@@ -51,6 +51,10 @@ Normal main composition sonraki entegrasyonlarda kalır.
 Bounded socket, partial frame ve 2s/3retry alarmı; ledger tek pending otoritesidir.
 Normal main ve UI alarm composition'ı sonraki kartlardadır.
 
+**COMM4-15 tamam:** [Transactional legacy migration ve rollback](migration.md).
+Read-only analiz, exact backup/manifest, unsupported/pending gate ve atomik seçim;
+normal main/UI ve güncel catalogue authority sahipliği COMM4-16'da bağlanmalıdır.
+
 ## Okuma ve kapsam
 
 Başlangıç paketi AGENTS, `docs/progress.md`, kök README ve çalışma protokolüdür.
@@ -90,7 +94,7 @@ fiziksel PLC/robot ve dağıtım engelleri bu planla kapanmaz.
 | [12](cards/COMM4-12.md) | Immutable publication değerlendirmesi — tamam | 09,11 |
 | [13](cards/COMM4-13.md) | Kalıcı terminal ve exact ACK ledger — tamam | 07,12 |
 | [14](cards/COMM4-14.md) | Reconnect/retry/backpressure — tamam | 13 |
-| [15](cards/COMM4-15.md) | Transactional legacy migration | 03,14 |
+| [15](cards/COMM4-15.md) | Transactional legacy migration — tamam | 03,14 |
 | [16](cards/COMM4-16.md) | Tek Communication UI | 05,10,14,15 |
 | [17](cards/COMM4-17.md) | Publish assignment UI | 11,12,16 |
 | [18](cards/COMM4-18.md) | Robot/optik araştırma ve 6D uygunluk kapısı | 01,02 |
