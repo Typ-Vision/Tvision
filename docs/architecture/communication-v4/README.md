@@ -2,7 +2,7 @@
 
 **Durum: sıralı uygulama sürüyor; hedef sistem henüz tamamlanmadı.**
 29 Ekim 2026. Kullanıcı seçimi: GPT-6.1 Sol / medium. Varsayılan oturum kapsamı
-tek karttır; ajanlar paralel çalışmaz. **Sonraki görev: [COMM4-13](cards/COMM4-13.md).**
+tek karttır; ajanlar paralel çalışmaz. **Sonraki görev: [COMM4-14](cards/COMM4-14.md).**
 
 **COMM4-01 tamam:** [güncel kaynak, test ve kart sahiplik haritası](source-map.md).
 **COMM4-02 tamam:** [wire fixture freeze](freeze-comm4-02.md).
@@ -43,6 +43,10 @@ Recipe dışı revision, strict schema ve type/unit/whole Pose doğrulaması.
 **COMM4-12 tamam:** [immutable fixed-slot evaluator](publication-evaluation.md).
 Exact cycle/provenance/DAG, rational ties-even ve seal öncesi validity verisi.
 
+**COMM4-13 tamam:** [Kalıcı station terminal/exact ACK ledger](station-delivery-ledger.md).
+Restart recovery, ayrı normal/control rezervi ve ortak archive headroom.
+Normal main composition sonraki entegrasyonlarda kalır.
+
 ## Okuma ve kapsam
 
 Başlangıç paketi AGENTS, `docs/progress.md`, kök README ve çalışma protokolüdür.
@@ -80,7 +84,7 @@ fiziksel PLC/robot ve dağıtım engelleri bu planla kapanmaz.
 | [10](cards/COMM4-10.md) | Ortak kamera kaynak arbitrajı — tamam | 09 |
 | [11](cards/COMM4-11.md) | Sabit şablon ve typed assignment domain — tamam | 04 |
 | [12](cards/COMM4-12.md) | Immutable publication değerlendirmesi — tamam | 09,11 |
-| [13](cards/COMM4-13.md) | Kalıcı terminal ve exact ACK ledger | 07,12 |
+| [13](cards/COMM4-13.md) | Kalıcı terminal ve exact ACK ledger — tamam | 07,12 |
 | [14](cards/COMM4-14.md) | Reconnect/retry/backpressure | 13 |
 | [15](cards/COMM4-15.md) | Transactional legacy migration | 03,14 |
 | [16](cards/COMM4-16.md) | Tek Communication UI | 05,10,14,15 |

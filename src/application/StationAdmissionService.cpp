@@ -32,7 +32,7 @@ const char* detail(const StationAdmissionBarriers& b){
 }
 bool recordMatches(const StationAdmissionRecord& record,const CommunicationV4Frame& f){
     const auto& h=record.replay.header;
-    if((h.kind!=110 && h.kind!=111) || h.stationKey!=f.header.stationKey || h.requestId!=f.header.requestId
+    if((h.kind!=110 && h.kind!=111 && !(h.kind==190 && C::uint32(record.replay.body,76)==9)) || h.stationKey!=f.header.stationKey || h.requestId!=f.header.requestId
        || h.peer!=f.header.peer || h.epoch!=f.header.epoch || h.recipeRevisionKey!=f.header.recipeRevisionKey
        || h.templateRevisionKey!=f.header.templateRevisionKey || h.activation!=f.header.activation)return false;
     try{C::encode(record.replay,V4Direction::Response);return true;}catch(...){return false;}
@@ -78,7 +78,7 @@ CommunicationV4Frame StationAdmissionService::trigger(const V4RequestIdentity& k
         if(!current || !same(*snapshot,*current))return response(f,4,"SNAPSHOT_CHANGED");
         barriers=boundary_.barriers(key.station);
         if(auto reason=gate(barriers,origin))return response(f,reason,detail(barriers));
-        StationAdmissionIntent intent{key,fingerprint,response(f,0,"",true),*snapshot};
+        StationAdmissionIntent intent{key,fingerprint,response(f,0,"",true),*snapshot,f};
         active_.insert(key.station,{key,fingerprint,intent.accepted,std::move(reservation.lease)});
         try{store_.commit(intent);}catch(...){active_[key.station].lease.reset();active_[key.station].blockedReason=8;return response(f,8,"PENDING_STORAGE");}
         try{boundary_.begin(intent,active_[key.station].lease);}catch(...){active_[key.station].blockedReason=9;return response(f,9,"RECOVERY_REQUIRED");}

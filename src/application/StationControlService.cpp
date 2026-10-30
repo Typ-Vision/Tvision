@@ -20,7 +20,7 @@ bool valid(const StationControlRecord& r,const CommunicationV4Frame& request){
         if(r.fingerprint!=C::requestFingerprint(C::encode(request,V4Direction::Request)))return false;
         C::encode(r.replay,V4Direction::Response);
         const auto& a=r.request.header;const auto& b=r.replay.header;
-        if((b.kind!=110 && b.kind!=111) || b.stationKey!=a.stationKey || b.requestId!=a.requestId || b.peer!=a.peer || b.epoch!=a.epoch
+        if((b.kind!=110 && b.kind!=111 && !(b.kind==190 && C::uint32(r.replay.body,76)==9)) || b.stationKey!=a.stationKey || b.requestId!=a.requestId || b.peer!=a.peer || b.epoch!=a.epoch
             || C::uint32(r.replay.body,824)!=a.kind)return false;
         // SELECT terminal intentionally has a NEW activation/header. Its old
         // request is retained separately for dedup rather than compared to it.
@@ -115,7 +115,7 @@ std::optional<CommunicationV4Frame> StationControlService::handle(const V4Reques
                 if(old->request.header.kind!=4 && old->request.header.kind!=5 && old->request.header.kind!=6)return {};
                 const auto& t=old->replay;
                 if(t.header.kind!=111 || !headerEqual(t.header,f.header) || f.body.first(16)!=t.body.first(16) || f.body.sliced(16,32)!=t.body.sliced(32,32))return reject(14);
-                C::encode(t,V4Direction::Response);store_->acknowledge(key);
+                C::encode(t,V4Direction::Response);store_->acknowledge(key,f);
                 auto r=response(f,112,0);r.body.replace(0,16,t.body.first(16));r.body.replace(32,32,t.body.sliced(32,32));C::putUInt32(r.body,100,4);C::putUInt32(r.body,824,C::uint32(t.body,824));return r;
             }
             if(old->fingerprint!=fingerprint)return reject(6);

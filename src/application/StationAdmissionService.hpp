@@ -29,6 +29,7 @@ struct StationAdmissionIntent {
     QByteArray fingerprint;
     CommunicationV4Frame accepted;
     StationAdmissionSnapshot snapshot;
+    CommunicationV4Frame request; // original body survives terminal/reconnect
 };
 class StationAdmissionStore {
 public:

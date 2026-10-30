@@ -27,6 +27,7 @@ public:
     virtual void seal(const V4RequestIdentity&,const CommunicationV4Frame& terminal)=0;
     // Commit exact ACK idempotently; must never release another record/slot.
     virtual void acknowledge(const V4RequestIdentity&)=0;
+    virtual void acknowledge(const V4RequestIdentity& key,const CommunicationV4Frame&){acknowledge(key);}
 };
 class StationControlService final {
 public:

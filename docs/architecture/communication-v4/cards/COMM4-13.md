@@ -1,6 +1,6 @@
 # COMM4-13 — Kalıcı terminal ve exact ACK ledger
 
-Durum: planlandı, başlanmadı. Model: **GPT-6.1 Sol / medium**.
+Durum: tamamlandı. [Kapanış](../../../archive/2026-10-30-comm4-13.md). Model: **GPT-6.1 Sol / medium**.
 Tek oturum kapsamı ve ortak kurallar [indekste](../README.md), kapanış
 kuralları [V0](../verification.md) içindedir.
 
