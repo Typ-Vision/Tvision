@@ -6,6 +6,8 @@ görev” ifadeleri yazıldıkları tarihe aittir.
 
 | Dönem / görev | Kayıt |
 | --- | --- |
+| 30 Ekim 2026 — COMM4-16 | [Tek Communication ve normal main entegrasyonu; kullanıcı isteğiyle hafif doğrulama, açık native/ON kabul](2026-10-30-comm4-16.md) |
+| 30 Ekim 2026 — COMM4-16 açık | [Tek Communication ara devri; hedefli ON/OFF geçti, native kilit ve main composition açık](2026-10-30-comm4-16-pending.md) |
 | 30 Ekim 2026 — COMM4-15 | [Transactional migration, backup/manifest, 38 crash noktası ve ledger'i koruyan rollback; tam Release ON/OFF](2026-10-30-comm4-15.md) |
 | 30 Ekim 2026 — COMM4-14 | [Adil station delivery, reconnect/retry/backpressure ve tam Release ON/OFF kabulü](2026-10-30-comm4-14.md) |
 | 30 Ekim 2026 — COMM4-13 | [Kalıcı station ledger, exact ACK/recovery, headroom sınırı ve tam Release ON/OFF kabulü](2026-10-30-comm4-13.md) |

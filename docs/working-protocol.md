@@ -47,6 +47,12 @@ push yok. Başka ajan açma. Son bildirim: durum, commit, kanıt yolu, açık en
 
 ## 3. Doğrulamayı değişikliğe göre seç
 
+**30 Ekim kullanıcı tercihi (öncelikli):** Kısa, ilgili kontrol yeterlidir.
+Kullanıcı ayrıca istemedikçe fonksiyon bazında ağır testler, geniş/tam suite
+ve başarılı koşum tekrarları başlatılmaz. Derleme/diff ve gerekli kısa hedefli
+kontrol seçilir; yapılmayan kabul açıkça kaydedilir. Aşağıdaki geniş matris bu
+tercihin önüne geçmez.
+
 | Değişiklik | Asgari doğrulama |
 | --- | --- |
 | Yalnız belge | Belge/link/boyut kontrolü ve diff kontrolü; build gerekmez. |

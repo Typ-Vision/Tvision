@@ -22,11 +22,11 @@ F yazılım kabulü; dispatch sonraki kartlardadır.
 
 **COMM4-07 tamam:** [HELLO/session ve peer sahipliği](peer-session.md).
 Listener codec'e bağlı; discovery/exact negotiation ve stale/retired fence var.
-Normal main catalogue manifest provider'ı henüz yok; station portu aşağıda08'dedir.
+Normal main catalogue/status provider'ı16'da bağlıdır; capability sınırı aşağıdadır.
 
 **COMM4-08 tamam:** [station admission ve mevcut Runtime adapter'ı](station-admission.md).
 Exact snapshot, atomik resource/durable-intent bariyeri ve session TRIGGER portu;
-normal main station/ledger/worker composition'ı sonraki entegrasyonları bekler.
+normal main station/ledger/worker composition'ı16'da bağlandı.
 
 **COMM4-08a tamam:** [PLC reçete seçimi ve ortak Auto/Stop portu](station-control.md).
 Durable control port, generation fence ve exact kontrol ACK'i; gerçek disk ledger13'te.
@@ -45,15 +45,21 @@ Exact cycle/provenance/DAG, rational ties-even ve seal öncesi validity verisi.
 
 **COMM4-13 tamam:** [Kalıcı station terminal/exact ACK ledger](station-delivery-ledger.md).
 Restart recovery, ayrı normal/control rezervi ve ortak archive headroom.
-Normal main composition sonraki entegrasyonlarda kalır.
+Normal main composition16'da bağlıdır; fiziksel kabul değildir.
 
 **COMM4-14 tamam:** [adil station delivery/reconnect scheduler](station-delivery-scheduler.md).
 Bounded socket, partial frame ve 2s/3retry alarmı; ledger tek pending otoritesidir.
-Normal main ve UI alarm composition'ı sonraki kartlardadır.
+Normal main scheduler14 yolunu, UI gerçek ledger pending durumunu kullanır.
 
 **COMM4-15 tamam:** [Transactional legacy migration ve rollback](migration.md).
 Read-only analiz, exact backup/manifest, unsupported/pending gate ve atomik seçim;
-normal main/UI ve güncel catalogue authority sahipliği COMM4-16'da bağlanmalıdır.
+normal main/UI ve güncel catalogue authority sahipliği16'da bağlıdır.
+
+**COMM4-16 yazılım uygulaması:** [Tek Communication ve normal main composition](communication-workspace.md).
+Immutable station/control/dispatch, typed terminal/exact ACK ve migration startup
+authority bağlıdır. Normal production yolu Image File'dır; native/webcam provider,
+whole Pose ve fiziksel kabul açılmaz. Native UI etkileşim kabulü uzak bağlantı /
+kilit ekranı nedeniyle açıktır; bu açık tamamlanmış gibi raporlanmaz.
 
 ## Okuma ve kapsam
 

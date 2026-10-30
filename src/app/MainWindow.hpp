@@ -31,6 +31,8 @@ class QCloseEvent;
 class QFormLayout;
 namespace visionflow {
 class DeliveryDiagnosticsWidget;
+class CommunicationPanel;
+class CommunicationWorkspace;
 class ImageViewer;
 class EdgeProfileView;
 class CalibrationOverview;
@@ -39,6 +41,7 @@ class WorkspacePanel;
 class MainWindow : public QMainWindow {
 public:
     explicit MainWindow(const QString& settingsFile);
+    void bindCommunication(CommunicationWorkspace*);
     ~MainWindow() override;
     bool verifyMultiSource(const QString& artifacts);
     bool verifyMultiSourceRuntime(const QString& artifacts);
@@ -250,6 +253,7 @@ private:
     std::optional<IndustrialExecutionInputs> runtimeCameraComposition_; // in-memory fixture composition only
     std::unique_ptr<RuntimeCoordinator> runtimeCoordinator_;
     DeliveryDiagnosticsWidget* deliveryDiagnostics_=nullptr;
+    CommunicationPanel* communicationPanel_=nullptr;
     std::unique_ptr<PlcRuntimeSocket> plc_;
     std::unique_ptr<InputSnapshotStore> tcpInputs_;
     std::unique_ptr<DeliveryStore> tcpLedger_;

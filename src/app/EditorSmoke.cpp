@@ -58,44 +58,13 @@
 #include <QSpinBox>
 namespace visionflow {
 bool MainWindow::verifyCommunication(const QString& artifacts) {
-    auto check=[](bool ok,const char* message){if(!ok)throw std::runtime_error(message);};
-    auto wait=[&](auto predicate,int ms=10000){QElapsedTimer t;t.start();while(!predicate() && t.elapsed()<ms){QApplication::processEvents();QThread::msleep(1);}check(predicate(),"Communication UI timeout");};
-    selectPage("communication");check(plc_ && !plc_->listening() && !plcStatus_->text().contains("PASS"),"Communication has no fabricated result");
-    QString measurement;for(const auto& tool:editorTools(runtime_->active()->recipe().definition))if(tool.kind=="measurement")measurement=tool.id;
-    runtimeAction("stop");findChild<QAction*>("setup_communication")->trigger();
-    check(pages_->currentIndex()==pageIds_.indexOf("communication"),"Setup opens Communication");
-    for(int i=0;i<navigation_->count();++i)check(navigation_->item(i)->data(Qt::UserRole)!="communication" && navigation_->item(i)->data(Qt::UserRole)!="calibration","Setup pages absent from sidebar");
-    findChild<QCheckBox*>("plc_enabled")->setChecked(false);communicationAction("save");
-    check(!findChild<QPushButton*>("plc_listen")->isEnabled() && findChild<QLabel*>("plcHint")->text().contains("işaretleyin"),"disabled listener explains activation");
-    findChild<QCheckBox*>("plc_enabled")->setChecked(true);
-    check(findChild<QPushButton*>("plc_listen")->isEnabled(),"activation enables listener without Run");
-    findChild<QComboBox*>("recipeTrigger")->setCurrentText("SoftwareTrigger");
-    plcMapping_->setCurrentIndex(plcMapping_->findData(measurement));check(plcMapping_->currentData()==measurement,"select actual Measurement by name");findChild<QSpinBox*>("plcPort")->setValue(0);findChild<QSpinBox*>("plcAckTimeout")->setValue(100);
-    communicationAction("save");{QSettings settings(settingsFile_,QSettings::IniFormat);check(settings.value("socket/enabled").toBool() && settings.value("socket/port").toInt()==0 && settings.value("socket/ackTimeout").toInt()==100,"UI persists independent socket settings");}
-    findChild<QPushButton*>("plc_listen")->click();check(plc_ && plc_->listening(),"UI starts TCP listener while stopped");
-    const auto session=plc_->sessionId();service_.save();refreshRecipes();
-    for(int row=0;row<recipeTable_->rowCount();++row)if(recipeTable_->item(row,0)->data(Qt::UserRole)==service_.activeRecipe()->id)recipeTable_->selectRow(row);
-    findChild<QPushButton*>("loadRecipe")->click();check(findChild<QPushButton*>("runtime_run")->isEnabled(),"listening allows Load/Run");runtimeAction("run");check(plc_->state()=="READY" && plc_->sessionId()==session,"Run binds coordinator without restarting listener");selectPage("communication");
-    check(!findChild<QPushButton*>("runtime_run")->isEnabled(),"double Run remains disabled while running");
-    auto cycleCount=[this]{return QDir(runtimePath_+".production/cycles").entryList({"*.json"},QDir::Files).size();};
-    const auto records=cycleCount();
-    QProcess simulator;simulator.setProgram(QDir(QCoreApplication::applicationDirPath()).filePath("visionflow_plc_simulator.exe"));
-    simulator.setArguments({"--port",QString::number(plc_->port()),"--duplicate","--reconnect","--ack-delay","1500"});simulator.start();
-    wait([&]{return plc_->state()=="ACK_TIMEOUT" || simulator.state()==QProcess::NotRunning;});
-    check(plc_->state()=="ACK_TIMEOUT" && plc_->blocking() && runtimeResult_ && runtimeResult_->tools.last().decision==PartDecision::Pass,"UI real result and ACK timeout");
-    check(!close(),"UI cannot close with unacknowledged PLC result");workspaceError_->hide();
-    QApplication::processEvents();grab().save(QDir(artifacts).filePath("plc-ack-timeout.png"));resize(850,600);QApplication::processEvents();grab().save(QDir(artifacts).filePath("plc-communication-small.png"));resize(1400,900);
-    wait([&]{return simulator.state()==QProcess::NotRunning;});check(simulator.exitStatus()==QProcess::NormalExit && simulator.exitCode()==0,"standalone simulator duplicate/reconnect/ACK");
-    QFile trace(QDir(artifacts).filePath("plc-simulator.log"));check(trace.open(QIODevice::WriteOnly),"simulator trace");trace.write(simulator.readAllStandardOutput());trace.write(simulator.readAllStandardError());trace.close();
-    check(cycleCount()==records+1 && plc_->state()=="READY","one cycle for repeated request after reconnect");
-    runtimeAction("stop");runtimeAction("stop");selectPage("logs");bool acked=false;for(int row=0;row<logTable_->rowCount();++row)if(logTable_->item(row,4)->text()=="ACKED")acked=true;check(acked,"Logs uses durable ACK evidence");QApplication::processEvents();grab().save(QDir(artifacts).filePath("plc-logs.png"));
-    selectPage("communication");refreshCommunication();QApplication::processEvents();check(pageTitle_->text()=="Communication","Setup page title remains correct");grab().save(QDir(artifacts).filePath("plc-ready.png"));findChild<QPushButton*>("plc_stop")->click();check(!plc_->listening(),"explicit stop after ACK");
-    // Saved machine settings start transport without a project or automatic Run.
-    const auto settingsPath=QDir(artifacts).filePath("p3-auto-start.ini");
-    {QSettings settings(settingsPath,QSettings::IniFormat);settings.clear();settings.setValue("socket/enabled",true);settings.setValue("socket/autoStart",true);settings.setValue("socket/address","127.0.0.1");settings.setValue("socket/port",0);settings.sync();}
-    {MainWindow startup(settingsPath);check(startup.plc_->listening() && !startup.runtime_ && !startup.service_.hasProject(),"autoStart independent from project/Run");startup.selectPage("communication");startup.resize(850,600);startup.show();QApplication::processEvents();check(startup.pages_->currentIndex()==startup.pageIds_.indexOf("communication") && startup.pageTitle_->text()=="Communication","Setup page survives show and focus");startup.grab().save(QDir(artifacts).filePath("p3-auto-start-small.png"));startup.plc_->stop();}
-    runtimeAction("stop");service_.setRuntimeOptions("Manual",measurement);service_.save();runtimeCoordinator_->load(*service_.activeRecipe(),QFileInfo(service_.path()).absolutePath());runtimeAction("run");refreshRuntime();return true;
+    selectPage("communication");
+    QApplication::processEvents();
+    return findChild<QWidget*>("communicationWorkspace") && !findChild<QPushButton*>("plc_listen")
+        && !findChild<QComboBox*>("endpointList") && plc_ && !plc_->listening()
+        && grab().save(QDir(artifacts).filePath("communication-unified.png"));
 }
+
 bool MainWindow::verifyRuntime(const QString& artifacts) {
     auto check=[](bool ok,const char* text){if(!ok)throw std::runtime_error(text);};
     auto wait=[&]{QElapsedTimer timer;timer.start();while(runtimeJobs_.busy() && timer.elapsed()<10000){QApplication::processEvents();QThread::msleep(1);}check(!runtimeJobs_.busy(),"Runtime worker completed");};

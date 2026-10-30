@@ -8,6 +8,8 @@
 #include "persistence/StationIdentityStore.hpp"
 #include "domain/PublicationConfig.hpp"
 #include "domain/ToolDefinition.hpp"
+#include "domain/ToolRegistry.hpp"
+#include "domain/IndustrialSourceReference.hpp"
 #include <QCryptographicHash>
 #include <QDirIterator>
 #include <QFile>
@@ -104,6 +106,11 @@ CommunicationMigrationPlan CommunicationMigrationPlanner::analyze() const {
     const auto templ=bind(catalogue,{CatalogueCategory::TemplateRevision,in.publication.id,in.publication.revision,{}},"Publication template");
     for(auto& recipe:project.recipes){
         const auto groups=recipeOutputGroups(recipe.definition);auto tools=editorTools(recipe.definition);
+        for(const auto& t:tools)if(t.enabled && ToolRegistry::get(t.kind).acquisitionSource){
+            const auto camera=t.kind=="industrial_camera"?QUuid(IndustrialSourceReference::fromJson(t.parameters["sourceReference"].toObject()).camera.value):QUuid(t.id);
+            need(!camera.isNull(),"Saved acquisition source identity required");
+            bind(catalogue,{CatalogueCategory::Camera,camera,{},{}},t.name);
+        }
         validatePublicationBindings(recipe.definition);
         if(groups.size()>1)issue(recipe.id,"MULTI_ENDPOINT_FANOUT");
         if(recipePublicationAssignments(recipe.definition))issue(recipe.id,"ALREADY_HAS_V4_ASSIGNMENTS");
@@ -202,6 +209,21 @@ QByteArray CommunicationMigrationTransaction::pointerDigest() const {
     auto p=workspace_+"/active.json";return QFileInfo::exists(p)?hash(read(p)):QByteArray{};
 }
 QByteArray CommunicationMigrationTransaction::ledgerDigest() const{return hash(json(inventory(input_.archiveDirectory)));}
+QJsonObject CommunicationMigrationTransaction::resolveSelection(const QString& workspace){
+    const auto w=path(workspace,true);const auto pointer=object(read(w+"/active.json"));
+    CommunicationMigrationInput in;in.archiveDirectory=pointer["archive"].toString();
+    CommunicationMigrationTransaction transaction(in,w);const auto selected=transaction.active();
+    const auto package=selected["package"].toString();const auto m=transaction.manifest(package,selected["manifest"].toString().toLatin1());
+    need(m["unsupported"].toArray().isEmpty() && m["pending"].toArray().isEmpty(),"Unsupported migration selection");
+    QJsonObject result=selected;result["projectDirectory"]=QFileInfo(m["sources"].toObject()["project"].toObject()["path"].toString()).absolutePath();
+    result["sourceRegistry"]=m["sources"].toObject()["registry"].toObject()["path"];
+    result["station"]=m["station"];result["mapping"]=m["mapping"];
+    const auto dir=w+"/"+package;
+    for(const auto& name:{"project","registry","template","server"}){result[name]=dir+"/"+name+".json";result[QString(name)+"Digest"]=m["files"].toObject()[QString(name)+".json"];}
+    result["baselineRegistry"]=dir+"/legacy-registry.json";
+    result["baselineRegistryDigest"]=m["files"].toObject()["legacy-registry.json"];
+    return result;
+}
 QByteArray CommunicationMigrationTransaction::prepare(const QString& package,const QByteArray& reviewed){
     safeName(package);const auto plan=CommunicationMigrationPlanner(input_).analyze();need(plan.digest()==reviewed,"Stale migration analysis");
     const auto dir=workspace_+"/"+package;need(!QFileInfo::exists(dir) && QDir().mkdir(dir),"Migration package already exists/unavailable");boundary("package-created");
@@ -244,8 +266,11 @@ void CommunicationMigrationTransaction::rollback(const QByteArray& expected,cons
     need(uid(c.installation)==m["installation"] && pending(input_,c).isEmpty(),"Rollback pending work requires drain/reconcile");
     // Binary/config identity is checked against the immutable backup, while the
     // archive stays live. Never replace the ledger with a backup snapshot.
-    for(const auto pair:{std::pair{"project",input_.projectPath},std::pair{"profiles",input_.profilesPath},std::pair{"binary",input_.binaryPath},std::pair{"registry",input_.registryPath}})
+    for(const auto pair:{std::pair{"project",input_.projectPath},std::pair{"profiles",input_.profilesPath},std::pair{"binary",input_.binaryPath}})
         need(hash(read(pair.second,256*1024*1024))==m["sources"].toObject()[pair.first].toObject()["sha256"].toString().toLatin1(),"Rollback binary/config differs from backup");
+    const auto original=JsonStationIdentityStore::decode(read(workspace_+"/"+o["package"].toString()+"/legacy-registry.json"));
+    const auto staged=JsonStationIdentityStore::decode(read(workspace_+"/"+o["package"].toString()+"/registry.json"));
+    if(c!=original && c!=staged)validateIdentityTransition(staged,c);
     boundary("rollback-validated");o["mode"]="legacy";o["revision"]=uid(QUuid::createUuid());swap(o,expected);
 }
 }

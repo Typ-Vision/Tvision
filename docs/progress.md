@@ -4,11 +4,11 @@
 
 ## Devam noktası
 
-**[COMM4-15](archive/2026-10-30-comm4-15.md) tamam.**
-F ON184/OFF145 geçti; skip1+1; 38crash; main açık.
-**Sonraki COMM4-16**; [14](archive/2026-10-30-comm4-14.md).
-Probe INI restore SEGFAULT/UI INI birikimi açık; temiz girdide kabul.
-[DOC-WORK-02](archive/2026-10-30-doc-work-02.md); ölçüm3/3 erişilemiyor.
+**[COMM4-16 yazılım](archive/2026-10-30-comm4-16.md).**
+Tek UI/main/Auto/migration bağlı; hedef ON14/OFF12 geçti.
+Native/ON ölçüm timeout açık; OFF kullanıcı isteğiyle kesildi.
+**Tercih: kısa kontrol; ağır tekrar yok.** 17 başlatılmadı.
+INI birikimi/probe restore SEGFAULT açık; temiz test girdisi kullan.
 [EFR-04](archive/2026-10-29-efr-04.md): Wheel açık, Match/θ ertelendi.
 
 [D:/TVision](archive/2026-10-28-dev-drive-01.md): OpenCV geçti; CTest kısmi.

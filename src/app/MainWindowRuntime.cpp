@@ -55,6 +55,8 @@ QWidget* MainWindow::makeRuntime() {
     layout->addLayout(actions);
     auto* tcpRow=new QHBoxLayout;auto* tcp=new QCheckBox("Run ile TCP v3 profilini aç");tcp->setObjectName("runtimeTcpV3");tcpRow->addWidget(tcp);
     auto* peer=new QLineEdit;peer->setObjectName("runtimeTcpPeer");peer->setPlaceholderText("Peer / namespace generation (açık mutabakat)");peer->setMaxLength(128);tcpRow->addWidget(peer,1);auto* closeTcp=new QPushButton("V3 kapat");closeTcp->setObjectName("runtime_tcp_stop");tcpRow->addWidget(closeTcp);connect(closeTcp,&QPushButton::clicked,this,[this]{runtimeAction("tcp_stop");});layout->addLayout(tcpRow);
+    const bool legacyFixture=QCoreApplication::arguments().contains("--tcp-acceptance-smoke") || QCoreApplication::arguments().contains("--publication-smoke");
+    tcp->setVisible(legacyFixture);peer->setVisible(legacyFixture);closeTcp->setVisible(legacyFixture);
     auto* allTools=new QCheckBox("Tüm araçları göster");allTools->setObjectName("runtimeAllTools");
     {QSettings settings(settingsFile_,QSettings::IniFormat);allTools->setChecked(settings.value("runtime/allToolOverlays",true).toBool());}
     connect(allTools,&QCheckBox::toggled,this,[this](bool checked){QSettings settings(settingsFile_,QSettings::IniFormat);settings.setValue("runtime/allToolOverlays",checked);settings.sync();showRuntimeResult();});

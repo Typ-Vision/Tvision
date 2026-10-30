@@ -46,6 +46,9 @@ public:
     QJsonObject active() const;
     QByteArray pointerDigest() const;
     QByteArray ledgerDigest() const;
+    // Startup before listener construction. Validates the exact selection and
+    // immutable package; does not start transport or grant production authority.
+    static QJsonObject resolveSelection(const QString& workspace);
 private:
     struct Lease;
     CommunicationMigrationInput input_;

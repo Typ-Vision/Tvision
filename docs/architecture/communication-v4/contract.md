@@ -165,6 +165,8 @@ konfigürasyonu açıkça belgelenir; TLS/robot safety desteği iddia edilmez.
 
 ## S5 — Tek yeni UX ve migration
 
+Uygulanan [workspace/composition ve açık capability sınırları](communication-workspace.md).
+
 Communication'da tek yeni yüzey: server health/profil, station listesi, active
 recipe/activation, Run/Auto/Stop, camera ownership, publication template, delivery/
 ACK diagnostics ve calibration workspace. V2/V3 ayrı kalıcı sayfa/sekme bırakılmaz.

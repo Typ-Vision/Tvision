@@ -240,7 +240,7 @@ daraltılır. Bir sonraki kart otomatik başlatılmaz.
 | 13 | ProductionResultCodec/ProductionStore/DeliveryStore journal | StationDeliveryLedger + admission/control adapter'ları ve station_delivery_ledger_contract; [uygulanan sınır](station-delivery-ledger.md) |
 | 14 | StationDeliveryScheduler + PeerConnection | Uygulandı: shared-socket fair station scheduler; ledger otoritesi; main composition sonraki kartlarda |
 | 15 | persistence/ProjectRepository, CommunicationProfiles, DeliveryStore, StationDeliveryLedger, ProductionStore | CommunicationMigrationPlanner/Transaction uygulandı; backup/manifest, unsupported/pending gate, CAS selection ve ledger'i koruyan rollback; communication_migration_contract |
-| 16 | MainWindowCommunication/MainWindowRuntime, PublishDataEditor sınırı | Station table/view model + tek Communication; legacy data korunur |
+| 16 | MainWindowCommunication/MainWindowRuntime, main, migration | CommunicationPanel + CommunicationWorkspace + CommunicationStationComposition; tek UI, shared control/dispatch, monotonic migration authority; [sınırlar](communication-workspace.md); native kabul açık |
 | 17 | PublishDataEditor typed bundle seçicisi | Slot assignment/direct-output model; machine template vs recipe yetkisi |
 | 18 | Yukarıdaki planar calibration portları, contract S6–S8 | calibration-readiness.md; optik/robot6D araştırması, daha derin audit |
 | 19 | domain/SpatialTransform FrameRef ve communication value DTO portu | RobotActualPoseAdapter; controller convention fixture, robot client varsayılmaz |

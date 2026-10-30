@@ -59,6 +59,7 @@ CommunicationV4Frame CommunicationPeerSessionService::handle(const QUuid& connec
     }
     if(auto reason=authorize(connection,f))return response(f,190,reason);
     if(f.header.kind==2){
+        if(f.header.stationKey && status_)try{return status_(f);}catch(...){return response(f,190,20);}
         // Global status is truthful before station composition. Station status
         // belongs to the station application port introduced by COMM4-08.
         return response(f,f.header.stationKey?190:102,f.header.stationKey?20:0);

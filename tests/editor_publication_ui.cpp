@@ -78,6 +78,10 @@ bool MainWindow::verifyPublicationUi(const QString& artifacts){
     ProductionRecipeService production([](const QString&,ProductionAction){return true;},[&](const Recipe& r){ProductionDependencies deps;deps.publication=PublicationService::capture(r.definition,store);return deps;});const auto frozen=*w.service_.activeRecipe();auto validation=production.validate("engineer",frozen,dir.path());production.activate("engineer",validation.id,frozen,dir.path());auto lease=production.beginCycle("engineer");auto result=RuntimeService::execute(lease,dir.filePath("catalog.json"),{});production.finishCycle(lease.ticket,result);const auto terminal=production.cycleRecords().last();ProductionResultCodec::validate(terminal);
     DeliveryStore delivery(dir.filePath("delivery"));DeliveryRequest request{"cell",w.service_.project().id,profile.id,"peer","request","fingerprint"};delivery.request(request);delivery.begin(request,terminal["cycleId"].toString());const auto payload=QJsonDocument(terminal["resultBundle"].toObject()).toJson(QJsonDocument::Compact);delivery.commit(request,terminal,payload);int writes=0;check(delivery.dispatch(request,[&](const QByteArray& bytes){check(bytes==payload,"persisted exact bytes");++writes;}),"terminal dispatch");check(writes==1 && terminal["resultBundle"].toObject()["groups"].toArray().size()==1,"one terminal publish");
     if(QCoreApplication::arguments().contains("--tcp-acceptance-smoke")){
+        // Legacy diagnostics are an explicit acceptance fixture, not a page
+        // owned by the normal Communication surface.
+        check(!w.deliveryDiagnostics_,"normal Communication has no legacy diagnostics owner");
+        w.deliveryDiagnostics_=new DeliveryDiagnosticsWidget([&w]{return w.service_.path()+".production";},&w);
         observer.close();profile=store.load()[profile.id];profile.role="server";++profile.revision;store.save({{profile.id,profile}});
         const bool multiple=QCoreApplication::arguments().contains("--multi-endpoint-smoke");
         if(multiple){

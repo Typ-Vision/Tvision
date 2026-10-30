@@ -4,6 +4,9 @@
 #include "application/CommunicationServerLifecycle.hpp"
 #include "application/CommunicationPeerSessionService.hpp"
 #include "persistence/StationIdentityStore.hpp"
+#include "persistence/StationActivationStore.hpp"
+#include "application/CommunicationWorkspace.hpp"
+#include "application/CommunicationStationComposition.hpp"
 #include <QStandardPaths>
 #include <QDebug>
 #include <QDir>
@@ -50,14 +53,23 @@ int main(int argc, char* argv[]) {
     const QDir buildDir(smoke ? qEnvironmentVariable("VISIONFLOW_TEST_ARTIFACTS",QCoreApplication::applicationDirPath()):QCoreApplication::applicationDirPath());
     if(smoke)QDir().mkpath(buildDir.absolutePath());
     const QDir communicationDirectory(smoke ? buildDir.filePath("v4-machine") : QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation));
+    QJsonObject communicationSelection;QString selectionError;
+    try{communicationSelection=visionflow::CommunicationStationComposition::restoreSelection(communicationDirectory.absolutePath());}
+    catch(const std::exception& e){selectionError=QString::fromUtf8(e.what());}
+    // A corrupt selection or explicit rollback cannot silently reopen v4.
+    const bool selectionBlocked=!selectionError.isEmpty() || communicationSelection["mode"]=="legacy";
     visionflow::CommunicationServerProfiles serverProfiles(communicationDirectory.filePath("communication-server-v4.json"));
-    // Enrollment is explicit. Missing/corrupt registry stays fail-closed; startup
-    // never manufactures installation/peer/epoch identities.
     visionflow::JsonStationIdentityStore communicationIdentities(communicationDirectory.filePath("communication-identities-v4.json"));
     visionflow::CommunicationPeerSessionService communicationSessions(communicationIdentities);
-    visionflow::CommunicationServerLifecycle communicationServer(serverProfiles,communicationDirectory.filePath("communication-shutdown-v4.json"),&communicationSessions);
-    if(communicationServer.state()==visionflow::CommunicationServerState::Fault)qCritical()<<"V4 listener:"<<communicationServer.error();
+    // This owner must outlive the server's registered station references.
+    visionflow::CommunicationStationComposition communicationStations(communicationDirectory.absolutePath(),communicationSelection,communicationIdentities,communicationSessions);
+    visionflow::CommunicationServerLifecycle communicationServer(serverProfiles,communicationDirectory.filePath("communication-shutdown-v4.json"),&communicationSessions,selectionBlocked?QString("Migration selection unavailable / legacy rollback: ")+selectionError:QString{});
+    visionflow::CommunicationWorkspace communicationWorkspace(communicationServer,serverProfiles,communicationIdentities);
+    communicationStations.attach(communicationServer,communicationWorkspace);
+    if(selectionBlocked)communicationWorkspace.setNotice("Migration selection unavailable / legacy rollback: "+selectionError);
+    QTimer stationPoll;stationPoll.setInterval(50);QObject::connect(&stationPoll,&QTimer::timeout,&app,[&]{try{communicationWorkspace.poll();}catch(const std::exception& e){qWarning()<<"V4 station poll:"<<e.what();}});stationPoll.start();
     visionflow::MainWindow window(buildDir.filePath(smoke ? "ui-smoke.ini" : "../config/local.ui.ini"));
+    window.bindCommunication(&communicationWorkspace);
     window.show();
     if (smoke) QTimer::singleShot(100, &app, [&]{
         if(flowRemovalOnly){bool valid=false;try{valid=window.verifyFlowRemoval(buildDir.absolutePath());}catch(const std::exception& e){QTextStream(stderr)<<e.what()<<'\n';}window.close();app.exit(valid?0:1);return;}

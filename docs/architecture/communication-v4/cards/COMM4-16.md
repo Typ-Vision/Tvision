@@ -1,6 +1,8 @@
 # COMM4-16 — Tek Communication yüzeyi
 
-Durum: planlandı, başlanmadı. Model: **GPT-6.1 Sol / medium**.
+Durum: **yazılım teslimi**; [kanıt ve açık kabul sınırları](../../../archive/2026-10-30-comm4-16.md).
+Kullanıcı kısa kontrolü yeterli gördü; native/tam kabul kapanmış sayılmaz.
+Model: **GPT-6.1 Sol / medium**.
 Tek oturum kapsamı ve ortak kurallar [indekste](../README.md), kapanış
 kuralları [V0](../verification.md) içindedir.
 

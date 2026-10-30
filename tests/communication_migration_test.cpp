@@ -1,4 +1,5 @@
 #include "application/CommunicationMigration.hpp"
+#include "application/CommunicationStationComposition.hpp"
 #include "application/ProjectService.hpp"
 #include "application/CommunicationProfiles.hpp"
 #include "application/DeliveryStore.hpp"
@@ -142,6 +143,18 @@ void faults(){
     write(w+"/"+pkg+"/project.json",original);rejects([&]{t.activate(pkg,m,{});});
     write(w+"/active.json","{");rejects([&]{t.active();});
 }
+void startupAuthority(){
+    Fixture f;const auto authority=f.root.filePath("communication-identities-v4.json");check(QFile::copy(f.in.registryPath,authority),"Machine authority fixture");f.in.registryPath=authority;
+    const auto work=f.root.filePath("migration");check(QDir().mkdir(work),"Machine migration directory");const auto package=id();
+    {CommunicationMigrationTransaction t(f.in,work);const auto plan=CommunicationMigrationPlanner(f.in).analyze();const auto digest=t.prepare(package,plan.digest());t.activate(package,digest,{});}
+    const auto selected=CommunicationStationComposition::restoreSelection(f.root.path());check(selected["mode"]=="v4","Normal startup consumes reviewed pointer");
+    JsonStationIdentityStore store(authority);const auto seed=store.load();check(seed==JsonStationIdentityStore::decode(read(selected["registry"].toString())),"Startup adopts exact migrated catalogue with CAS");
+    StationIdentityRegistry registry(store);const auto camera=registry.bind(store.load().revision,{CatalogueCategory::Camera,QUuid::createUuid(),{},{}},"New camera");registry.retire(store.load().revision,camera.key);const auto peer=QUuid::createUuid(),epoch=QUuid::createUuid();registry.enrollEpoch(store.load().revision,peer,epoch);registry.retireEpoch(store.load().revision,peer,epoch);const auto live=read(authority);
+    CommunicationStationComposition::restoreSelection(f.root.path());check(read(authority)==live,"Restart preserves new keys/retired/epoch history");
+    {CommunicationMigrationTransaction t(f.in,work);t.rollback(t.pointerDigest(),t.ledgerDigest());}
+    check(CommunicationStationComposition::restoreSelection(f.root.path())["mode"]=="legacy" && read(authority)==live,"Rollback never restores stale catalogue seed");
+    write(work+"/active.json","{");rejects([&]{CommunicationStationComposition::restoreSelection(f.root.path());});check(read(authority)==live,"Corrupt pointer fails closed without rewriting live authority");
+}
 }
 int main(int argc,char** argv){QCoreApplication app(argc,argv);try{
     if(app.arguments().value(1)=="--crash"){
@@ -151,5 +164,5 @@ int main(int argc,char** argv){QCoreApplication app(argc,argv);try{
             const auto bytes=read(a[3]+"/"+a[4]+"/manifest.json");auto digest=QCryptographicHash::hash(bytes,QCryptographicHash::Sha256).toHex();t.activate(a[4],digest,{});
         }else t.rollback(t.pointerDigest(),t.ledgerDigest());return 2;
     }
-    basic();unsupported();staleAndPending();faults();QTextStream(stdout)<<"communication migration checks="<<checks<<"; crash boundaries=38\n";return 0;
+    basic();unsupported();staleAndPending();faults();startupAuthority();QTextStream(stdout)<<"communication migration checks="<<checks<<"; crash boundaries=38\n";return 0;
 }catch(const std::exception& e){QTextStream(stderr)<<e.what()<<"\n";return 1;}}

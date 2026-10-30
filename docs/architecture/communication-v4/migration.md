@@ -1,8 +1,7 @@
 # Transactional legacy migration — COMM4-15
 
 `application/CommunicationMigration.hpp/.cpp` uygulama portudur. UI/normal main
-bu portu henüz çağırmaz; seçim dosyasını okuyacak composition COMM4-16'da
-bağlanmalıdır. Mevcut v2/v3 okuyucular, project/profile serializer'ları ve eski
+[COMM4-16 workspace](communication-workspace.md) üzerinden bağlanır. Mevcut v2/v3 okuyucular, project/profile serializer'ları ve eski
 belgeler değiştirilmez. Migration listener, Run, Auto veya kamera açmaz.
 
 ## Analiz ve açık taslak
@@ -17,8 +16,8 @@ verilir; migration bunlara fiziksel uygunluk kazandırmaz.
 legacy yedeği yeni kurulum/registry sayılmaz. Rollback sonrası yeni bir migration
 taslağı hazırlanacaksa önceki v4 catalogue key/retired/epoch geçmişi authority
 olarak taşınmalıdır; eski `legacy-registry.json` dosyasını seed olarak yeniden
-seçmek uygun değildir. Port farklı workspace'ler arasında registry authority
-seçimini yönetmez; bu sahiplik normal main/COMM4-16 entegrasyonunun sorumluluğudur.
+seçmek uygun değildir. Main tek machine migration workspace'ini ve current
+registry yolunu zorunlu kılar; startup seed adoption CAS/monotonik geçişle yapılır.
 
 `CommunicationMigrationPlanner::analyze()` gerçek ProjectRepository,
 CommunicationProfiles ve registry serializer'larını okur. Kaynakların exact
@@ -47,7 +46,9 @@ Aday project'te UUID'ler korunur, ilgili recipeVersion artar ve status Draft
 olur. Eski Publish Data düğümleri/dependency kimlikleri korunup disable edilir;
 legacy publication yerine typed v4 assignments yazılır. Registry kopyası mevcut
 installation/key/retired/epoch geçmişini korur; yeni station/template/recipe
-revision kimlikleri yalnız yeni numeric key alır. Orijinal registry değişmez.
+revision ve acquisition-source camera kimlikleri yalnız yeni numeric key alır.
+Analiz/staging orijinal registry'yi değiştirmez; açık seçim sonrası startup
+adoption current authority'de yalnız doğrulanmış monotonik geçiş yapar.
 
 ## Backup, staging ve atomik seçim
 
@@ -100,6 +101,8 @@ Rollback yalnız yeni revision'lı legacy pointer commit eder. Live archive
 yerinde kalır; yeni v4 ACK/tombstone dahil hiçbir journal/dedup kopyalanmaz,
 silinmez veya eski yedeğe döndürülmez. Legacy original dosyaları backup kimliğiyle
 eşleşmiyorsa rollback durur; backup'tan kontrolsüz config restore yapılmaz.
+Registry immutable seed veya onun geçerli monotonik devamı olabilir; yeni
+key/retired/epoch geçmişi korunur, eski catalogue yedeği restore edilmez.
 Composition legacy seçimini yüklerken manifestteki doğrulanmış backup/binary
 kimliğine uymalıdır. Kilitleri bırakmadan yeni binary/listener başlatmayın.
 

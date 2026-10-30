@@ -30,7 +30,7 @@ enum class CommunicationServerState {NotConfigured,Disabled,Listening,PeerConnec
 // Owner must outlive registered station controllers and explicitly shutdown before destroying them.
 class CommunicationServerLifecycle final {
 public:
-    CommunicationServerLifecycle(const CommunicationServerProfiles&,QString checkpointPath,CommunicationPeerSessionService* sessions=nullptr);
+    CommunicationServerLifecycle(const CommunicationServerProfiles&,QString checkpointPath,CommunicationPeerSessionService* sessions=nullptr,QString startupError={});
     ~CommunicationServerLifecycle();
     CommunicationServerLifecycle(const CommunicationServerLifecycle&)=delete;
     CommunicationServerLifecycle& operator=(const CommunicationServerLifecycle&)=delete;

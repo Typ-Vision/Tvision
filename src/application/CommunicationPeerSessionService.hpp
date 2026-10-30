@@ -20,6 +20,9 @@ public:
     using Metadata=std::function<QByteArray(const IdentityCatalogue&,const CatalogueEntry&)>;
     using TriggerHandler=std::function<CommunicationV4Frame(const V4RequestIdentity&,const CommunicationV4Frame&)>;
     explicit CommunicationPeerSessionService(StationIdentityStore&,Metadata={});
+    void setMetadata(Metadata metadata){owner();metadata_=std::move(metadata);}
+    using StatusHandler=std::function<CommunicationV4Frame(const CommunicationV4Frame&)>;
+    void setStatusHandler(StatusHandler handler){owner();status_=std::move(handler);}
     CommunicationPeerSessionService(const CommunicationPeerSessionService&)=delete;
     CommunicationPeerSessionService& operator=(const CommunicationPeerSessionService&)=delete;
     static QUuid contractRevision();
@@ -42,6 +45,7 @@ private:
     CommunicationV4Frame response(const CommunicationV4Frame&,quint32 kind,quint32 reason) const;
     StationIdentityStore& store_;
     Metadata metadata_;
+    StatusHandler status_;
     TriggerHandler trigger_;
     ControlHandler control_;
     StationDeliveryLedger* ledger_=nullptr; // application-owned; outlives connections

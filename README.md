@@ -98,12 +98,11 @@ OECS / GenTL probe komutları, sandbox sınırları ve kanıt bağlantıları
    Doğrulama kayıtlı metrik kaynak iznini yeni kareyle denetler; Run başlatmaz.
    Load/Run hazırlığı tek başına sonuç değildir. Stop → yeniden Load sürümü değiştirir.
 
-Publish Data Editor'da paket hazırlar. SoftwareTrigger reçetesiyle Load → v3
-seçimi + peer generation → Run, grupların ayrı TCP sunucularını açar. İlk grup
-tetik girişidir; diğerleri bağımsız ACK/retry hedefidir. Required offline/pending
-çevrimi engeller; optional kuyruk 128'dir. Restart izin açmaz; Stop pending ACK'yi
-korur. V2 ayrıdır.
-[Simulator ve kısa kullanım](docs/architecture/communication/tcp-v3-usage.md).
+Communication tek V4 listener, station Run/Auto/Stop, aktif revision, kamera
+sahibi ve pending ACK durumunu gösterir. Restart Run/Auto açmaz;
+Remote Enable açılışta kapalıdır. V2/V3 sayfaları kaldırıldı; geçmiş salt
+okunurdur. Image File yolu doğrulandı; native/robot kabulü açık.
+[Makine kaydı ve migration](docs/architecture/communication-v4/communication-workspace.md).
 
 Profil bağlama, PGM+JSON, kalibrasyon, Runtime ve panel
 kullanımı [kısa kullanım rehberinde](docs/camera-runtime-usage.md). Restart

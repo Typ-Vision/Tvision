@@ -2,7 +2,8 @@
 
 Uygulanan C profili. `CommunicationServerLifecycle` process composition'unda
 bir kez oluşturulur; Qt application thread'inde çalışır. `src/app/main.cpp`
-başlangıçta bu composition'u oluşturur. UI sayfaları değiştirilmedi.
+başlangıçta bu composition'u oluşturur. Güncel UI ve station owner bağlantısı
+[COMM4-16 workspace](communication-workspace.md) içindedir.
 
 ## Profil ve ömür
 
@@ -62,6 +63,8 @@ checkpoint'ten Run/Auto/production snapshot restore etmez; yalnız enabled
 profille yeni listener generation açar. Hard crash ve güç kesilmesinde yeni
 checkpoint garanti edilmez; mevcut Runtime recovery kayıtları korunur.
 
-V4 station Runtime composition'unun gerçek proje/worker bağlantısı09'da,
-wire STATUS/ACK erişimi06/07/13'tedir. Bu karttaki localhost kontrol erişimi
+V4 station Runtime proje/worker portu09, wire STATUS/ACK portları06/07/13'tedir;
+normal main bunları16'da bağlar. Bozuk migration seçimi veya legacy rollback
+startup error ile listener'ı Fault'ta tutar; profil/pointer dosyaları karışmaz.
+Bu karttaki localhost kontrol erişimi
 transport ve application-state kabulüdür; PLC wire/fiziksel kabulü değildir.

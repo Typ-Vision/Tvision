@@ -63,8 +63,9 @@ void CommunicationServerProfiles::save(const CommunicationServerProfile& p) cons
     validate(p);atomicWrite(path_,{{"schema","visionflow.communication-server.v4/1"},{"enabled",p.enabled},{"address",p.address},{"port",p.port},{"peerPolicy",p.peerPolicy},
         {"parserDeadlineMs",p.parserDeadlineMs},{"ackTimeoutMs",p.ackTimeoutMs},{"retries",p.retries},{"maxStations",p.maxStations},{"maxQueuedResponses",p.maxQueuedResponses},{"writeHighWaterBytes",p.writeHighWaterBytes},{"maxReadBatch",p.maxReadBatch}});
 }
-CommunicationServerLifecycle::CommunicationServerLifecycle(const CommunicationServerProfiles& profiles,QString checkpoint,CommunicationPeerSessionService* sessions):sessions_(sessions),checkpointPath_(std::move(checkpoint)) {
+CommunicationServerLifecycle::CommunicationServerLifecycle(const CommunicationServerProfiles& profiles,QString checkpoint,CommunicationPeerSessionService* sessions,QString startupError):sessions_(sessions),checkpointPath_(std::move(checkpoint)) {
     QObject::connect(&server_,&QTcpServer::newConnection,&server_,[this]{acceptPeer();});server_.setMaxPendingConnections(1);
+    if(!startupError.isEmpty()){state_=CommunicationServerState::Fault;error_=std::move(startupError);return;}
     try {const auto p=profiles.load();if(!p)return;maxStations_=p->maxStations;if(!p->enabled){state_=CommunicationServerState::Disabled;return;}
         CommunicationListenerOwnership::selectV4(server_);
         if(!server_.listen(QHostAddress(p->address),p->port))throw std::runtime_error(server_.errorString().toStdString());
