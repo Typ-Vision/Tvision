@@ -73,7 +73,15 @@ QWidget* MainWindow::makeCommunication() {
     };
     return communicationPanel_;
 }
+QString MainWindow::communicationTemplatePath() const {
+    if(!communicationTemplateOverride_.isEmpty())return communicationTemplateOverride_;
+    if(!communicationWorkspace_)return {};
+    const auto machine=communicationWorkspace_->machineDirectory();
+    return machine.isEmpty()?QString{}:QDir(machine).filePath("publication-templates-v4");
+}
+void MainWindow::setCommunicationTemplateDirectory(const QString& path){communicationTemplateOverride_=path;}
 void MainWindow::bindCommunication(CommunicationWorkspace* workspace){
+    communicationWorkspace_=workspace;
     if(workspace)workspace->setMaintenanceBarrier([this]{
         if(editorSession_.busy() || cameraSession_.busy() || runtimeJobs_.busy() || editorCameras_.hasTargets()
            || (runtime_ && (runtime_->busy() || runtime_->camerasPending() || runtime_->camerasDraining()))

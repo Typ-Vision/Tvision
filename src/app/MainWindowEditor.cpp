@@ -379,7 +379,8 @@ void MainWindow::showToolPropertiesView(const EditorContext& context,const std::
         auto* manage=new QPushButton(cameras->count()==1 ? "Kamera ekle — Setup":"Kameraları aç");manage->setObjectName("sourceCameraManage");form->addRow(manage);connect(manage,&QPushButton::clicked,this,[this]{selectPage("camera");});
         form->addRow(note("Raw/px kalibrasyonsuzdur. mm yalnız bu kameranın uygun etkin modeliyle hesaplanır. Model/optik değişimi world ROI ve referansı yeniden denetler."));
     } else if (tool.kind=="publish_data") {
-        form->addRow(new PublishDataEditor(tool,context.definition,QFileInfo(settingsFile_).absolutePath()+"/communication-profiles.json"));
+        const auto* cycle=editorSession_.cycle && editorSession_.accepts(editorSession_.cycle->configId,context) && !editorSession_.busy() ? &*editorSession_.cycle:nullptr;
+        form->addRow(new PublishDataEditor(tool,context.definition,QFileInfo(settingsFile_).absolutePath()+"/communication-profiles.json",communicationTemplatePath(),cycle));
         auto* apply=new QPushButton("Paketi uygula");apply->setObjectName("publishApply");form->addRow(apply);
         connect(apply,&QPushButton::clicked,this,[this]{if(applyToolProperties())QTimer::singleShot(0,this,&MainWindow::showToolProperties);});
         auto* reset=new QPushButton("Taslağı geri al");reset->setObjectName("publishCancel");form->addRow(reset);
@@ -766,8 +767,11 @@ MainWindow::PropertyCommit MainWindow::commitToolProperties() {
             if(tool.kind=="publish_data")if(auto* settings=dynamic_cast<PublishDataEditor*>(propertiesBody_->findChild<QWidget*>("publishDataEditor"))){
                 const auto before=service_.activeRecipe()->definition;
                 auto candidate=service_;candidate.updatePublication(tool,settings->groups());
+                // Slot assignment is a recipe-level authority; the machine
+                // template itself stays read-only.
+                if(settings->assignmentsEdited())candidate.setPublicationAssignments(settings->assignments());
                 if(before==candidate.activeRecipe()->definition){displayedProperties_=displayed;return PropertyCommit::Unchanged;}
-                settings->validateDraft(tool);service_=std::move(candidate);displayedProperties_=displayed;
+                settings->validateDraft(tool);settings->validateAssignments();service_=std::move(candidate);displayedProperties_=displayed;
                 return PropertyCommit::Changed;
             }
             if(tool.name==original.name && tool.description==original.description && tool.enabled==original.enabled && tool.parameters==original.parameters) {

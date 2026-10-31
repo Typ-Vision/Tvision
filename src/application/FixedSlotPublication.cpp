@@ -1,4 +1,8 @@
 #include "FixedSlotPublication.hpp"
+#include "domain/AssignmentConfig.hpp"
+#include "domain/ToolGraph.hpp"
+#include "domain/ToolRegistry.hpp"
+#include <algorithm>
 #include <bit>
 #include <cmath>
 #include <functional>
@@ -120,6 +124,105 @@ int find(const QVector<PublicationBinding> &bs, const PublicationSource &s) {
   throw std::runtime_error("Unresolved DAG source");
 }
 } // namespace
+
+ScalarUnit publicationUnit(const QString &u) {
+  if (u.isEmpty() || u == "ratio" || u == "count")
+    return ScalarUnit::Unitless;
+  if (u == "mm") return ScalarUnit::Millimetre;
+  if (u == "m") return ScalarUnit::Metre;
+  if (u == "rad") return ScalarUnit::Radian;
+  if (u == "deg" || u == "degree") return ScalarUnit::Degree;
+  throw std::runtime_error(
+      ("Publication unit requires explicit converter: " + u).toStdString());
+}
+
+QVector<PublicationBinding> publicationBindings(const QJsonObject &definition) {
+  const auto a = recipePublicationAssignments(definition);
+  need(bool(a), "Publication assignments missing");
+  const auto tools = editorTools(definition);
+  const auto graph = validateGraph(tools, executionConnections(definition));
+  need(graph.valid(), qPrintable("Invalid publication graph: " + graph.errors.join("; ")));
+  QVector<PublicationBinding> out;
+  QSet<QString> visiting;
+  std::function<void(PublicationSource)> add = [&](PublicationSource source) {
+    for (const auto &b : out)
+      if (b.definition.source == source) return;
+    const auto token = QString::number(int(source.kind)) + source.id + ":" +
+                       source.port;
+    need(!visiting.contains(token), "Publication dependency cycle");
+    visiting.insert(token);
+    PublicationBinding b;
+    b.definition.source = source;
+    if (source.kind == PublicationSourceKind::Variable) {
+      const auto variables = recipeVariables(definition);
+      auto found = std::find_if(variables.begin(), variables.end(),
+                                [&](const auto &v) { return v.id == source.id; });
+      need(found != variables.end(), "Unknown publication variable");
+      switch (found->type) {
+      case VariableType::Boolean: b.definition.type = PublicationValueType::Boolean; break;
+      case VariableType::Int32: b.definition.type = PublicationValueType::Int32; break;
+      case VariableType::UInt32: b.definition.type = PublicationValueType::UInt32; break;
+      case VariableType::Int64: b.definition.type = PublicationValueType::Int64; break;
+      case VariableType::Float64: b.definition.type = PublicationValueType::Float64; break;
+      case VariableType::String: b.definition.type = PublicationValueType::String; break;
+      case VariableType::Enum:
+        need(false, "Enum requires explicit Int32 adapter");
+      case VariableType::SpatialTransform:
+        need(false, "Whole Pose adapter unavailable");
+      }
+      b.definition.unit = found->unit;
+      int writers = 0;
+      for (const auto &t : tools) if (t.enabled && t.kind == "set_variables") {
+        const auto config = decodeAssignmentConfig(t.parameters, t.id);
+        for (const auto &row : config.rows) if (row.targetId == source.id) {
+          ++writers; b.producerId = t.id; b.port = source.id;
+          b.revision = config.revision;
+          if (const auto *rhs = std::get_if<ToolOutputAssignmentSource>(&row.source))
+            b.dependencies.append({PublicationSourceKind::ToolOutput, rhs->toolId,
+                                   rhs->port, rhs->revision});
+          if (const auto *rhs = std::get_if<BundleAssignmentSource>(&row.source)) {
+            PublicationSource dep{PublicationSourceKind::Variable, rhs->fieldId, {}, 0};
+            add(dep);
+            const auto it = std::find_if(
+                out.begin(), out.end(),
+                [&](const auto &parent) { return parent.definition.source == dep; });
+            need(it != out.end() && it->producerId == rhs->producerId &&
+                     it->revision == rhs->revision,
+                 "Bundle producer requires explicit publication binding");
+            b.dependencies = it->dependencies;
+            b.dependencies.append(dep);
+          }
+        }
+      }
+      need(writers == 1, "Publication variable must have one immutable writer");
+    } else {
+      auto t = std::find_if(tools.begin(), tools.end(), [&](const auto &tool) {
+        return tool.enabled && tool.id == source.id;
+      });
+      need(t != tools.end(), "Missing direct publication producer");
+      const auto descriptor = ToolRegistry::get(t->kind);
+      need(source.revision == descriptor.version, "Stale direct publication version");
+      auto p = std::find_if(descriptor.outputs.begin(), descriptor.outputs.end(),
+                            [&](const auto &port) { return port.id == source.port; });
+      need(p != descriptor.outputs.end(), "Missing direct publication port");
+      need(p->type == PortType::Number || p->type == PortType::Boolean ||
+               p->type == PortType::Text,
+           "Whole/scalar publication converter unavailable");
+      b.producerId = source.id; b.port = source.port; b.revision = source.revision;
+      b.definition.unit = publicationUnit(p->unit);
+      b.definition.type = p->type == PortType::Number
+                              ? PublicationValueType::Float64
+                              : p->type == PortType::Boolean
+                                    ? PublicationValueType::Boolean
+                                    : PublicationValueType::String;
+    }
+    for (const auto &dep : b.dependencies) add(dep);
+    out.append(b);
+    visiting.remove(token);
+  };
+  for (const auto &row : a->rows) add(row.source);
+  return out;
+}
 
 std::shared_ptr<const FixedSlotPublication> FixedSlotPublication::capture(
     PublicationTemplate t, PublicationAssignments a,

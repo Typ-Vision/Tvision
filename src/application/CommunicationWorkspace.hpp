@@ -29,6 +29,8 @@ public:
     void setLedger(StationDeliveryLedger* ledger){ledger_=ledger;}
     void setMaintenanceBarrier(std::function<QString()> barrier){maintenanceBarrier_=std::move(barrier);}
     void setMachinePaths(QString workspace,QString registry){machineWorkspace_=std::move(workspace);machineRegistry_=std::move(registry);}
+    // Machine directory that owns v4 manifests (templates, registry, stations).
+    QString machineDirectory() const;
     using RecipeList=std::function<QVector<StationSavedRecipe>()>;
     void setRecipeControl(RecipeList recipes,std::function<void(const QUuid&,const QUuid&,quint32,quint32)> select){recipes_=std::move(recipes);select_=std::move(select);}
     QVector<StationSavedRecipe> recipes() const {owner();return recipes_?recipes_():QVector<StationSavedRecipe>{};}

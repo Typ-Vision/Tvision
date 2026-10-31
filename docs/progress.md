@@ -4,11 +4,11 @@
 
 ## Devam noktası
 
-**[COMM4-16 yazılım](archive/2026-10-30-comm4-16.md).**
-Tek UI/main/Auto/migration bağlı; hedef ON14/OFF12 geçti.
-Native/ON ölçüm timeout açık; OFF kullanıcı isteğiyle kesildi.
-**Tercih: kısa kontrol; ağır tekrar yok.** 17 başlatılmadı.
-INI birikimi/probe restore SEGFAULT açık; temiz test girdisi kullan.
+**[COMM4-17 yazılım](archive/2026-10-31-comm4-17.md).**
+Slot editorü: template salt okunur; Variable/direct kaynak, satır validation,
+atomik Apply/no-op cancel. ON6/OFF5+komşu7+UI geçti; native görsel var.
+Pose/Enum 19'da açık; tam suite yok. 18 başlatılmadı.
+INI/probe SEGFAULT açık; temiz girdi kullan.
 [EFR-04](archive/2026-10-29-efr-04.md): Wheel açık, Match/θ ertelendi.
 
 [D:/TVision](archive/2026-10-28-dev-drive-01.md): OpenCV geçti; CTest kısmi.

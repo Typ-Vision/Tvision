@@ -17,7 +17,7 @@ koşumları yalnız kendi `VISIONFLOW_TEST_ARTIFACTS/v4-machine` dizinini kullan
 | `communication-server-v4.json` | Makine listener profili; UI save yalnız sonraki açılışı değiştirir |
 | `communication-identities-v4.json` | Güncel installation/key/retired/epoch catalogue authority |
 | `communication-stations-v4.json` | Checksummed, append-only immutable station seçim geçmişi |
-| `publication-templates-v4/<revision>.json` | Açıkça hazırlanmış template manifest'leri; slot editorü COMM4-17'de |
+| `publication-templates-v4/<revision>.json` | Açıkça hazırlanmış template manifest'leri; Editor revision'ı seçer, manifest'i yazmaz (COMM4-17) |
 | `migration/active.json` | Tek transactional migration selection pointer'ı |
 | `production/` | Migration seçimi yokken ortak production archive/ledger |
 
@@ -61,6 +61,34 @@ whole Pose binding fail closed kalır. Pose frame/adapter entegrasyonu COMM4-19,
 assignment/template editorü COMM4-17 kapsamındadır. Point/Pose2D whole Pose olmaz.
 Hata/Stop terminalinde execution error/canceled, decision NotEvaluated ve invalid
 slotlar korunur; eski OK/değerler taşınmaz.
+
+## Publish slot assignment editorü (COMM4-17)
+
+Reçete Editor'ünde `publish_data` paneli iki ayrı yetki taşır. v3 logical bundle
+alanları (`publication`/OutputGroup) eskisi gibi reçetede düzenlenir. v4 sabit slot
+tarafında makine `publication-templates-v4/*.json` manifest'leri **salt okunur**
+listelenir; UI yalnız reçete kaynağını (`publicationV4` assignment referansları)
+bağlar. Template adı, required bayrağı, birim, ölçek/offset, aralık ve Pose
+sözleşmesi manifest otoritesidir; Editor bunları değiştirmez. Revision değişimi
+hâlâ açık migration/activation işidir.
+
+Kaynak listesi cycle-local Variable veya doğrudan typed tool output portudur.
+Enum ve whole Pose aday olarak görünür fakat açık adapter eksiği nedeniyle
+`blockReason` ile kapalıdır; Point2D/Pose2D whole Pose'a yükseltilmez. Birim
+eşlemesi `publicationUnit` üzerinden tek yerden yapılır; bilinmeyen birim
+(ör. `px`, `gray8/px`) sessizce dönüştürülmez, kaynak reddedilir.
+
+Satır bazında durum sözleşme denetimini gösterir: uyumsuz port, eksik required
+slot, kaybolan kaynak. Değer/wire önizlemesi yalnız bu tanımla eşleşen kabul
+edilmiş çevrim varsa ve aynı `FixedSlotPublication` evaluator'ı üzerinden yapılır;
+aksi halde panel "değer önizlemesi yok" der ve sıfır pose/sahte PASS üretmez.
+Runtime yolu ve Editor yolu aynı `publicationBindings` çözümlemesini kullanır, bu
+yüzden preview ile üretim aynı tip/birim/revision otoritesine sahiptir.
+
+Apply atomiktir: bundle ve assignment birlikte tek `ProjectService` adımında
+yazılır; değişiklik yoksa byte no-op olur, hata durumunda önceki tanım korunur ve
+Taslağı geri al diski/tanımı değiştirmez. Editor önizlemesi ağ, ledger veya
+terminal üretmez.
 
 Native/webcam physical identity/provider composition bu owner'da üretilmez.
 Bu kaynaklar için uygun normal production provider/manifest olmadığı açıkça

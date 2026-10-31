@@ -42,6 +42,8 @@ class MainWindow : public QMainWindow {
 public:
     explicit MainWindow(const QString& settingsFile);
     void bindCommunication(CommunicationWorkspace*);
+    // Explicit test/harness injection of the machine template directory.
+    void setCommunicationTemplateDirectory(const QString&);
     ~MainWindow() override;
     bool verifyMultiSource(const QString& artifacts);
     bool verifyMultiSourceRuntime(const QString& artifacts);
@@ -254,6 +256,10 @@ private:
     std::unique_ptr<RuntimeCoordinator> runtimeCoordinator_;
     DeliveryDiagnosticsWidget* deliveryDiagnostics_=nullptr;
     CommunicationPanel* communicationPanel_=nullptr;
+    CommunicationWorkspace* communicationWorkspace_=nullptr;
+    QString communicationTemplateOverride_;
+    // Machine-owned v4 template directory; empty until Communication binds.
+    QString communicationTemplatePath() const;
     std::unique_ptr<PlcRuntimeSocket> plc_;
     std::unique_ptr<InputSnapshotStore> tcpInputs_;
     std::unique_ptr<DeliveryStore> tcpLedger_;

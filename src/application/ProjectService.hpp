@@ -1,5 +1,6 @@
-#include "domain/PublicationConfig.hpp"
 #pragma once
+#include "domain/PublicationConfig.hpp"
+#include "domain/PublicationTemplate.hpp"
 #include "persistence/ProjectRepository.hpp"
 #include "domain/ToolDefinition.hpp"
 #include "domain/ToolGraph.hpp"
@@ -57,6 +58,9 @@ public:
     QVector<OutputGroup> outputGroups() const;
     void setOutputGroups(const QVector<OutputGroup>&);
     void updatePublication(const ToolDefinition&,const QVector<OutputGroup>&);
+    // Recipe-level v4 slot assignment; pulls template authority from the
+    // machine manifest, never from UI-edited metadata.
+    void setPublicationAssignments(const std::optional<PublicationAssignments>&);
     QVector<VariableDefinition> variables() const;
     QString addVariable(VariableDefinition definition);
     void renameVariable(const QString& id,QString name);

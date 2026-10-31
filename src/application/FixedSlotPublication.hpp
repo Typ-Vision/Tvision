@@ -14,6 +14,11 @@ struct PublicationBinding {
   QVector<PublicationSource> dependencies;
   std::optional<FrameRef> targetFrame, sourceFrame;
 };
+// Shared by Runtime composition and the Editor preview so both resolve the same
+// source/type/unit/revision authority. Fails closed; never guesses metadata.
+QVector<PublicationBinding> publicationBindings(const QJsonObject &definition);
+// Port units without an explicit typed converter are rejected, not converted.
+ScalarUnit publicationUnit(const QString &unit);
 enum class PublicationExecution { Unknown, Done, Error, Canceled };
 enum class PublicationDecision { NotEvaluated, Ok, Nok };
 struct PublicationCycleView {

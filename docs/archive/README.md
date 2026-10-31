@@ -6,6 +6,7 @@ görev” ifadeleri yazıldıkları tarihe aittir.
 
 | Dönem / görev | Kayıt |
 | --- | --- |
+| 31 Ekim 2026 — COMM4-17 | [Publish slot assignment editorü; salt okunur makine template'i, ortak binding çözümlemesi, atomik Apply ve hedefli ON/OFF + native görsel kontrol](2026-10-31-comm4-17.md) |
 | 30 Ekim 2026 — COMM4-16 | [Tek Communication ve normal main entegrasyonu; kullanıcı isteğiyle hafif doğrulama, açık native/ON kabul](2026-10-30-comm4-16.md) |
 | 30 Ekim 2026 — COMM4-16 açık | [Tek Communication ara devri; hedefli ON/OFF geçti, native kilit ve main composition açık](2026-10-30-comm4-16-pending.md) |
 | 30 Ekim 2026 — COMM4-15 | [Transactional migration, backup/manifest, 38 crash noktası ve ledger'i koruyan rollback; tam Release ON/OFF](2026-10-30-comm4-15.md) |

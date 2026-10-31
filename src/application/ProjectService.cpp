@@ -161,6 +161,14 @@ void ProjectService::updatePublication(const ToolDefinition& tool,const QVector<
     auto candidate=project();for(auto& r:candidate.recipes)if(r.id==activeId_){r.definition=d;r.status=RecipeStatus::Draft;}
     validateProject(candidate);project_=candidate;dirty_=true;changedRecipes_.insert(activeId_);
 }
+void ProjectService::setPublicationAssignments(const std::optional<PublicationAssignments>& assignments) {
+    if(!activeRecipe())fail("Önce bir reçete açın.");
+    auto d=activeRecipe()->definition;
+    if(assignments)d=withRecipePublicationAssignments(d,*assignments);else d.remove("publicationV4");
+    if(d==activeRecipe()->definition)return;
+    auto candidate=project();for(auto& r:candidate.recipes)if(r.id==activeId_){r.definition=d;r.status=RecipeStatus::Draft;}
+    validateProject(candidate);project_=candidate;dirty_=true;changedRecipes_.insert(activeId_);
+}
 void ProjectService::setOutputGroups(const QVector<OutputGroup>& groups) {
     if(!activeRecipe())fail("Open a recipe first.");
     const auto d=withRecipeOutputGroups(activeRecipe()->definition,groups);if(d==activeRecipe()->definition)return;

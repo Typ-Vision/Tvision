@@ -37,6 +37,10 @@ QVector<CommunicationStationView> CommunicationWorkspace::stations() const {
     }
     return rows;
 }
+QString CommunicationWorkspace::machineDirectory() const {
+    if(machineWorkspace_.isEmpty())return {};
+    return QFileInfo(machineWorkspace_).absolutePath();
+}
 QString CommunicationWorkspace::listener() const {
     owner();QString state;
     switch(server_.state()){case CommunicationServerState::NotConfigured:state="NOT_CONFIGURED";break;case CommunicationServerState::Disabled:state="DISABLED";break;case CommunicationServerState::Listening:state="LISTENING";break;case CommunicationServerState::PeerConnected:state="CONNECTED";break;case CommunicationServerState::Fault:state="FAULT";break;case CommunicationServerState::Closing:state="CLOSING";break;case CommunicationServerState::Closed:state="CLOSED";break;}

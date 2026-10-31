@@ -1,5 +1,6 @@
 #include "app/MainWindow.hpp"
 #include "app/PublishDataEditor.hpp"
+#include "domain/PublicationTemplate.hpp"
 #include "app/EndpointProfileEditor.hpp"
 #include "app/DeliveryDiagnosticsWidget.hpp"
 #include "application/PublicationService.hpp"
@@ -58,7 +59,8 @@ bool MainWindow::verifyPublicationUi(const QString& artifacts){
     for(auto size:{QSize(1400,900),QSize(850,600)}){w.resize(size);QApplication::processEvents();auto* scroll=w.findChild<QScrollArea*>("propertiesScroll");scroll->ensureWidgetVisible(w.findChild<QLabel*>("publishStatus"));QApplication::processEvents();check(w.grab().save(QDir(artifacts).filePath(QString("publish-error-%1.png").arg(size.width()))),"error visual");}
     w.showToolProperties();w.workspaceError_->clear();w.workspaceError_->hide();w.statusBar()->clearMessage();
     auto* sourcePicker=w.findChild<QComboBox*>("publishProducer");sourcePicker->setFocus();QKeyEvent tab(QEvent::KeyPress,Qt::Key_Tab,Qt::NoModifier);QApplication::sendEvent(sourcePicker,&tab);check(QApplication::focusWidget()!=sourcePicker,"Publish keyboard traversal");
-    for(auto size:{QSize(1400,900),QSize(850,600)}){w.resize(size);QApplication::processEvents();w.findChild<QPushButton*>("publishPreview")->click();auto* scroll=w.findChild<QScrollArea*>("propertiesScroll");scroll->verticalScrollBar()->setValue(0);QApplication::processEvents();check(scroll->horizontalScrollBar()->maximum()==0 && sourcePicker->height()>=27,"Publish panel fits without horizontal clipping");check(w.grab().save(QDir(artifacts).filePath(QString("publish-editor-%1.png").arg(size.width()))),"Editor visual");scroll->verticalScrollBar()->setValue(scroll->verticalScrollBar()->maximum());QApplication::processEvents();check(w.grab().save(QDir(artifacts).filePath(QString("publish-controls-%1.png").arg(size.width()))),"controls visual");}
+    for(auto size:{QSize(1400,900),QSize(850,600)}){w.resize(size);QApplication::processEvents();w.findChild<QPushButton*>("publishPreview")->click();auto* scroll=w.findChild<QScrollArea*>("propertiesScroll");scroll->verticalScrollBar()->setValue(0);QApplication::processEvents();if(scroll->horizontalScrollBar()->maximum()!=0){QTextStream(stdout)<<"WIDTH DEBUG max="<<scroll->horizontalScrollBar()->maximum()<<" viewport="<<scroll->viewport()->width()<<" content="<<scroll->widget()->minimumSizeHint().width()<<" hint="<<scroll->widget()->sizeHint().width()<<"\n";
+            if(auto* editor=w.findChild<QWidget*>("publishDataEditor")){QTextStream(stdout)<<"  editor min="<<editor->minimumSizeHint().width()<<"\n";for(auto* child:editor->findChildren<QWidget*>())if(child->minimumSizeHint().width()>=120)QTextStream(stdout)<<"   child: "<<child->objectName()<<" "<<child->metaObject()->className()<<" min="<<child->minimumSizeHint().width()<<" hint="<<child->sizeHint().width()<<" h="<<child->height()<<"\n";}}check(scroll->horizontalScrollBar()->maximum()==0 && sourcePicker->height()>=27,"Publish panel fits without horizontal clipping");check(w.grab().save(QDir(artifacts).filePath(QString("publish-editor-%1.png").arg(size.width()))),"Editor visual");scroll->verticalScrollBar()->setValue(scroll->verticalScrollBar()->maximum());QApplication::processEvents();check(w.grab().save(QDir(artifacts).filePath(QString("publish-controls-%1.png").arg(size.width()))),"controls visual");}
     auto incompatible=[&](const QJsonObject& definition,const QString& reason){
         ToolDefinition tool;for(const auto& t:editorTools(definition))if(t.id==publisher)tool=t;
         PublishDataEditor editor(tool,definition,dir.filePath("communication-profiles.json"));bool rejected=false;
@@ -125,6 +127,68 @@ bool MainWindow::verifyPublicationUi(const QString& artifacts){
         w.deliveryDiagnostics_->refresh();check(w.findChild<QLabel*>("deliveryStatus")->text().contains("no bound production endpoint"),"diagnostics releases closed endpoint");
         MainWindow restarted(dir.filePath("panels.ini"));check(!restarted.tcpEndpoint_ && !restarted.findChild<QCheckBox*>("runtimeTcpV3")->isChecked(),"restart does not restore production network permission");
     }
-    check(group.producerId==producer && group.fields[0].fieldId==variables[0].id,"UUID binding preserved");QTextStream(stdout)<<"PASS Publish UI: three fields, mapping errors, UUID reopen, Editor network=0, Runtime terminal dispatch=1\n";return true;
+    // ---- v4 fixed-slot assignment (COMM4-17) ----
+    // Machine template manifests are an explicit machine artifact; this fixture
+    // writes one revision and only edits the recipe-level source binding.
+    const auto templateDir=QDir(dir.filePath("v4-machine")).filePath("publication-templates-v4");
+    check(QDir().mkpath(templateDir),"template fixture dir");
+    PublicationPoseContract poseContract{QUuid::createUuid(),QUuid::createUuid(),QUuid::createUuid(),QUuid::createUuid(),QUuid::createUuid()};
+    auto machineTemplate=PublicationTemplate::create(QUuid::createUuid(),QUuid::createUuid(),poseContract);
+    machineTemplate.flags[0].name="AcceptedFlag";
+    machineTemplate.flags[0].required=true;
+    machineTemplate.flags[1].name="SecondFlag";
+    {QFile file(QDir(templateDir).filePath("revision1.json"));check(file.open(QIODevice::WriteOnly),"template fixture write");file.write(QJsonDocument(machineTemplate.toJson()).toJson());}
+    w.setCommunicationTemplateDirectory(templateDir);
+    w.showToolProperties();
+    auto* templateSelector=w.findChild<QComboBox*>("publishTemplateSelector");
+    auto* slotTable=w.findChild<QTableWidget*>("publishSlots");
+    auto* slotStatus=w.findChild<QLabel*>("publishSlotStatus");
+    check(templateSelector && slotTable && slotStatus,"slot editor controls exist");
+    check(templateSelector->count()==2,"one machine template revision offered");
+    auto slotRow=[&](const QString& prefix){for(int r=0;r<slotTable->rowCount();++r)if(slotTable->item(r,0) && slotTable->item(r,0)->text().startsWith(prefix))return r;return -1;};
+    auto pickSource=[&](int row,const QString& prefix){auto* picker=qobject_cast<QComboBox*>(slotTable->cellWidget(row,1));check(picker,"slot picker");for(int i=0;i<picker->count();++i)if(picker->itemText(i).startsWith(prefix)){picker->setCurrentIndex(i);return;}throw std::runtime_error("slot source option missing");};
+    templateSelector->setCurrentIndex(1);
+    check(slotTable->rowCount()==53,"fixed 16/32/4/1 slot capacity listed");
+    check(slotRow("AcceptedFlag")>=0,"custom slot name from machine template shown");
+    // Required slot missing blocks Apply with the field name; nothing is written.
+    const auto beforeSlotDraft=w.service_.activeRecipe()->definition;
+    check(!w.applyToolProperties() && beforeSlotDraft==w.service_.activeRecipe()->definition,"required missing blocks apply atomically");
+    check(w.findChild<QLabel*>("publishStatus")->text().contains("AcceptedFlag"),"required slot named in error");
+    // Variable and direct source produce the same metadata preview path.
+    pickSource(slotRow("AcceptedFlag"),"Accepted0 • Variable • Boolean");
+    if(!w.applyToolProperties())QTextStream(stdout)<<"SLOT APPLY DEBUG: "<<w.findChild<QLabel*>("publishStatus")->text()<<" | "<<w.findChild<QLabel*>("publishSlotStatus")->text()<<"\n";
+    check(w.applyToolProperties(),"Boolean variable assigned to flag slot");
+    // Apply rebuilds the properties panel; re-acquire the widgets.
+    slotTable=w.findChild<QTableWidget*>("publishSlots");slotStatus=w.findChild<QLabel*>("publishSlotStatus");
+    check(slotTable && slotStatus,"slot editor restored after apply");
+    const auto savedV4=w.service_.activeRecipe()->definition;
+    const auto assignments=recipePublicationAssignments(savedV4);
+    check(assignments && assignments->templateId==machineTemplate.id && assignments->templateRevision==machineTemplate.revision && assignments->rows.size()==1,"template revision + one assignment persisted");
+    check(assignments->rows.first().kind==PublicationSlotKind::Flag && assignments->rows.first().index==0 && assignments->rows.first().source.kind==PublicationSourceKind::Variable,"variable slot source recorded");
+    w.findChild<QPushButton*>("publishSlotPreview")->click();
+    check(slotStatus->text().contains("SLOT ÖNİZLEMESİ") && (slotStatus->text().contains("Kontrat uyumlu") || slotStatus->text().contains("Geçerli")),"definition slot preview names the resolved slot");
+    check(!slotStatus->text().contains("PASS"),"slot preview never reports a part PASS");
+    // Incompatible port choice is a visible validation error, not a silent drop.
+    pickSource(slotRow("Number0"),"Accepted0 • Variable • Boolean");
+    check(w.findChild<QLabel*>("publishSlotStatus")->text().contains("sayısal") || (slotTable->cellWidget(slotRow("Number0"),1) && slotTable->cellWidget(slotRow("Number0"),1)->toolTip().contains("sayısal")),"incompatible Number assignment explained");
+    check(!w.applyToolProperties() && savedV4==w.service_.activeRecipe()->definition,"incompatible slot assignment rejected atomically");
+    // Cancel restores the last applied definition byte-for-byte.
+    w.showToolProperties();slotTable=w.findChild<QTableWidget*>("publishSlots");pickSource(slotRow("SecondFlag"),"Accepted1 • Variable • Boolean");
+    w.findChild<QPushButton*>("publishCancel")->click();QApplication::processEvents();
+    check(savedV4==w.service_.activeRecipe()->definition && w.commitToolProperties()==PropertyCommit::Unchanged,"cancel leaves recipe bytes unchanged");
+    for(const auto size:{QSize(1400,900),QSize(850,600)}){
+        w.resize(size);QApplication::processEvents();
+        auto* scroll=w.findChild<QScrollArea*>("propertiesScroll");
+        scroll->ensureWidgetVisible(w.findChild<QLabel*>("publishSlotStatus"));QApplication::processEvents();
+        check(scroll->horizontalScrollBar()->maximum()==0,"slot panel fits without horizontal clipping");
+        check(w.grab().save(QDir(artifacts).filePath(QString("publish-slots-%1.png").arg(size.width()))),"slot editor visual");
+        w.findChild<QPushButton*>("publishSlotPreview")->click();
+        QApplication::processEvents();
+        auto* editorPanel=w.findChild<QWidget*>("publishDataEditor");
+        check(editorPanel && editorPanel->grab().save(QDir(artifacts).filePath(QString("publish-slots-preview-%1.png").arg(size.width()))),"slot preview visual");
+    }
+    slotTable=w.findChild<QTableWidget*>("publishSlots");slotTable->setFocus();
+    check(QApplication::focusWidget()==slotTable,"slot table accepts keyboard focus");
+    check(group.producerId==producer && group.fields[0].fieldId==variables[0].id,"UUID binding preserved");QTextStream(stdout)<<"PASS Publish UI: three fields, mapping errors, UUID reopen, Editor network=0, Runtime terminal dispatch=1, machine template slot assignment/no-op\n";return true;
 }
 }
