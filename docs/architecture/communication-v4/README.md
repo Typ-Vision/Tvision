@@ -2,7 +2,11 @@
 
 **Durum: sıralı uygulama sürüyor; hedef sistem henüz tamamlanmadı.**
 29 Ekim 2026. Kullanıcı seçimi: GPT-6.1 Sol / medium. Varsayılan oturum kapsamı
-tek karttır; ajanlar paralel çalışmaz. **Sonraki görev: [COMM4-16](cards/COMM4-16.md).**
+tek karttır; ajanlar paralel çalışmaz. **Devam: [COMM4-18 kalan kodlama](cards/COMM4-18.md).**
+
+**COMM4-18 araştırması tamam:** [robot/optik kararları](calibration-readiness.md)
+ve kartta dar kodlama tarifi hazır; readiness uygulaması ve yazılım kabulü bekliyor.
+Fiziksel solve/validation/activation BLOCKED;19 henüz başlamadı.
 
 **COMM4-01 tamam:** [güncel kaynak, test ve kart sahiplik haritası](source-map.md).
 **COMM4-02 tamam:** [wire fixture freeze](freeze-comm4-02.md).

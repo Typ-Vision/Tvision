@@ -4,10 +4,16 @@
 
 ## Devam noktası
 
+**[COMM4-18 araştırma](archive/2026-10-31-comm4-18-research.md) tamam.**
+[Kartta](architecture/communication-v4/cards/COMM4-18.md) readiness kodlama tarifi;
+uygulama/kapsamlı kabul bekliyor.19 başlamadı. Fiziksel6D BLOCKED.
+31 Ekim: kodda tam Release ON/OFF regresyonu geri geldi
+([protokol](working-protocol.md)); eski kısmi kabul açık.
+
 **[COMM4-17 yazılım](archive/2026-10-31-comm4-17.md).**
 Slot editorü: template salt okunur; Variable/direct kaynak, satır validation,
 atomik Apply/no-op cancel. ON6/OFF5+komşu7+UI geçti; native görsel var.
-Pose/Enum 19'da açık; tam suite yok. 18 başlatılmadı.
+Pose/Enum 19'da açık;17 tam suite yok.
 INI/probe SEGFAULT açık; temiz girdi kullan.
 [EFR-04](archive/2026-10-29-efr-04.md): Wheel açık, Match/θ ertelendi.
 
@@ -15,15 +21,9 @@ INI/probe SEGFAULT açık; temiz girdi kullan.
 
 [Değişken rehberi](variables-usage.md).
 
-**[COMM-37](archive/2026-10-28-comm-37.md):** UI 164/core 127 geçti;
-dış plaka skipped. Faz kapandı; cihaz varsa COMM-38.
-[36](archive/2026-10-28-comm-36.md), [23](archive/2026-10-28-comm-23.md),
-[22](archive/2026-10-27-comm-22.md),
-[21](archive/2026-10-27-comm-21.md),
-[20](archive/2026-10-27-comm-20.md),
-[19](archive/2026-10-27-comm-19.md),
-[18](archive/2026-10-27-comm-18.md),
-[17](archive/2026-10-27-comm-17.md) tamam.
+**[COMM-37](archive/2026-10-28-comm-37.md):** UI164/core127 geçti;
+dış plaka skipped. Faz kapandı; cihaz varsa COMM-38.17–23/36 tamam;
+ayrıntılı kapanışlar [arşiv dizininde](archive/README.md).
 COMM-12–16: profil/intent/bundle/outbox/input-router/codec.
 Editor/Load ağ açmaz; tombstone silinmez; fiziksel kabul açık.
 
@@ -31,18 +31,14 @@ Editor/Load ağ açmaz; tombstone silinmez; fiziksel kabul açık.
 **[COMM-10](archive/2026-10-27-comm-10.md):** Missing-first karar/export.
 **[COMM-09](archive/2026-10-27-comm-09.md):** Frozen cycle variable context/digest.
 
-**[COMM-02–08 tamam](archive/2026-10-26-comm-08.md):**
-UUID/type/unit/frame/enum/no-op/hash korunur.
-Editor dışarı yazmaz; değerler tanımda tutulmaz. Circle: COMM-37’de kapandı.
+**[COMM-02–08](archive/2026-10-26-comm-08.md) tamam:** UUID/type/unit/frame/enum/no-op/hash
+korunur. Editor dışarı yazmaz; tanım değer tutmaz. Circle37'de kapandı.
 
-[Kaynak haritası](architecture/communication/source-map.md),
-[Plan](architecture/communication/README.md): 01–23 → 36 → 37 tamam;
-opsiyonel Modbus 24–28, OPC UA 29–33, sample 34, FANUC 35.
-Çevrim sonunda gönderim; akış ortası gönder/bekle ayrı kapsam. Fiziksel COMM-38,
-Hand-eye/robot hareketi ayrı; araştırma notları plan indeksindedir.
+[COMM planı/kaynak haritası](architecture/communication/README.md):01–23/36/37 tamam;
+opsiyonel24–35 ve fiziksel38 açık. Çevrim sonu gönderim var;
+akış ortası gönder/bekle, Hand-eye/robot hareketi ayrı kapsam.
 
-**[INT-10](archive/2026-10-26-int-10.md):** CameraIntegration main’e birleşti;
-dal `Variables`, fiziksel/native açık.
+**[INT-10](archive/2026-10-26-int-10.md):** CameraIntegration main'de; fiziksel/native açık.
 
 **[CCUX-24I yazılım/görsel tamam](archive/2026-10-26-ccux-24i.md):** iki Release;
 UI 39/UI OFF 19 test; tekrar, context hata sınırı ve iki boyut fixture kayıtta.

@@ -32,7 +32,7 @@ CMake isimlerinden belirlenir; öneri test ismi uygulanmış test gibi sunulmaz.
 | Profil | Zorunlu kapsam |
 | --- | --- |
 | D — yalnız belge/fixture tasarımı | Link, byte-size/aralık, diff ve bağlam boyutu; build gerekmiyor. Çalıştırılmayan Release ON/OFF açıkça belirtilir. |
-| C — core uygulama | İlgili Release hedeflerini hem `build/reference-ui` ON hem `build/kmc9-core-off` OFF'da derle; ilgili CTest. Qt Widgets bağımlılığı core'a sızmaz. SDK OFF capability unavailable kabulü korunur. |
+| C — core uygulama | Release ON/OFF derleme; ilgili davranış, negatif/sınır ve hata testlerinden sonra son kaynakta tam ON/OFF CTest. Qt Widgets bağımlılığı core'a sızmaz. SDK OFF capability unavailable kabulü korunur. |
 | U — UI | C + UI Release, ilgili CTest ve gerçek normal/küçük ekran görsel kontrolü; örnek1920×1080 ve1280×720, DPI kayıtlı. Offscreen tek başına native kabul değildir. |
 | F — ortak sözleşme/faz | Hedefli testler sonra son kaynakta tam Release ON ve OFF CTest; skipped sebep/adet ayrı. UI etkisi varsa U da zorunlu. |
 
@@ -43,7 +43,8 @@ cmake --build build/kmc9-core-off -j 6
 ctest --test-dir build/kmc9-core-off --output-on-failure -R '<gerçek-ilgili-testler>'
 ```
 
-Tam F kabulünde `-R` kaldırılır. Başarısız testi ve komşularını düzeltip yeniden
+31 Ekim kullanıcı kararıyla C/U/F tam regresyonunda `-R` kaldırılır; hedefli
+koşumlar tek başına kapanış değildir. Başarısız testi ve komşularını düzeltip yeniden
 çalıştır; yeni gerekçe olmadan başarılı tam koşumu tekrar etme. Hedefli sonuç tam
 suite değildir. Yalnız belge planı için bu komutlar şimdi çalıştırılmaz.
 

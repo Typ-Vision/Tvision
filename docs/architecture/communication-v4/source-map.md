@@ -161,7 +161,8 @@ attempt<10.000; tombstone'lar bütçeye dahildir ve sessiz eviction yoktur.
 
 Native OECS cancel/drain/frame correlation, bağımsız fiziksel mm, lens ve robot
 actual6DOF/controller/TCP/frame/plate/reference/tolerance engelleri korunur.
-COMM4-18 araştırması,22–26 fixture/fiziksel kapı ayrımı halen gereklidir.
+COMM4-18 [dar araştırma/audit](calibration-readiness.md) tamam; readiness kodu
+bekliyor.22–26 fixture/fiziksel kapı ayrımı halen gereklidir.
 
 ## Gerçek build ve CTest haritası
 
@@ -245,7 +246,7 @@ daraltılır. Bir sonraki kart otomatik başlatılmaz.
 | 15 | persistence/ProjectRepository, CommunicationProfiles, DeliveryStore, StationDeliveryLedger, ProductionStore | CommunicationMigrationPlanner/Transaction uygulandı; backup/manifest, unsupported/pending gate, CAS selection ve ledger'i koruyan rollback; communication_migration_contract |
 | 16 | MainWindowCommunication/MainWindowRuntime, main, migration | CommunicationPanel + CommunicationWorkspace + CommunicationStationComposition; tek UI, shared control/dispatch, monotonic migration authority; [sınırlar](communication-workspace.md); native kabul açık |
 | 17 | PublishDataEditor typed bundle seçicisi | Slot assignment/direct-output model; machine template vs recipe yetkisi |
-| 18 | Yukarıdaki planar calibration portları, contract S6–S8 | calibration-readiness.md; optik/robot6D araştırması, daha derin audit |
+| 18 | Yukarıdaki planar calibration portları, contract S6–S8 | calibration-readiness.md araştırması hazır; yeni aday HandEyeReadiness DTO/policy ve pure service; kodlama bekliyor |
 | 19 | domain/SpatialTransform FrameRef ve communication value DTO portu | RobotActualPoseAdapter; controller convention fixture, robot client varsayılmaz |
 | 20 | IndependentCalibrationSession, CalibrationWizardSession, ScopedActiveCalibration | RobotCalibrationSessionService;10 arbiter'ını tüketir |
 | 21 | Independent capture, CameraAcquisitionSessions, legacy StudyStore sınırı | CalibrationSampleCoordinator;13 durable request/sample ledger |

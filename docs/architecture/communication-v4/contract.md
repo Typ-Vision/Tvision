@@ -203,6 +203,13 @@ değildir. Düzlemsel plate görüntüsünden solvePnP gibi pose kestirimi ancak
 kalibre intrinsics, gerçek geometrik boyut, belirsizlik ve cheirality/ambiguity
 denetimiyle adaydır; algoritma/SDK seçimi COMM4-18 kararıdır.
 
+COMM4-18 [araştırma kararı](calibration-readiness.md): ilk aday perspektif
+pinhole/Brown-Conrady + IPPE ambiguity denetimi ve açık PARK hand-eye;
+iki modun dönüşümleri, fixture eşikleri ve fiziksel bekleyen kararlar bu kayıttadır.
+Telecentrik/fisheye ilk yolda unsupported; araştırma tamamlanması solver
+softwareEvidence veya fiziksel izin değildir. Pure readiness uygulaması18'de,
+gerçek adapter/session/sample/solve/activate19–23'te kalır.
+
 Gerekli gerçek girdiler: robot marka/controller/firmware, erişilebilir actual
 6DOF pose, robot frame ve TCP tanımı, gripper/plate montajı, kamera/lens/distortion,
 plaka ölçü/belirsizlik, hareket çeşitliliği, bağımsız kabul referansı/tolerans.

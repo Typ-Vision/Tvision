@@ -1,6 +1,6 @@
 # VisionFlow çalışma protokolü
 
-DOC-WORK-02 · 30 Ekim 2026. Amaç, kabul kalitesini koruyarak bağlamı,
+DOC-WORK-03 · 31 Ekim 2026. Amaç, kabul kalitesini koruyarak bağlamı,
 tekrarları ve görev devri maliyetini azaltmaktır. Kullanıcının güncel talimatı,
 AGENTS ve seçili kartın zorunlu kabulü önceliklidir. Bu belge bir oturumda bir
 kez okunur; ajan mesajına veya her araç çağrısına tekrar kopyalanmaz.
@@ -47,17 +47,17 @@ push yok. Başka ajan açma. Son bildirim: durum, commit, kanıt yolu, açık en
 
 ## 3. Doğrulamayı değişikliğe göre seç
 
-**30 Ekim kullanıcı tercihi (öncelikli):** Kısa, ilgili kontrol yeterlidir.
-Kullanıcı ayrıca istemedikçe fonksiyon bazında ağır testler, geniş/tam suite
-ve başarılı koşum tekrarları başlatılmaz. Derleme/diff ve gerekli kısa hedefli
-kontrol seçilir; yapılmayan kabul açıkça kaydedilir. Aşağıdaki geniş matris bu
-tercihin önüne geçmez.
+**31 Ekim kullanıcı tercihi:** 30 Ekim'deki kısa/yüzeysel kontrol istisnası
+kaldırıldı. Kod değişikliklerinde kapsamlı davranış, negatif/sınır, hata ve
+regresyon kabulü uygulanır; ilgili hedefli testlerden sonra son kaynakta tam
+Release ON/OFF CTest çalıştırılır. Süre veya maliyet gerekçesiyle zorunlu test
+daraltılmaz. Yalnız belge değişikliği için aşağıdaki belge profili geçerlidir.
 
 | Değişiklik | Asgari doğrulama |
 | --- | --- |
 | Yalnız belge | Belge/link/boyut kontrolü ve diff kontrolü; build gerekmez. |
-| Sınırlı core davranışı | İlgili Release hedefleri ve davranışı sınayan CTestler. |
-| UI davranışı | UI Release, ilgili CTest, normal/küçük ekran görsel kontrolü. |
+| Sınırlı core davranışı | Release ON/OFF derleme, ilgili davranış/negatif/sınır CTestleri ve tam ON/OFF regresyonu. |
+| UI davranışı | UI Release, ilgili CTest, tam ON/OFF regresyonu ve normal/küçük ekran görsel kontrolü. |
 | Ortak sözleşme, codec, katmanlar arası değişim veya faz kapanışı | Etkilenen hedefli testlerden sonra son kaynakta tam Release ON/OFF regresyonu. |
 
 Kart daha geniş kabul istiyorsa o uygulanır. Komut/toolchain README'dedir.
