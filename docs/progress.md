@@ -4,17 +4,16 @@
 
 ## Devam noktası
 
-**[COMM4-18 araştırma](archive/2026-10-31-comm4-18-research.md) tamam.**
-[Kartta](architecture/communication-v4/cards/COMM4-18.md) readiness kodlama tarifi;
-uygulama/kapsamlı kabul bekliyor.19 başlamadı. Fiziksel6D BLOCKED.
-31 Ekim: kodda tam Release ON/OFF regresyonu geri geldi
-([protokol](working-protocol.md)); eski kısmi kabul açık.
+**[COMM4-18 yazılım](archive/2026-10-31-comm4-18.md)** ve
+[araştırma](archive/2026-10-31-comm4-18-research.md) tamam. Pure readiness
+DTO/policy/servis +258 check; ON/OFF derleme, hedefli13/13, tam OFF149+1 skipped
+geçti. Tam ON187/190; 2 COMM4-17 UI fixture hatası açık. Fiziksel6D BLOCKED;
+19 başlamadı; 17 tam suite yok. 31 Ekim tam ON/OFF regresyonu geri
+([protokol](working-protocol.md)).
 
-**[COMM4-17 yazılım](archive/2026-10-31-comm4-17.md).**
-Slot editorü: template salt okunur; Variable/direct kaynak, satır validation,
-atomik Apply/no-op cancel. ON6/OFF5+komşu7+UI geçti; native görsel var.
-Pose/Enum 19'da açık;17 tam suite yok.
-INI/probe SEGFAULT açık; temiz girdi kullan.
+**[COMM4-17 yazılım](archive/2026-10-31-comm4-17.md).** Salt okunur template,
+Variable/direct kaynak, atomik Apply. ON6/OFF5+komşu7+UI geçti; native görsel var.
+Pose/Enum19'da. INI/probe SEGFAULT açık; temiz girdi kullan.
 [EFR-04](archive/2026-10-29-efr-04.md): Wheel açık, Match/θ ertelendi.
 
 [D:/TVision](archive/2026-10-28-dev-drive-01.md): OpenCV geçti; CTest kısmi.

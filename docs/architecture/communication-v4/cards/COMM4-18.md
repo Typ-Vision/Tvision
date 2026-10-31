@@ -1,8 +1,8 @@
 # COMM4-18 — Robot optik ve 6D gözlenebilirlik araştırma kapısı
 
-Durum: **araştırma tamam (31 Ekim 2026); kodlama ve yazılım kabulü bekliyor**.
+Durum: **araştırma ve pure readiness kodlaması tamam (31 Ekim 2026); fiziksel kapılar açık**.
 Araştırma: [calibration-readiness](../calibration-readiness.md).
-Kalan uygulama modeli kullanıcı tarafından seçilecek; bu kart model başlatmaz.
+Kodlama kanıtı: `build/comm4/COMM4-18/`; gerçek solver/capture/activation 19–23'te kalır.
 Tek oturum kapsamı ve ortak kurallar [indekste](../README.md), kapanış
 kuralları [V0](../verification.md) içindedir.
 

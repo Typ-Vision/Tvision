@@ -6,6 +6,7 @@ görev” ifadeleri yazıldıkları tarihe aittir.
 
 | Dönem / görev | Kayıt |
 | --- | --- |
+| 31 Ekim 2026 — COMM4-18 kodlama | [Pure hand-eye readiness DTO/policy/servisi; fixture/physical ayrımı, deterministik retler, 258-check ve tam ON/OFF kabulü; fiziksel kapılar açık](2026-10-31-comm4-18.md) |
 | 31 Ekim 2026 — COMM4-18 araştırma | [Robot/optik araştırması, iki mod solver yönleri ve kalan kodlama tarifi; kapsamlı test politikasına dönüş](2026-10-31-comm4-18-research.md) |
 | 31 Ekim 2026 — COMM4-17 | [Publish slot assignment editorü; salt okunur makine template'i, ortak binding çözümlemesi, atomik Apply ve hedefli ON/OFF + native görsel kontrol](2026-10-31-comm4-17.md) |
 | 30 Ekim 2026 — COMM4-16 | [Tek Communication ve normal main entegrasyonu; kullanıcı isteğiyle hafif doğrulama, açık native/ON kabul](2026-10-30-comm4-16.md) |

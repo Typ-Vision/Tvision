@@ -1,7 +1,7 @@
 # COMM4-18 — Robot/optik araştırması ve uygulama kararları
 
-31 Ekim 2026 · Araştırma tamam; aşağıdaki yazılım kapısı henüz uygulanmadı.
-Yetki sınırı [contract S6–S8](contract.md#s6--robot-ve-optik-araştırma-kapısı).
+31 Ekim 2026 · Araştırma ve pure readiness kapısı tamam; gerçek solver/capture/
+activation 19–23'te. Yetki sınırı [contract S6–S8](contract.md#s6--robot-ve-optik-araştırma-kapısı).
 Fiziksel solve/validate/activate **BLOCKED**. Sentetik çalışma ilerleyebilir.
 
 ## 1. Mevcut ve eksik kanıt
@@ -127,6 +127,6 @@ yalnız pure readiness DTO/policy kapısını uygular.19 adapter,20 session/leas
 18'de aday solver API'sinin bulunması `softwareEvidence=1` yapmaz; W6a algorithm
 ve evidence alanları gerçek uygulama/test olmadan yükseltilmez.
 
-Son araştırma durumu: software fixture planı **READY_TO_IMPLEMENT**;
-physical solve/validation/activation **BLOCKED**. Fiziksel tolerans ve controller
-kararı bekliyor; bu araştırma ne kodun ne fiziksel kabulün tamamlandığıdır.
+Son durum: software fixture planı **IMPLEMENTED**; physical solve/validation/
+activation **BLOCKED**. Fiziksel tolerans ve controller kararı bekliyor; bu
+araştırma ne kodun ne fiziksel kabulün tamamlandığıdır.
