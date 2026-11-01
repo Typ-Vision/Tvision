@@ -1,6 +1,6 @@
 # COMM4-23 — Bağımsız validate ve atomik activation
 
-Durum: planlandı, başlanmadı. Model: **GPT-6.1 Sol / medium**.
+Durum: fixture yazılımı tamam; fiziksel activation BLOCKED. Model: **GPT-6.1 Sol / medium**.
 Tek oturum kapsamı ve ortak kurallar [indekste](../README.md), kapanış
 kuralları [V0](../verification.md) içindedir.
 
@@ -40,3 +40,6 @@ Teslim: Immutable validation report, activation transaction ve invalidation test
 V0 kapanışı zorunlu: kanıt `build/comm4/COMM4-23/`, tarihli arşiv kaydı,
 progress/arşiv indeksi, bağlam kontrolü ve tek **`COMM4-23: …`** commit; push yok.
 Sonraki: **COMM4-24**; kullanıcı yeni sıra vermedikçe aynı oturumda başlatma.
+
+Uygulanan port ve sınırlar: [validation/activation](../hand-eye-validation-activation.md).
+Son kabul ve açık eski UI hataları: [kapanış](../../../archive/2026-11-02-comm4-23.md).

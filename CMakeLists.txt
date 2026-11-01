@@ -106,7 +106,7 @@ target_sources(visionflow_acquisition PRIVATE src/application/RuntimeOverlay.cpp
 
 target_sources(visionflow_acquisition PRIVATE src/application/ToolResultCodec.cpp src/application/ProductionResultCodec.cpp)
 target_sources(visionflow_acquisition PRIVATE src/application/SourceFrameIndex.cpp src/application/MultiSourceRuntimeService.cpp)
-target_sources(visionflow_acquisition PRIVATE src/application/HandEyeCandidateSolver.cpp)
+target_sources(visionflow_acquisition PRIVATE src/application/HandEyeCandidateSolver.cpp src/application/HandEyeValidationService.cpp)
 
 target_sources(visionflow_acquisition PRIVATE src/application/CalibrationService.cpp)
 target_sources(visionflow_acquisition PRIVATE src/application/ActiveCalibrationService.cpp)
@@ -189,6 +189,12 @@ target_sources(visionflow_acquisition PRIVATE src/application/ReferenceService.c
 target_sources(visionflow_acquisition PRIVATE src/application/PoseRoiService.cpp src/vision/RectangleMask.cpp)
 target_sources(visionflow_acquisition PRIVATE src/application/WorldTrackingService.cpp)
 if(BUILD_TESTING)
+  add_executable(hand_eye_validation_test tests/hand_eye_validation_test.cpp)
+  target_link_libraries(hand_eye_validation_test PRIVATE visionflow_acquisition)
+  target_compile_definitions(hand_eye_validation_test PRIVATE TEST_DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/tests/fixtures/hand-eye-candidate")
+  add_test(NAME hand_eye_validation_activation_contract COMMAND hand_eye_validation_test)
+  set_tests_properties(hand_eye_validation_activation_contract PROPERTIES ENVIRONMENT "VISIONFLOW_TEST_ARTIFACTS=${CMAKE_CURRENT_BINARY_DIR}/comm4-23-validation-evidence")
+
   add_executable(hand_eye_candidate_solver_test tests/hand_eye_candidate_solver_test.cpp)
   target_link_libraries(hand_eye_candidate_solver_test PRIVATE visionflow_acquisition)
   target_compile_definitions(hand_eye_candidate_solver_test PRIVATE TEST_DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/tests/fixtures/hand-eye-candidate")

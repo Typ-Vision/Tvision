@@ -1,4 +1,5 @@
 #include "HandEyeCandidateSolver.hpp"
+#include "HandEyeValidationService.hpp"
 #include "ProductionStore.hpp"
 #include <QCryptographicHash>
 #include <QJsonArray>
@@ -33,18 +34,7 @@ SpatialTransform spatial(const M& m,FrameRef source,FrameRef target) {
     SpatialTransform s{source,target,{m(0,3),m(1,3),m(2,3)},q.normalized()};s.validate();return s;
 }
 QJsonArray singular(const cv::Mat& a) { cv::Mat w;cv::SVD::compute(a,w);QJsonArray values;for(int i=0;i<w.rows;++i)values.append(w.at<double>(i));return values; }
-QJsonObject dependencies(const CalibrationDependencySnapshot& d) {
-    return {{"mode",int(d.mode)},{"cameraKey",double(d.cameraKey)},{"cameraRevision",id(d.cameraRevision)},
-      {"intrinsicKey",double(d.intrinsicRevisionKey)},{"intrinsicRevision",id(d.intrinsicRevision)},
-      {"plateKey",double(d.plateRevisionKey)},{"plateRevision",id(d.plateRevision)},
-      {"tcpKey",double(d.flangeTcpRevisionKey)},{"tcpRevision",id(d.flangeTcpRevision)},
-      {"adapterKey",double(d.robotAdapterRevisionKey)},{"adapterRevision",id(d.robotAdapterRevision)},
-      {"acquisitionKey",double(d.acquisitionProfileRevisionKey)},{"acquisitionRevision",id(d.acquisitionProfileRevision)},
-      {"modelKey",double(d.modelRevisionKey)},{"modelRevision",id(d.modelRevision)},
-      {"cameraId",d.cameraId},{"physical",d.physical.toJson()},
-      {"targetFrame",id(d.pose.targetFrame)},{"targetRevision",id(d.pose.targetFrameRevision)},
-      {"sourceFrame",id(d.pose.sourceFrame)},{"sourceRevision",id(d.pose.sourceFrameRevision)},{"convention",int(d.pose.convention)}};
-}
+
 M mean(const std::vector<M>& values) {
     cv::Mat r=rotation(values.front()); bool converged=false;
     for(int n=0;n<100;++n){cv::Vec3d delta{};for(const auto& v:values)delta+=logR(r.t()*rotation(v));delta*=1.0/values.size();
@@ -68,7 +58,7 @@ HandEyeSolveResult HandEyeCandidateSolver::solveFixture(const HandEyeFixtureRequ
         QSet<QString> frames{request.base.frameUuid,request.flange.frameUuid,request.camera.frameUuid,request.plate.frameUuid};require(frames.size()==4,"FRAME_ALIAS");
         require(std::isfinite(request.plateDiagonalMm)&&request.plateDiagonalMm>0,"INVALID_PLATE_DIAGONAL");
         require(request.samples.size()<=256,"DATASET_LIMIT");
-        const auto dep=dependencies(request.dependencies);report["dependencies"]=dep;report["dependencyDigest"]=digest(dep);
+        const auto dep=handEyeDependencyJson(request.dependencies);report["dependencies"]=dep;report["dependencyDigest"]=digest(dep);
         report["policyRevision"]=request.policy.revision;report["policyDigest"]=request.policy.digest;
         std::vector<M> g,c;std::vector<cv::Mat> rg,tg,rc,tc;QSet<QUuid> sampleIds,frameIds;QJsonArray samples;
         for(const auto& s:request.samples) {
@@ -114,7 +104,7 @@ HandEyeSolveResult HandEyeCandidateSolver::solveFixture(const HandEyeFixtureRequ
         const bool inHand=request.dependencies.mode==HandEyeMode::EyeInHand;
         report["transform"]=spatial(x,request.camera,inHand?request.flange:request.base).toJson();
         report["fixedTransform"]=spatial(fixed,request.plate,inHand?request.base:request.flange).toJson();
-        report["candidate"]=id(QUuid::createUuid());report["state"]="CANDIDATE";
+        report["candidate"]=id(QUuid::createUuid());report["candidateRevision"]=id(QUuid::createUuid());report["state"]="CANDIDATE";
         // Append-only evidence store; archive failure never returns accepted.
         ProductionStore(directory).append("hand_eye_candidate",report["candidate"].toString(),report);
         result.accepted=true;result.reason="CANDIDATE";

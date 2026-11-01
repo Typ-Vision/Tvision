@@ -2,8 +2,11 @@
 
 **Durum: sıralı uygulama sürüyor; hedef sistem henüz tamamlanmadı.**
 1 Kasım 2026. Kullanıcı seçimi: GPT-6.1 Sol / medium. Varsayılan oturum kapsamı
-tek karttır; ajanlar paralel çalışmaz. **Devam: [COMM4-23 validate/activate](cards/COMM4-23.md);
+tek karttır; ajanlar paralel çalışmaz. **Devam: [COMM4-24 kalibrasyon UI](cards/COMM4-24.md);
 kullanıcı yeni sıra vermedikçe başlatılmaz.**
+
+**COMM4-23 fixture yazılımı tamam:** [bağımsız validation ve atomik seçim](hand-eye-validation-activation.md).
+Immutable holdout/reference raporu, exact CAS ve crash recovery; production BLOCKED.
 
 **COMM4-22 fixture yazılımı tamam:** [iki geometri aday solver](hand-eye-candidate-solver.md).
 PARK, immutable provenance ve kalite/degeneracy; fiziksel solve BLOCKED.
@@ -120,7 +123,7 @@ fiziksel PLC/robot ve dağıtım engelleri bu planla kapanmaz.
 | [20](cards/COMM4-20.md) | Kalibrasyon session ve lease — tamam | 10,19 |
 | [21](cards/COMM4-21.md) | SAMPLE pose/frame eşleştirme | 13,20 |
 | [22](cards/COMM4-22.md) | İki kurulum için aday solve | 18,21 |
-| [23](cards/COMM4-23.md) | Bağımsız validate ve atomik activate | 22 |
+| [23](cards/COMM4-23.md) | Bağımsız validate ve atomik activate — fixture tamam | 22 |
 | [24](cards/COMM4-24.md) | Kalibrasyon UI ve operatör akışı | 16,23 |
 | [25](cards/COMM4-25.md) | PLC/robot simulator ve dayanıklılık kabulü | 14,17,24 |
 | [26](cards/COMM4-26.md) | Entegre kapanış ve fiziksel kabul raporu | 25 |

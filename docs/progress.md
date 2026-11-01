@@ -5,9 +5,9 @@
 
 ## Devam noktası
 
-**[COMM4-22](archive/2026-11-02-comm4-22.md)**: PARK fixture,274 check;
-ON/OFF14/14. Tam ON191/2eskiUI/1skip, OFF153/1skip. Fiziksel BLOCKED;
-devam23. [21 pairing](archive/2026-11-02-comm4-21.md) korunur.
+**[COMM4-23](archive/2026-11-02-comm4-23.md)**: validation/CAS,570check;
+ON/OFF15/15. Tam ON192/2eskiUI/1skip, OFF154/1skip.
+Fiziksel BLOCKED; devam24. [22](archive/2026-11-02-comm4-22.md)/[21](archive/2026-11-02-comm4-21.md) korunur.
 
 **[COMM4-18a](archive/2026-11-01-comm4-18a.md)**: evidence enum reddi; 706 kontrol.
 İki eski UI hatası/dış plaka skipped; fiziksel6D BLOCKED.

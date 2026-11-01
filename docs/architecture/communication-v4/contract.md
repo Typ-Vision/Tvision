@@ -287,3 +287,9 @@ ve dependency hash ile compare-and-swap, idle station+drained camera koşulunda
 atomik olur. Eski geçerli model başarısız işlemde korunur. Lens, intrinsics,
 mounting, TCP/frame revision değişimi validation iznini düşürür; rename düşürmez.
 Restart ACTIVE kayıtlarını okur ama üretim Run/Auto ve lease'i yeniden açmaz.
+COMM4-23 [validation ve atomik seçim fixture portları](hand-eye-validation-activation.md)
+immutable rapor, bağımsız oracle, max/RMS/p95 ve exact CAS uygular. Candidate
+ayrı UUID revision taşır; reference/tolerance revision da aktivasyonda güncel
+olmalıdır. Exclusive idle/drained/configuration boundary disk commit boyunca
+korunur. Sentetik ACTIVE geçmişi üretim izni değildir; physical activate ve
+normal main/wire composition BLOCKED kalır.

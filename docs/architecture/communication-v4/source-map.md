@@ -180,6 +180,7 @@ Yeni COMM4 test/hedef adları ilgili kartın uygulamasında eklenir.
 | communication_v4_codec_test / tests/communication_v4_codec_test.cpp | communication_v4_codec (COMM4-06) |
 | communication_values_test / tests/communication_values_test.cpp | communication_values_contract |
 | spatial_values_test / tests/spatial_values_test.cpp | spatial_values_contract |
+| hand_eye_validation_test / tests/hand_eye_validation_test.cpp | hand_eye_validation_activation_contract (COMM4-23) |
 | hand_eye_readiness_test / tests/hand_eye_readiness_test.cpp | hand_eye_readiness (COMM4-18) |
 | robot_actual_pose_adapter_test / tests/robot_actual_pose_adapter_test.cpp | robot_actual_pose_adapter_contract (COMM4-19) |
 | robot_calibration_session_test / tests/robot_calibration_session_test.cpp | robot_calibration_session_contract (COMM4-20) |
@@ -255,7 +256,7 @@ daraltılır. Bir sonraki kart otomatik başlatılmaz.
 | 20 tamam | IndependentCalibrationSession, CalibrationWizardSession, ScopedActiveCalibration | RobotCalibrationSessionService;10 arbiter'ını tüketir; [uygulanan sınır](calibration-session-lifecycle.md) |
 | 21 tamam | CalibrationSampleCoordinator + IndependentCalibrationSession; aynı calibration lease | [SAMPLE pairing](calibration-sample-pairing.md);13 durable ledger + bounded raw raster pairing; calibration_sample_coordinator_contract |
 | 22 tamam (fixture) | HandEyeCandidateSolver;18 PARK + domain SpatialTransform; ProductionStore | [İki geometri aday solver](hand-eye-candidate-solver.md); hand_eye_candidate_solver_contract; fiziksel gate BLOCKED, main/wire yolu yok |
-| 23 | ScopedActiveCalibration save/use portu;18 sonrası gerçek repository seçimi | HandEyeValidationReport/ActivationService; planar aktivasyonu robot izni yapmaz |
+| 23 fixture tamam | ProductionStore candidate/validation namespace; planar ScopedActiveCalibration ayrı kalır | HandEyeValidationService/HandEyeActivationService; immutable report + per-station QSaveFile CAS; hand_eye_validation_activation_contract; [sınırlar](hand-eye-validation-activation.md) |
 | 24 | CalibrationWizard/Overview ve16 Communication composition | Robot calibration view model; UI solve/SDK çağırmaz |
 | 25 | src/app/plc_simulator.cpp, mevcut TCP test executable kayıtları | v4 simulator mode, robot handshake fixture driver; üretim producer yok |
 | 26 | verification matrisi, kullanım README ilgili davranışları | Entegre kabul raporu ve yalnız dar gerçek açık düzeltmesi |
