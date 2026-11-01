@@ -6,6 +6,7 @@ görev” ifadeleri yazıldıkları tarihe aittir.
 
 | Dönem / görev | Kayıt |
 | --- | --- |
+| 2 Kasım 2026 — COMM4-22 | [İki mod PARK aday solver, bağımsız golden/negatif fixture ve immutable provenance; fiziksel BLOCKED](2026-11-02-comm4-22.md) |
 | 2 Kasım 2026 — COMM4-21 | [SAMPLE actual pose/yeni frame, kalıcı intent/raw raster, exact terminal ve drain/restart recovery](2026-11-02-comm4-21.md) |
 | 2 Kasım 2026 — LIC-01 | [Makineyle teslimde Qt/LGPL ve diğer bağımlılıklar; SDK/paket/kaynak teslimi açık](2026-11-02-lic-01.md) |
 | 1 Kasım 2026 — COMM4-18a | [Geçersiz evidence enum reddi; 64 negatif senaryo, 706 check, Release ON/OFF ve tam regresyon; iki mevcut UI hatası açık](2026-11-01-comm4-18a.md) |

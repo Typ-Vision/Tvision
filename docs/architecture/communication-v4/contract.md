@@ -271,7 +271,9 @@ wire'a eklemek yeni contract revision/freeze ister. Otomatik convention yoktur.
 ## S8 — Solve, validate, activate
 
 Session: CREATED/COLLECTING → SOLVING → CANDIDATE → VALIDATING → VALIDATED →
-ACTIVE veya FAILED/ABORTED. SOLVE yalnız candidate üretir; üretim modeli değişmez.
+ACTIVE veya FAILED/ABORTED. SOLVE yalnız candidate üretir; üretim modeli değişmez. COMM4-22
+[fixture adapterı ve denklem türetimi](hand-eye-candidate-solver.md) iki mod için
+uygulandı; fiziksel gate bloklu olduğundan normal wire/main solve yolu açılmaz.
 En az örnek sayısı, yön/translation çeşitliliği, singularity/condition metriği ve
 plate reprojection hatası araştırma kapısında sayısal olarak karara bağlanır;
 üç/çok sayıda benzer pose yeterli kabul edilmez. Reject edilen örnek nedeni

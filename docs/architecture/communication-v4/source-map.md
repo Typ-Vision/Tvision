@@ -254,7 +254,7 @@ daraltılır. Bir sonraki kart otomatik başlatılmaz.
 | 19 tamam | domain/SpatialTransform FrameRef ve communication value DTO portu | [RobotActualPoseAdapter](robot-pose-adapter.md); generic quaternion + explicit Euler convention, exact frame/revision map; robot client yok |
 | 20 tamam | IndependentCalibrationSession, CalibrationWizardSession, ScopedActiveCalibration | RobotCalibrationSessionService;10 arbiter'ını tüketir; [uygulanan sınır](calibration-session-lifecycle.md) |
 | 21 tamam | CalibrationSampleCoordinator + IndependentCalibrationSession; aynı calibration lease | [SAMPLE pairing](calibration-sample-pairing.md);13 durable ledger + bounded raw raster pairing; calibration_sample_coordinator_contract |
-| 22 |18'de seçilecek gerçek solver portu, Wizard/Active planar ayrımı | HandEyeCandidateSolver; iki geometri, uygunluk blokluysa fixture |
+| 22 tamam (fixture) | HandEyeCandidateSolver;18 PARK + domain SpatialTransform; ProductionStore | [İki geometri aday solver](hand-eye-candidate-solver.md); hand_eye_candidate_solver_contract; fiziksel gate BLOCKED, main/wire yolu yok |
 | 23 | ScopedActiveCalibration save/use portu;18 sonrası gerçek repository seçimi | HandEyeValidationReport/ActivationService; planar aktivasyonu robot izni yapmaz |
 | 24 | CalibrationWizard/Overview ve16 Communication composition | Robot calibration view model; UI solve/SDK çağırmaz |
 | 25 | src/app/plc_simulator.cpp, mevcut TCP test executable kayıtları | v4 simulator mode, robot handshake fixture driver; üretim producer yok |

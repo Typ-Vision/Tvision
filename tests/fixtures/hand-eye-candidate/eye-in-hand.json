@@ -1,0 +1,1280 @@
+{
+  "format": "comm4-22-golden-v1",
+  "generator": "stdlib independent 4x4 arithmetic; no OpenCV",
+  "mode": "eye-in-hand",
+  "groundTruth": {
+    "schemaVersion": 1,
+    "convention": "right-handed-column-vector",
+    "source": {
+      "deviceId": "fixture",
+      "robotId": "",
+      "groupId": "",
+      "frameUuid": "00000000-0000-0000-0000-000000000003",
+      "revision": 1
+    },
+    "target": {
+      "deviceId": "fixture",
+      "robotId": "",
+      "groupId": "",
+      "frameUuid": "00000000-0000-0000-0000-000000000002",
+      "revision": 1
+    },
+    "translationUnit": "mm",
+    "translation": [
+      57,
+      -83,
+      126
+    ],
+    "rotation": {
+      "format": "quaternion-wxyz",
+      "value": [
+        0.972514341332643,
+        0.09505775078194618,
+        0.19011550156389237,
+        -0.09505775078194618
+      ]
+    }
+  },
+  "fixedTruth": {
+    "schemaVersion": 1,
+    "convention": "right-handed-column-vector",
+    "source": {
+      "deviceId": "fixture",
+      "robotId": "",
+      "groupId": "",
+      "frameUuid": "00000000-0000-0000-0000-000000000004",
+      "revision": 1
+    },
+    "target": {
+      "deviceId": "fixture",
+      "robotId": "",
+      "groupId": "",
+      "frameUuid": "00000000-0000-0000-0000-000000000001",
+      "revision": 1
+    },
+    "translationUnit": "mm",
+    "translation": [
+      430,
+      210,
+      690
+    ],
+    "rotation": {
+      "format": "quaternion-wxyz",
+      "value": [
+        0.9523335698857134,
+        -0.16306070006397094,
+        0.08153035003198547,
+        0.24459105009595644
+      ]
+    }
+  },
+  "samples": [
+    {
+      "sample": "00000000-0000-0000-0000-000000000064",
+      "frame": "00000000-0000-0000-0000-0000000000c8",
+      "holdout": false,
+      "baseTFlange": {
+        "schemaVersion": 1,
+        "convention": "right-handed-column-vector",
+        "source": {
+          "deviceId": "fixture",
+          "robotId": "",
+          "groupId": "",
+          "frameUuid": "00000000-0000-0000-0000-000000000002",
+          "revision": 1
+        },
+        "target": {
+          "deviceId": "fixture",
+          "robotId": "",
+          "groupId": "",
+          "frameUuid": "00000000-0000-0000-0000-000000000001",
+          "revision": 1
+        },
+        "translationUnit": "mm",
+        "translation": [
+          160,
+          -120,
+          300
+        ],
+        "rotation": {
+          "format": "quaternion-wxyz",
+          "value": [
+            0.939372712847379,
+            -0.13998744369749486,
+            -0.13998744369749486,
+            -0.2799748873949897
+          ]
+        }
+      },
+      "cameraTPlate": {
+        "schemaVersion": 1,
+        "convention": "right-handed-column-vector",
+        "source": {
+          "deviceId": "fixture",
+          "robotId": "",
+          "groupId": "",
+          "frameUuid": "00000000-0000-0000-0000-000000000004",
+          "revision": 1
+        },
+        "target": {
+          "deviceId": "fixture",
+          "robotId": "",
+          "groupId": "",
+          "frameUuid": "00000000-0000-0000-0000-000000000003",
+          "revision": 1
+        },
+        "translationUnit": "mm",
+        "translation": [
+          -58.09677841990843,
+          486.8011451982671,
+          221.29445700347551
+        ],
+        "rotation": {
+          "format": "quaternion-wxyz",
+          "value": [
+            0.7879832549241564,
+            -0.20106801566376817,
+            0.016846394131666446,
+            0.5816960048349372
+          ]
+        }
+      }
+    },
+    {
+      "sample": "00000000-0000-0000-0000-000000000065",
+      "frame": "00000000-0000-0000-0000-0000000000c9",
+      "holdout": false,
+      "baseTFlange": {
+        "schemaVersion": 1,
+        "convention": "right-handed-column-vector",
+        "source": {
+          "deviceId": "fixture",
+          "robotId": "",
+          "groupId": "",
+          "frameUuid": "00000000-0000-0000-0000-000000000002",
+          "revision": 1
+        },
+        "target": {
+          "deviceId": "fixture",
+          "robotId": "",
+          "groupId": "",
+          "frameUuid": "00000000-0000-0000-0000-000000000001",
+          "revision": 1
+        },
+        "translationUnit": "mm",
+        "translation": [
+          183,
+          -89,
+          337
+        ],
+        "rotation": {
+          "format": "quaternion-wxyz",
+          "value": [
+            0.9568021423210139,
+            -0.19382656674909515,
+            0.19382656674909515,
+            -0.09691328337454758
+          ]
+        }
+      },
+      "cameraTPlate": {
+        "schemaVersion": 1,
+        "convention": "right-handed-column-vector",
+        "source": {
+          "deviceId": "fixture",
+          "robotId": "",
+          "groupId": "",
+          "frameUuid": "00000000-0000-0000-0000-000000000004",
+          "revision": 1
+        },
+        "target": {
+          "deviceId": "fixture",
+          "robotId": "",
+          "groupId": "",
+          "frameUuid": "00000000-0000-0000-0000-000000000003",
+          "revision": 1
+        },
+        "translationUnit": "mm",
+        "translation": [
+          -206.68827495812278,
+          277.75366064188313,
+          278.1709838703972
+        ],
+        "rotation": {
+          "format": "quaternion-wxyz",
+          "value": [
+            0.8448641570247348,
+            -0.15776743914270733,
+            -0.31588686971120494,
+            0.401907298845508
+          ]
+        }
+      }
+    },
+    {
+      "sample": "00000000-0000-0000-0000-000000000066",
+      "frame": "00000000-0000-0000-0000-0000000000ca",
+      "holdout": false,
+      "baseTFlange": {
+        "schemaVersion": 1,
+        "convention": "right-handed-column-vector",
+        "source": {
+          "deviceId": "fixture",
+          "robotId": "",
+          "groupId": "",
+          "frameUuid": "00000000-0000-0000-0000-000000000002",
+          "revision": 1
+        },
+        "target": {
+          "deviceId": "fixture",
+          "robotId": "",
+          "groupId": "",
+          "frameUuid": "00000000-0000-0000-0000-000000000001",
+          "revision": 1
+        },
+        "translationUnit": "mm",
+        "translation": [
+          206,
+          -58,
+          374
+        ],
+        "rotation": {
+          "format": "quaternion-wxyz",
+          "value": [
+            0.9713379748520296,
+            -0.1680811390524795,
+            -0.1680811390524795,
+            0.0
+          ]
+        }
+      },
+      "cameraTPlate": {
+        "schemaVersion": 1,
+        "convention": "right-handed-column-vector",
+        "source": {
+          "deviceId": "fixture",
+          "robotId": "",
+          "groupId": "",
+          "frameUuid": "00000000-0000-0000-0000-000000000004",
+          "revision": 1
+        },
+        "target": {
+          "deviceId": "fixture",
+          "robotId": "",
+          "groupId": "",
+          "frameUuid": "00000000-0000-0000-0000-000000000003",
+          "revision": 1
+        },
+        "translationUnit": "mm",
+        "translation": [
+          146.1241450364416,
+          321.82027556600025,
+          195.09099058255325
+        ],
+        "rotation": {
+          "format": "quaternion-wxyz",
+          "value": [
+            0.9281872930094776,
+            -0.1194369247817573,
+            0.04479571023949038,
+            0.34956618034151243
+          ]
+        }
+      }
+    },
+    {
+      "sample": "00000000-0000-0000-0000-000000000067",
+      "frame": "00000000-0000-0000-0000-0000000000cb",
+      "holdout": false,
+      "baseTFlange": {
+        "schemaVersion": 1,
+        "convention": "right-handed-column-vector",
+        "source": {
+          "deviceId": "fixture",
+          "robotId": "",
+          "groupId": "",
+          "frameUuid": "00000000-0000-0000-0000-000000000002",
+          "revision": 1
+        },
+        "target": {
+          "deviceId": "fixture",
+          "robotId": "",
+          "groupId": "",
+          "frameUuid": "00000000-0000-0000-0000-000000000001",
+          "revision": 1
+        },
+        "translationUnit": "mm",
+        "translation": [
+          229,
+          -27,
+          411
+        ],
+        "rotation": {
+          "format": "quaternion-wxyz",
+          "value": [
+            0.9829362506302315,
+            -0.04335661374447885,
+            0.1734264549779154,
+            0.04335661374447885
+          ]
+        }
+      },
+      "cameraTPlate": {
+        "schemaVersion": 1,
+        "convention": "right-handed-column-vector",
+        "source": {
+          "deviceId": "fixture",
+          "robotId": "",
+          "groupId": "",
+          "frameUuid": "00000000-0000-0000-0000-000000000004",
+          "revision": 1
+        },
+        "target": {
+          "deviceId": "fixture",
+          "robotId": "",
+          "groupId": "",
+          "frameUuid": "00000000-0000-0000-0000-000000000003",
+          "revision": 1
+        },
+        "translationUnit": "mm",
+        "translation": [
+          -82.39482519163414,
+          313.5447915334365,
+          162.82177637167513
+        ],
+        "rotation": {
+          "format": "quaternion-wxyz",
+          "value": [
+            0.8928745898031069,
+            -0.2702739724344034,
+            -0.26856428708136354,
+            0.24000035502669587
+          ]
+        }
+      }
+    },
+    {
+      "sample": "00000000-0000-0000-0000-000000000068",
+      "frame": "00000000-0000-0000-0000-0000000000cc",
+      "holdout": false,
+      "baseTFlange": {
+        "schemaVersion": 1,
+        "convention": "right-handed-column-vector",
+        "source": {
+          "deviceId": "fixture",
+          "robotId": "",
+          "groupId": "",
+          "frameUuid": "00000000-0000-0000-0000-000000000002",
+          "revision": 1
+        },
+        "target": {
+          "deviceId": "fixture",
+          "robotId": "",
+          "groupId": "",
+          "frameUuid": "00000000-0000-0000-0000-000000000001",
+          "revision": 1
+        },
+        "translationUnit": "mm",
+        "translation": [
+          252,
+          4,
+          300
+        ],
+        "rotation": {
+          "format": "quaternion-wxyz",
+          "value": [
+            0.9915618937147881,
+            -0.08642276174646323,
+            -0.04321138087323161,
+            0.08642276174646323
+          ]
+        }
+      },
+      "cameraTPlate": {
+        "schemaVersion": 1,
+        "convention": "right-handed-column-vector",
+        "source": {
+          "deviceId": "fixture",
+          "robotId": "",
+          "groupId": "",
+          "frameUuid": "00000000-0000-0000-0000-000000000004",
+          "revision": 1
+        },
+        "target": {
+          "deviceId": "fixture",
+          "robotId": "",
+          "groupId": "",
+          "frameUuid": "00000000-0000-0000-0000-000000000003",
+          "revision": 1
+        },
+        "translationUnit": "mm",
+        "translation": [
+          32.58509678077451,
+          258.0648164860008,
+          271.3431441117349
+        ],
+        "rotation": {
+          "format": "quaternion-wxyz",
+          "value": [
+            0.9485908236507716,
+            -0.19691231279226698,
+            -0.06306642205653089,
+            0.2396322531825352
+          ]
+        }
+      }
+    },
+    {
+      "sample": "00000000-0000-0000-0000-000000000069",
+      "frame": "00000000-0000-0000-0000-0000000000cd",
+      "holdout": false,
+      "baseTFlange": {
+        "schemaVersion": 1,
+        "convention": "right-handed-column-vector",
+        "source": {
+          "deviceId": "fixture",
+          "robotId": "",
+          "groupId": "",
+          "frameUuid": "00000000-0000-0000-0000-000000000002",
+          "revision": 1
+        },
+        "target": {
+          "deviceId": "fixture",
+          "robotId": "",
+          "groupId": "",
+          "frameUuid": "00000000-0000-0000-0000-000000000001",
+          "revision": 1
+        },
+        "translationUnit": "mm",
+        "translation": [
+          275,
+          -120,
+          337
+        ],
+        "rotation": {
+          "format": "quaternion-wxyz",
+          "value": [
+            0.9971888181122075,
+            -0.05451937016155205,
+            0.036346246774368034,
+            -0.036346246774368034
+          ]
+        }
+      },
+      "cameraTPlate": {
+        "schemaVersion": 1,
+        "convention": "right-handed-column-vector",
+        "source": {
+          "deviceId": "fixture",
+          "robotId": "",
+          "groupId": "",
+          "frameUuid": "00000000-0000-0000-0000-000000000004",
+          "revision": 1
+        },
+        "target": {
+          "deviceId": "fixture",
+          "robotId": "",
+          "groupId": "",
+          "frameUuid": "00000000-0000-0000-0000-000000000003",
+          "revision": 1
+        },
+        "translationUnit": "mm",
+        "translation": [
+          -118.33710919775937,
+          418.5265622184869,
+          178.83667286964217
+        ],
+        "rotation": {
+          "format": "quaternion-wxyz",
+          "value": [
+            0.8936681254631549,
+            -0.26499668998180403,
+            -0.1397493045121235,
+            0.3340720995806689
+          ]
+        }
+      }
+    },
+    {
+      "sample": "00000000-0000-0000-0000-00000000006a",
+      "frame": "00000000-0000-0000-0000-0000000000ce",
+      "holdout": false,
+      "baseTFlange": {
+        "schemaVersion": 1,
+        "convention": "right-handed-column-vector",
+        "source": {
+          "deviceId": "fixture",
+          "robotId": "",
+          "groupId": "",
+          "frameUuid": "00000000-0000-0000-0000-000000000002",
+          "revision": 1
+        },
+        "target": {
+          "deviceId": "fixture",
+          "robotId": "",
+          "groupId": "",
+          "frameUuid": "00000000-0000-0000-0000-000000000001",
+          "revision": 1
+        },
+        "translationUnit": "mm",
+        "translation": [
+          298,
+          -89,
+          374
+        ],
+        "rotation": {
+          "format": "quaternion-wxyz",
+          "value": [
+            0.9998000066665778,
+            -0.006029824884469384,
+            -0.018089474653408148,
+            -0.006029824884469384
+          ]
+        }
+      },
+      "cameraTPlate": {
+        "schemaVersion": 1,
+        "convention": "right-handed-column-vector",
+        "source": {
+          "deviceId": "fixture",
+          "robotId": "",
+          "groupId": "",
+          "frameUuid": "00000000-0000-0000-0000-000000000004",
+          "revision": 1
+        },
+        "target": {
+          "deviceId": "fixture",
+          "robotId": "",
+          "groupId": "",
+          "frameUuid": "00000000-0000-0000-0000-000000000003",
+          "revision": 1
+        },
+        "translationUnit": "mm",
+        "translation": [
+          -54.34326560025552,
+          412.4771719188132,
+          116.79776730566269
+        ],
+        "rotation": {
+          "format": "quaternion-wxyz",
+          "value": [
+            0.9036693733649472,
+            -0.29684910581162477,
+            -0.0774652910334802,
+            0.29876646516324534
+          ]
+        }
+      }
+    },
+    {
+      "sample": "00000000-0000-0000-0000-00000000006b",
+      "frame": "00000000-0000-0000-0000-0000000000cf",
+      "holdout": false,
+      "baseTFlange": {
+        "schemaVersion": 1,
+        "convention": "right-handed-column-vector",
+        "source": {
+          "deviceId": "fixture",
+          "robotId": "",
+          "groupId": "",
+          "frameUuid": "00000000-0000-0000-0000-000000000002",
+          "revision": 1
+        },
+        "target": {
+          "deviceId": "fixture",
+          "robotId": "",
+          "groupId": "",
+          "frameUuid": "00000000-0000-0000-0000-000000000001",
+          "revision": 1
+        },
+        "translationUnit": "mm",
+        "translation": [
+          321,
+          -58,
+          411
+        ],
+        "rotation": {
+          "format": "quaternion-wxyz",
+          "value": [
+            0.9993875625234886,
+            0.01564928032441246,
+            -0.03129856064882492,
+            0.0
+          ]
+        }
+      },
+      "cameraTPlate": {
+        "schemaVersion": 1,
+        "convention": "right-handed-column-vector",
+        "source": {
+          "deviceId": "fixture",
+          "robotId": "",
+          "groupId": "",
+          "frameUuid": "00000000-0000-0000-0000-000000000004",
+          "revision": 1
+        },
+        "target": {
+          "deviceId": "fixture",
+          "robotId": "",
+          "groupId": "",
+          "frameUuid": "00000000-0000-0000-0000-000000000003",
+          "revision": 1
+        },
+        "translationUnit": "mm",
+        "translation": [
+          -43.90790676204837,
+          382.1373342890377,
+          69.5260756240259
+        ],
+        "rotation": {
+          "format": "quaternion-wxyz",
+          "value": [
+            0.9027330971711437,
+            -0.3136589548999316,
+            -0.060601248956990046,
+            0.28812931802878033
+          ]
+        }
+      }
+    },
+    {
+      "sample": "00000000-0000-0000-0000-00000000006c",
+      "frame": "00000000-0000-0000-0000-0000000000d0",
+      "holdout": false,
+      "baseTFlange": {
+        "schemaVersion": 1,
+        "convention": "right-handed-column-vector",
+        "source": {
+          "deviceId": "fixture",
+          "robotId": "",
+          "groupId": "",
+          "frameUuid": "00000000-0000-0000-0000-000000000002",
+          "revision": 1
+        },
+        "target": {
+          "deviceId": "fixture",
+          "robotId": "",
+          "groupId": "",
+          "frameUuid": "00000000-0000-0000-0000-000000000001",
+          "revision": 1
+        },
+        "translationUnit": "mm",
+        "translation": [
+          344,
+          -27,
+          300
+        ],
+        "rotation": {
+          "format": "quaternion-wxyz",
+          "value": [
+            0.9959527330119943,
+            0.081298206652173,
+            0.027099402217391,
+            -0.027099402217391
+          ]
+        }
+      },
+      "cameraTPlate": {
+        "schemaVersion": 1,
+        "convention": "right-handed-column-vector",
+        "source": {
+          "deviceId": "fixture",
+          "robotId": "",
+          "groupId": "",
+          "frameUuid": "00000000-0000-0000-0000-000000000004",
+          "revision": 1
+        },
+        "target": {
+          "deviceId": "fixture",
+          "robotId": "",
+          "groupId": "",
+          "frameUuid": "00000000-0000-0000-0000-000000000003",
+          "revision": 1
+        },
+        "translationUnit": "mm",
+        "translation": [
+          -149.19148429596754,
+          402.2543853429079,
+          116.65012985814978
+        ],
+        "rotation": {
+          "format": "quaternion-wxyz",
+          "value": [
+            0.8704949284049639,
+            -0.38616117656443516,
+            -0.10712708271000237,
+            0.2857304909974647
+          ]
+        }
+      }
+    },
+    {
+      "sample": "00000000-0000-0000-0000-00000000006d",
+      "frame": "00000000-0000-0000-0000-0000000000d1",
+      "holdout": false,
+      "baseTFlange": {
+        "schemaVersion": 1,
+        "convention": "right-handed-column-vector",
+        "source": {
+          "deviceId": "fixture",
+          "robotId": "",
+          "groupId": "",
+          "frameUuid": "00000000-0000-0000-0000-000000000002",
+          "revision": 1
+        },
+        "target": {
+          "deviceId": "fixture",
+          "robotId": "",
+          "groupId": "",
+          "frameUuid": "00000000-0000-0000-0000-000000000001",
+          "revision": 1
+        },
+        "translationUnit": "mm",
+        "translation": [
+          367,
+          4,
+          337
+        ],
+        "rotation": {
+          "format": "quaternion-wxyz",
+          "value": [
+            0.9895059058723947,
+            0.04816414323684215,
+            -0.0963282864736843,
+            -0.0963282864736843
+          ]
+        }
+      },
+      "cameraTPlate": {
+        "schemaVersion": 1,
+        "convention": "right-handed-column-vector",
+        "source": {
+          "deviceId": "fixture",
+          "robotId": "",
+          "groupId": "",
+          "frameUuid": "00000000-0000-0000-0000-000000000004",
+          "revision": 1
+        },
+        "target": {
+          "deviceId": "fixture",
+          "robotId": "",
+          "groupId": "",
+          "frameUuid": "00000000-0000-0000-0000-000000000003",
+          "revision": 1
+        },
+        "translationUnit": "mm",
+        "translation": [
+          -99.70068654194355,
+          357.88486231904835,
+          108.28576472446147
+        ],
+        "rotation": {
+          "format": "quaternion-wxyz",
+          "value": [
+            0.8592303670564141,
+            -0.35379918759809814,
+            0.006807659470895129,
+            0.36946307928608235
+          ]
+        }
+      }
+    },
+    {
+      "sample": "00000000-0000-0000-0000-00000000006e",
+      "frame": "00000000-0000-0000-0000-0000000000d2",
+      "holdout": false,
+      "baseTFlange": {
+        "schemaVersion": 1,
+        "convention": "right-handed-column-vector",
+        "source": {
+          "deviceId": "fixture",
+          "robotId": "",
+          "groupId": "",
+          "frameUuid": "00000000-0000-0000-0000-000000000002",
+          "revision": 1
+        },
+        "target": {
+          "deviceId": "fixture",
+          "robotId": "",
+          "groupId": "",
+          "frameUuid": "00000000-0000-0000-0000-000000000001",
+          "revision": 1
+        },
+        "translationUnit": "mm",
+        "translation": [
+          390,
+          -120,
+          374
+        ],
+        "rotation": {
+          "format": "quaternion-wxyz",
+          "value": [
+            0.9800665778412416,
+            0.09636878063986036,
+            0.14455317095979053,
+            0.09636878063986036
+          ]
+        }
+      },
+      "cameraTPlate": {
+        "schemaVersion": 1,
+        "convention": "right-handed-column-vector",
+        "source": {
+          "deviceId": "fixture",
+          "robotId": "",
+          "groupId": "",
+          "frameUuid": "00000000-0000-0000-0000-000000000004",
+          "revision": 1
+        },
+        "target": {
+          "deviceId": "fixture",
+          "robotId": "",
+          "groupId": "",
+          "frameUuid": "00000000-0000-0000-0000-000000000003",
+          "revision": 1
+        },
+        "translationUnit": "mm",
+        "translation": [
+          -147.90646942253085,
+          458.40972453860604,
+          4.735187360901747
+        ],
+        "rotation": {
+          "format": "quaternion-wxyz",
+          "value": [
+            0.8856825657062843,
+            -0.38239833898688874,
+            -0.2145975121139697,
+            0.15259689033036133
+          ]
+        }
+      }
+    },
+    {
+      "sample": "00000000-0000-0000-0000-00000000006f",
+      "frame": "00000000-0000-0000-0000-0000000000d3",
+      "holdout": false,
+      "baseTFlange": {
+        "schemaVersion": 1,
+        "convention": "right-handed-column-vector",
+        "source": {
+          "deviceId": "fixture",
+          "robotId": "",
+          "groupId": "",
+          "frameUuid": "00000000-0000-0000-0000-000000000002",
+          "revision": 1
+        },
+        "target": {
+          "deviceId": "fixture",
+          "robotId": "",
+          "groupId": "",
+          "frameUuid": "00000000-0000-0000-0000-000000000001",
+          "revision": 1
+        },
+        "translationUnit": "mm",
+        "translation": [
+          413,
+          -89,
+          411
+        ],
+        "rotation": {
+          "format": "quaternion-wxyz",
+          "value": [
+            0.9676632956885756,
+            0.14840818394317842,
+            -0.19787757859090457,
+            0.04946939464772614
+          ]
+        }
+      },
+      "cameraTPlate": {
+        "schemaVersion": 1,
+        "convention": "right-handed-column-vector",
+        "source": {
+          "deviceId": "fixture",
+          "robotId": "",
+          "groupId": "",
+          "frameUuid": "00000000-0000-0000-0000-000000000004",
+          "revision": 1
+        },
+        "target": {
+          "deviceId": "fixture",
+          "robotId": "",
+          "groupId": "",
+          "frameUuid": "00000000-0000-0000-0000-000000000003",
+          "revision": 1
+        },
+        "translationUnit": "mm",
+        "translation": [
+          -0.14475194078604403,
+          444.44698439465265,
+          -49.7969868059698
+        ],
+        "rotation": {
+          "format": "quaternion-wxyz",
+          "value": [
+            0.8846254879526307,
+            -0.3943289828472165,
+            0.12979392032468232,
+            0.21235804104860181
+          ]
+        }
+      }
+    },
+    {
+      "sample": "00000000-0000-0000-0000-000000000070",
+      "frame": "00000000-0000-0000-0000-0000000000d4",
+      "holdout": true,
+      "baseTFlange": {
+        "schemaVersion": 1,
+        "convention": "right-handed-column-vector",
+        "source": {
+          "deviceId": "fixture",
+          "robotId": "",
+          "groupId": "",
+          "frameUuid": "00000000-0000-0000-0000-000000000002",
+          "revision": 1
+        },
+        "target": {
+          "deviceId": "fixture",
+          "robotId": "",
+          "groupId": "",
+          "frameUuid": "00000000-0000-0000-0000-000000000001",
+          "revision": 1
+        },
+        "translationUnit": "mm",
+        "translation": [
+          436,
+          -58,
+          300
+        ],
+        "rotation": {
+          "format": "quaternion-wxyz",
+          "value": [
+            0.9523335698857134,
+            0.2157090304886806,
+            0.2157090304886806,
+            0.0
+          ]
+        }
+      },
+      "cameraTPlate": {
+        "schemaVersion": 1,
+        "convention": "right-handed-column-vector",
+        "source": {
+          "deviceId": "fixture",
+          "robotId": "",
+          "groupId": "",
+          "frameUuid": "00000000-0000-0000-0000-000000000004",
+          "revision": 1
+        },
+        "target": {
+          "deviceId": "fixture",
+          "robotId": "",
+          "groupId": "",
+          "frameUuid": "00000000-0000-0000-0000-000000000003",
+          "revision": 1
+        },
+        "translationUnit": "mm",
+        "translation": [
+          -282.69598092313026,
+          436.19896625407057,
+          -105.19378988953343
+        ],
+        "rotation": {
+          "format": "quaternion-wxyz",
+          "value": [
+            0.7942142585596264,
+            -0.5137728055605747,
+            -0.26421734117667,
+            0.18828279897146752
+          ]
+        }
+      }
+    },
+    {
+      "sample": "00000000-0000-0000-0000-000000000071",
+      "frame": "00000000-0000-0000-0000-0000000000d5",
+      "holdout": true,
+      "baseTFlange": {
+        "schemaVersion": 1,
+        "convention": "right-handed-column-vector",
+        "source": {
+          "deviceId": "fixture",
+          "robotId": "",
+          "groupId": "",
+          "frameUuid": "00000000-0000-0000-0000-000000000002",
+          "revision": 1
+        },
+        "target": {
+          "deviceId": "fixture",
+          "robotId": "",
+          "groupId": "",
+          "frameUuid": "00000000-0000-0000-0000-000000000001",
+          "revision": 1
+        },
+        "translationUnit": "mm",
+        "translation": [
+          459,
+          -27,
+          337
+        ],
+        "rotation": {
+          "format": "quaternion-wxyz",
+          "value": [
+            0.9341237611646731,
+            0.2379661963179409,
+            -0.2379661963179409,
+            -0.11898309815897046
+          ]
+        }
+      },
+      "cameraTPlate": {
+        "schemaVersion": 1,
+        "convention": "right-handed-column-vector",
+        "source": {
+          "deviceId": "fixture",
+          "robotId": "",
+          "groupId": "",
+          "frameUuid": "00000000-0000-0000-0000-000000000004",
+          "revision": 1
+        },
+        "target": {
+          "deviceId": "fixture",
+          "robotId": "",
+          "groupId": "",
+          "frameUuid": "00000000-0000-0000-0000-000000000003",
+          "revision": 1
+        },
+        "translationUnit": "mm",
+        "translation": [
+          -117.72218972852093,
+          448.526779107258,
+          -46.989564556913805
+        ],
+        "rotation": {
+          "format": "quaternion-wxyz",
+          "value": [
+            0.7794352623912028,
+            -0.49875848231658226,
+            0.18259225283241143,
+            0.33223593614177444
+          ]
+        }
+      }
+    },
+    {
+      "sample": "00000000-0000-0000-0000-000000000072",
+      "frame": "00000000-0000-0000-0000-0000000000d6",
+      "holdout": true,
+      "baseTFlange": {
+        "schemaVersion": 1,
+        "convention": "right-handed-column-vector",
+        "source": {
+          "deviceId": "fixture",
+          "robotId": "",
+          "groupId": "",
+          "frameUuid": "00000000-0000-0000-0000-000000000002",
+          "revision": 1
+        },
+        "target": {
+          "deviceId": "fixture",
+          "robotId": "",
+          "groupId": "",
+          "frameUuid": "00000000-0000-0000-0000-000000000001",
+          "revision": 1
+        },
+        "translationUnit": "mm",
+        "translation": [
+          482,
+          4,
+          374
+        ],
+        "rotation": {
+          "format": "quaternion-wxyz",
+          "value": [
+            0.9130889403123083,
+            0.26080446208136593,
+            0.26080446208136593,
+            -0.17386964138757727
+          ]
+        }
+      },
+      "cameraTPlate": {
+        "schemaVersion": 1,
+        "convention": "right-handed-column-vector",
+        "source": {
+          "deviceId": "fixture",
+          "robotId": "",
+          "groupId": "",
+          "frameUuid": "00000000-0000-0000-0000-000000000004",
+          "revision": 1
+        },
+        "target": {
+          "deviceId": "fixture",
+          "robotId": "",
+          "groupId": "",
+          "frameUuid": "00000000-0000-0000-0000-000000000003",
+          "revision": 1
+        },
+        "translationUnit": "mm",
+        "translation": [
+          -325.68774646250426,
+          259.66628829201863,
+          -217.4096825729801
+        ],
+        "rotation": {
+          "format": "quaternion-wxyz",
+          "value": [
+            0.6812188805801979,
+            -0.5874078425125017,
+            -0.3021415210362874,
+            0.3156000072271053
+          ]
+        }
+      }
+    },
+    {
+      "sample": "00000000-0000-0000-0000-000000000073",
+      "frame": "00000000-0000-0000-0000-0000000000d7",
+      "holdout": true,
+      "baseTFlange": {
+        "schemaVersion": 1,
+        "convention": "right-handed-column-vector",
+        "source": {
+          "deviceId": "fixture",
+          "robotId": "",
+          "groupId": "",
+          "frameUuid": "00000000-0000-0000-0000-000000000002",
+          "revision": 1
+        },
+        "target": {
+          "deviceId": "fixture",
+          "robotId": "",
+          "groupId": "",
+          "frameUuid": "00000000-0000-0000-0000-000000000001",
+          "revision": 1
+        },
+        "translationUnit": "mm",
+        "translation": [
+          505,
+          -120,
+          411
+        ],
+        "rotation": {
+          "format": "quaternion-wxyz",
+          "value": [
+            0.8892927216231682,
+            0.0997994310671965,
+            -0.399197724268786,
+            0.199598862134393
+          ]
+        }
+      },
+      "cameraTPlate": {
+        "schemaVersion": 1,
+        "convention": "right-handed-column-vector",
+        "source": {
+          "deviceId": "fixture",
+          "robotId": "",
+          "groupId": "",
+          "frameUuid": "00000000-0000-0000-0000-000000000004",
+          "revision": 1
+        },
+        "target": {
+          "deviceId": "fixture",
+          "robotId": "",
+          "groupId": "",
+          "frameUuid": "00000000-0000-0000-0000-000000000003",
+          "revision": 1
+        },
+        "translationUnit": "mm",
+        "translation": [
+          118.8360396215806,
+          446.0927620751173,
+          -24.894549436080368
+        ],
+        "rotation": {
+          "format": "quaternion-wxyz",
+          "value": [
+            0.9005024729262047,
+            -0.2676624891618349,
+            0.33064465418116984,
+            0.09014544254090368
+          ]
+        }
+      }
+    },
+    {
+      "sample": "00000000-0000-0000-0000-000000000074",
+      "frame": "00000000-0000-0000-0000-0000000000d8",
+      "holdout": true,
+      "baseTFlange": {
+        "schemaVersion": 1,
+        "convention": "right-handed-column-vector",
+        "source": {
+          "deviceId": "fixture",
+          "robotId": "",
+          "groupId": "",
+          "frameUuid": "00000000-0000-0000-0000-000000000002",
+          "revision": 1
+        },
+        "target": {
+          "deviceId": "fixture",
+          "robotId": "",
+          "groupId": "",
+          "frameUuid": "00000000-0000-0000-0000-000000000001",
+          "revision": 1
+        },
+        "translationUnit": "mm",
+        "translation": [
+          528,
+          -89,
+          300
+        ],
+        "rotation": {
+          "format": "quaternion-wxyz",
+          "value": [
+            0.862807070514761,
+            0.41276624463872713,
+            0.20638312231936357,
+            0.20638312231936357
+          ]
+        }
+      },
+      "cameraTPlate": {
+        "schemaVersion": 1,
+        "convention": "right-handed-column-vector",
+        "source": {
+          "deviceId": "fixture",
+          "robotId": "",
+          "groupId": "",
+          "frameUuid": "00000000-0000-0000-0000-000000000004",
+          "revision": 1
+        },
+        "target": {
+          "deviceId": "fixture",
+          "robotId": "",
+          "groupId": "",
+          "frameUuid": "00000000-0000-0000-0000-000000000003",
+          "revision": 1
+        },
+        "translationUnit": "mm",
+        "translation": [
+          -80.5810896398067,
+          529.9651673116113,
+          -276.26067052908775
+        ],
+        "rotation": {
+          "format": "quaternion-wxyz",
+          "value": [
+            0.7517764612159986,
+            -0.6207031160224007,
+            -0.2069936648039181,
+            -0.08193544320180164
+          ]
+        }
+      }
+    }
+  ]
+}

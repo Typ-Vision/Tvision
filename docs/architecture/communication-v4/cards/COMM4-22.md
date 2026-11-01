@@ -1,6 +1,6 @@
 # COMM4-22 — İki geometriden aday hand-eye solve
 
-Durum: planlandı, başlanmadı. Model: **GPT-6.1 Sol / medium**.
+Durum: fixture yazılımı tamam; fiziksel solve BLOCKED. Model: **GPT-6.1 Sol / medium**.
 Tek oturum kapsamı ve ortak kurallar [indekste](../README.md), kapanış
 kuralları [V0](../verification.md) içindedir.
 
