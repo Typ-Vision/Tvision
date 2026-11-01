@@ -4,15 +4,18 @@
 
 ## Devam noktası
 
-**[COMM4-19 yazılım](archive/2026-11-01-comm4-19.md)** tamam: `base_T_flange`
-sözleşmesi, exact frame/revision UUID map, TCP offset bileşimi, explicit Euler
-convention ve synthetic correction reddi. 121 check; ON/OFF derleme, hedefli
-5/5, tam OFF 150+1 skipped; tam ON 188/191 (2 COMM4-17 UI hatası açık).
-Fiziksel kabul yok. Sıradaki 20 başlatılmadı.
+**[COMM4-20 yazılım](archive/2026-11-01-comm4-20.md)** tamam: BEGIN dependency
+snapshot, ayrı kalibrasyon lease, duplicate/ABORT-drain/restart, explicit recovery;
+268 check. ON/OFF derleme, hedefli 9/9; tam OFF 152 (151+1 skipped); tam ON 192
+(188 geçti; 2 bilinen COMM4-17 UI hatası, 1 yük timeout'u izolede geçti).
+Hand-eye fiziksel BLOCKED. 21 başlatılmadı.
+
+**[COMM4-19](archive/2026-11-01-comm4-19.md)** actual-pose/frame sözleşmesi;
+fiziksel kabul yok.
 
 **[COMM4-18](archive/2026-10-31-comm4-18.md)** +
 [araştırma](archive/2026-10-31-comm4-18-research.md) tamam (258 check; ON/OFF).
-Fiziksel6D BLOCKED; 17 tam suite yok. Tam ON/OFF regresyonu geri
+Fiziksel6D BLOCKED; tam ON/OFF regresyonu geri
 ([protokol](working-protocol.md)).
 
 **[COMM4-17 yazılım](archive/2026-10-31-comm4-17.md).** Salt okunur template,

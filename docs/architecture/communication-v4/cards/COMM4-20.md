@@ -1,6 +1,8 @@
 # COMM4-20 — Kalibrasyon session ve lease yaşam döngüsü
 
-Durum: planlandı, başlanmadı. Model: **GPT-6.1 Sol / medium**.
+Durum: yazılım tamamlandı (1 Kasım 2026). [Kapanış](../../../archive/2026-11-01-comm4-20.md);
+uygulanan sınır [session/lease yaşam döngüsü](../calibration-session-lifecycle.md).
+Model: **GPT-6.1 Sol / medium**; uygulayıcı DeepSeek V4.1 Flash.
 Tek oturum kapsamı ve ortak kurallar [indekste](../README.md), kapanış
 kuralları [V0](../verification.md) içindedir.
 

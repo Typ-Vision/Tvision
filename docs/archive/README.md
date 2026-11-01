@@ -6,6 +6,7 @@ görev” ifadeleri yazıldıkları tarihe aittir.
 
 | Dönem / görev | Kayıt |
 | --- | --- |
+| 1 Kasım 2026 — COMM4-20 kodlama | [Kalibrasyon session ve lease yaşam döngüsü; immutable dependency snapshot, COMM4-10 lease, duplicate/ABORT-drain/restart, explicit recovery ve tam ON/OFF kabul](2026-11-01-comm4-20.md) |
 | 1 Kasım 2026 — COMM4-19 kodlama | [Robot actual-pose adapter; base_T_flange sözleşmesi, exact frame/revision UUID map, TCP offset bileşimi, açık Euler convention ve synthetic correction reddi; tam ON/OFF kabul](2026-11-01-comm4-19.md) |
 | 31 Ekim 2026 — COMM4-18 kodlama | [Pure hand-eye readiness DTO/policy/servisi; fixture/physical ayrımı, deterministik retler, 258-check ve tam ON/OFF kabulü; fiziksel kapılar açık](2026-10-31-comm4-18.md) |
 | 31 Ekim 2026 — COMM4-18 araştırma | [Robot/optik araştırması, iki mod solver yönleri ve kalan kodlama tarifi; kapsamlı test politikasına dönüş](2026-10-31-comm4-18-research.md) |

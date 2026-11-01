@@ -180,6 +180,9 @@ Yeni COMM4 test/hedef adları ilgili kartın uygulamasında eklenir.
 | communication_v4_codec_test / tests/communication_v4_codec_test.cpp | communication_v4_codec (COMM4-06) |
 | communication_values_test / tests/communication_values_test.cpp | communication_values_contract |
 | spatial_values_test / tests/spatial_values_test.cpp | spatial_values_contract |
+| hand_eye_readiness_test / tests/hand_eye_readiness_test.cpp | hand_eye_readiness (COMM4-18) |
+| robot_actual_pose_adapter_test / tests/robot_actual_pose_adapter_test.cpp | robot_actual_pose_adapter_contract (COMM4-19) |
+| robot_calibration_session_test / tests/robot_calibration_session_test.cpp | robot_calibration_session_contract (COMM4-20) |
 | publication_test / tests/publication_test.cpp | publication_contract |
 | assignment_execution_test / tests/assignment_execution_test.cpp | assignment_execution_contract |
 | trigger_router_test / tests/trigger_router_test.cpp | trigger_router_contract |
@@ -249,7 +252,7 @@ daraltılır. Bir sonraki kart otomatik başlatılmaz.
 | 17 | PublishDataEditor typed bundle seçicisi | Slot assignment/direct-output model; machine template vs recipe yetkisi |
 | 18 | Yukarıdaki planar calibration portları, contract S6–S8 | calibration-readiness.md araştırması hazır; yeni aday HandEyeReadiness DTO/policy ve pure service; kodlama bekliyor |
 | 19 tamam | domain/SpatialTransform FrameRef ve communication value DTO portu | [RobotActualPoseAdapter](robot-pose-adapter.md); generic quaternion + explicit Euler convention, exact frame/revision map; robot client yok |
-| 20 | IndependentCalibrationSession, CalibrationWizardSession, ScopedActiveCalibration | RobotCalibrationSessionService;10 arbiter'ını tüketir |
+| 20 tamam | IndependentCalibrationSession, CalibrationWizardSession, ScopedActiveCalibration | RobotCalibrationSessionService;10 arbiter'ını tüketir; [uygulanan sınır](calibration-session-lifecycle.md) |
 | 21 | Independent capture, CameraAcquisitionSessions, legacy StudyStore sınırı | CalibrationSampleCoordinator;13 durable request/sample ledger |
 | 22 |18'de seçilecek gerçek solver portu, Wizard/Active planar ayrımı | HandEyeCandidateSolver; iki geometri, uygunluk blokluysa fixture |
 | 23 | ScopedActiveCalibration save/use portu;18 sonrası gerçek repository seçimi | HandEyeValidationReport/ActivationService; planar aktivasyonu robot izni yapmaz |

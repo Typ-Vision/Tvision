@@ -1,12 +1,14 @@
 # COMM4 — Tek bağlantı, bağımsız istasyonlar ve robot kalibrasyonu
 
 **Durum: sıralı uygulama sürüyor; hedef sistem henüz tamamlanmadı.**
-29 Ekim 2026. Kullanıcı seçimi: GPT-6.1 Sol / medium. Varsayılan oturum kapsamı
-tek karttır; ajanlar paralel çalışmaz. **Devam: [COMM4-18 kalan kodlama](cards/COMM4-18.md).**
+1 Kasım 2026. Kullanıcı seçimi: GPT-6.1 Sol / medium. Varsayılan oturum kapsamı
+tek karttır; ajanlar paralel çalışmaz. **Devam: [COMM4-21 SAMPLE pose/frame](cards/COMM4-21.md);
+kullanıcı yeni sıra vermedikçe başlatılmaz.**
 
-**COMM4-18 araştırması tamam:** [robot/optik kararları](calibration-readiness.md)
-ve kartta dar kodlama tarifi hazır; readiness uygulaması ve yazılım kabulü bekliyor.
-Fiziksel solve/validation/activation BLOCKED;19 henüz başlamadı.
+**COMM4-20 yazılımı tamam:** [kalibrasyon session ve lease yaşam döngüsü](calibration-session-lifecycle.md).
+BEGIN immutable dependency snapshot, COMM4-10 lease'i, idempotent duplicate,
+ABORT/drain, reconnect/restart ve explicit recovery; fiziksel hand-eye BLOCKED.
+**COMM4-19 tamam:** [robot actual-pose adapter](robot-pose-adapter.md).
 
 **COMM4-01 tamam:** [güncel kaynak, test ve kart sahiplik haritası](source-map.md).
 **COMM4-02 tamam:** [wire fixture freeze](freeze-comm4-02.md).
@@ -108,8 +110,8 @@ fiziksel PLC/robot ve dağıtım engelleri bu planla kapanmaz.
 | [16](cards/COMM4-16.md) | Tek Communication UI | 05,10,14,15 |
 | [17](cards/COMM4-17.md) | Publish assignment UI | 11,12,16 |
 | [18](cards/COMM4-18.md) | Robot/optik araştırma ve 6D uygunluk kapısı | 01,02 |
-| [19](cards/COMM4-19.md) | Frame ve robot pose adapter sözleşmesi | 03,18 |
-| [20](cards/COMM4-20.md) | Kalibrasyon session ve lease | 10,19 |
+| [19](cards/COMM4-19.md) | Frame ve robot pose adapter sözleşmesi — tamam | 03,18 |
+| [20](cards/COMM4-20.md) | Kalibrasyon session ve lease — tamam | 10,19 |
 | [21](cards/COMM4-21.md) | SAMPLE pose/frame eşleştirme | 13,20 |
 | [22](cards/COMM4-22.md) | İki kurulum için aday solve | 18,21 |
 | [23](cards/COMM4-23.md) | Bağımsız validate ve atomik activate | 22 |
