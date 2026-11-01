@@ -4,16 +4,20 @@
 
 ## Devam noktası
 
-**[COMM4-18 yazılım](archive/2026-10-31-comm4-18.md)** ve
-[araştırma](archive/2026-10-31-comm4-18-research.md) tamam. Pure readiness
-DTO/policy/servis +258 check; ON/OFF derleme, hedefli13/13, tam OFF149+1 skipped
-geçti. Tam ON187/190; 2 COMM4-17 UI fixture hatası açık. Fiziksel6D BLOCKED;
-19 başlamadı; 17 tam suite yok. 31 Ekim tam ON/OFF regresyonu geri
+**[COMM4-19 yazılım](archive/2026-11-01-comm4-19.md)** tamam: `base_T_flange`
+sözleşmesi, exact frame/revision UUID map, TCP offset bileşimi, explicit Euler
+convention ve synthetic correction reddi. 121 check; ON/OFF derleme, hedefli
+5/5, tam OFF 150+1 skipped; tam ON 188/191 (2 COMM4-17 UI hatası açık).
+Fiziksel kabul yok. Sıradaki 20 başlatılmadı.
+
+**[COMM4-18](archive/2026-10-31-comm4-18.md)** +
+[araştırma](archive/2026-10-31-comm4-18-research.md) tamam (258 check; ON/OFF).
+Fiziksel6D BLOCKED; 17 tam suite yok. Tam ON/OFF regresyonu geri
 ([protokol](working-protocol.md)).
 
 **[COMM4-17 yazılım](archive/2026-10-31-comm4-17.md).** Salt okunur template,
-Variable/direct kaynak, atomik Apply. ON6/OFF5+komşu7+UI geçti; native görsel var.
-Pose/Enum19'da. INI/probe SEGFAULT açık; temiz girdi kullan.
+Variable/direct kaynak, atomik Apply. ON6/OFF5+komşu7+UI geçti.
+INI/probe SEGFAULT açık; temiz girdi kullan.
 [EFR-04](archive/2026-10-29-efr-04.md): Wheel açık, Match/θ ertelendi.
 
 [D:/TVision](archive/2026-10-28-dev-drive-01.md): OpenCV geçti; CTest kısmi.
@@ -40,9 +44,7 @@ akış ortası gönder/bekle, Hand-eye/robot hareketi ayrı kapsam.
 **[INT-10](archive/2026-10-26-int-10.md):** CameraIntegration main'de; fiziksel/native açık.
 
 **[CCUX-24I yazılım/görsel tamam](archive/2026-10-26-ccux-24i.md):** iki Release;
-UI 39/UI OFF 19 test; tekrar, context hata sınırı ve iki boyut fixture kayıtta.
-Native wheel/pan pencere yakalama hatasıyla açık; fiziksel kabul açık.
-Tercihler repo TEMP/localhost ile doğrulandı; varsayılan TEMP kabulü açık.
+UI 39/UI OFF 19 test. Native wheel/pan pencere yakalama hatası ve fiziksel kabul açık.
 
 **[INT-09](archive/2026-10-25-int-09.md):** başlatıcı/kamera entegrasyonu.
 [Restart devri](architecture/camera-integration-handoff.md).

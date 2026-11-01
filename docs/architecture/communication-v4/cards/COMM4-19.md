@@ -1,6 +1,7 @@
 # COMM4-19 — Robot pose adapter ve frame sözleşmesi
 
-Durum: planlandı, başlanmadı. Model: **GPT-6.1 Sol / medium**.
+Durum: **tamamlandı** (31 Ekim 2026). Uygulayıcı: DeepSeek V4.1 Flash.
+Uygulama ve convention kaydı [robot-pose-adapter](../robot-pose-adapter.md).
 Tek oturum kapsamı ve ortak kurallar [indekste](../README.md), kapanış
 kuralları [V0](../verification.md) içindedir.
 
