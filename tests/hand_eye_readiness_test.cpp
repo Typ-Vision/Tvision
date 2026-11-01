@@ -443,6 +443,46 @@ int main(int argc, char** argv) {
                   "synthetic tolerance approval blocked");
         }
 
+        // Unknown evidence origins must never become verified physical evidence.
+        for (const auto mode : {HandEyeMode::EyeInHand, HandEyeMode::EyeToHand}) {
+            for (const int state : {-1, 3, 99, std::numeric_limits<int>::max()}) {
+                for (int field = 0; field < 8; ++field) {
+                    auto input = physicalInput(mode);
+                    EvidenceRef* evidence[]{
+                        &input.robot.controllerEvidence, &input.robot.adapterEvidence,
+                        &input.optics.opticalEvidence, &input.optics.plateEvidence,
+                        &input.dataset.evidence, &input.capture,
+                        &input.independentReference, &input.toleranceApproval};
+                    const QString fields[]{
+                        QStringLiteral("robot.controllerEvidence"), QStringLiteral("robot.adapterEvidence"),
+                        QStringLiteral("optics.opticalEvidence"), QStringLiteral("optics.plateEvidence"),
+                        QStringLiteral("dataset.evidence"), QStringLiteral("capture"),
+                        QStringLiteral("independentReference"), QStringLiteral("toleranceApproval")};
+                    const ReadinessCode codes[]{
+                        ReadinessCode::UnverifiedController, ReadinessCode::MissingDependency,
+                        ReadinessCode::UnverifiedOptics, ReadinessCode::UnverifiedPlate,
+                        ReadinessCode::MissingDependency, ReadinessCode::UnverifiedCapture,
+                        ReadinessCode::IndependentReferenceRequired,
+                        ReadinessCode::IndependentReferenceRequired};
+                    evidence[field]->state = static_cast<EvidenceState>(state);
+                    check(!evidence[field]->complete(), "unknown evidence origin is incomplete");
+                    const auto before = input;
+                    const auto report = HandEyeReadinessService::evaluate(input);
+                    check(report.fixtureEligible == (field != 4),
+                          "unknown dataset origin blocks fixture; physical-only origins do not");
+                    check(report.physicalSolveEligible == (field >= 6),
+                          "unknown solve evidence blocks solve; validation-only evidence does not");
+                    check(!report.physicalValidationEligible, "unknown evidence blocks physical validation");
+                    check(hasIssue(report.physicalValidationIssues, codes[field],
+                                   fields[field] + QStringLiteral(".state")),
+                          "unknown evidence reports exact state field");
+                    check(report == HandEyeReadinessService::evaluate(input),
+                          "unknown evidence report is deterministic");
+                    check(input == before, "unknown evidence evaluation does not mutate input");
+                }
+            }
+        }
+
         // Identity revision/digest and evidence identity are mandatory.
         {
             auto input = fixtureInput();

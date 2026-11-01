@@ -4,19 +4,19 @@
 
 ## Devam noktası
 
-**[COMM4-20 yazılım](archive/2026-11-01-comm4-20.md)** tamam: BEGIN dependency
-snapshot, ayrı kalibrasyon lease, duplicate/ABORT-drain/restart, explicit recovery;
-268 check. ON/OFF derleme, hedefli 9/9; tam OFF 152 (151+1 skipped); tam ON 192
-(188 geçti; 2 bilinen COMM4-17 UI hatası, 1 yük timeout'u izolede geçti).
-Hand-eye fiziksel BLOCKED. 21 başlatılmadı.
+**[COMM4-18a](archive/2026-11-01-comm4-18a.md)**: geçersiz evidence enum reddi;
+706 check, ON/OFF build ve 10/10. Tam OFF151 geçti; ON189 geçti, iki eski UI
+hatası. Dış plaka skipped; timeout yok. Fiziksel6D BLOCKED.
+
+**[COMM4-20 yazılım](archive/2026-11-01-comm4-20.md)**: frozen dependency,
+kalibrasyon lease, duplicate/ABORT-drain/restart/recovery hazır; 268 check.
+Fiziksel BLOCKED; 21 başlatılmadı. Önceki kabul arşivde.
 
 **[COMM4-19](archive/2026-11-01-comm4-19.md)** actual-pose/frame sözleşmesi;
 fiziksel kabul yok.
 
 **[COMM4-18](archive/2026-10-31-comm4-18.md)** +
-[araştırma](archive/2026-10-31-comm4-18-research.md) tamam (258 check; ON/OFF).
-Fiziksel6D BLOCKED; tam ON/OFF regresyonu geri
-([protokol](working-protocol.md)).
+[araştırma](archive/2026-10-31-comm4-18-research.md) tamam; fiziksel6D BLOCKED.
 
 **[COMM4-17 yazılım](archive/2026-10-31-comm4-17.md).** Salt okunur template,
 Variable/direct kaynak, atomik Apply. ON6/OFF5+komşu7+UI geçti.

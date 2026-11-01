@@ -42,7 +42,8 @@ bool RevisionedIdentity::complete() const {
 }
 
 bool EvidenceRef::complete() const {
-    return state != EvidenceState::Missing && !id.trimmed().isEmpty() &&
+    return (state == EvidenceState::Synthetic || state == EvidenceState::PhysicalVerified) &&
+           !id.trimmed().isEmpty() &&
            !revision.trimmed().isEmpty();
 }
 

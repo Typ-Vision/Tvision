@@ -32,6 +32,11 @@ void addEvidenceIssues(std::vector<ReadinessIssue>& issues,
         addIssue(issues, missingCode, field);
         return;
     }
+    if (evidence.state != EvidenceState::Synthetic &&
+        evidence.state != EvidenceState::PhysicalVerified) {
+        addIssue(issues, missingCode, field + QStringLiteral(".state"));
+        return;
+    }
     bool complete = true;
     if (evidence.id.trimmed().isEmpty()) {
         addIssue(issues, missingCode, field + QStringLiteral(".id"));
@@ -184,10 +189,8 @@ void addPhysicalSolveIssues(std::vector<ReadinessIssue>& issues,
         addIssue(issues, ReadinessCode::PhysicalPolicyPending,
                  QStringLiteral("physicalPolicy"));
 
-    if (input.dataset.evidence.state == EvidenceState::Synthetic &&
-        input.dataset.evidence.complete())
-        addIssue(issues, ReadinessCode::SyntheticEvidenceOnly,
-                 QStringLiteral("dataset.evidence"));
+    addEvidenceIssues(issues, input.dataset.evidence, QStringLiteral("dataset.evidence"),
+                      ReadinessCode::MissingDependency, false);
 }
 
 void addPhysicalValidationIssues(std::vector<ReadinessIssue>& issues,
