@@ -5,20 +5,22 @@
 
 ## Devam noktası
 
-**[COMM4-18a](archive/2026-11-01-comm4-18a.md)**: geçersiz evidence enum reddi;
-706 check, ON/OFF build ve 10/10. Tam OFF151/ON189 geçti; iki eski UI
-hatası. Dış plaka skipped; timeout yok. Fiziksel6D BLOCKED.
+**[COMM4-21](archive/2026-11-02-comm4-21.md)**: SAMPLE pairing, 189 kontrol;
+ON/OFF13/13. Tam OFF152 geçti/1skip; ON189/1skip/3UI failure (2eski,1flake;
+izole geçti). Fiziksel/native BLOCKED. Devam22; başlatılmadı.
 
-**[COMM4-20 yazılım](archive/2026-11-01-comm4-20.md)**: frozen dependency,
-kalibrasyon lease, duplicate/ABORT-drain/restart/recovery hazır; 268 check.
-Fiziksel BLOCKED; 21 başlatılmadı.
+**[COMM4-18a](archive/2026-11-01-comm4-18a.md)**: evidence enum reddi; 706 kontrol.
+İki eski UI hatası/dış plaka skipped; fiziksel6D BLOCKED.
 
-**[COMM4-19](archive/2026-11-01-comm4-19.md)** actual-pose/frame; fiziksel kabul yok.
+**[COMM4-20](archive/2026-11-01-comm4-20.md)**: frozen dependency, lease,
+duplicate/ABORT-drain/recovery.
+
+**[COMM4-19](archive/2026-11-01-comm4-19.md)** actual-pose/frame.
 
 **[COMM4-18](archive/2026-10-31-comm4-18.md)**/[araştırma](archive/2026-10-31-comm4-18-research.md) tamam; fiziksel6D BLOCKED.
 
 **[COMM4-17 yazılım](archive/2026-10-31-comm4-17.md).** Salt okunur template,
-Variable/direct kaynak, atomik Apply. ON6/OFF5+komşu7+UI geçti.
+Variable/direct kaynak, atomik Apply; kabul arşivde.
 INI/probe SEGFAULT açık; temiz girdi kullan.
 [EFR-04](archive/2026-10-29-efr-04.md): Wheel açık, Match/θ ertelendi.
 
@@ -26,9 +28,8 @@ INI/probe SEGFAULT açık; temiz girdi kullan.
 
 [Değişkenler](variables-usage.md).
 
-**[COMM-37](archive/2026-10-28-comm-37.md):** UI164/core127 geçti;
-dış plaka skipped. Faz kapandı; cihaz varsa COMM-38.17–23/36 tamam;
-ayrıntılı kapanışlar [arşiv dizininde](archive/README.md).
+**[COMM-37](archive/2026-10-28-comm-37.md):** faz kapandı; dış plaka skipped;
+cihaz varsa COMM-38. Kabul/17–23/36 ayrıntısı arşivde.
 COMM-12–16: profil/intent/bundle/outbox/input-router/codec.
 Editor/Load ağ açmaz; tombstone silinmez; fiziksel kabul açık.
 

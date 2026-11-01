@@ -264,6 +264,7 @@ RobotCalibrationSessionService::Result RobotCalibrationSessionService::begin(
     record.session = body->session;
     record.beginCommand = commandKey;
     record.fingerprint = fingerprint;
+    record.beginRequest = encoded;
     record.state = CalibrationState::Created;
     record.generation = nextGeneration_++;
     record.dependencies = *current;
@@ -482,7 +483,7 @@ RobotCalibrationSessionService::Result RobotCalibrationSessionService::recover(c
 std::optional<quint64> RobotCalibrationSessionService::admitCapture(const QUuid& sessionId) const {
     auto it = active_.constFind(sessionId);
     if (it == active_.cend()) return std::nullopt;
-    if (it->record.state != CalibrationState::Created || it->record.recoveryRequired
+    if ((it->record.state != CalibrationState::Created && it->record.state != CalibrationState::Collecting && it->record.state != CalibrationState::Candidate) || it->record.recoveryRequired
         || it->record.abortRequested) {
         return std::nullopt;
     }
@@ -492,8 +493,17 @@ std::optional<quint64> RobotCalibrationSessionService::admitCapture(const QUuid&
 bool RobotCalibrationSessionService::acceptCaptureCallback(const QUuid& sessionId, quint64 generation) const {
     auto it = active_.constFind(sessionId);
     if (it == active_.cend()) return false;
-    return it->record.generation == generation && it->record.state == CalibrationState::Created
+    return it->record.generation == generation && (it->record.state == CalibrationState::Created || it->record.state == CalibrationState::Collecting || it->record.state == CalibrationState::Candidate)
         && !it->record.recoveryRequired && !it->record.abortRequested;
 }
 
+CameraLeaseArbiter::Ticket RobotCalibrationSessionService::captureLease(const QUuid& id) const {
+    owner();if(!admitCapture(id))return {};return active_.value(id).ticket;
+}
+bool RobotCalibrationSessionService::collect(const QUuid& id) {
+    owner();if(!admitCapture(id))return false;
+    auto it=active_.find(id);if(it->record.state!=CalibrationState::Created)return true;
+    auto record=it->record;record.state=CalibrationState::Collecting;
+    store_.commit(record);it->record=record;records_[id]=record;return true;
+}
 } // namespace visionflow

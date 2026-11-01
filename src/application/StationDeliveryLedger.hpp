@@ -27,6 +27,10 @@ public:
     // control handler returns nullopt; RECOVER never creates an intent.
     std::optional<CommunicationV4Frame> handle(const V4RequestIdentity&,const CommunicationV4Frame&);
     bool pending(const QUuid& station,bool control=false) const;
+    const QString& directory() const { return directory_; }
+    // Only after an explicit real camera drain. Cannot recover success or a
+    // non-SAMPLE command; no acquisition is repeated.
+    void recoverSampleFailure(const V4RequestIdentity&,const CommunicationV4Frame&);
 
     class Admission final:public StationAdmissionStore {
     public:

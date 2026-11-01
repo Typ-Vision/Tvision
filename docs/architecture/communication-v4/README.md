@@ -2,8 +2,11 @@
 
 **Durum: sıralı uygulama sürüyor; hedef sistem henüz tamamlanmadı.**
 1 Kasım 2026. Kullanıcı seçimi: GPT-6.1 Sol / medium. Varsayılan oturum kapsamı
-tek karttır; ajanlar paralel çalışmaz. **Devam: [COMM4-21 SAMPLE pose/frame](cards/COMM4-21.md);
+tek karttır; ajanlar paralel çalışmaz. **Devam: [COMM4-22 solver](cards/COMM4-22.md);
 kullanıcı yeni sıra vermedikçe başlatılmaz.**
+
+**COMM4-21 yazılımı tamam:** [exact SAMPLE pose/frame ve kalıcı pairing](calibration-sample-pairing.md).
+Duplicate, shared lease, CAPTURED/FAILED, timeout/drain/restart; fiziksel6D BLOCKED.
 
 **COMM4-20 yazılımı tamam:** [kalibrasyon session ve lease yaşam döngüsü](calibration-session-lifecycle.md).
 BEGIN immutable dependency snapshot, COMM4-10 lease'i, idempotent duplicate,

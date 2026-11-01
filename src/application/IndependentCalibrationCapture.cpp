@@ -77,9 +77,9 @@ std::optional<MeasurementSetup> IndependentCalibrationSession::acceptedSetup() c
 std::optional<AcquisitionProfile> IndependentCalibrationSession::acceptedProfile() const {owner();return profile_;}
 std::optional<DiscoveredDevice> IndependentCalibrationSession::acceptedDevice() const {owner();return device_;}
 CalibrationWizardSession& IndependentCalibrationSession::math(){owner();return math_;}
-IndependentCaptureJob IndependentCalibrationSession::begin(IndependentCaptureRequest request){
+IndependentCaptureJob IndependentCalibrationSession::begin(IndependentCaptureRequest request, CameraLeaseArbiter::Ticket admittedLease){
     owner();cancel(false);if(request.origin!=SourceOrigin::CameraAcquired)closeCamera();
-    normalize(request);require(generation_<1000000000,"Capture generation exhausted");IndependentCaptureJob job;job.request_=std::move(request);job.sourceId_=sourceId_;job.ticket_=id();job.generation_=++generation_;job.cancel_=std::make_shared<std::atomic_bool>(false);job.deadline_=Deadline(job.request_.timeoutMs);ticket_=job.ticket_;cancel_=job.cancel_;job.timing_=AcquisitionTiming::current();if(job.timing_.request.isEmpty())job.timing_=AcquisitionTiming::request("calibration");job.commandedAt_=AcquisitionTiming::Clock::now();
+    normalize(request);require(generation_<1000000000,"Capture generation exhausted");IndependentCaptureJob job;job.admittedLease_=admittedLease;job.leaseRequired_=bool(admittedLease);job.request_=std::move(request);job.sourceId_=sourceId_;job.ticket_=id();job.generation_=++generation_;job.cancel_=std::make_shared<std::atomic_bool>(false);job.deadline_=Deadline(job.request_.timeoutMs);ticket_=job.ticket_;cancel_=job.cancel_;job.timing_=AcquisitionTiming::current();if(job.timing_.request.isEmpty())job.timing_=AcquisitionTiming::request("calibration");job.commandedAt_=AcquisitionTiming::Clock::now();
     if(job.request_.origin==SourceOrigin::CameraAcquired && prepared_.valid()){
         require(cameraKey(job.request_)==preparedKey_,"Prepared calibration target changed");job.sessions_=sessions_;job.prepared_=prepared_;
     }
@@ -92,6 +92,7 @@ IndependentCaptureResult IndependentCalibrationSession::run(const IndependentCap
     quint64 preparedGeneration=0;
     IndependentCaptureResult result;result.ticket_=job.ticket_;result.generation_=job.generation_;
     try {
+        auto admittedLease=job.admittedLease_.lock();require(!job.leaseRequired_ || admittedLease,"Admitted calibration lease retired");
         const auto& r=job.request_;r.validate();require(!job.cancel_->load() && !job.deadline_.expired(),"Capture cancelled/expired before acquisition");
         std::unique_ptr<AcquisitionAdapter> adapter;
         if(r.origin==SourceOrigin::CameraAcquired && !r.camera->physical){
@@ -122,7 +123,7 @@ IndependentCaptureResult IndependentCalibrationSession::run(const IndependentCap
             IndustrialCameraRequest request{*r.camera,*r.setup,*r.profile,{},source};
             request.device=CameraService::resolveIndustrial(*r.camera,discovery,r.localRoute);
             discoveryTiming.finish("success",{{"route",request.device.route.toJson()},{"backend",request.device.backend.toJson()}});
-            auto session=r.policy==CalibrationCapturePolicy::ExperimentalOecs ? ExperimentalOecsAcquisition::openCalibration(request,ExperimentalOecsAcquisition::installedRuntime(),backend.experimentalApi):backend.factory.open(request,CameraLeaseUse::Calibration,FrameQueueMode::ProductionFifo,1);
+            auto session=r.policy==CalibrationCapturePolicy::ExperimentalOecs ? ExperimentalOecsAcquisition::openCalibration(request,ExperimentalOecsAcquisition::installedRuntime(),backend.experimentalApi):backend.factory.open(request,CameraLeaseUse::Calibration,FrameQueueMode::ProductionFifo,1,admittedLease);
             auto command=[&](CameraOperation op,CameraState expected){
                 require(!job.cancel_->load() && !job.deadline_.expired(),"Industrial capture cancelled/expired");
                 session->submit(op,job.deadline_.remainingMs());
@@ -165,6 +166,9 @@ IndependentCaptureResult IndependentCalibrationSession::run(const IndependentCap
         evidence.validate();mathSetup.validate();require(!job.cancel_->load() && !job.deadline_.expired(),"Capture cancelled/expired after acquisition");result.frame_=image;result.evidence_=evidence;result.mathSetup_=mathSetup;
     }catch(const std::exception& e){result.error_=QString::fromUtf8(e.what());if(job.sessions_ && preparedGeneration && job.sessions_->status(job.sourceId_).generation==preparedGeneration)job.sessions_->close(job.sourceId_);}
     timing.finish(job.cancel_->load()?"cancelled":job.deadline_.expired()?"timeout":result.error_.isEmpty()?"success":"error");return result;
+}
+bool IndependentCalibrationSession::matches(const IndependentCaptureResult& result) const {
+    owner();return !ticket_.isEmpty() && ticket_==result.ticket_ && generation_==result.generation_ && cancel_;
 }
 bool IndependentCalibrationSession::accept(const IndependentCaptureResult& result){
     owner();if(ticket_.isEmpty() || ticket_!=result.ticket_ || generation_!=result.generation_ || !cancel_)return false;

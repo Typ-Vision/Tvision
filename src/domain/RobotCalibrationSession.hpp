@@ -172,6 +172,7 @@ struct CalibrationSessionRecord {
     QUuid session;
     CalibrationCommandKey beginCommand;
     QByteArray fingerprint;
+    QByteArray beginRequest; // exact frozen BEGIN header/body; absent legacy records cannot SAMPLE
     CalibrationState state = CalibrationState::Created;
     bool recoveryRequired = false;
     bool abortRequested = false;

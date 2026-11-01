@@ -40,6 +40,8 @@ class IndependentCaptureJob {
     friend class IndependentCalibrationSession;
     IndependentCaptureJob()=default;
     IndependentCaptureRequest request_;
+    std::weak_ptr<CameraLeaseArbiter::Lease> admittedLease_;
+    bool leaseRequired_=false;
     std::shared_ptr<CameraAcquisitionSessions> sessions_;
     std::shared_future<AcquisitionContextStatus> prepared_;
     QString sourceId_,ticket_;
@@ -76,8 +78,9 @@ public:
     void prepareCamera(IndependentCaptureRequest,const IndependentCaptureBackend& = {});
     void closeCamera();
     AcquisitionContextStatus cameraStatus() const;
-    IndependentCaptureJob begin(IndependentCaptureRequest);
+    IndependentCaptureJob begin(IndependentCaptureRequest, CameraLeaseArbiter::Ticket admittedLease={});
     static IndependentCaptureResult run(const IndependentCaptureJob&,const IndependentCaptureBackend& = {});
+    bool matches(const IndependentCaptureResult&) const;
     bool accept(const IndependentCaptureResult&);
     void cancel(bool closeCamera=true);
     bool busy() const;

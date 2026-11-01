@@ -66,6 +66,8 @@ public:
     // Minimal COMM4-21 boundary: admission is a fence, not a capture implementation.
     std::optional<quint64> admitCapture(const QUuid& session) const;
     bool acceptCaptureCallback(const QUuid& session, quint64 generation) const;
+    bool collect(const QUuid& session);
+    CameraLeaseArbiter::Ticket captureLease(const QUuid& session) const;
 
     std::optional<CalibrationSessionRecord> session(const QUuid&) const;
     bool ownsCamera(const QString& cameraId) const;

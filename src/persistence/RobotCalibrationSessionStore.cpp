@@ -106,6 +106,7 @@ QJsonObject sessionToJson(const CalibrationSessionRecord& record) {
         {"session", text(record.session)},
         {"begin", commandKeyToJson(record.beginCommand)},
         {"fingerprint", QString::fromLatin1(record.fingerprint.toBase64())},
+        {"beginRequest", QString::fromLatin1(record.beginRequest.toBase64())},
         {"state", int(record.state)},
         {"recoveryRequired", record.recoveryRequired},
         {"abortRequested", record.abortRequested},
@@ -118,6 +119,7 @@ CalibrationSessionRecord sessionFromJson(const QJsonObject& object) {
     record.session = uuid(object.value("session").toString());
     record.beginCommand = commandKeyFromJson(object.value("begin").toObject());
     record.fingerprint = QByteArray::fromBase64(object.value("fingerprint").toString().toLatin1());
+    record.beginRequest = QByteArray::fromBase64(object.value("beginRequest").toString().toLatin1());
     record.state = CalibrationState(object.value("state").toInt());
     record.recoveryRequired = object.value("recoveryRequired").toBool();
     record.abortRequested = object.value("abortRequested").toBool();

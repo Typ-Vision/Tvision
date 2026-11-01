@@ -114,9 +114,10 @@ quint32 StationDeliveryLedger::reserve(const StationControlIntent& intent){
     require(h.peer==intent.identity.peer && h.epoch==intent.identity.epoch && h.requestId==intent.identity.request && h.stationKey && intent.controlReserve==controlKind(h.kind),"V4 intent key/reserve mismatch");
     require(h.kind==4 || h.kind==5 || h.kind==6 || h.kind==10 || (h.kind>=20 && h.kind<=25),"V4 command does not create intent");
     if(all.contains(id)){require(all[id].record.value.fingerprint==intent.record.fingerprint,"CONFLICT: v4 request differs");return 0;}
-    int remaining=0;QSet<QUuid> stations,normal,control;
+    int remaining=0; qint64 sampleBytes=h.kind==21?40LL*1024*1024:0;QSet<QUuid> stations,normal,control;
     for(const auto& e:all)if(!e.record.value.acknowledged){
         stations.insert(e.record.key.station);remaining+=4-e.sequence;
+        if(e.record.value.request.header.kind==21 && e.record.value.replay.header.kind!=111){remaining+=2;sampleBytes+=40LL*1024*1024;}
         (e.record.control?control:normal).insert(e.record.key.station);
         if(e.record.key.station==intent.identity.station && e.record.control==intent.controlReserve)return intent.controlReserve?23:2;
     }
@@ -125,9 +126,9 @@ quint32 StationDeliveryLedger::reserve(const StationControlIntent& intent){
     // Count the remaining events ONCE, including the requested slot. Reserve
     // one future control terminal only where normal has no control yet. A STOP
     // consumes that reserved headroom instead of reserving it a second time.
-    int reserve=remaining+5;
+    int reserve=remaining+5+(h.kind==21?2:0);
     for(const auto& station:normal)if(!control.contains(station))reserve+=5;
-    try{ProductionStore(directory_).requireCapacity(reserve,qint64(reserve)*4096);}catch(const std::exception& e){if(QByteArray(e.what())=="QUEUE_FULL")return 7;throw;}
+    try{ProductionStore(directory_).requireCapacity(reserve,qint64(reserve)*4096+sampleBytes);}catch(const std::exception& e){if(QByteArray(e.what())=="QUEUE_FULL")return 7;throw;}
     Entry e;e.record={intent.identity,intent.record,"",intent.controlReserve};
     append(e,"INTENT");append(e,"BEGIN");live_.insert(id);return 0;
 }
@@ -140,6 +141,20 @@ void StationDeliveryLedger::seal(const V4RequestIdentity& k,const CommunicationV
         e.record.value=r;append(e,"TERMINAL");
     }
     if(e.record.state=="TERMINAL")append(e,"PENDING");
+}
+void StationDeliveryLedger::recoverSampleFailure(const V4RequestIdentity& k,const CommunicationV4Frame& terminal){
+    {
+        Guard guard(directory_);const auto id=identity(k);auto all=load();
+        require(all.contains(id),"Unknown sample recovery");auto e=all[id];
+        require(e.record.value.request.header.kind==21 && terminal.header.kind==111
+            && C::uint32(terminal.body,100)==7 && C::uint32(terminal.body,76)==21
+            && C::uint32(terminal.body,64)==2 && C::uint32(terminal.body,72)==0
+            && terminal.body.sliced(136,16)==QByteArray(16,0),"Invalid sample recovery terminal");
+        auto pair=e.record.value;pair.replay=terminal;validatePair(pair);
+        require(e.record.state=="INTENT" || e.record.state=="BEGIN","Sample recovery requires unresolved intent");
+        if(e.record.state=="INTENT")append(e,"BEGIN");live_.insert(id);
+    }
+    seal(k,terminal);
 }
 void StationDeliveryLedger::acknowledgeLocked(Entry& e,const CommunicationV4Frame& ack){
     C::encode(ack,V4Direction::Request);const auto& t=e.record.value.replay;

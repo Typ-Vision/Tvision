@@ -1,6 +1,7 @@
 # COMM4-21 — SAMPLE actual pose ve yeni kareyi exact eşleştir
 
-Durum: planlandı, başlanmadı. Model: **GPT-6.1 Sol / medium**.
+Durum: yazılım uygulandı ve doğrulandı; fiziksel kabul BLOCKED. Model: **GPT-6.1 Sol / medium**.
+[Kapanış](../../../archive/2026-11-02-comm4-21.md).
 Tek oturum kapsamı ve ortak kurallar [indekste](../README.md), kapanış
 kuralları [V0](../verification.md) içindedir.
 
