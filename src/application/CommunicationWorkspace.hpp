@@ -11,6 +11,7 @@ struct CommunicationStationView {
     StationRuntimeState runtime;
     std::shared_ptr<const StationSnapshot> snapshot;
     QString cameraOwners, publication, unavailable;
+    std::optional<StationFileSource> source;
     bool automatic=false, canRun=false, canAuto=false;
 };
 // Owner-thread application port. Selection is deliberately absent: selecting a
@@ -35,6 +36,8 @@ public:
     QString machineDirectory() const;
     QString setupStatus() const;
     void startSetup();
+    IdentityCatalogue sourceCatalogue() const {owner();return identities_.load();}
+    void saveStationSource(const QUuid& expected,const QUuid& station,const QString& name,const QUuid& camera,const QString& cameraName,const QString& path);
     void setSetupCompleted(std::function<void()> callback){setupCompleted_=std::move(callback);}
     using RecipeList=std::function<QVector<StationSavedRecipe>()>;
     void setRecipeControl(RecipeList recipes,std::function<void(const QUuid&,const QUuid&,quint32,quint32)> select){recipes_=std::move(recipes);select_=std::move(select);}

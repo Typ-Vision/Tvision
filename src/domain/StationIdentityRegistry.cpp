@@ -1,6 +1,7 @@
 #include "StationIdentityRegistry.hpp"
 #include <QSet>
 #include <QHash>
+#include <QFileInfo>
 #include <limits>
 #include <stdexcept>
 
@@ -29,6 +30,18 @@ void validateIdentityCatalogue(const IdentityCatalogue& c) {
         const auto token=QByteArray::number(category)+e.identity.entity.toRfc4122()+e.identity.revision.toRfc4122();
         need(!identities.contains(token)); identities.insert(token); keys.insert(e.key);
     }
+    QSet<QUuid> sourceStations,sourceCameras;
+    for(const auto& s:c.stationSources) {
+        need(!s.station.isNull() && !s.camera.isNull() && !s.revision.isNull() && !sourceStations.contains(s.station));
+        need(!sourceCameras.contains(s.camera));sourceCameras.insert(s.camera);sourceStations.insert(s.station);
+        need(QFileInfo(s.path).isAbsolute() && !s.path.isEmpty() && s.path.size()<=32768 && !s.path.contains(QChar::Null));
+        bool station=false,camera=false;
+        for(const auto& e:c.entries) {
+            station|=e.identity.category==CatalogueCategory::Station && e.identity.entity==s.station;
+            camera|=e.identity.category==CatalogueCategory::Camera && e.identity.entity==s.camera;
+        }
+        need(station && camera);
+    }
     for(const auto& e:c.epochs) {
         need(!e.peer.isNull() && !e.epoch.isNull());
         auto token=e.peer.toRfc4122()+e.epoch.toRfc4122();
@@ -49,6 +62,13 @@ void validateIdentityTransition(const IdentityCatalogue& old, const IdentityCata
     for(const auto& e:next.entries) {
         if(e.key<old.nextKey)
             need(oldKeys.contains(e.key));
+    }
+    // Never lose an established machine camera or silently reuse its source revision.
+    for(const auto& s:old.stationSources) {
+        const StationFileSource* found=nullptr;
+        for(const auto& n:next.stationSources)if(n.station==s.station)found=&n;
+        need(found && found->camera==s.camera);
+        need(found->path==s.path ? found->revision==s.revision : found->revision!=s.revision);
     }
     QHash<QByteArray,bool> newEpochs;
     for(const auto& e:next.epochs) newEpochs.insert(e.peer.toRfc4122()+e.epoch.toRfc4122(),e.retired);

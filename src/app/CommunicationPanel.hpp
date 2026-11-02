@@ -12,6 +12,7 @@ public:
     std::function<QString()> legacyHistory;
 private:
     void selection();
+    void sourceSettings(bool create);
     void command(const QString&);
     void migration(const QString&);
     RobotCalibrationPanel* calibration_;

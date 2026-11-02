@@ -89,6 +89,8 @@ std::optional<StationSavedRecipe> CommunicationStationComposition::recipe(quint3
     }catch(...){return {};}
 }
 std::optional<StationAdmissionSnapshot> CommunicationStationComposition::manifest(const QUuid& id) const {
+    const auto catalogue=identities_.load();
+    for(const auto& source:catalogue.stationSources)if(source.station==id)return {}; // VF-04 resolves the station source into the immutable execution snapshot.
     const auto s=activations_.snapshot(id);if(!s || s->selection.cameras.size()>32)return {};const auto r=recipe(s->selection.recipeKey);if(!r || stationRecipeBytes(r->selection)!=stationRecipeBytes(s->selection))return {};
     for(const auto& t:editorTools(s->selection.recipe.definition))if(t.enabled && ToolRegistry::get(t.kind).acquisitionSource && t.kind!="image_file")return {};
     return StationAdmissionSnapshot{s,r->templateKey,cameraRevision(*s),{},{},{}};

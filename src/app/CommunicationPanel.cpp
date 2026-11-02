@@ -19,6 +19,12 @@
 #include <QFile>
 #include <QJsonDocument>
 #include <QSignalBlocker>
+#include <QDialog>
+#include <QDialogButtonBox>
+#include <QFileDialog>
+#include <QImage>
+#include <QPixmap>
+#include "application/StationSourceSetup.hpp"
 
 namespace visionflow {
 namespace {
@@ -48,6 +54,11 @@ CommunicationPanel::CommunicationPanel(QWidget* parent):QWidget(parent){
     stations_->setSelectionBehavior(QAbstractItemView::SelectRows);stations_->setSelectionMode(QAbstractItemView::SingleSelection);stations_->setEditTriggers(QAbstractItemView::NoEditTriggers);stations_->setMinimumHeight(180);stations_->horizontalHeader()->setSectionResizeMode(QHeaderView::Interactive);stations_->horizontalHeader()->setStretchLastSection(true);layout->addWidget(stations_);
     const int widths[]{140,140,70,320,260,150,280};for(int column=0;column<7;++column)stations_->setColumnWidth(column,widths[column]);
     connect(stations_,&QTableWidget::itemSelectionChanged,this,[this]{selection();});
+    auto* sourceActions=new QHBoxLayout;
+    auto* addStation=new QPushButton("İstasyon ekle");addStation->setObjectName("stationAdd");sourceActions->addWidget(addStation);
+    auto* editSource=new QPushButton("Kaynak ayarları / adlandır");editSource->setObjectName("stationSourceSettings");sourceActions->addWidget(editSource);layout->addLayout(sourceActions);
+    connect(addStation,&QPushButton::clicked,this,[this]{sourceSettings(true);});
+    connect(editSource,&QPushButton::clicked,this,[this]{sourceSettings(false);});
     auto* recipeRow=new QHBoxLayout;recipes_=new QComboBox;recipes_->setObjectName("communicationSavedRecipe");recipes_->setAccessibleName("Kayıtlı immutable reçete revision");recipes_->setMinimumContentsLength(16);recipes_->setSizeAdjustPolicy(QComboBox::AdjustToMinimumContentsLengthWithIcon);recipeRow->addWidget(recipes_,1);
     auto* choose=new QPushButton("Seçili station'a reçeteyi yükle (Run açmaz)");choose->setObjectName("stationSelectRecipe");recipeRow->addWidget(choose);layout->addLayout(recipeRow);
     connect(choose,&QPushButton::clicked,this,[this]{const int n=stations_->currentRow();if(!workspace_ || n<0 || n>=rows_.size() || recipes_->currentIndex()<0)return;try{const auto& row=rows_[n];workspace_->selectRecipe(row.station.id,row.snapshot?row.snapshot->activation:QUuid{},recipes_->currentData().toUInt(),recipes_->currentData(Qt::UserRole+1).toUInt());message_->setText("Station reçete seçimi kaydedildi; Run / Auto kapalı.");}catch(const std::exception& e){message_->setText(QString::fromUtf8(e.what()));}refresh();});
@@ -86,6 +97,36 @@ void CommunicationPanel::selection(){
     calibration_->selectStation(valid?rows_[n].station.id:QUuid{});
     if(!valid){detail_->setText("Kayıtlı station seçilmedi. Enrollment / manifest eksikliği üretim izni oluşturmaz.");return;}
     const auto& v=rows_[n];detail_->setText(QString("Station UUID: %1\nActivation: %2\nPublication: %3\nKamera: %4\n%5%6").arg(v.station.id.toString(QUuid::WithoutBraces),v.snapshot?v.snapshot->activation.toString(QUuid::WithoutBraces):"yok",v.publication.isEmpty()?"Bağlanmadı":v.publication,v.cameraOwners,v.unavailable,v.runtime.deliveryPending?"\nPENDING ACK: Run/Auto kapalı; Stop ve exact ACK kullanılabilir.":""));
+}
+void CommunicationPanel::sourceSettings(bool create){
+    try{
+        if(!workspace_)throw std::runtime_error("Workspace bağlanmadı");
+        const auto cat=workspace_->sourceCatalogue();const int n=stations_->currentRow();
+        if(!create && (n<0 || n>=rows_.size()))throw std::runtime_error("Önce istasyon seçin.");
+        const auto id=create?QUuid::createUuid():rows_[n].station.id;
+        std::optional<StationFileSource> current;for(const auto& s:cat.stationSources)if(s.station==id)current=s;
+        QDialog dialog(this);dialog.setWindowTitle(create?"İstasyon ekle":"Kaynak ayarları");dialog.resize(620,440);
+        auto* layout=new QVBoxLayout(&dialog);auto* form=new QFormLayout;layout->addLayout(form);
+        auto* name=new QLineEdit(create?QString("İstasyon %1").arg(rows_.size()+1):rows_[n].station.name);name->setObjectName("stationName");form->addRow("İstasyon adı",name);
+        auto* cameras=new QComboBox;cameras->setObjectName("stationCamera");
+        if(current){for(const auto& e:cat.entries)if(e.identity.entity==current->camera && e.identity.category==CatalogueCategory::Camera)cameras->addItem(e.name,e.identity.entity);}
+        else{
+            cameras->addItem(QString("Yeni Kamera %1").arg(rows_.size()+1),QUuid::createUuid());
+            for(const auto& e:cat.entries)if(!e.retired && e.identity.category==CatalogueCategory::Camera){bool used=false;for(const auto& s:cat.stationSources)used|=s.camera==e.identity.entity;if(!used)cameras->addItem(e.name,e.identity.entity);}
+        }
+        form->addRow("Kamera kaynağı bağla",cameras);
+        auto* path=new QLineEdit(current?current->path:QString{});path->setObjectName("stationSourcePath");form->addRow("Dosyadan test görüntüsü",path);
+        auto* choose=new QPushButton("Dosyadan test görüntüsü seç");layout->addWidget(choose);
+        auto* preview=new QLabel;preview->setAlignment(Qt::AlignCenter);preview->setMinimumHeight(100);preview->setMaximumHeight(150);layout->addWidget(preview);
+        auto* status=plain("Kaydetmeden önce görüntü doğrulanır. Kamera kimliği adlandırmada korunur.\nKayıttan sonra Runtime için uygulamayı yeniden başlatın. Run / Auto açılmaz.");layout->addWidget(status);
+        auto show=[&]{try{const auto size=StationSourceSetup::inspectImage(path->text());const QImage image(path->text());preview->setPixmap(QPixmap::fromImage(image).scaled(400,140,Qt::KeepAspectRatio,Qt::SmoothTransformation));status->setText(QString("Görüntü doğrulandı: %1 × %2\nKaydettikten sonra uygulamayı yeniden başlatın. Run / Auto kapalı.").arg(size.width()).arg(size.height()));return true;}catch(const std::exception& e){preview->clear();status->setText(QString::fromUtf8(e.what()));return false;}};
+        connect(choose,&QPushButton::clicked,&dialog,[&]{const auto file=QFileDialog::getOpenFileName(&dialog,"Test görüntüsü seç",path->text(),"Görüntüler (*.png *.jpg *.jpeg *.bmp *.tif *.tiff *.pgm);;Tüm dosyalar (*)");if(!file.isEmpty()){path->setText(file);show();}});
+        connect(path,&QLineEdit::editingFinished,&dialog,[&]{show();});if(current)show();
+        auto* buttons=new QDialogButtonBox(QDialogButtonBox::Save|QDialogButtonBox::Cancel);buttons->button(QDialogButtonBox::Save)->setText("Kaydet");buttons->button(QDialogButtonBox::Cancel)->setText("İptal");layout->addWidget(buttons);
+        connect(buttons,&QDialogButtonBox::rejected,&dialog,&QDialog::reject);
+        connect(buttons,&QDialogButtonBox::accepted,&dialog,[&]{try{if(!show())return;workspace_->saveStationSource(cat.revision,id,name->text(),cameras->currentData().toUuid(),cameras->currentText(),path->text());dialog.accept();}catch(const std::exception& e){status->setText(QString::fromUtf8(e.what()));}});
+        if(dialog.exec()==QDialog::Accepted)message_->setText("İstasyon ve kaynak kaydedildi. Runtime için uygulamayı yeniden başlatın.");refresh();
+    }catch(const std::exception& e){message_->setText(QString::fromUtf8(e.what()));}
 }
 void CommunicationPanel::command(const QString& cmd){const int n=stations_->currentRow();if(!workspace_ || n<0 || n>=rows_.size())return;const auto row=rows_[n];try{workspace_->command(row.station.id,row.snapshot?row.snapshot->activation:QUuid{},cmd);message_->setText("Station komutu: "+cmd);}catch(const std::exception& e){message_->setText(QString::fromUtf8(e.what()));}refresh();}
 void CommunicationPanel::migration(const QString& cmd){

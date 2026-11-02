@@ -226,3 +226,50 @@ drain/reconcile gerekir; eski dosyaları live registry üstüne kopyalama.
 Monotonik numeric key, epoch, dedup/tombstone ve ACK geçmişi korunur.
 Uyumsuz text/fan-out/Pose mapping'i sessizce küçültülmez; analiz raporundaki
 unsupported nedenleri çözülmeden apply edilmez.
+
+
+## VF-02 · İstasyonun kalıcı dosya kaynağı
+
+Onaylı [V4 kullanıcı uygulama planı](../visionflow-v4-uygulama-plani.md),
+VF-02/K1: Communication → İstasyon ekle → ad → mantıksal kamera → test
+görüntüsü → Kaydet. Kaynak ayarları / adlandır seçili satırı düzenler;
+dosya kaybolduğunda aynı eylemle yeni dosya seçilir. Kaydet görüntüyü
+OpenCV ile gerçekten decode eder; okunamayan/geçersiz veya 64 MiB üzeri
+dosya mevcut eşleşmeyi değiştirmez. Önizleme piksel görüntüsüdür, araç sonucu
+veya fiziksel kamera kabulü değildir.
+
+StationFileSource (station, camera, revision, absolute path) makinenin
+IdentityCatalogue.stationSources alanına aittir; recipe tool UUID'si veya
+StationRecipeSelection dosya yolu değildir. İstasyon/kamera anahtarları, ad ve
+tam kaynak eşleşmesi aynı checksummed identity snapshot'ında tek QLockFile +
+revision CAS + QSaveFile commit ile kaydedilir. Kısmi yazımda önceki kayıt
+korunur; ilk kayıtta kimlik-only istasyon bırakılmaz. Anahtarlar yeniden
+kullanılmaz. Ad değişikliği kamera/kaynak kimliğini değiştirmez; farklı dosya
+yolu yeni kaynak revizyonu üretir. Aynı dosya/ad tekrar kaydı no-op'tur.
+
+İlk açık kaynak kaydı JSON payload schemaVersion=2 üretir. Eski schemaVersion=1
+boş stationSources ile okunur ve kaynak eklenmedikçe aynı biçimde yazılır.
+SchemaVersion=2 eksik/çift kaynak, bilinmeyen alan, hatalı kimlik veya checksum
+ile reddedilir. StationActivationCatalogue formatı ve geçmiş baytları değişmez.
+Eski activation'lardan kamera otomatik çıkarılmaz; Kaynak ayarları ile bir
+kez açık eşleme yapılır. İlk ürün sürümünde kaydedilmiş kamera kimliği korunur
+ve başka istasyona sessizce atanmaz.
+
+Kaydet, owner thread üzerinde bütün Runtime'ların drained olmasını, Remote
+Enable'ın kapalı olmasını, hedef istasyonda pending terminal bulunmamasını ve
+Editor/Calibration/Runtime bakım bariyerini denetler. Yeni katalog satırı hemen
+görünür; mevcut server/run owner'ları yerinde değiştirilmez. Panel açıkça
+uygulamanın yeniden başlatılmasını ister; o süreçte Run/Auto/Remote Enable ve
+reçete seçimi engellenir. Sonraki normal composition istasyon kimliklerini
+yeniden bağlar, başlangıç Run/Auto/Remote Enable kapalı kalır.
+
+VF-02 kaynak kaydı üretim reçetesi seçmez. Makine kaynağını reçetenin tool
+kimliklerine çözümleyip aynı immutable admission/execution snapshot'ına taşıma
+VF-04'e aittir. Kaynağı açıkça bağlanan istasyonda bu çözümleme hazır olmadan
+eski reçete dosyası üzerinden Run/Auto açılmaz. A/B görüntü işleme kanıtı VF-08'e
+aittir. VF-03 ve sonraki kartlar bu teslimin kapsamına girmez.
+
+Kalıcılık, bozuk görüntü, stale CAS, kilit, yarım yazım ve legacy/restart
+korumasının hedefli testi `station_source_setup_contract`'tır. K1 ürün kabulü
+normal başlatıcı ve izole kullanıcı verisiyle, elle katalog üretmeden yapılır.
+Güncel sonuç ve kanıt yolları [devir özetindedir](../../progress.md).

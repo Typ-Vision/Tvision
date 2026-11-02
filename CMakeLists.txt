@@ -142,7 +142,7 @@ target_sources(visionflow_acquisition PRIVATE src/application/StationControlServ
 target_sources(visionflow_acquisition PRIVATE src/application/StationDeliveryLedger.cpp)
 target_sources(visionflow_acquisition PRIVATE src/application/StationDeliveryScheduler.cpp)
 target_sources(visionflow_acquisition PRIVATE src/application/CommunicationMigration.cpp)
-target_sources(visionflow_acquisition PRIVATE src/application/MachineSetup.cpp src/application/CommunicationWorkspace.cpp src/application/RobotCalibrationWorkspace.cpp)
+target_sources(visionflow_acquisition PRIVATE src/application/MachineSetup.cpp src/application/StationSourceSetup.cpp src/application/CommunicationWorkspace.cpp src/application/RobotCalibrationWorkspace.cpp)
 target_sources(visionflow_acquisition PRIVATE src/application/CommunicationStationComposition.cpp)
 target_compile_definitions(visionflow_acquisition PRIVATE
   VISIONFLOW_DIAGNOSTIC_BUILD_TYPE="$<CONFIG>"
@@ -229,6 +229,9 @@ if(BUILD_TESTING)
   add_executable(robot_calibration_workspace_test tests/robot_calibration_workspace_test.cpp)
   target_link_libraries(robot_calibration_workspace_test PRIVATE visionflow_acquisition)
   add_test(NAME robot_calibration_workspace_contract COMMAND robot_calibration_workspace_test)
+  add_executable(station_source_setup_test tests/station_source_setup_test.cpp)
+  target_link_libraries(station_source_setup_test PRIVATE visionflow_acquisition)
+  add_test(NAME station_source_setup_contract COMMAND station_source_setup_test)
   add_executable(machine_setup_test tests/machine_setup_test.cpp)
   target_link_libraries(machine_setup_test PRIVATE visionflow_acquisition)
   add_test(NAME machine_setup_contract COMMAND machine_setup_test)

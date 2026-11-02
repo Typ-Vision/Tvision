@@ -29,12 +29,19 @@ struct PeerEpochIdentity {
     bool retired=false;
     bool operator==(const PeerEpochIdentity&) const = default;
 };
+// Machine-owned file source, independent of recipe tool IDs and activations.
+struct StationFileSource {
+    QUuid station, camera, revision;
+    QString path;
+    bool operator==(const StationFileSource&) const = default;
+};
 struct IdentityCatalogue {
     QUuid installation, revision;
     // uint64 represents the exhausted UINT32_MAX+1 sentinel without wrapping.
     std::uint64_t nextKey=1;
     QVector<CatalogueEntry> entries;
     QVector<PeerEpochIdentity> epochs;
+    QVector<StationFileSource> stationSources;
     bool operator==(const IdentityCatalogue&) const = default;
 };
 QByteArray exportIdentityUuid(const QUuid&);

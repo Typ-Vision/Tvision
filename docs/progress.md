@@ -5,9 +5,12 @@
 
 ## Devam noktası
 
-**[VF-01](archive/2026-11-02-vf-01.md):** makine kurulumu ve Yüzey/Ölçüm hazır.
-Hedefli5/5; normal liste/restart/1280×720 kullanıcı tarafından doğrulandı.
-Tam ON/OFF kullanıcı isteğiyle kesildi; OFF timeout açık. VF-02 başlatılmadı.
+**[VF-02](archive/2026-11-02-vf-02.md): K1 geçti.** Restart/küçük ekran OK.
+Hedefli8/7; OFF158+1skip. ON196/1skip/3timeout; 2 tekrar geçti.
+Pose UI/tam ON kullanıcı isteğiyle açık; bu haliyle commit istendi. VF-03 yok.
+
+**[VF-01](archive/2026-11-02-vf-01.md):** kurulum/şablonlar hazır; hedefli5/5,
+liste/restart/1280×720 onaylı. Tam ON/OFF kesildi; eski OFF timeout arşivde.
 
 **[COMM4-26](archive/2026-11-02-comm4-26.md)**: yazılım tamam;
 ON197/1skip, OFF156/1skip; hata0. Hedefli34/29; Qt iki viewport.

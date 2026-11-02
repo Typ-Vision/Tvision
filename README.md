@@ -83,11 +83,7 @@ OECS / GenTL probe komutları, sandbox sınırları ve kanıt bağlantıları
    Yeni kaydın varsayılan kurulum/profili otomatik bağlanır; eksik fiziksel kurulum
    ayrıntıları tamamlanmadan ölçüm izni oluşmaz.
 3. Reçeteyi Editor'da kur; kaynak/araçları bağla, görüntü al ve Run Flow çalıştır.
-   Variables sekmesinde reçete değişkenlerini ekle/düzenle/sil; sistem satırları salt
-   okunurdur. Değerler yalnız güncel Editor çevriminden gelir; tanımda saklanmaz.
-   Toolbox → Set Variables: Properties'de satır ekle/sil/taşı; hedef ve uyumlu
-   port/bundle veya typed JSON sabit seç. Atamaları uygula tüm taslağı tek
-   komutta kaydeder; Taslağı geri al değişiklikleri atar. Run Tool/Flow dışarı yazmaz.
+   Variables ve Set Variables kullanımı [değişken rehberindedir](docs/variables-usage.md).
    Toolbox → Result: Boolean kaynakları açıkça seçip ALL/ANY kuralını uygula,
    ardından Enabled aç. Tek etkin Result genel OK/NOK/NOT_EVALUATED kararını
    üretir; execution DONE/ERROR ve eski Measurement PASS/FAIL ayrı kalır.
@@ -97,6 +93,9 @@ OECS / GenTL probe komutları, sandbox sınırları ve kanıt bağlantıları
 4. Kaydedilmiş reçete için Load Recipe → Kaynağı doğrula → Run → Tek çevrim; sonuçlar Logs/CSV'de.
    Doğrulama kayıtlı metrik kaynak iznini yeni kareyle denetler; Run başlatmaz.
    Load/Run hazırlığı tek başına sonuç değildir. Stop → yeniden Load sürümü değiştirir.
+
+Communication → İstasyon ekle: ad/kamera/test görüntüsünü kaydet ve yeniden başlat.
+[Kalıcı kaynak ayarları ve sınırlar](docs/architecture/communication-v4/communication-workspace.md#vf-02--istasyonun-kalıcı-dosya-kaynağı).
 
 Communication tek V4 listener, station Run/Auto/Stop, aktif revision, kamera
 sahibi ve pending ACK durumunu gösterir. Restart Run/Auto açmaz;

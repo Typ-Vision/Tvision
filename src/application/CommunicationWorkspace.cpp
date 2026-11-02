@@ -1,5 +1,6 @@
 #include "CommunicationWorkspace.hpp"
 #include "MachineSetup.hpp"
+#include "StationSourceSetup.hpp"
 #include <QJsonDocument>
 #include <QJsonArray>
 #include <QFileInfo>
@@ -34,7 +35,16 @@ QVector<CommunicationStationView> CommunicationWorkspace::stations() const {
             for(const auto& lease:leases)if(lease.cameraId==camera.camera.toString(QUuid::WithoutBraces) || lease.cameraId==camera.camera.toString())value=QString("%1: %2 (g%3%4)").arg(lease.cameraId,lease.owner).arg(lease.generation).arg(lease.quarantined?", QUARANTINED":"");
             owners.append(value);
         }
-        v.cameraOwners=owners.isEmpty()?"Kamera ataması yok":owners.join('\n');rows.append(v);
+        v.cameraOwners=owners.isEmpty()?"Kamera ataması yok":owners.join('\n');
+        for(const auto& source:catalogue.stationSources)if(source.station==v.station.id){
+            v.source=source;QString cameraName;
+            for(const auto& e:catalogue.entries)if(e.identity.category==CatalogueCategory::Camera && e.identity.entity==source.camera)cameraName=e.name;
+            v.cameraOwners=cameraName+" / "+source.camera.toString(QUuid::WithoutBraces)+"\n"+source.path;
+            if(!QFileInfo(source.path).isFile() || !QFileInfo(source.path).isReadable()){v.unavailable="Kaynak okunamıyor. Kaynak ayarları ile dosyayı seçin.";v.canRun=false;v.canAuto=false;}
+        }
+        if(!v.source){v.unavailable+="\nKalıcı kamera eşleşmesi yok; Kaynak ayarları ile açıkça eşleyin.";}
+        if(restartRequired_)v.unavailable+="\nKaynak kaydedildi; Runtime için uygulamayı yeniden başlatın.";
+        rows.append(v);
     }
     return rows;
 }
@@ -44,6 +54,13 @@ QString CommunicationWorkspace::machineDirectory() const {
 }
 QString CommunicationWorkspace::setupStatus() const {owner();return MachineSetup(machineDirectory()).status();}
 void CommunicationWorkspace::startSetup(){owner();if(restartRequired_)throw std::runtime_error("Migration sonrası yeniden başlatın.");MachineSetup(machineDirectory()).start();if(setupCompleted_)setupCompleted_();}
+void CommunicationWorkspace::saveStationSource(const QUuid& expected,const QUuid& station,const QString& name,const QUuid& camera,const QString& cameraName,const QString& path){
+    owner();if(!drained() || remoteEnabled())throw std::runtime_error("Önce Stop/drain yapın ve Remote Enable kapatın.");
+    if(ledger_)for(const auto& r:ledger_->recovery())if(!r.value.acknowledged && r.key.station==station)throw std::runtime_error("PENDING ACK: kaynak değiştirilemez.");
+    if(maintenanceBarrier_){const auto why=maintenanceBarrier_();if(!why.isEmpty())throw std::runtime_error(why.toStdString());}
+    StationSourceSetup(identities_).save(expected,station,name,camera,cameraName,path);
+    restartRequired_=true;notice_="İstasyon / kaynak kaydedildi. Runtime için uygulamayı yeniden başlatın; Run / Auto kapalı.";
+}
 QString CommunicationWorkspace::listener() const {
     owner();QString state;
     switch(server_.state()){case CommunicationServerState::NotConfigured:state="NOT_CONFIGURED";break;case CommunicationServerState::Disabled:state="DISABLED";break;case CommunicationServerState::Listening:state="LISTENING";break;case CommunicationServerState::PeerConnected:state="CONNECTED";break;case CommunicationServerState::Fault:state="FAULT";break;case CommunicationServerState::Closing:state="CLOSING";break;case CommunicationServerState::Closed:state="CLOSED";break;}

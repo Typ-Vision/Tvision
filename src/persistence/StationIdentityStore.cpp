@@ -31,8 +31,15 @@ QJsonObject payload(const IdentityCatalogue& c) {
         {"key",qint64(e.key)},{"category",int(e.identity.category)},{"entity",uuid(e.identity.entity)},
         {"revision",uuid(e.identity.revision)},{"parent",uuid(e.identity.parent)},{"name",e.name},{"retired",e.retired}});
     for(const auto& e:c.epochs) epochs.append(QJsonObject{{"peer",uuid(e.peer)},{"epoch",uuid(e.epoch)},{"retired",e.retired}});
-    return {{"schemaVersion",1},{"installation",uuid(c.installation)},{"catalogueRevision",uuid(c.revision)},
+    QJsonObject result{{"schemaVersion",1},{"installation",uuid(c.installation)},{"catalogueRevision",uuid(c.revision)},
         {"nextKey",QString::number(c.nextKey)},{"entries",entries},{"epochs",epochs}};
+    // Legacy catalogues retain their exact schema/bytes until the first explicit source save.
+    if(!c.stationSources.isEmpty()) {
+        result["schemaVersion"]=2;QJsonArray sources;
+        for(const auto& s:c.stationSources)sources.append(QJsonObject{{"station",uuid(s.station)},{"camera",uuid(s.camera)},{"revision",uuid(s.revision)},{"path",s.path}});
+        result["stationSources"]=sources;
+    }
+    return result;
 }
 QByteArray compact(const QJsonObject& o) {return QJsonDocument(o).toJson(QJsonDocument::Compact);}
 QByteArray digest(const QJsonObject& o) {return QCryptographicHash::hash(compact(o),QCryptographicHash::Sha256).toHex();}
@@ -46,7 +53,7 @@ IdentityCatalogue JsonStationIdentityStore::decode(const QByteArray& bytes) {
     const auto doc=QJsonDocument::fromJson(bytes,&error);need(error.error==QJsonParseError::NoError && doc.isObject());
     const auto envelope=doc.object();need(envelope.size()==2 && envelope["payload"].isObject() && envelope["sha256"].isString());
     const auto p=envelope["payload"].toObject();need(envelope["sha256"].toString().toLatin1()==digest(p));
-    need(p.size()==6 && p["schemaVersion"]==1 && p["entries"].isArray() && p["epochs"].isArray() && p["nextKey"].isString());
+    need(((p.size()==6 && p["schemaVersion"]==1) || (p.size()==7 && p["schemaVersion"]==2 && p["stationSources"].isArray() && !p["stationSources"].toArray().isEmpty())) && p["entries"].isArray() && p["epochs"].isArray() && p["nextKey"].isString());
     IdentityCatalogue c;c.installation=uuid(p["installation"]);c.revision=uuid(p["catalogueRevision"]);
     bool ok=false;c.nextKey=p["nextKey"].toString().toULongLong(&ok);need(ok && QString::number(c.nextKey)==p["nextKey"].toString());
     for(auto v:p["entries"].toArray()) {
@@ -56,6 +63,10 @@ IdentityCatalogue JsonStationIdentityStore::decode(const QByteArray& bytes) {
     for(auto v:p["epochs"].toArray()) {
         need(v.isObject());auto e=v.toObject();need(e.size()==3 && e["retired"].isBool());
         c.epochs.append({uuid(e["peer"]),uuid(e["epoch"]),e["retired"].toBool()});
+    }
+    for(auto v:p["stationSources"].toArray()) {
+        need(v.isObject());const auto o=v.toObject();need(o.size()==4 && o["path"].isString());
+        c.stationSources.append({uuid(o["station"]),uuid(o["camera"]),uuid(o["revision"]),o["path"].toString()});
     }
     validateIdentityCatalogue(c);need(payload(c)==p);return c;
 }
