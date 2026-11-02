@@ -1,6 +1,7 @@
 # COMM4-24 — Kalibrasyon operatör UI akışı
 
-Durum: planlandı, başlanmadı. Model: **GPT-6.1 Sol / medium**.
+Durum: fixture yazılım/görsel tamam; normal fiziksel adapter BLOCKED.
+[Kapanış ve açık sınırlar](../../../archive/2026-11-02-comm4-24.md). Model: **GPT-6.1 Sol / medium**.
 Tek oturum kapsamı ve ortak kurallar [indekste](../README.md), kapanış
 kuralları [V0](../verification.md) içindedir.
 

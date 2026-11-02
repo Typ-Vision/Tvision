@@ -1,4 +1,5 @@
 #include "CommunicationPanel.hpp"
+#include "RobotCalibrationPanel.hpp"
 #include <QLabel>
 #include <QTableWidget>
 #include <QHeaderView>
@@ -56,12 +57,12 @@ CommunicationPanel::CommunicationPanel(QWidget* parent):QWidget(parent){
     migrationRequest_=new QLineEdit;migrationRequest_->setObjectName("communicationMigrationRequest");migrationRequest_->setPlaceholderText("Gözden geçirilmiş migration istek JSON dosyasının mutlak yolu");migrationRequest_->setAccessibleName("Migration istek dosyası");ml->addWidget(migrationRequest_);
     auto* ma=new QGridLayout;int actionIndex=0;for(const auto& pair:QVector<QPair<QString,QString>>{{"analyze","Read-only analiz"},{"prepare","Backup + manifest"},{"activate","V4 seçimini uygula"},{"reviewRollback","Rollback incele"},{"rollback","Rollback uygula"}}){auto* b=new QPushButton(pair.second);b->setObjectName("migration_"+pair.first);ma->addWidget(b,actionIndex/2,actionIndex%2);++actionIndex;connect(b,&QPushButton::clicked,this,[this,cmd=pair.first]{migration(cmd);});}ml->addLayout(ma);
     migrationReport_=new QPlainTextEdit;migrationReport_->setObjectName("communicationMigrationReport");migrationReport_->setReadOnly(true);migrationReport_->setMinimumHeight(160);ml->addWidget(migrationReport_);layout->addWidget(migrationBox);
-    layout->addWidget(plain("Robot kalibrasyon workspace'i COMM4-24 kapsamındadır. Fiziksel kamera / PLC / robot kabulü açık."));
+    auto* robotBox=new QGroupBox("Robot calibration");auto* robotLayout=new QVBoxLayout(robotBox);calibration_=new RobotCalibrationPanel;robotLayout->addWidget(calibration_);layout->insertWidget(7,robotBox);
     message_=plain();message_->setObjectName("communicationMessage");layout->addWidget(message_);layout->addStretch();
     layout->setSizeConstraint(QLayout::SetMinimumSize);
     auto* timer=new QTimer(this);timer->setInterval(500);connect(timer,&QTimer::timeout,this,[this]{if(isVisible())refresh();});timer->start();selection();
 }
-void CommunicationPanel::bind(CommunicationWorkspace* w){workspace_=w;if(w)try{const auto p=w->profile();enabled_->setChecked(p.enabled);address_->setText(p.address);port_->setValue(p.port);QSignalBlocker block(remote_);remote_->setChecked(w->remoteEnabled());recipes_->clear();for(const auto& recipe:w->recipes()){recipes_->addItem(recipe.selection.recipe.name+" / "+recipe.selection.revision.toString(QUuid::WithoutBraces),recipe.selection.recipeKey);recipes_->setItemData(recipes_->count()-1,recipe.templateKey,Qt::UserRole+1);}}catch(const std::exception& e){message_->setText(QString::fromUtf8(e.what()));}refresh();}
+void CommunicationPanel::bind(CommunicationWorkspace* w){workspace_=w;calibration_->bind(w?&w->calibration():nullptr);if(w)try{const auto p=w->profile();enabled_->setChecked(p.enabled);address_->setText(p.address);port_->setValue(p.port);QSignalBlocker block(remote_);remote_->setChecked(w->remoteEnabled());recipes_->clear();for(const auto& recipe:w->recipes()){recipes_->addItem(recipe.selection.recipe.name+" / "+recipe.selection.revision.toString(QUuid::WithoutBraces),recipe.selection.recipeKey);recipes_->setItemData(recipes_->count()-1,recipe.templateKey,Qt::UserRole+1);}}catch(const std::exception& e){message_->setText(QString::fromUtf8(e.what()));}refresh();}
 void CommunicationPanel::refresh(){
     if(!workspace_)return;
     try{
@@ -77,6 +78,7 @@ void CommunicationPanel::refresh(){
 }
 void CommunicationPanel::selection(){
     const int n=stations_->currentRow();const bool valid=n>=0 && n<rows_.size();run_->setEnabled(valid && rows_[n].canRun);automatic_->setEnabled(valid && rows_[n].canAuto && !rows_[n].automatic);manual_->setEnabled(valid && rows_[n].canAuto && rows_[n].automatic);stop_->setEnabled(valid);
+    calibration_->selectStation(valid?rows_[n].station.id:QUuid{});
     if(!valid){detail_->setText("Kayıtlı station seçilmedi. Enrollment / manifest eksikliği üretim izni oluşturmaz.");return;}
     const auto& v=rows_[n];detail_->setText(QString("Station UUID: %1\nActivation: %2\nPublication: %3\nKamera: %4\n%5%6").arg(v.station.id.toString(QUuid::WithoutBraces),v.snapshot?v.snapshot->activation.toString(QUuid::WithoutBraces):"yok",v.publication.isEmpty()?"Bağlanmadı":v.publication,v.cameraOwners,v.unavailable,v.runtime.deliveryPending?"\nPENDING ACK: Run/Auto kapalı; Stop ve exact ACK kullanılabilir.":""));
 }

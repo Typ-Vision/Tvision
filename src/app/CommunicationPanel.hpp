@@ -3,6 +3,7 @@
 #include <QWidget>
 class QLabel;class QTableWidget;class QPlainTextEdit;class QPushButton;class QLineEdit;class QSpinBox;class QCheckBox;class QComboBox;
 namespace visionflow {
+class RobotCalibrationPanel;
 class CommunicationPanel final:public QWidget {
 public:
     explicit CommunicationPanel(QWidget* parent=nullptr);
@@ -13,6 +14,7 @@ private:
     void selection();
     void command(const QString&);
     void migration(const QString&);
+    RobotCalibrationPanel* calibration_;
     CommunicationWorkspace* workspace_=nullptr;
     QVector<CommunicationStationView> rows_;
     QLabel *listener_,*message_,*detail_;

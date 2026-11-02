@@ -3,6 +3,7 @@
 #include "StationDeliveryLedger.hpp"
 #include "CameraLeaseArbiter.hpp"
 #include "CommunicationMigration.hpp"
+#include "RobotCalibrationWorkspace.hpp"
 
 namespace visionflow {
 struct CommunicationStationView {
@@ -26,6 +27,7 @@ public:
     };
     CommunicationWorkspace(CommunicationServerLifecycle&,const CommunicationServerProfiles&,StationIdentityStore&);
     void bind(Binding);
+    RobotCalibrationWorkspace& calibration(){owner();return calibration_;}
     void setLedger(StationDeliveryLedger* ledger){ledger_=ledger;}
     void setMaintenanceBarrier(std::function<QString()> barrier){maintenanceBarrier_=std::move(barrier);}
     void setMachinePaths(QString workspace,QString registry){machineWorkspace_=std::move(workspace);machineRegistry_=std::move(registry);}
@@ -60,6 +62,7 @@ private:
     void owner() const;
     void maintenance() const;
     void machineInput(const CommunicationMigrationInput&,const QString&) const;
+    RobotCalibrationWorkspace calibration_;
     CommunicationServerLifecycle& server_;
     const CommunicationServerProfiles& profiles_;
     StationIdentityStore& identities_;

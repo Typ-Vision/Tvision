@@ -6,6 +6,7 @@ görev” ifadeleri yazıldıkları tarihe aittir.
 
 | Dönem / görev | Kayıt |
 | --- | --- |
+| 2 Kasım 2026 — COMM4-24 | [İki mount Calibration UI, exact application komut sınırı, native Qt iki viewport; physical BLOCKED](2026-11-02-comm4-24.md) |
 | 2 Kasım 2026 — COMM4-23 | [Bağımsız holdout/reference raporu, exact CAS ve atomik crash recovery; fiziksel BLOCKED](2026-11-02-comm4-23.md) |
 | 2 Kasım 2026 — COMM4-22 | [İki mod PARK aday solver, bağımsız golden/negatif fixture ve immutable provenance; fiziksel BLOCKED](2026-11-02-comm4-22.md) |
 | 2 Kasım 2026 — COMM4-21 | [SAMPLE actual pose/yeni frame, kalıcı intent/raw raster, exact terminal ve drain/restart recovery](2026-11-02-comm4-21.md) |

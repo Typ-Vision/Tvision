@@ -166,6 +166,9 @@ konfigürasyonu açıkça belgelenir; TLS/robot safety desteği iddia edilmez.
 ## S5 — Tek yeni UX ve migration
 
 Uygulanan [workspace/composition ve açık capability sınırları](communication-workspace.md).
+Robot kalibrasyon operatörünün [application projection/command sınırı](robot-calibration-workspace.md)
+COMM4-24 fixture yazılımı ve Windows Qt görsel kabulünü kapsar; normal fiziksel
+kalibrasyon adapterı BLOCKED kalır.
 
 Communication'da tek yeni yüzey: server health/profil, station listesi, active
 recipe/activation, Run/Auto/Stop, camera ownership, publication template, delivery/

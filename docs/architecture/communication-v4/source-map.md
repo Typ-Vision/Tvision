@@ -224,6 +224,9 @@ UI test hedefi varsayılmamalı. UI kalibrasyon hedefleri `calibration_ui_test` 
 Core hedefler Widgets istemeden ON/OFF'ta kalır. Bu D profilli kartta build/CTest
 koşulmadı, geçmiş test başarıları devralınmadı; yalnız belge/link/identity kontrolü.
 
+`robot_calibration_workspace_test` → `robot_calibration_workspace_contract` ON/OFF;
+`robot_calibration_ui_test` → `ui_robot_calibration_workflow` UI ON (COMM4-24).
+
 ## Kart başına sahiplik tablosu: gerçek port ve yeni aday
 
 Bu tablo seçili kartların sahiplik bölümlerini somutlaştırır; gelecekteki dosya
@@ -257,7 +260,7 @@ daraltılır. Bir sonraki kart otomatik başlatılmaz.
 | 21 tamam | CalibrationSampleCoordinator + IndependentCalibrationSession; aynı calibration lease | [SAMPLE pairing](calibration-sample-pairing.md);13 durable ledger + bounded raw raster pairing; calibration_sample_coordinator_contract |
 | 22 tamam (fixture) | HandEyeCandidateSolver;18 PARK + domain SpatialTransform; ProductionStore | [İki geometri aday solver](hand-eye-candidate-solver.md); hand_eye_candidate_solver_contract; fiziksel gate BLOCKED, main/wire yolu yok |
 | 23 fixture tamam | ProductionStore candidate/validation namespace; planar ScopedActiveCalibration ayrı kalır | HandEyeValidationService/HandEyeActivationService; immutable report + per-station QSaveFile CAS; hand_eye_validation_activation_contract; [sınırlar](hand-eye-validation-activation.md) |
-| 24 | CalibrationWizard/Overview ve16 Communication composition | Robot calibration view model; UI solve/SDK çağırmaz |
+| 24 fixture yazılım/görsel tamam | CommunicationPanel + RobotCalibrationPanel; planar CalibrationWizard/Overview ayrı kalır | RobotCalibrationWorkspace immutable application projection/typed command port; robot_calibration_workspace_contract ve ui_robot_calibration_workflow; [uygulanan sınır](robot-calibration-workspace.md); normal physical adapter BLOCKED |
 | 25 | src/app/plc_simulator.cpp, mevcut TCP test executable kayıtları | v4 simulator mode, robot handshake fixture driver; üretim producer yok |
 | 26 | verification matrisi, kullanım README ilgili davranışları | Entegre kabul raporu ve yalnız dar gerçek açık düzeltmesi |
 

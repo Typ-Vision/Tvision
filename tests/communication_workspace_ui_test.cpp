@@ -54,6 +54,7 @@ int main(int argc,char** argv){QApplication app(argc,argv);app.setStyle("Fusion"
     auto* table=panel.findChild<QTableWidget*>("communicationStations");auto* listener=panel.findChild<QLabel*>("communicationListener");auto* detail=panel.findChild<QLabel*>("communicationStationDetail");
     auto button=[&](const char* name){panel.findChild<QPushButton*>(name)->click();};
     check(table->rowCount()==3,"All three stations visible concurrently");
+    check(panel.findChild<QWidget*>("robotCalibrationWorkspace") && panel.findChild<QLabel*>("robotCalibrationReadiness")->text().contains("PHYSICAL BLOCKED"),"Robot calibration belongs to single Communication workspace and physical gate stays closed");
     QTcpSocket peer;peer.connectToHost(QHostAddress::LocalHost,profile.port);until([&]{return peer.state()==QAbstractSocket::ConnectedState && server.peer();});panel.refresh();
     check(listener->text().contains("CONNECTED") && table->item(0,1)->text()=="STOPPED" && table->item(0,2)->text()=="OFF","Connected stopped never implies production readiness");
     const auto generation=server.listenerGeneration();
