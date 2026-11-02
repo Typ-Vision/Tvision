@@ -33,6 +33,9 @@ public:
     void setMachinePaths(QString workspace,QString registry){machineWorkspace_=std::move(workspace);machineRegistry_=std::move(registry);}
     // Machine directory that owns v4 manifests (templates, registry, stations).
     QString machineDirectory() const;
+    QString setupStatus() const;
+    void startSetup();
+    void setSetupCompleted(std::function<void()> callback){setupCompleted_=std::move(callback);}
     using RecipeList=std::function<QVector<StationSavedRecipe>()>;
     void setRecipeControl(RecipeList recipes,std::function<void(const QUuid&,const QUuid&,quint32,quint32)> select){recipes_=std::move(recipes);select_=std::move(select);}
     QVector<StationSavedRecipe> recipes() const {owner();return recipes_?recipes_():QVector<StationSavedRecipe>{};}
@@ -70,6 +73,7 @@ private:
     QMap<QUuid,Binding> bindings_;
     std::function<QString()> maintenanceBarrier_;
     QString machineWorkspace_,machineRegistry_;
+    std::function<void()> setupCompleted_;
     RecipeList recipes_;
     std::function<void(const QUuid&,const QUuid&,quint32,quint32)> select_;
     std::function<void()> poll_;

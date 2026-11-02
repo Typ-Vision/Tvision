@@ -36,6 +36,11 @@ CommunicationPanel::CommunicationPanel(QWidget* parent):QWidget(parent){
     auto* save=new QPushButton("Profili &kaydet (yeniden başlatmada kullanılır)");save->setObjectName("communicationSave");form->addRow(save);
     connect(save,&QPushButton::clicked,this,[this]{try{if(!workspace_)throw std::runtime_error("Workspace bağlanmadı");auto p=workspace_->profile();p.enabled=enabled_->isChecked();p.address=address_->text().trimmed();p.port=quint16(port_->value());workspace_->saveProfile(p);message_->setText("Profil kaydedildi. Etkin listener değişmedi; yeniden başlatın.");}catch(const std::exception& e){message_->setText(QString::fromUtf8(e.what()));}});
     layout->addWidget(profile);
+    auto* setup=new QGroupBox("Makine kurulumu");auto* setupLayout=new QVBoxLayout(setup);
+    setupStatus_=plain();setupStatus_->setObjectName("machineSetupStatus");setupLayout->addWidget(setupStatus_);
+    auto* startSetup=new QPushButton("Kurulumu başlat");startSetup->setObjectName("machineSetupStart");setupLayout->addWidget(startSetup);
+    connect(startSetup,&QPushButton::clicked,this,[this,startSetup]{startSetup->setEnabled(false);try{if(!workspace_)throw std::runtime_error("Workspace bağlanmadı");workspace_->startSetup();message_->setText("Makine kurulumu hazır. Yüzey ve Ölçüm şablonları Publish Data listesinde kullanılabilir.");}catch(const std::exception& e){message_->setText(QString::fromUtf8(e.what()));}startSetup->setEnabled(true);refresh();});
+    layout->addWidget(setup);
     remote_=new QCheckBox("Remote Enable — PLC reçete seçimi / Auto / Stop izni (açılışta kapalı)");remote_->setObjectName("communicationRemoteEnable");layout->addWidget(remote_);
     connect(remote_,&QCheckBox::toggled,this,[this](bool enabled){try{if(!workspace_)throw std::runtime_error("Workspace bağlanmadı");workspace_->setRemoteEnabled(enabled);}catch(const std::exception& e){message_->setText(QString::fromUtf8(e.what()));QSignalBlocker block(remote_);remote_->setChecked(workspace_ && workspace_->remoteEnabled());}});
     layout->addWidget(plain("İstasyonlar • Bağlantı, üretim durumu ve teslim birbirinden bağımsızdır."));
@@ -66,7 +71,7 @@ void CommunicationPanel::bind(CommunicationWorkspace* w){workspace_=w;calibratio
 void CommunicationPanel::refresh(){
     if(!workspace_)return;
     try{
-        workspace_->poll();listener_->setText(workspace_->listener());
+        workspace_->poll();listener_->setText(workspace_->listener());setupStatus_->setText(workspace_->setupStatus());
         QUuid selected;const auto previous=stations_->currentRow();if(previous>=0 && previous<rows_.size())selected=rows_[previous].station.id;
         auto next=workspace_->stations();QSignalBlocker block(stations_);rows_=std::move(next);stations_->setRowCount(rows_.size());int restore=-1;
         for(int n=0;n<rows_.size();++n){const auto& v=rows_[n];const QStringList values{v.station.name+QString(" (#%1)").arg(v.station.key),CommunicationWorkspace::modeName(v.runtime.mode),v.automatic?"ON":"OFF",v.snapshot?v.snapshot->selection.recipe.name+" / "+v.snapshot->selection.revision.toString(QUuid::WithoutBraces):"Seçilmedi",v.cameraOwners,v.runtime.deliveryPending?"PENDING ACK":"Pending yok",v.runtime.health.isEmpty()?v.unavailable:v.runtime.health};

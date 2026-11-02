@@ -21,6 +21,34 @@ koşumları yalnız kendi `VISIONFLOW_TEST_ARTIFACTS/v4-machine` dizinini kullan
 | `migration/active.json` | Tek transactional migration selection pointer'ı |
 | `production/` | Migration seçimi yokken ortak production archive/ledger |
 
+### VF-01 · Açık makine kurulumu
+
+Communication → Makine kurulumu → Kurulumu başlat, boş veya yalnız listener
+profili bulunan makinede kalıcı installation kataloğunu ve Yüzey/Ölçüm
+manifestlerini oluşturur. Publish Data → Slot ataması (v4), aynı manifestleri
+ve katalogdaki görünen adları okur. Kullanıcı JSON/UUID/migration hazırlamaz.
+Yüzey terminal karar/geçerlilik alanlarını kullanır; ek slot zorunlu değildir.
+Ölçüm Number[0] zorunludur, varsayılan birimi unitless ve ölçeği 1/1'dir;
+kalibrasyonsuz piksel çıktısı mm sayılmaz. Çıktı/birim bağlama VF-03 kapsamıdır.
+
+`MachineSetup`, processler arası QLockFile ile yalnız kurulum işlemlerini
+serileştirir. Atomik identity create → atomik manifest → identity CAS sırasını
+kullanır. Hazır şablon UUID/revizyonları installation altında sürümlü UUIDv5
+ile belirlenir; kesinti sonrası aynı kayıtlar tamamlanır. Tamamlanmış kuruluma
+tekrar basmak katalog revizyonunu veya manifest baytlarını değiştirmez.
+Mevcut identity bozuksa ya da manifest/anahtar çelişkisi varsa veri korunur ve
+onarım nedeni gösterilir. Kimlik kataloğu kayıpken geçmiş/seçim/şablon verisi
+bulunan dizin temiz kurulum sayılmaz. Kullanıcı şablonları ve retired anahtarlar
+yeniden yazılmaz. Kurulum listener profiline, reçeteye veya geçmişe yazmaz;
+Run/Auto/Remote Enable açmaz, istasyon oluşturmaz.
+
+İlk boş kurulumda normal composition aynı süreçte yeniden oluşturulur; kayıtlı
+istasyon varsa mevcut Runtime sahipleri korunarak şablonlar yenilenir.
+Başlangıçta kurulum durumu salt okunur denetlenir, eylem olmadan enrollment
+yapılmaz. Normal uygulamayı izole veriyle çalıştırmak için yalnız test sürecinde
+`VISIONFLOW_USER_DATA_DIRECTORY` mutlak bir test dizinine ayarlanabilir; bu yol
+makine kayıtları ile UI INI'sini birlikte ayırır. Smoke veya fixture gerektirmez.
+
 Enrollment kendiliğinden oluşturulmaz. Geçerli identity authority'den sonra
 eksik seçim deposu boş oluşturulabilir; bu işlem reçete/Run/Auto seçmez.
 `CommunicationStationComposition`, normal main ve integration testlerinin ortak

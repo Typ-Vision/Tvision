@@ -17,7 +17,7 @@ private:
     RobotCalibrationPanel* calibration_;
     CommunicationWorkspace* workspace_=nullptr;
     QVector<CommunicationStationView> rows_;
-    QLabel *listener_,*message_,*detail_;
+    QLabel *listener_,*message_,*detail_,*setupStatus_;
     QTableWidget* stations_;
     QPlainTextEdit *history_,*migrationReport_;
     QLineEdit *address_,*migrationRequest_;

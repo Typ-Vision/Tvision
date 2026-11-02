@@ -93,6 +93,14 @@ std::optional<StationAdmissionSnapshot> CommunicationStationComposition::manifes
     for(const auto& t:editorTools(s->selection.recipe.definition))if(t.enabled && ToolRegistry::get(t.kind).acquisitionSource && t.kind!="image_file")return {};
     return StationAdmissionSnapshot{s,r->templateKey,cameraRevision(*s),{},{},{}};
 }
+void CommunicationStationComposition::refreshTemplates(){
+    const auto catalogue=identities_.load();QMap<quint32,PublicationTemplate> added;
+    for(const auto& file:QDir(directory_.filePath("publication-templates-v4")).entryList({"*.json"},QDir::Files)){
+        const auto t=PublicationTemplate::fromJson(QJsonDocument::fromJson(read(directory_.filePath("publication-templates-v4/"+file))).object());
+        added.insert(key(catalogue,CatalogueCategory::TemplateRevision,t.id,t.revision),t);
+    }
+    for(auto i=added.cbegin();i!=added.cend();++i)templates_.insert(i.key(),i.value());
+}
 void CommunicationStationComposition::attach(CommunicationServerLifecycle& server,CommunicationWorkspace& workspace){
     workspace.setMachinePaths(directory_.filePath("migration"),directory_.filePath("communication-identities-v4.json"));
     if(ledger_)workspace.setLedger(ledger_.get());if(!error_.isEmpty()){workspace.setNotice("Station composition unavailable: "+error_);return;}

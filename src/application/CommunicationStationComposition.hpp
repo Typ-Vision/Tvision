@@ -16,6 +16,7 @@ public:
     ~CommunicationStationComposition();
     void attach(CommunicationServerLifecycle&,CommunicationWorkspace&);
     void poll();
+    void refreshTemplates();
     static QJsonObject restoreSelection(const QString& machineDirectory);
 private:
     struct Station {

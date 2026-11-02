@@ -52,7 +52,7 @@ int main(int argc, char* argv[]) {
     const bool smoke = flowRemovalOnly || publicationOnly || endpointsOnly || resultOnly || assignmentsOnly || variablesOnly || overlaysOnly || visibilityOnly || restartOnly || failureOnly || responsivenessOnly || runtimeCamerasOnly || editorCamerasOnly || roiOnly || app.arguments().contains("--smoke-test") || circleOnly || geometryOnly || poseOnly || usabilityOnly || systemOnly || multiOnly || multiRuntimeOnly || experimentalOnly || recipeFieldsOnly;
     const QDir buildDir(smoke ? qEnvironmentVariable("VISIONFLOW_TEST_ARTIFACTS",QCoreApplication::applicationDirPath()):QCoreApplication::applicationDirPath());
     if(smoke)QDir().mkpath(buildDir.absolutePath());
-    const QDir communicationDirectory(smoke ? buildDir.filePath("v4-machine") : QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation));
+    const QDir communicationDirectory(smoke ? buildDir.filePath("v4-machine") : qEnvironmentVariable("VISIONFLOW_USER_DATA_DIRECTORY",QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation)));
     QJsonObject communicationSelection;QString selectionError;
     try{communicationSelection=visionflow::CommunicationStationComposition::restoreSelection(communicationDirectory.absolutePath());}
     catch(const std::exception& e){selectionError=QString::fromUtf8(e.what());}
@@ -62,13 +62,23 @@ int main(int argc, char* argv[]) {
     visionflow::JsonStationIdentityStore communicationIdentities(communicationDirectory.filePath("communication-identities-v4.json"));
     visionflow::CommunicationPeerSessionService communicationSessions(communicationIdentities);
     // This owner must outlive the server's registered station references.
-    visionflow::CommunicationStationComposition communicationStations(communicationDirectory.absolutePath(),communicationSelection,communicationIdentities,communicationSessions);
+    auto communicationStations=std::make_unique<visionflow::CommunicationStationComposition>(communicationDirectory.absolutePath(),communicationSelection,communicationIdentities,communicationSessions);
     visionflow::CommunicationServerLifecycle communicationServer(serverProfiles,communicationDirectory.filePath("communication-shutdown-v4.json"),&communicationSessions,selectionBlocked?QString("Migration selection unavailable / legacy rollback: ")+selectionError:QString{});
     visionflow::CommunicationWorkspace communicationWorkspace(communicationServer,serverProfiles,communicationIdentities);
-    communicationStations.attach(communicationServer,communicationWorkspace);
+    communicationStations->attach(communicationServer,communicationWorkspace);
+    communicationWorkspace.setSetupCompleted([&]{
+        // Empty first installation has no server station references to replace.
+        // Existing compositions retain their Runtime and selection owners.
+        if(communicationWorkspace.stations().isEmpty()){
+            communicationStations.reset();
+            communicationStations=std::make_unique<visionflow::CommunicationStationComposition>(communicationDirectory.absolutePath(),communicationSelection,communicationIdentities,communicationSessions);
+            communicationStations->attach(communicationServer,communicationWorkspace);
+            communicationWorkspace.setNotice({});
+        }else communicationStations->refreshTemplates();
+    });
     if(selectionBlocked)communicationWorkspace.setNotice("Migration selection unavailable / legacy rollback: "+selectionError);
     QTimer stationPoll;stationPoll.setInterval(50);QObject::connect(&stationPoll,&QTimer::timeout,&app,[&]{try{communicationWorkspace.poll();}catch(const std::exception& e){qWarning()<<"V4 station poll:"<<e.what();}});stationPoll.start();
-    visionflow::MainWindow window(buildDir.filePath(smoke ? "ui-smoke.ini" : "../config/local.ui.ini"));
+    visionflow::MainWindow window(!smoke && qEnvironmentVariableIsSet("VISIONFLOW_USER_DATA_DIRECTORY") ? communicationDirectory.filePath("ui.ini") : buildDir.filePath(smoke ? "ui-smoke.ini" : "../config/local.ui.ini"));
     window.bindCommunication(&communicationWorkspace);
     window.show();
     if (smoke) QTimer::singleShot(100, &app, [&]{

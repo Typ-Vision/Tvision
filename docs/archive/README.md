@@ -6,6 +6,7 @@ görev” ifadeleri yazıldıkları tarihe aittir.
 
 | Dönem / görev | Kayıt |
 | --- | --- |
+| 2 Kasım 2026 — VF-01 | [Açık makine kurulumu, idempotent hazır şablonlar, hedefli test ve kullanıcı kabulü](2026-11-02-vf-01.md) |
 | 2 Kasım 2026 — COMM4-26 | [Kamerasız entegre yazılım kapanışı; tam ON/OFF, görsel kabul ve açık fiziksel devir](2026-11-02-comm4-26.md) |
 | 2 Kasım 2026 — COMM4-17a | [İki TCP UI testinde publisher reçetesi/Editor bağlamını geri yükleme; hedefli 3/3 geçti](2026-11-02-comm4-17a.md) |
 | 2 Kasım 2026 — COMM4-25 | [Bağımsız V4 peer, gerçek TCP overlap/collision, consumer crash/ACK ve iki-mode robot fixture; fiziksel BLOCKED](2026-11-02-comm4-25.md) |

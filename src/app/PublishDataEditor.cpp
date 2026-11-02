@@ -3,6 +3,8 @@
 #include "application/PublicationAssignmentCatalog.hpp"
 #include "application/PublicationService.hpp"
 #include "persistence/PublicationTemplateStore.hpp"
+#include "persistence/StationIdentityStore.hpp"
+#include <QDir>
 #include "domain/ToolGraph.hpp"
 #include <QVBoxLayout>
 #include <QGridLayout>
@@ -134,7 +136,9 @@ void PublishDataEditor::loadTemplates(){
     QStringList errors;PublicationTemplateStore store(templateDirectory_);
     for(const auto& manifest:store.load(&errors)){
         templates_.append(manifest.value);
-        templateSelector_->addItem(sharedTemplateLabel(manifest.value),templates_.size()-1);
+        QString label=sharedTemplateLabel(manifest.value);
+        try{const auto c=JsonStationIdentityStore(QDir(templateDirectory_).filePath("../communication-identities-v4.json")).load();for(const auto& e:c.entries)if(!e.retired && e.identity==CatalogueIdentity{CatalogueCategory::TemplateRevision,manifest.value.id,manifest.value.revision,{}}){label=e.name+" • "+label;break;}}catch(const std::exception&){}
+        templateSelector_->addItem(label,templates_.size()-1);
         templateSelector_->setItemData(templateSelector_->count()-1,manifest.path,Qt::ToolTipRole);
     }
     if(!errors.isEmpty())templateError_="Bazı şablon manifest'leri okunamadı: "+errors.join(" • ");
@@ -142,7 +146,7 @@ void PublishDataEditor::loadTemplates(){
     if(stored){assignment_=stored;for(int i=0;i<templates_.size();++i)if(templates_[i].id==stored->templateId && templates_[i].revision==stored->templateRevision){templateSelector_->setCurrentIndex(i+1);startAssignment(i+1);break;}}
     if(templateSelector_->currentIndex()<=0){
         selectedTemplate_=PublicationTemplate{};hasTemplate_=false;
-        templateInfo_->setText(templates_.isEmpty()?"Bu makinede hazırlanmış publication template yok. Machine template Communication/migration ile hazırlanır."
+        templateInfo_->setText(templates_.isEmpty()?"Bu makinede hazırlanmış publication template yok. Communication → Makine kurulumu → Kurulumu başlat ile hazırlanır."
                                                     :"Slot ataması için bir makine şablon revision'ı seçin. Seçim reçeteye yalnız kaynak bağı ekler.");
         slotTable_->setRowCount(0);slotStatus_->clear();slotInfo_->clear();
     }
