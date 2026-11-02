@@ -102,7 +102,8 @@ Communication tek V4 listener, station Run/Auto/Stop, aktif revision, kamera
 sahibi ve pending ACK durumunu gösterir. Restart Run/Auto açmaz;
 Remote Enable açılışta kapalıdır. V2/V3 sayfaları kaldırıldı; geçmiş salt
 okunurdur. Image File yolu doğrulandı; native/robot kabulü açık.
-[Makine kaydı ve migration](docs/architecture/communication-v4/communication-workspace.md).
+[Kullanım/migration](docs/architecture/communication-v4/communication-workspace.md);
+[kabul](docs/architecture/communication-v4/acceptance-comm4-26.md).
 
 Profil bağlama, PGM+JSON, kalibrasyon, Runtime ve panel
 kullanımı [kısa kullanım rehberinde](docs/camera-runtime-usage.md). Restart

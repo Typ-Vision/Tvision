@@ -1,9 +1,12 @@
 # COMM4 — Tek bağlantı, bağımsız istasyonlar ve robot kalibrasyonu
 
-**Durum: sıralı uygulama sürüyor; hedef sistem henüz tamamlanmadı.**
-1 Kasım 2026. Kullanıcı seçimi: GPT-6.1 Sol / medium. Varsayılan oturum kapsamı
-tek karttır; ajanlar paralel çalışmaz. **Devam: [COMM4-26 entegre kapanış/fiziksel rapor](cards/COMM4-26.md);
-kullanıcı yeni sıra vermedikçe başlatılmaz.**
+**Durum: COMM4-26 yazılım/fixture kapanışı tamam; fiziksel kabul BLOCKED.**
+2 Kasım 2026. [Entegre kabul/capability raporu](acceptance-comm4-26.md),
+[güncel kullanım ve migration](communication-workspace.md#operatör-akışı-ve-migration-devri).
+Gerçek kamera olmadan son Release ON/OFF regresyonu ve iki viewport görsel kabulü
+yapıldı. Fiziksel native kamera/PLC, iki mount 6D ve OS input/WGC takip ID'leri
+raporda açıktır; yalnız kullanıcı yönlendirmesiyle başlatılır. Tek kart/sıralı
+uygulama kuralı korunur; otomatik yeni faz yoktur.
 
 **COMM4-25 yazılım/fixture tamam:** [Bağımsız PLC/robot simulator ve kabul rehberi](simulator.md).
 Dört station, aynı TCP overlap/collision, gerçek consumer crash ve iki-mode SAMPLE; fiziksel BLOCKED.
@@ -132,7 +135,7 @@ fiziksel PLC/robot ve dağıtım engelleri bu planla kapanmaz.
 | [23](cards/COMM4-23.md) | Bağımsız validate ve atomik activate — fixture tamam | 22 |
 | [24](cards/COMM4-24.md) | Kalibrasyon UI/operatör akışı — fixture yazılım/görsel tamam | 16,23 |
 | [25](cards/COMM4-25.md) | PLC/robot simulator ve dayanıklılık kabulü — yazılım/fixture tamam | 14,17,24 |
-| [26](cards/COMM4-26.md) | Entegre kapanış ve fiziksel kabul raporu | 25 |
+| [26](cards/COMM4-26.md) | Entegre kapanış — yazılım tamam, fiziksel BLOCKED | 25 |
 
 Kartlar listedeki sırayla uygulanır; önkoşul tablosu bağımlılığı açıklar,
 paralel ajan yetkisi vermez. COMM4-02 dondurulmadan codec/PLC uygulaması başlamaz.

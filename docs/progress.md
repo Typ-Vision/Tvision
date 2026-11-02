@@ -5,23 +5,20 @@
 
 ## Devam noktası
 
-**[COMM4-25](archive/2026-11-02-comm4-25.md)**: V4/16E2E; ON195/2eskiUI/1skip; OFF156/1skip.
-6D BLOCKED; WGC/OS input açık; devam26. [24](archive/2026-11-02-comm4-24.md),
+**[COMM4-26](archive/2026-11-02-comm4-26.md)**: yazılım tamam;
+ON197/1skip, OFF156/1skip; hata0. Hedefli34/29; Qt iki viewport.
+[Fiziksel devir](architecture/communication-v4/acceptance-comm4-26.md):
+COMM4-PHYS-01/02 ve UI-NATIVE-01 açık; yalnız kullanıcı yönlendirmesiyle.
+[25](archive/2026-11-02-comm4-25.md), [24](archive/2026-11-02-comm4-24.md),
 [23](archive/2026-11-02-comm4-23.md), [22](archive/2026-11-02-comm4-22.md),
 [21](archive/2026-11-02-comm4-21.md).
 
-**[COMM4-18a](archive/2026-11-01-comm4-18a.md)**: enum reddi/706 kontrol.
-Eski UI hataları; plaka skipped; fiziksel6D BLOCKED.
-
-**[COMM4-20](archive/2026-11-01-comm4-20.md)**: frozen dependency, lease,
-duplicate/ABORT-drain/recovery.
-
-**[COMM4-19](archive/2026-11-01-comm4-19.md)** actual-pose/frame.
-
-**[COMM4-18](archive/2026-10-31-comm4-18.md)**/[araştırma](archive/2026-10-31-comm4-18-research.md) tamam; fiziksel6D BLOCKED.
-
-**[COMM4-17](archive/2026-10-31-comm4-17.md)**: template/Variable/direct/atomik Apply.
-[17a](archive/2026-11-02-comm4-17a.md): UI 3/3; tam kabul26.
+COMM4 geçmişi: [18a enum](archive/2026-11-01-comm4-18a.md),
+[20 lease/recovery](archive/2026-11-01-comm4-20.md),
+[19 pose/frame](archive/2026-11-01-comm4-19.md),
+[18](archive/2026-10-31-comm4-18.md)/[araştırma](archive/2026-10-31-comm4-18-research.md),
+[17 publish](archive/2026-10-31-comm4-17.md)/[17a UI](archive/2026-11-02-comm4-17a.md).
+İki UI hatası 26’da kapandı; fiziksel6D BLOCKED.
 INI/probe SEGFAULT açık; temiz girdi kullan.
 [EFR-04](archive/2026-10-29-efr-04.md): Wheel açık, Match/θ ertelendi.
 

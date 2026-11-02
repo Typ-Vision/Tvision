@@ -160,3 +160,41 @@ Windows native/DPI etkileşim kabulü **açıktır**. Kilit ekranı nedeniyle na
 computer-use durduruldu; kullanıcı uzak bağlantıdan kilidi açamayacağını belirtti.
 Offscreen veya QWidget grab bu kabulün yerine geçmez. Tamamlanan yazılım
 doğrulaması bu sınırla birlikte [devir/arşivde](../../progress.md) raporlanır.
+
+
+## Operatör akışı ve migration devri
+
+COMM4-26 [kabul raporu](acceptance-comm4-26.md) son yazılım koşumunu ve normal
+ürün/fixture/fiziksel sınırlarını ayırır. Tek Communication ekranında:
+
+1. Makine listener profilinde adres/port ve enabled durumunu açıkça kaydet;
+   değişiklik sonraki açılışta kullanılır. Açılışta listen, station Run/Auto açmaz.
+2. Hedef station'ı seçip kaydedilmiş reçete revision'ını yükle. Bu seçim yalnız
+   ilgili station aktivasyonunu değiştirir; listener/session korunur. Bekleyen
+   sonuç varsa exact ACK/recovery tamamlanmadan yeni iş kabul edilmez.
+3. Run ile kaynakları hazırla; Auto'yu ayrıca aç. PLC kontrolü için açılışta kapalı
+   Remote Enable ve controlling peer yetkisi gerekir. PLC sırası exact catalogue
+   ve HELLO sonrası SELECT_RECIPE → SET_AUTO → READY → TRIGGER'dır.
+4. Publisher'ın reçete assignment'larını Editor'da machine template slotlarına
+   bağla; Variable veya direct typed output seç ve atomik Apply yap. Editor
+   önizlemesi ağa göndermez. Execution/Result/resultValid ayrımını koru.
+5. Pending ACK, station çalışma durumu ve kamera sahibini ayrı kontrol et. Stop
+   admission'ı kapatıp drain ister; pending terminali silmez. Reconnect/recovery
+   aynı sonucu döndürür; consumer kendi dış etkisini idempotent işlemelidir.
+
+Normal V4 production composition bu kabulde Image File'dır. Native/webcam
+provider ve gerçek robot calibration adapter composition açık iştir. Calibration
+ekranında PHYSICAL BLOCKED/disabled nedenlerini gideren gerçek kanıt olmadan
+fixture ACTIVE veya ekrandaki düğmeler üretim izni oluşturmaz.
+
+Legacy v2/v3 geçişinde önce read-only analiz yap; unsupported mapping ve eski
+pending ACK listesini değerlendir. Pending sonuçları kurulu eski binary/profille
+drain et. Yeni binary ve eski binary aynı socket/ledger'i eşzamanlı kullanmaz.
+Explicit backup+manifest oluştur; hash/UUID mapping ve disabled staged profili
+inceledikten sonra Apply yap ve yeniden başlat. Yeni listener profilini ayrıca
+operatör etkinleştirir; migration kendiliğinden Run/Auto veya ağ izni açmaz.
+Rollback için current pointer/ledger revision kontrolü ve yeni V4 pending
+drain/reconcile gerekir; eski dosyaları live registry üstüne kopyalama.
+Monotonik numeric key, epoch, dedup/tombstone ve ACK geçmişi korunur.
+Uyumsuz text/fan-out/Pose mapping'i sessizce küçültülmez; analiz raporundaki
+unsupported nedenleri çözülmeden apply edilmez.

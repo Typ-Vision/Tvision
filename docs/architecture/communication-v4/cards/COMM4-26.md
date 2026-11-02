@@ -1,6 +1,7 @@
 # COMM4-26 — Entegre faz kapanışı ve fiziksel kabul raporu
 
-Durum: planlandı, başlanmadı. Model: **GPT-6.1 Sol / medium**.
+Durum: yazılım/fixture kapanışı tamam; fiziksel kabul BLOCKED.
+Kabul ve açık takip ID’leri: [faz raporu](../acceptance-comm4-26.md). Model: **GPT-6.1 Sol / medium**.
 Tek oturum kapsamı ve ortak kurallar [indekste](../README.md), kapanış
 kuralları [V0](../verification.md) içindedir.
 
