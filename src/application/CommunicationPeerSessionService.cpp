@@ -95,6 +95,11 @@ CommunicationV4Frame CommunicationPeerSessionService::handle(const QUuid& connec
         try{key=requestIdentity(connection,f);}catch(...){return response(f,190,10);}
         try{return trigger_(*key,f);}catch(...){return response(f,190,8);}
     }
+    if(f.header.kind>=20 && f.header.kind<=25 && calibration_){
+        std::optional<V4RequestIdentity> key;
+        try{key=requestIdentity(connection,f);}catch(...){return response(f,190,10);}
+        try{return calibration_(*key,f);}catch(...){return response(f,190,8);}
+    }
     // Missing station composition never grants production permission.
     return response(f,190,20);
 }

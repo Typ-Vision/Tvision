@@ -189,6 +189,19 @@ target_sources(visionflow_acquisition PRIVATE src/application/ReferenceService.c
 target_sources(visionflow_acquisition PRIVATE src/application/PoseRoiService.cpp src/vision/RectangleMask.cpp)
 target_sources(visionflow_acquisition PRIVATE src/application/WorldTrackingService.cpp)
 if(BUILD_TESTING)
+  find_package(Python3 REQUIRED COMPONENTS Interpreter)
+  # Only test executables can compose synthetic calibration producers.
+  add_executable(communication_v4_fixture_server tests/communication_v4_fixture_server.cpp)
+  target_link_libraries(communication_v4_fixture_server PRIVATE visionflow_acquisition)
+  add_executable(communication_v4_robot_fixture tests/communication_v4_robot_fixture.cpp)
+  target_link_libraries(communication_v4_robot_fixture PRIVATE visionflow_acquisition)
+  add_test(NAME communication_v4_simulator_e2e COMMAND ${Python3_EXECUTABLE}
+    ${CMAKE_SOURCE_DIR}/tests/communication_v4_e2e.py
+    --server $<TARGET_FILE:communication_v4_fixture_server>
+    --robot-server $<TARGET_FILE:communication_v4_robot_fixture>
+    --source ${CMAKE_SOURCE_DIR}
+    --output ${CMAKE_CURRENT_BINARY_DIR}/comm4-25-e2e)
+  set_tests_properties(communication_v4_simulator_e2e PROPERTIES TIMEOUT 120 LABELS "communication;fixture")
   add_executable(hand_eye_validation_test tests/hand_eye_validation_test.cpp)
   target_link_libraries(hand_eye_validation_test PRIVATE visionflow_acquisition)
   target_compile_definitions(hand_eye_validation_test PRIVATE TEST_DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/tests/fixtures/hand-eye-candidate")

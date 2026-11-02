@@ -256,7 +256,10 @@ Duplicate SAMPLE aynı kayıtlı capture cevabını verir, tekrar çekmez. Captu
 timeout sonrası pending hardware tamamlanması belgeli fence/drain ister; yeni
 sample'a eski kare bağlanamaz. Reconnect BEGIN'i veya SAMPLE'ı kendiliğinden
 yenilemez. ABORT yeni capture kapatır, lease'i gerçek drain'den sonra bırakır;
-önceki sample/ledger kalır. Robot bağlantı kaybı güvenli hareket izni değildir;
+önceki sample/ledger kalır. COMM4-25 [bağımsız peer ve robot fixture sürücüsü](simulator.md) exact session/station
+denetiminden sonra açık application callback kullanır. Normal main calibration
+adapterı bağlamaz; fixture producer üretim binary'sine girmez.
+Robot bağlantı kaybı güvenli hareket izni değildir;
 operatör kontrolünde kalır, yazılım motion komutu göndermez.
 
 SAMPLE role=solve veya holdout ile kaydedilir. Holdout örnekleri solve dataset'ine

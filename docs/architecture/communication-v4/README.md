@@ -2,8 +2,11 @@
 
 **Durum: sıralı uygulama sürüyor; hedef sistem henüz tamamlanmadı.**
 1 Kasım 2026. Kullanıcı seçimi: GPT-6.1 Sol / medium. Varsayılan oturum kapsamı
-tek karttır; ajanlar paralel çalışmaz. **Devam: [COMM4-25 simulator/dayanıklılık](cards/COMM4-25.md);
+tek karttır; ajanlar paralel çalışmaz. **Devam: [COMM4-26 entegre kapanış/fiziksel rapor](cards/COMM4-26.md);
 kullanıcı yeni sıra vermedikçe başlatılmaz.**
+
+**COMM4-25 yazılım/fixture tamam:** [Bağımsız PLC/robot simulator ve kabul rehberi](simulator.md).
+Dört station, aynı TCP overlap/collision, gerçek consumer crash ve iki-mode SAMPLE; fiziksel BLOCKED.
 
 **COMM4-24 fixture yazılım/görsel tamam:** [Kalibrasyon operatör workspace](robot-calibration-workspace.md).
 İki mount, readiness, exact model ayrımı, disabled nedenleri ve gerçek drain; fiziksel gate BLOCKED.
@@ -128,7 +131,7 @@ fiziksel PLC/robot ve dağıtım engelleri bu planla kapanmaz.
 | [22](cards/COMM4-22.md) | İki kurulum için aday solve | 18,21 |
 | [23](cards/COMM4-23.md) | Bağımsız validate ve atomik activate — fixture tamam | 22 |
 | [24](cards/COMM4-24.md) | Kalibrasyon UI/operatör akışı — fixture yazılım/görsel tamam | 16,23 |
-| [25](cards/COMM4-25.md) | PLC/robot simulator ve dayanıklılık kabulü | 14,17,24 |
+| [25](cards/COMM4-25.md) | PLC/robot simulator ve dayanıklılık kabulü — yazılım/fixture tamam | 14,17,24 |
 | [26](cards/COMM4-26.md) | Entegre kapanış ve fiziksel kabul raporu | 25 |
 
 Kartlar listedeki sırayla uygulanır; önkoşul tablosu bağımlılığı açıklar,

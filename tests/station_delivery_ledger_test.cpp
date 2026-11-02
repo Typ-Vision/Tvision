@@ -68,6 +68,8 @@ void crashBoundaries(){
         }
         check(fired,"Every write boundary injected");
         StationDeliveryLedger restarted(f.root.path(),f.key.installation);const auto r=restarted.inspect(f.key);
+        const auto evidence=QJsonObject{{"boundary",point},{"fired",fired},{"acceptedBeforeFault",accepted},{"recordPreserved",bool(r)},{"replayKind",r?int(r->value.replay.header.kind):0},{"reason",r?int(C::uint32(r->value.replay.body,76)):0},{"newAcquisitionOnRestart",0}};
+        QTextStream(stdout)<<"FAULT_RECOVERY "<<QJsonDocument(evidence).toJson(QJsonDocument::Compact)<<'\n';
         if(point=="before:INTENT"){check(!r,"Unaccepted write leaves no request");continue;}
         check(r.has_value(),"Accepted/ambiguous intent is never lost");
         if(r->value.replay.header.kind==111){

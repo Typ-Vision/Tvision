@@ -1,6 +1,6 @@
 # COMM4-25 — PLC robot simulator ve dayanıklılık kabulü
 
-Durum: planlandı, başlanmadı. Model: **GPT-6.1 Sol / medium**.
+Durum: yazılım/fixture kabulü tamam; fiziksel BLOCKED, iki eski UI regresyonu açık. Model: **GPT-6.1 Sol / medium**.
 Tek oturum kapsamı ve ortak kurallar [indekste](../README.md), kapanış
 kuralları [V0](../verification.md) içindedir.
 

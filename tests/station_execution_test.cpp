@@ -1,4 +1,6 @@
 #include "application/StationExecutionRegistry.hpp"
+#include "application/CameraLeaseArbiter.hpp"
+#include <QJsonDocument>
 #include "application/StationRuntimeAdmissionBoundary.hpp"
 #include "application/ProjectService.hpp"
 #include "application/RuntimeVariables.hpp"
@@ -9,6 +11,7 @@
 #include <QLockFile>
 #include <QTextStream>
 #include <QElapsedTimer>
+#include <QTcpServer>
 #include <condition_variable>
 #include <chrono>
 #include <future>
@@ -75,11 +78,23 @@ int main(int argc,char** argv){QCoreApplication app(argc,argv);try{
             results[n].append(result);store.terminal(intent);
         },[gate,n,path=paths[n]](const ToolDefinition& t)->std::unique_ptr<AcquisitionAdapter>{if(t.kind!="image_file")return {};return std::make_unique<Camera>(gate,n,path);});
     }
-    StationRuntimeAdmissionBoundary adapter(boundary,[&](const QUuid& id)->std::optional<StationAdmissionSnapshot>{const auto n=ids.indexOf(id);return n<0?std::nullopt:std::optional(manifests[n]);},[&](const auto& s){return executor.reserve(s);},[&](const auto& i,const auto& c,const auto& lease){executor.dispatch(i,c,lease);});for(auto& c:controllers)adapter.bind(*c);
-    StationAdmissionService admission(store,adapter);CommunicationPeerSessionService sessions(identities);sessions.setTriggerHandler([&](const auto& key,const auto& f){return admission.trigger(key,f);});const auto connection=QUuid::createUuid();sessions.open(connection);
-    CommunicationV4Frame hello;hello.header.kind=1;hello.header.requestId=1;hello.header.peer=peer;hello.header.epoch=epoch;hello.body=QByteArray(384,0);hello.body.replace(0,16,CommunicationPeerSessionService::contractRevision().toRfc4122());check(C::uint32(sessions.handle(connection,hello).body,76)==0,"Shared peer stream HELLO");
+    struct Resources {std::shared_ptr<void> worker;QVector<CameraLeaseArbiter::Ticket> cameras;};
+    QVector<CameraLeaseTarget> cameraTargets;
+    for(int n=0;n<4;++n)cameraTargets.append({QString("socket-camera-%1").arg(n),{"fixture","socket-camera",QString::number(n),DeviceIdentityConfidence::SerialReported}});
+    StationRuntimeAdmissionBoundary adapter(boundary,[&](const QUuid& id)->std::optional<StationAdmissionSnapshot>{const auto n=ids.indexOf(id);return n<0?std::nullopt:std::optional(manifests[n]);},[&](const auto& snapshot){
+        const auto n=ids.indexOf(snapshot.station->station.id);
+        auto lease=CameraLeaseArbiter::reserve(QString("socket-S%1").arg(n),CameraLeaseUse::Runtime,{cameraTargets[n]});
+        if(lease.reason)return StationAdmissionReservation{lease.reason,{}};
+        auto worker=executor.reserve(snapshot);if(worker.reason)return worker;
+        return StationAdmissionReservation{0,std::make_shared<Resources>(Resources{worker.lease,lease.leases})};
+    },[&](const auto& i,const auto& c,const auto& resources){executor.dispatch(i,c,std::static_pointer_cast<Resources>(resources)->worker);});for(auto& c:controllers)adapter.bind(*c);
+    StationAdmissionService admission(store,adapter);CommunicationPeerSessionService sessions(identities);sessions.setTriggerHandler([&](const auto& key,const auto& f){return admission.trigger(key,f);});QTcpServer listener;check(listener.listen(QHostAddress::LocalHost,0),"Overlap fixture TCP listen");
+    QObject::connect(&listener,&QTcpServer::newConnection,&app,[&]{auto socket=listener.nextPendingConnection();QObject::connect(socket,&QTcpSocket::disconnected,socket,&QObject::deleteLater);attachCommunicationPeer(*socket,sessions);});
+    QTcpSocket peerSocket;peerSocket.connectToHost(QHostAddress::LocalHost,listener.serverPort());
+    auto exchange=[&](const CommunicationV4Frame& f){peerSocket.write(C::encode(f,V4Direction::Request));QElapsedTimer timer;timer.start();while(peerSocket.bytesAvailable()<1024 && timer.elapsed()<4000)QCoreApplication::processEvents(QEventLoop::AllEvents,5);check(peerSocket.bytesAvailable()>=1024,"Same-stream socket response deadline");return C::decode(peerSocket.read(1024),V4Direction::Response);};
+    CommunicationV4Frame hello;hello.header.kind=1;hello.header.requestId=1;hello.header.peer=peer;hello.header.epoch=epoch;hello.body=QByteArray(384,0);hello.body.replace(0,16,CommunicationPeerSessionService::contractRevision().toRfc4122());check(C::uint32(exchange(hello).body,76)==0,"Actual TCP peer stream HELLO");
     auto request=[&](int n,quint64 ticket){CommunicationV4Frame f;const auto& s=manifests[n];f.header={10,s.station->station.key,ticket,sessions.session(),peer,epoch,s.station->selection.recipeKey,s.templateKey,s.station->activation};f.body=QByteArray(384,0);f.body.replace(0,16,s.cameraSetRevision.toRfc4122());return f;};
-    auto send=[&](int n,quint64 ticket){return sessions.handle(connection,request(n,ticket));};
+    auto send=[&](int n,quint64 ticket){return exchange(request(n,ticket));};
     auto until=[&](auto predicate){QElapsedTimer timer;timer.start();while(!predicate() && timer.elapsed()<10000){executor.poll();for(auto& c:controllers)c->poll();QThread::msleep(1);}check(predicate(),"Bounded station completion/drain");};
     auto release=[&](int n,quint64 ticket){check(admission.release({installation,peer,epoch,ids[n],ticket}),"Exact terminal releases only its own station slot");};
     rejects([&]{executor.bind(ids[0],*coordinators[0],"",{});});
@@ -88,7 +103,7 @@ int main(int argc,char** argv){QCoreApplication app(argc,argv);try{
     {auto permit=executor.reserve(manifests[3]);check(!permit.reason,"Reversible pre-intent reservation");check(executor.reserve(manifests[3]).reason==2,"Same station reservation BUSY");}check(store.entries.isEmpty(),"Reservation alone never executes/writes");
     for(int n=0;n<3;++n)check(send(n,1).header.kind==110,"Same peer admits independent stations");gate->wait(3);
     check(C::uint32(send(0,2).body,76)==2,"Same station second cycle BUSY");check(C::uint32(send(3,1).body,76)==23 && !runtimes[3]->busy(),"Fourth station explicit RESOURCE_LIMIT before begin");check(send(0,1).header.kind==110,"Duplicate accepted does not recapture");
-    {std::lock_guard lock(gate->mutex);for(int n=0;n<3;++n){check(!gate->end[n] && gate->start[n]>0,"Three acquisitions overlap at common barrier");check(gate->threads[n]!=QThread::currentThreadId(),"Acquisition runs off owner thread");for(int j=0;j<n;++j)check(gate->threads[n]!=gate->threads[j],"Independent worker threads");}}
+    {std::lock_guard lock(gate->mutex);for(int n=0;n<3;++n){check(!gate->end[n] && gate->start[n]>0,"Three acquisitions from the same TCP stream overlap at common barrier");check(gate->threads[n]!=QThread::currentThreadId(),"Acquisition runs off owner thread");for(int j=0;j<n;++j)check(gate->threads[n]!=gate->threads[j],"Independent worker threads");}}
     // S1 remains in its uncooperative camera while S2/S3 finish independently.
     controllers[0]->stop();check(controllers[0]->state().mode==StationMode::Draining,"Stop waits for its actual worker");rejects([&]{controllers[0]->run(manifests[0].station);});
     QLockFile disk(archives[1]+"/archive.lock");check(disk.tryLock(),"Fixture recording failure lock");failSink=true;gate->release(1);gate->release(2);
@@ -108,5 +123,23 @@ int main(int argc,char** argv){QCoreApplication app(argc,argv);try{
     // Dynamic fourth station uses the same code path once worker capacity returns.
     check(send(3,1).header.kind==110,"Fourth station retries transient capacity without code special case");gate->release(3);until([&]{return !executor.busy(ids[3]);});check(results[3].size()==1 && results[3][0].state==ExecutionState::Done,"Fourth station actual execution");release(3,1);
     for(auto& c:controllers){c->stop();c->poll();}executor.poll();check(results[0].size()==2 && results[1].size()==2 && results[2].size()==2,"No late registry callback after retirement");
+    // Same TCP peer, real worker barriers and the common camera arbiter. S2
+    // shares S1's exact UUID/physical identity; S3 must finish while S1 holds it.
+    release(0,2);gate->reset();cameraTargets[1]=cameraTargets[0];
+    for(int n=0;n<3;++n){controllers[n]->run(manifests[n].station);controllers[n]->poll();}
+    for(int n=0;n<3;++n)controllers[n]->setAuto(true);
+    check(send(0,3).header.kind==110,"Shared-camera S1 admitted over TCP");
+    check(C::uint32(send(1,3).body,76)==3 && !runtimes[1]->busy(),"Shared-camera S2 CAMERA_BUSY before worker");
+    check(send(2,3).header.kind==110,"Independent-camera S3 admitted on same TCP stream");
+    {std::unique_lock lock(gate->mutex);check(gate->cv.wait_for(lock,std::chrono::seconds(10),[&]{return gate->entered[0] && gate->entered[2];}),"Shared-camera S1 and independent S3 overlap");check(!gate->entered[1],"S2 rejection never touches camera");}
+    gate->release(2);until([&]{return !executor.busy(ids[2]);});release(2,3);
+    check(executor.busy(ids[0]) && results[2].size()==3,"Independent S3 completes while shared S1 remains blocked");
+    gate->release(0);until([&]{return !executor.busy(ids[0]);});release(0,3);
+    check(send(1,3).header.kind==110,"S2 retries same previously rejected request after actual S1 drain");
+    gate->release(1);until([&]{return !executor.busy(ids[1]);});release(1,3);
+    check(CameraLeaseArbiter::diagnostics().isEmpty(),"Socket collision leaves no partial camera leases");
+    QTextStream(stdout)<<"COLLISION "<<QJsonDocument(QJsonObject{{"sameTcpStream",true},{"s2Reason",3},{"s3CompletedBeforeS1",true},{"partialLeaseLeak",false}}).toJson(QJsonDocument::Compact)<<'\n';
+    for(auto& c:controllers){c->stop();c->poll();}
+    peerSocket.abort();QCoreApplication::processEvents();
     QTextStream(stdout)<<"PASS "<<checks<<" station execution assertions; fixture cameras, no physical acceptance\n";return 0;
 }catch(const std::exception& e){QTextStream(stderr)<<e.what()<<'\n';return 1;}}

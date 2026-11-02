@@ -5,9 +5,10 @@
 
 ## Devam noktası
 
-**[COMM4-24](archive/2026-11-02-comm4-24.md)**: UI/Qt. ON194/2eskiUI/1skip,
-OFF155/1skip; WGC/OS input/fiziksel açık; devam25. [23](archive/2026-11-02-comm4-23.md),
-[22](archive/2026-11-02-comm4-22.md), [21](archive/2026-11-02-comm4-21.md).
+**[COMM4-25](archive/2026-11-02-comm4-25.md)**: V4/16E2E; ON195/2eskiUI/1skip; OFF156/1skip.
+6D BLOCKED; WGC/OS input açık; devam26. [24](archive/2026-11-02-comm4-24.md),
+[23](archive/2026-11-02-comm4-23.md), [22](archive/2026-11-02-comm4-22.md),
+[21](archive/2026-11-02-comm4-21.md).
 
 **[COMM4-18a](archive/2026-11-01-comm4-18a.md)**: evidence enum reddi; 706 kontrol.
 İki eski UI hatası/dış plaka skipped; fiziksel6D BLOCKED.
@@ -19,8 +20,7 @@ duplicate/ABORT-drain/recovery.
 
 **[COMM4-18](archive/2026-10-31-comm4-18.md)**/[araştırma](archive/2026-10-31-comm4-18-research.md) tamam; fiziksel6D BLOCKED.
 
-**[COMM4-17 yazılım](archive/2026-10-31-comm4-17.md).** Salt okunur template,
-Variable/direct kaynak, atomik Apply; kabul arşivde.
+**[COMM4-17 yazılım](archive/2026-10-31-comm4-17.md).** Salt okunur template, Variable/direct, atomik Apply.
 INI/probe SEGFAULT açık; temiz girdi kullan.
 [EFR-04](archive/2026-10-29-efr-04.md): Wheel açık, Match/θ ertelendi.
 
@@ -78,7 +78,7 @@ SDK kayıtlı kamerayı bulamadı; kare/mm kabulü yok. 22f açık.
 Geçici viewer geometrisi ayrı adlandırılır; araç ROI'leri reçeteye bağlıdır.
 CCUX-16–19 [arşivde](archive/README.md); C0 açık.
 
-**CCUX-15 fiziksel açık:** 7×7, 12 mm kullanıcı beyanı; [15c tarihsel kanıtı](archive/2026-10-22-ccux-15c.md); güncel başarı yukarıda.
+**CCUX-15 fiziksel açık:** 7×7, 12 mm kullanıcı beyanı; [15c](archive/2026-10-22-ccux-15c.md).
 **CCUX-10b:** [Editor seçici/klavye düzeltmesi](archive/2026-10-22-ccux-10b.md).
 **CCUX-03b:** [Ayrı Opto ayar servisi ve fiziksel readback](archive/2026-10-22-ccux-03b.md);
 görüntü/mm kabulü değildir.

@@ -33,6 +33,10 @@ public:
     V4RequestIdentity requestIdentity(const QUuid& connection,const CommunicationV4Frame&) const;
     QUuid session() const {owner();return session_;}
     void setTriggerHandler(TriggerHandler handler){owner();trigger_=std::move(handler);}
+    // Explicit application adapter; absent in normal main while physical
+    // calibration readiness is blocked. Transport never grants fixture capability.
+    using CalibrationHandler=std::function<CommunicationV4Frame(const V4RequestIdentity&,const CommunicationV4Frame&)>;
+    void setCalibrationHandler(CalibrationHandler handler){owner();calibration_=std::move(handler);}
     // SELECT_RECIPE/SET_AUTO/STOP and exact control ACK. The application port
     // returns nullopt for ACKs belonging to the production/calibration ledger.
     using ControlHandler=std::function<std::optional<CommunicationV4Frame>(const V4RequestIdentity&,const CommunicationV4Frame&)>;
@@ -47,6 +51,7 @@ private:
     Metadata metadata_;
     StatusHandler status_;
     TriggerHandler trigger_;
+    CalibrationHandler calibration_;
     ControlHandler control_;
     StationDeliveryLedger* ledger_=nullptr; // application-owned; outlives connections
     QUuid connection_,session_,peer_,epoch_,installation_;

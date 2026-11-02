@@ -37,6 +37,21 @@ int main(int argc,char** argv){QCoreApplication app(argc,argv);try{
     r=sessions.handle(connection,hello(peer,epoch));const auto exact=r.header.session;check(reason(r)==0 && exact!=discovery,"Exact HELLO replaces discovery session");
     check(sessions.authorize(connection,trigger)==5,"Previous session stale");trigger.header.session=exact;
     check(sessions.authorize(connection,trigger)==0 && reason(sessions.handle(connection,trigger))==20,"Authority does not dispatch unimplemented station command");
+    auto calibration=request(25,peer,epoch,exact);calibration.header.stationKey=stationEntry.key;
+    int calibrationCalls=0;
+    check(reason(sessions.handle(connection,calibration))==20,"No calibration adapter never grants capability");
+    sessions.setCalibrationHandler([&](const auto& identity,const auto& command){
+        ++calibrationCalls;check(identity.station==station && identity.installation==installation,"Calibration exact station namespace");
+        auto response=command;response.header.kind=110;response.body=QByteArray(896,0);return response;
+    });
+    auto staleCalibration=calibration;staleCalibration.header.session=discovery;
+    check(reason(sessions.handle(connection,staleCalibration))==5 && calibrationCalls==0,"Stale session cannot call calibration adapter");
+    auto unknownCalibration=calibration;unknownCalibration.header.stationKey=9999;
+    check(reason(sessions.handle(connection,unknownCalibration))==10 && calibrationCalls==0,"Unknown station cannot call calibration adapter");
+    check(sessions.handle(connection,calibration).header.kind==110 && calibrationCalls==1,"Explicit calibration application adapter dispatches");
+    sessions.setCalibrationHandler([](const auto&,const auto&)->CommunicationV4Frame{throw std::runtime_error("fixture storage failure");});
+    check(reason(sessions.handle(connection,calibration))==8,"Calibration application failure fences as storage error");
+    sessions.setCalibrationHandler({});
     const auto key=sessions.requestIdentity(connection,trigger);check(key==V4RequestIdentity{installation,peer,epoch,station,9007199254740993ULL},"Opaque UUID and >2^53 request namespace exact");
     const auto fingerprint=C::requestFingerprint(C::encode(trigger,V4Direction::Request));
     sessions.close(other);check(sessions.session()==exact,"Foreign close cannot release owner");sessions.close(connection);check(sessions.open(other),"Reconnect slot released");
