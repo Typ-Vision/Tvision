@@ -127,6 +127,14 @@ bool MainWindow::verifyPublicationUi(const QString& artifacts){
         w.deliveryDiagnostics_->refresh();check(w.findChild<QLabel*>("deliveryStatus")->text().contains("no bound production endpoint"),"diagnostics releases closed endpoint");
         MainWindow restarted(dir.filePath("panels.ini"));check(!restarted.tcpEndpoint_ && !restarted.findChild<QCheckBox*>("runtimeTcpV3")->isChecked(),"restart does not restore production network permission");
     }
+    // TCP acceptance intentionally selected another draft and the Runtime page.
+    // Restore the publisher's recipe/tool before exercising the slot editor.
+    w.service_.selectRecipe(recipe);
+    w.refreshWorkspace();
+    w.selectPage("editor");
+    w.selectTool(publisher);
+    check(w.service_.activeRecipe()->id==recipe && w.selectedToolId_==publisher,
+          "slot fixture restores publisher recipe and tool");
     // ---- v4 fixed-slot assignment (COMM4-17) ----
     // Machine template manifests are an explicit machine artifact; this fixture
     // writes one revision and only edits the recipe-level source binding.

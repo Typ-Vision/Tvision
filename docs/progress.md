@@ -10,8 +10,8 @@
 [23](archive/2026-11-02-comm4-23.md), [22](archive/2026-11-02-comm4-22.md),
 [21](archive/2026-11-02-comm4-21.md).
 
-**[COMM4-18a](archive/2026-11-01-comm4-18a.md)**: evidence enum reddi; 706 kontrol.
-İki eski UI hatası/dış plaka skipped; fiziksel6D BLOCKED.
+**[COMM4-18a](archive/2026-11-01-comm4-18a.md)**: enum reddi/706 kontrol.
+Eski UI hataları; plaka skipped; fiziksel6D BLOCKED.
 
 **[COMM4-20](archive/2026-11-01-comm4-20.md)**: frozen dependency, lease,
 duplicate/ABORT-drain/recovery.
@@ -20,7 +20,8 @@ duplicate/ABORT-drain/recovery.
 
 **[COMM4-18](archive/2026-10-31-comm4-18.md)**/[araştırma](archive/2026-10-31-comm4-18-research.md) tamam; fiziksel6D BLOCKED.
 
-**[COMM4-17 yazılım](archive/2026-10-31-comm4-17.md).** Salt okunur template, Variable/direct, atomik Apply.
+**[COMM4-17](archive/2026-10-31-comm4-17.md)**: template/Variable/direct/atomik Apply.
+[17a](archive/2026-11-02-comm4-17a.md): UI 3/3; tam kabul26.
 INI/probe SEGFAULT açık; temiz girdi kullan.
 [EFR-04](archive/2026-10-29-efr-04.md): Wheel açık, Match/θ ertelendi.
 
