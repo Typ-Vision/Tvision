@@ -6,33 +6,35 @@
 
 ## Devam noktası
 
-**[VF-04a](archive/2026-11-03-vf-04a.md): editor9 tek dosya provider düzeltildi.**
-Hedefli ON12/OFF10; tam ON203+1skip/1timeout; timeout izole2/2 geçti. Tam OFF kullanıcı isteğiyle yok.
-Kullanıcı “Uyumlu oldu” dedi. Modern Dashboard/restart ve preview mesajı geçti.
-[VF-04](archive/2026-11-03-vf-04.md) korunur. Sıradaki VF-05; TCP A/B VF-08’de.
+**[VF-05](archive/2026-11-03-vf-05.md): istemci kaydı/test profili tamam.**
+Tek etkin peer/epoch; ikinci kayıt ve pending/remote altında yenileme reddedilir.
+Profil bağımsız Python HELLO ile doğrulandı; gerçek TCP tetik/ACK VF-07’de.
+Sıradaki VF-06.
 
-**[VF-03](archive/2026-11-03-vf-03.md):** değişmez yayın; tam regresyon devri VF-04’te karşılandı.
-**[VF-02](archive/2026-11-02-vf-02.md):** K1 geçti; tam ON/Pose UI devri VF-04’te karşılandı.
+**[VF-04a](archive/2026-11-03-vf-04a.md): editor9 tek dosya provider düzeltildi.**
+Hedefli ON12/OFF10; tam ON203+1skip/1timeout; timeout izole2/2. Tam OFF yok.
+Kullanıcı “Uyumlu oldu” dedi. [VF-04](archive/2026-11-03-vf-04.md) korunur;
+TCP A/B VF-08’de.
+
+**[VF-03](archive/2026-11-03-vf-03.md):** değişmez yayın; tam regresyon VF-04’te.
+**[VF-02](archive/2026-11-02-vf-02.md):** K1 geçti; tam ON/Pose UI VF-04’te.
 **[VF-01](archive/2026-11-02-vf-01.md):** şablonlar; restart/küçük ekran geçti.
 
 **[COMM4-26](archive/2026-11-02-comm4-26.md)**: yazılım tamam;
 ON197/1skip, OFF156/1skip; hata0. Hedefli34/29; Qt iki viewport.
 [Fiziksel devir](architecture/communication-v4/acceptance-comm4-26.md):
 COMM4-PHYS-01/02 ve UI-NATIVE-01 açık. COMM4-21–25 arşivdedir.
-
 COMM4-17–20 geçmişi/kalıcı kararları COMM4-26 ve arşivdedir.
 İki UI hatası 26’da kapandı; fiziksel6D BLOCKED.
 INI/probe SEGFAULT açık; temiz girdi kullan.
 [EFR-04](archive/2026-10-29-efr-04.md): Wheel açık, Match/θ ertelendi.
-
 [D:/TVision](archive/2026-10-28-dev-drive-01.md): OpenCV geçti; CTest kısmi.
-
 [Değişkenler](variables-usage.md).
 
 **[COMM-37](archive/2026-10-28-comm-37.md):** faz kapandı; dış plaka skipped;
-cihaz varsa COMM-38. Kabul/17–23/36 ayrıntısı arşivde.
+cihaz varsa COMM-38. Ayrıntı arşivde.
 COMM-12–16: profil/intent/bundle/outbox/input-router/codec.
-Editor/Load ağ açmaz; tombstone silinmez; fiziksel kabul açık.
+Editor/Load ağ açmaz; tombstone silinmez; fiziksel açık.
 
 **[COMM-11](archive/2026-10-27-comm-11.md):** Result DAG/ALL/ANY.
 **[COMM-10](archive/2026-10-27-comm-10.md):** Missing-first karar/export.
@@ -40,36 +42,30 @@ Editor/Load ağ açmaz; tombstone silinmez; fiziksel kabul açık.
 
 **[COMM-02–08](archive/2026-10-26-comm-08.md) tamam:** UUID/type/unit/frame/enum/no-op/hash
 korunur. Editor dışarı yazmaz; tanım değer tutmaz. Circle37'de kapandı.
-
 [COMM planı](architecture/communication/README.md):01–23/36/37 tamam;
 opsiyonel24–35 ve fiziksel38 açık. Çevrim sonu gönderim var;
 akış ortası gönder/bekle, Hand-eye/robot hareketi ayrı kapsam.
-
 **[INT-10](archive/2026-10-26-int-10.md):** CameraIntegration main'de; fiziksel/native açık.
-
 **[CCUX-24I yazılım/görsel tamam](archive/2026-10-26-ccux-24i.md):** iki Release;
-UI 39/UI OFF 19 test. Native wheel/pan yakalama hatası ve fiziksel kabul açık.
-
-**[INT-09](archive/2026-10-25-int-09.md):** başlatıcı/kamera entegrasyonu.
-[Restart devri](architecture/camera-integration-handoff.md).
+UI 39/OFF 19 test. Native wheel/pan yakalama hatası ve fiziksel kabul açık.
+**[INT-09](archive/2026-10-25-int-09.md):** başlatıcı/kamera entegrasyonu
+([restart devri](architecture/camera-integration-handoff.md)).
 [INT-08](archive/2026-10-25-int-08.md): üç medyan aşımı ve fiziksel
 E2/mm/native açık; gerçek proje/reçete/kaynak/model gerekli.
-
 **[CCUX-23b-1–6 yazılım tamam](archive/2026-10-24-ccux-23b-6.md).**
 Canlı proje/2448×2048 kabulü açık; fixture fiziksel kabul değildir.
 Kullanıcı plaka kalibrasyonunu başardı; bağımsız mm kabulü ayrıdır.
 **[CCUX-15j fiziksel kabul açık](archive/2026-10-23-ccux-15j.md):**
-Exact SDK raw/sidecar: 56000 µs/0 dB kare karanlık/odak dışı,
-0 merkez; model yok. Kanıt `build/ccux/ccux-15j/`.
-Devam: ışık/odak/düzlem; referans/tolerans ve operatör kabulü.
-[15i](archive/2026-10-23-ccux-15i.md) korunur;
-`multi_source_production_contract`: Missing result açık.
-[15f](archive/2026-10-23-ccux-15f.md): eski kare 50→49; fiziksel eksen/mm açık.
+Exact SDK raw/sidecar 56000 µs/0 dB karanlık/odak dışı, 0 merkez; model yok
+(`build/ccux/ccux-15j/`). Devam: ışık/odak/düzlem; referans/tolerans ve operatör.
+[15i](archive/2026-10-23-ccux-15i.md) ve `multi_source_production_contract`
+Missing result açık. [15f](archive/2026-10-23-ccux-15f.md): eski kare 50→49;
+fiziksel eksen/mm açık.
 
 **[CCUX-22e yazılımı tamamlandı](archive/2026-10-23-ccux-22e.md):** Kalibrasyon
 bağlantı ömrü, dosya/iptal/SaveUse drain. Kanıt: `build/ccux/ccux-22e/`.
 SDK kayıtlı kamerayı bulamadı; kare/mm kabulü yok. 22f açık.
-[22d Runtime](archive/2026-10-23-ccux-22d.md), [22c Editor](archive/2026-10-23-ccux-22c.md),
+[22d](archive/2026-10-23-ccux-22d.md), [22c](archive/2026-10-23-ccux-22c.md),
 [API/ömür](architecture/camera-setup/acquisition-sessions.md).
 `multi_source_production_contract` 22d kapanış hatası korunur.
 **[22a](archive/2026-10-23-ccux-22a.md):** yazılım tamam; fiziksel baseline/paint açık.
@@ -77,8 +73,8 @@ SDK kayıtlı kamerayı bulamadı; kare/mm kabulü yok. 22f açık.
 [20 hash/preview](archive/2026-10-22-ccux-20.md) korunur; canlı teyit açık.
 Geçici viewer geometrisi ayrı adlandırılır; araç ROI'leri reçeteye bağlıdır.
 CCUX-16–19 [arşivde](archive/README.md); C0 açık.
-
-**CCUX-15 fiziksel açık:** 7×7, 12 mm kullanıcı beyanı; [15c](archive/2026-10-22-ccux-15c.md).**CCUX-10b:** [Editor seçici/klavye düzeltmesi](archive/2026-10-22-ccux-10b.md).
+**CCUX-15 fiziksel açık:** 7×7, 12 mm kullanıcı beyanı; [15c](archive/2026-10-22-ccux-15c.md).
+**CCUX-10b:** [Editor seçici/klavye](archive/2026-10-22-ccux-10b.md).
 **CCUX-03b:** [Ayrı Opto ayar servisi/readback](archive/2026-10-22-ccux-03b.md);
 görüntü/mm kabulü değildir.
 **[15a](archive/2026-10-22-ccux-15a.md):** SDK kopma/Stop temizleme hatası ve
@@ -88,9 +84,8 @@ lens/düzlem ve belgeli fiziksel kabulü tamamlanmadı.
 **[CCUX-14](archive/2026-10-22-ccux-14.md):** yazılım/görsel tamam; fiziksel açık.
 CCUX-01–13 tamam; [arşiv](archive/README.md).
 Kamera kimliği/profil, oturum drain, kalibrasyon izni, typed köken/hash,
-Editor binding ve immutable Runtime kararlarının [korunan ayrıntıları](archive/2026-10-26-comm-plan-01.md#önceki-kamera-özetinden-korunan-ayrıntılar).
+Editor binding ve immutable Runtime [ayrıntıları](archive/2026-10-26-comm-plan-01.md#önceki-kamera-özetinden-korunan-ayrıntılar).
 Restart üretim izni başlatmaz; PLC/robot çıkışı kapalı kalır.
-
 Arşiv rasteri karanlık/kısmen bulanık; **bağımsız fiziksel mm kabulü açık**.
 CCUX-14 fixture bunu kapatmaz. [CCUX planı](architecture/camera-setup/README.md) sürer;
 **Hand-eye kapsam dışı.** KMC/ICM/EXP yeniden başlatılmaz.
@@ -99,13 +94,12 @@ CCUX-14 fixture bunu kapatmaz. [CCUX planı](architecture/camera-setup/README.md
 
 - EXP-01–03, MUI-01–03/EUI-01–08 ve KMC/ICM/G2 yazılımı hazır;
   [kanıt/korunan sınırlar](archive/2026-10-28-efr-plan-01.md).
-  **MUI-04 özgün raster/reçete/ROI açık**; fiziksel/optik/mm kabulü açık.
+  **MUI-04 özgün raster/reçete/ROI açık**; fiziksel/optik/mm açık.
 
 ## Engeller ve kararlar
 
 - **OECS native Unavailable**. ICM-04d gecikmiş command, Clear→Stop→Start sonrası
-  yeni tetik olmadan **8/8 eski kare** üretti;
-  [kanıt](archive/2026-10-18-icm-04d-pending.md),
+  yeni tetik olmadan **8/8 eski kare** üretti; [kanıt](archive/2026-10-18-icm-04d-pending.md),
   [korelasyon sözleşmesi](architecture/industrial-camera-trigger-correlation.md).
   Belgeli cancel/completion/drain/reset eksik; delay=0/close-open/sessizlik kanıt
   değildir. Native 04e/G1 kapalı; deneysel kullanım production izni oluşturmaz.

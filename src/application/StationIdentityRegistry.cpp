@@ -52,6 +52,22 @@ void StationIdentityRegistry::enrollEpoch(const QUuid& revision,const QUuid& pee
         c.epochs.append({peer,epoch,false});
     });
 }
+void StationIdentityRegistry::enrollControllingEpoch(const QUuid& revision,const QUuid& peer,const QUuid& epoch) {
+    update(revision,[&](auto& c){
+        for(const auto& e:c.epochs){
+            need(e.peer!=peer || e.epoch!=epoch,"Peer epoch already enrolled");
+            need(e.retired,"Etkin istemci var; önce açık epoch yenileme gerekir");
+        }
+        c.epochs.append({peer,epoch,false});
+    });
+}
+void StationIdentityRegistry::replaceControllingEpoch(const QUuid& revision,const QUuid& peer,const QUuid& epoch) {
+    update(revision,[&](auto& c){
+        for(const auto& e:c.epochs)need(e.peer!=peer || e.epoch!=epoch,"Peer epoch already enrolled");
+        for(auto& e:c.epochs)if(!e.retired)e.retired=true;
+        c.epochs.append({peer,epoch,false});
+    });
+}
 void StationIdentityRegistry::retireEpoch(const QUuid& revision,const QUuid& peer,const QUuid& epoch) {
     update(revision,[&](auto& c){
         auto i=std::find_if(c.epochs.begin(),c.epochs.end(),[&](const auto& e){return e.peer==peer && e.epoch==epoch;});

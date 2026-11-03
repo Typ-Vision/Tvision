@@ -14,6 +14,10 @@ struct CommunicationStationView {
     std::optional<StationFileSource> source;
     bool automatic=false, canRun=false, canAuto=false;
 };
+struct CommunicationClientView {
+    QUuid peer, epoch;
+    bool active=false;
+};
 // Owner-thread application port. Selection is deliberately absent: selecting a
 // UI row cannot mutate a listener, activation, Runtime or delivery record.
 class CommunicationWorkspace final {
@@ -37,6 +41,14 @@ public:
     QString setupStatus() const;
     void startSetup();
     IdentityCatalogue sourceCatalogue() const {owner();return identities_.load();}
+    // Registered controlling clients (history retained). Registration creates a
+    // new peer/epoch only when no active identity exists; rollover requires a
+    // drained machine and no pending delivery, and retires the old epoch.
+    QVector<CommunicationClientView> clients() const;
+    CommunicationClientView enrollClient();
+    CommunicationClientView rolloverClient();
+    QByteArray exportClientProfile(const QString& label) const;
+    void checkClientProfile(const QByteArray& bytes) const;
     void saveStationSource(const QUuid& expected,const QUuid& station,const QString& name,const QUuid& camera,const QString& cameraName,const QString& path);
     void setSetupCompleted(std::function<void()> callback){setupCompleted_=std::move(callback);}
     using RecipeList=std::function<QVector<StationSavedRecipe>()>;

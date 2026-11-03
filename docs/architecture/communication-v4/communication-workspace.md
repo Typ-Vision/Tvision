@@ -382,3 +382,40 @@ başlatma mesajı verir; `Station runtime not bound` genel hatasına düşmez.
 `station_recipe_selection_editor9_contract`, eski biçimin yanı sıra modern tek
 Image File ile gerçek admission/worker/terminal ve kaynak değişmezliğini sınar.
 Dashboard UI kabulü artık modern schema 9 yayını kullanır.
+
+## VF-05 · İstemci kaydı ve test profili
+
+Communication → **İstemciler** bölümü kayıtlı kontrol kimliklerini listeler. **Yetkili
+istemci kaydet** yeni rastgele peer ve epoch üretir; kullanıcı UUID yazmaz. Tek etkin
+kimlik kuralı katalogda zorlanır: etkin bir epoch varken ikinci kayıt reddedilir ve
+mesaj önce `Epoch yenile` eylemini söyler. Kayıt ve yenileme bütün station
+Runtime'larının drained olmasını ve Remote Enable'ın kapalı olmasını ister; yenileme
+ayrıca bekleyen normal/kontrol teslimini (exact ACK/reconcile tamamlanmadan) reddeder.
+
+`replaceControllingEpoch` eski etkin epoch'u aynı katalog revision'ında emekliye
+ayırır ve yeni epoch'u ekler; tarih silinmez, retired epoch yeniden açılamaz. Peer
+kimliği yenilemede korunur, yalnız epoch döner. Bu bir kimlik geçmişi işlemidir;
+admission, Run/Auto veya üretim izni üretmez. `CommunicationPeerSessionService`
+zaten tek etkin epoch dışında HELLO'yu `CONTRACT_MISMATCH` ile reddettiğinden eski
+profil sessizce çalışmaya devam etmez.
+
+**Test profilini dışa aktar** 64 KiB sınırlı, strict şemalı
+`visionflow.communication-client-profile/1` JSON'u yazar: schema, label, installation,
+peer, epoch, listener adresi/portu ve sözleşme revizyonu. Profil credential veya
+üretim izni değildir; içe/doğrula yolu kurulum kimliği, aktif epoch, emekli epoch ve
+sözleşme revizyonu eşleşmesini denetler. Başka makine kurulumuna ait profil, bilinmeyen
+epoch, emekli epoch, eksik/fazla alan ve farklı sözleşme kapalı reddedilir. Profil
+yazımı QSaveFile ile atomiktir.
+
+`scripts/communication_v4_simulator.py --profile <json> --log <jsonl>` ürünün
+dışa aktardığı profili okur; `--peer/--epoch` verilmezse profil kimliği, `--host/--port`
+verilmezse profil bağlantısı kullanılır. Açık `--peer/--epoch` override'ı yalnız elle
+sınamada kalır. Profil okuyucu strict'tir (bilinmeyen/eksik alan, sözleşme, sıfır UUID
+ve port sınırı); discovery veya üretim yetkisi üretmez. Gerçek PLC'ye aktarım ayrı
+operatör işidir: adres/port, peer ve epoch değerleri PLC yapılandırmasına elle girilir.
+Gerçek TCP tetik/terminal/ACK akışı VF-07'ye aittir.
+
+Hedefli testler `communication_clients_contract` (kayıt, ikinci etkin ret, yenileme,
+pending ret, restart kalıcılığı, profil şema/uyum redleri ve bağımsız Python
+HELLO) ve genişletilmiş `ui_communication_workspace` (panel düğmeleri, export/verify
+dosya akışı, emekli profil reddi, normal/küçük ekran görselleri).

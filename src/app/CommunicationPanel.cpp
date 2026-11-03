@@ -24,7 +24,9 @@
 #include <QFileDialog>
 #include <QImage>
 #include <QPixmap>
+#include <QSaveFile>
 #include "application/StationSourceSetup.hpp"
+#include "application/CommunicationClientProfiles.hpp"
 
 namespace visionflow {
 namespace {
@@ -62,6 +64,21 @@ CommunicationPanel::CommunicationPanel(QWidget* parent):QWidget(parent){
     auto* recipeRow=new QHBoxLayout;recipes_=new QComboBox;recipes_->setObjectName("communicationSavedRecipe");recipes_->setAccessibleName("Kayıtlı immutable reçete revision");recipes_->setMinimumContentsLength(16);recipes_->setSizeAdjustPolicy(QComboBox::AdjustToMinimumContentsLengthWithIcon);recipeRow->addWidget(recipes_,1);
     auto* choose=new QPushButton("Seçili station'a reçeteyi yükle (Run açmaz)");choose->setObjectName("stationSelectRecipe");recipeRow->addWidget(choose);layout->addLayout(recipeRow);
     publicationStatus_=plain();publicationStatus_->setObjectName("communicationPublicationStatus");publicationStatus_->setAccessibleName("Yayımlanmış reçete kataloğu");layout->addWidget(publicationStatus_);
+    auto* clientsBox=new QGroupBox("İstemciler");auto* clientLayout=new QVBoxLayout(clientsBox);
+    clientLayout->addWidget(plain("Tek etkin kontrol kimliği. Kayıt yeni peer/epoch üretir; ikinci etkin istemci reddedilir. Epoch yenileme eski epoch'u emekliye ayırır ve bekleyen teslim varken kapalıdır. Profil yalnız test bağlantı bilgisidir; üretim izni veya credential değildir."));
+    clientStatus_=plain();clientStatus_->setObjectName("clientStatus");clientLayout->addWidget(clientStatus_);
+    clients_=new QTableWidget(0,4);clients_->setObjectName("communicationClients");clients_->setAccessibleName("Kayıtlı istemciler");clients_->setHorizontalHeaderLabels({"İstemci","Peer","Epoch","Durum"});clients_->setSelectionMode(QAbstractItemView::SingleSelection);clients_->setEditTriggers(QAbstractItemView::NoEditTriggers);clients_->setMinimumHeight(90);clients_->setMaximumHeight(130);clients_->horizontalHeader()->setStretchLastSection(true);clientLayout->addWidget(clients_);
+    auto* clientForm=new QFormLayout;clientLabel_=new QLineEdit("Simülatör istemcisi");clientLabel_->setObjectName("clientLabel");clientLabel_->setMaxLength(64);clientForm->addRow("Profil adı",clientLabel_);clientLayout->addLayout(clientForm);
+    auto* clientActions=new QHBoxLayout;auto clientButton=[&](QString title,QString name){auto* b=new QPushButton(title);b->setObjectName(name);clientActions->addWidget(b);return b;};
+    auto* clientEnroll=clientButton("Yetkili istemci kaydet","clientEnroll");
+    auto* clientRollover=clientButton("Epoch yenile (eski emekli)","clientRollover");
+    auto* clientExport=clientButton("Test profilini dışa aktar","clientExport");
+    auto* clientVerify=clientButton("Profili doğrula","clientVerify");
+    clientLayout->addLayout(clientActions);layout->insertWidget(4,clientsBox);
+    connect(clientEnroll,&QPushButton::clicked,this,[this]{try{if(!workspace_)throw std::runtime_error("Workspace bağlanmadı");const auto client=workspace_->enrollClient();message_->setText("Yetkili istemci kaydedildi. Peer: "+client.peer.toString(QUuid::WithoutBraces)+" • Epoch: "+client.epoch.toString(QUuid::WithoutBraces));}catch(const std::exception& e){message_->setText(QString::fromUtf8(e.what()));}refresh();});
+    connect(clientRollover,&QPushButton::clicked,this,[this]{try{if(!workspace_)throw std::runtime_error("Workspace bağlanmadı");const auto client=workspace_->rolloverClient();message_->setText("Epoch yenilendi. Eski epoch emekliye ayrıldı; eski profiller HELLO yapamaz. Yeni epoch: "+client.epoch.toString(QUuid::WithoutBraces));}catch(const std::exception& e){message_->setText(QString::fromUtf8(e.what()));}refresh();});
+    connect(clientExport,&QPushButton::clicked,this,[this]{try{if(!workspace_)throw std::runtime_error("Workspace bağlanmadı");const auto bytes=workspace_->exportClientProfile(clientLabel_->text().trimmed());auto path=saveFile?saveFile("visionflow-test-client.json","Test istemci profilini dışa aktar","JSON (*.json)"):QFileDialog::getSaveFileName(this,"Test istemci profilini dışa aktar","visionflow-test-client.json","JSON (*.json)");if(path.isEmpty())return;QSaveFile file(path);file.setDirectWriteFallback(false);if(!file.open(QIODevice::WriteOnly) || file.write(bytes)!=bytes.size() || !file.commit())throw std::runtime_error("Test profili yazılamadı");message_->setText("Test profili dışa aktarıldı: "+path+"\nProfil dinleme bağlantı bilgisi taşır; üretim izni değildir.");}catch(const std::exception& e){message_->setText(QString::fromUtf8(e.what()));}});
+    connect(clientVerify,&QPushButton::clicked,this,[this]{try{if(!workspace_)throw std::runtime_error("Workspace bağlanmadı");const auto path=openFile?openFile("Test istemci profilini doğrula","JSON (*.json)"):QFileDialog::getOpenFileName(this,"Test istemci profilini doğrula",QString{},"JSON (*.json)");if(path.isEmpty())return;QFile file(path);if(!file.open(QIODevice::ReadOnly) || file.size()>64*1024)throw std::runtime_error("İstemci profili okunamadı (64 KiB sınırı)");const auto bytes=file.readAll();const auto profile=readCommunicationClientProfile(bytes);workspace_->checkClientProfile(bytes);message_->setText("Profil doğrulandı: "+profile.label+" • port "+QString::number(profile.port));}catch(const std::exception& e){message_->setText(QString::fromUtf8(e.what()));}});
     connect(choose,&QPushButton::clicked,this,[this]{const int n=stations_->currentRow();if(!workspace_ || n<0 || n>=rows_.size() || recipes_->currentIndex()<0)return;try{const auto& row=rows_[n];workspace_->selectRecipe(row.station.id,row.snapshot?row.snapshot->activation:QUuid{},recipes_->currentData().toUInt(),recipes_->currentData(Qt::UserRole+1).toUInt());message_->setText("Station reçete seçimi kaydedildi; Run / Auto kapalı.");}catch(const std::exception& e){message_->setText(QString::fromUtf8(e.what()));}refresh();});
     auto* commands=new QHBoxLayout;auto add=[&](QString title,QString name,QString cmd){auto* b=new QPushButton(title);b->setObjectName(name);commands->addWidget(b);connect(b,&QPushButton::clicked,this,[this,cmd]{command(cmd);});return b;};
     run_=add("&Run","stationRun","run");automatic_=add("&Auto","stationAuto","auto");manual_=add("Auto kapat","stationManual","manual");stop_=add("&Stop / drain","stationStop","stop");layout->addLayout(commands);
@@ -79,7 +96,7 @@ CommunicationPanel::CommunicationPanel(QWidget* parent):QWidget(parent){
     layout->setSizeConstraint(QLayout::SetMinimumSize);
     auto* timer=new QTimer(this);timer->setInterval(500);connect(timer,&QTimer::timeout,this,[this]{if(isVisible())refresh();});timer->start();selection();
 }
-void CommunicationPanel::bind(CommunicationWorkspace* w){workspace_=w;calibration_->bind(w?&w->calibration():nullptr);recipeSignature_.clear();if(w)try{const auto p=w->profile();enabled_->setChecked(p.enabled);address_->setText(p.address);port_->setValue(p.port);QSignalBlocker block(remote_);remote_->setChecked(w->remoteEnabled());}catch(const std::exception& e){message_->setText(QString::fromUtf8(e.what()));}refresh();}
+void CommunicationPanel::bind(CommunicationWorkspace* w){workspace_=w;calibration_->bind(w?&w->calibration():nullptr);recipeSignature_.clear();clientSignature_="<unset>";if(w)try{const auto p=w->profile();enabled_->setChecked(p.enabled);address_->setText(p.address);port_->setValue(p.port);QSignalBlocker block(remote_);remote_->setChecked(w->remoteEnabled());}catch(const std::exception& e){message_->setText(QString::fromUtf8(e.what()));}refresh();}
 void CommunicationPanel::refreshRecipeList(){
     if(!workspace_)return;
     const auto recipes=workspace_->recipes();
@@ -97,11 +114,22 @@ void CommunicationPanel::refreshRecipeList(){
     }
     const int restore=recipes_->findData(selected);if(restore>=0)recipes_->setCurrentIndex(restore);
 }
+void CommunicationPanel::refreshClients(){
+    if(!workspace_)return;
+    const auto list=workspace_->clients();
+    QStringList signature;for(const auto& client:list)signature<<client.peer.toString(QUuid::WithoutBraces)+"|"+client.epoch.toString(QUuid::WithoutBraces)+"|"+(client.active?"1":"0");
+    const auto next=signature.join('\n');
+    if(next!=clientSignature_){
+        clientSignature_=next;QSignalBlocker block(clients_);clients_->setRowCount(list.size());int active=0;
+        for(int n=0;n<list.size();++n){const auto& client=list[n];if(client.active)++active;const QStringList values{QString("İstemci %1").arg(n+1),client.peer.toString(QUuid::WithoutBraces),client.epoch.toString(QUuid::WithoutBraces),client.active?"ETKİN":"emekli"};for(int c=0;c<values.size();++c){auto* item=clients_->item(n,c);if(!item){item=new QTableWidgetItem;clients_->setItem(n,c,item);}item->setText(values[c]);item->setToolTip(values[c]);}}
+        clientStatus_->setText(active==1?"Tek etkin kontrol kimliği kayıtlı.":active==0?"Etkin istemci yok; 'Yetkili istemci kaydet' gerekir.":"Birden fazla etkin istemci; HELLO CONTRACT_MISMATCH ile kapanır. Epoch yenile veya katalog onarımı gerekir.");
+    }
+}
 void CommunicationPanel::refresh(){
     if(!workspace_)return;
     try{
         workspace_->poll();listener_->setText(workspace_->listener());setupStatus_->setText(workspace_->setupStatus());
-        refreshRecipeList();publicationStatus_->setText(workspace_->publicationStatus());
+        refreshRecipeList();refreshClients();publicationStatus_->setText(workspace_->publicationStatus());
         QUuid selected;const auto previous=stations_->currentRow();if(previous>=0 && previous<rows_.size())selected=rows_[previous].station.id;
         auto next=workspace_->stations();QSignalBlocker block(stations_);rows_=std::move(next);stations_->setRowCount(rows_.size());int restore=-1;
         for(int n=0;n<rows_.size();++n){const auto& v=rows_[n];const QStringList values{v.station.name+QString(" (#%1)").arg(v.station.key),CommunicationWorkspace::modeName(v.runtime.mode),v.automatic?"ON":"OFF",v.snapshot?v.snapshot->selection.recipe.name+" / "+v.snapshot->selection.revision.toString(QUuid::WithoutBraces):"Seçilmedi",v.cameraOwners,v.runtime.deliveryPending?"PENDING ACK":"Pending yok",v.runtime.health.isEmpty()?v.unavailable:v.runtime.health};

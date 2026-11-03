@@ -10,9 +10,13 @@ public:
     void bind(CommunicationWorkspace*);
     void refresh();
     std::function<QString()> legacyHistory;
+    // Testable file pickers; the defaults are QFileDialog. Empty result cancels.
+    std::function<QString(const QString&,const QString&,const QString&)> saveFile;
+    std::function<QString(const QString&,const QString&)> openFile;
 private:
     void selection();
     void refreshRecipeList();
+    void refreshClients();
     void sourceSettings(bool create);
     void command(const QString&);
     void migration(const QString&);
@@ -28,6 +32,10 @@ private:
     QCheckBox* remote_;
     QComboBox* recipes_;
     QString recipeSignature_;
+    QTableWidget* clients_;
+    QLabel* clientStatus_;
+    QLineEdit* clientLabel_;
+    QString clientSignature_{"<unset>"};
     QPushButton *run_,*automatic_,*manual_,*stop_;
     std::optional<CommunicationMigrationInput> reviewedInput_;
     QString reviewedRequest_,workspacePath_,packagePath_;

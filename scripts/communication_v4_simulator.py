@@ -10,9 +10,42 @@ import uuid
 from pathlib import Path
 
 CONTRACT = uuid.UUID('00434634-0002-4000-8000-202610290001').bytes
+PROFILE_SCHEMA = 'visionflow.communication-client-profile/1'
+PROFILE_KEYS = {'schema', 'label', 'installation', 'peer', 'epoch', 'address',
+                'port', 'contractRevision'}
 ZERO = bytes(16)
 REQUESTS = {1, 2, 3, 4, 5, 6, 10, 11, 12, 20, 21, 22, 23, 24, 25, 30}
 RESPONSES = {101, 102, 103, 110, 111, 112, 113, 190, 191}
+
+
+def load_profile(path):
+    """Read the product-exported test profile. Strict; no discovery fallback."""
+    raw = path.read_bytes()
+    if not raw or len(raw) > 64 * 1024:
+        raise ValueError('client profile size')
+    document = json.loads(raw.decode('utf-8'))
+    if not isinstance(document, dict) or set(document) != PROFILE_KEYS:
+        raise ValueError('client profile has unknown or missing fields')
+    if document['schema'] != PROFILE_SCHEMA:
+        raise ValueError('client profile schema')
+    if not isinstance(document['label'], str) or not 1 <= len(document['label'].encode('utf-8')) <= 64:
+        raise ValueError('client profile label')
+    if not isinstance(document['address'], str) or not document['address'] or len(document['address']) > 255:
+        raise ValueError('client profile address')
+    port = document['port']
+    if isinstance(port, bool) or not isinstance(port, int) or not 1 <= port <= 65535:
+        raise ValueError('client profile port')
+    for field in ('installation', 'peer', 'epoch', 'contractRevision'):
+        text = document[field]
+        if not isinstance(text, str):
+            raise ValueError('client profile UUID field type')
+        value = uuid.UUID(text)
+        if value.int == 0 or text != value.hex:
+            raise ValueError('client profile UUID')
+    if uuid.UUID(document['contractRevision']).bytes != CONTRACT:
+        raise ValueError('client profile contract revision')
+    return document
+
 
 
 def u32(data, offset):
@@ -161,17 +194,28 @@ class Peer:
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--host', default='127.0.0.1')
-    parser.add_argument('--port', type=int, default=5000)
-    parser.add_argument('--peer', required=True, help='locally enrolled peer UUID')
-    parser.add_argument('--epoch', required=True, help='locally enrolled persistent epoch UUID')
+    parser.add_argument('--host', help='listener address; profile address is used when omitted')
+    parser.add_argument('--port', type=int, help='listener port; profile port is used when omitted')
+    parser.add_argument('--profile', type=Path, help='product-exported test client profile JSON')
+    parser.add_argument('--peer', help='locally enrolled peer UUID; overrides the profile')
+    parser.add_argument('--epoch', help='locally enrolled persistent epoch UUID; overrides the profile')
     parser.add_argument('--plan', type=Path, help='JSON list: kind, station/recipe/template/activation, body_hex, request decimal string, expect_kind, ack')
     parser.add_argument('--log', type=Path, required=True, help='JSONL protocol/failure log')
     args = parser.parse_args()
+    profile = load_profile(args.profile) if args.profile else None
+    peer_id = args.peer or (profile['peer'] if profile else None)
+    epoch_id = args.epoch or (profile['epoch'] if profile else None)
+    if not peer_id or not epoch_id:
+        parser.error('--peer and --epoch are required unless --profile provides them')
+    host = args.host or (profile['address'] if profile else '127.0.0.1')
+    port = args.port or (profile['port'] if profile else 5000)
     args.log.parent.mkdir(parents=True, exist_ok=True)
     with args.log.open('w', encoding='utf-8') as log:
-        peer = Peer(args.host, args.port, args.peer, args.epoch, log)
+        peer = Peer(host, port, peer_id, epoch_id, log)
         try:
+            if profile:
+                peer.event('profile', label=profile['label'], installation=profile['installation'],
+                           schema=profile['schema'])
             peer.connect()
             operations = json.loads(args.plan.read_text(encoding='utf-8')) if args.plan else [{'kind': 2, 'expect_kind': 102}]
             for operation in operations:

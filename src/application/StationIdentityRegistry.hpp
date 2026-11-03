@@ -20,6 +20,11 @@ public:
     void retire(const QUuid& expectedRevision, std::uint32_t key);
     // Caller must establish drained rollover. This port records history only, not admission permission.
     void enrollEpoch(const QUuid& expectedRevision, const QUuid& peer, const QUuid& epoch);
+    // Product-level controlling identity: at most one active peer/epoch exists.
+    // Enrollment refuses a second active identity; rollover retires the previous
+    // active record in the same revision so history is never lost.
+    void enrollControllingEpoch(const QUuid& expectedRevision, const QUuid& peer, const QUuid& epoch);
+    void replaceControllingEpoch(const QUuid& expectedRevision, const QUuid& peer, const QUuid& epoch);
     void retireEpoch(const QUuid& expectedRevision, const QUuid& peer, const QUuid& epoch);
 private:
     void update(const QUuid&, const std::function<void(IdentityCatalogue&)>&);

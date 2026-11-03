@@ -8,9 +8,20 @@ W7'den bağımsız uygulanır. Bu araç fiziksel robot hareketi göndermez.
 
 ## Gerçek listener'a bağlanma
 
-Yerel katalogda önceden enrolled controlling peer/epoch ve enabled V4 listener
-gerekir. Simulator kimlik/epoch oluşturmaz, discovery üzerinden üretim yetkisi
-açmaz. Remote Enable operatör tarafından ayrıca açılır; restart Auto başlatmaz.
+Ürünün Communication → İstemciler → **Test profilini dışa aktar** çıktısı tercih edilen
+yoldur (VF-05). Profil dinleme adresi/portu, installation, tek etkin peer/epoch ve
+sözleşme revizyonunu taşır; credential değildir:
+
+```powershell
+python scripts/communication_v4_simulator.py --profile build/vf-05/client.json --log build/comm4/manual/status.jsonl
+```
+
+`--host/--port` ve `--peer/--epoch` verilmezse profil değerleri kullanılır; açık
+değerler profil değerlerini geçersiz kılar (yalnız elle sınama). Profil yoksa yerel katalogda
+önceden enrolled controlling peer/epoch ve enabled V4 listener gerekir; aşağıdaki
+açık biçim bu elle sınama yoludur. Simulator kimlik/epoch oluşturmaz, discovery
+üzerinden üretim yetkisi açmaz. Remote Enable operatör tarafından ayrıca açılır;
+restart Auto başlatmaz.
 
 ```powershell
 python scripts/communication_v4_simulator.py --host 127.0.0.1 --port 5000 --peer <enrolled-UUID> --epoch <enrolled-epoch-UUID> --log build/comm4/manual/status.jsonl

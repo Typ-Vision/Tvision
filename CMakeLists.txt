@@ -143,7 +143,7 @@ target_sources(visionflow_acquisition PRIVATE src/application/StationControlServ
 target_sources(visionflow_acquisition PRIVATE src/application/StationDeliveryLedger.cpp)
 target_sources(visionflow_acquisition PRIVATE src/application/StationDeliveryScheduler.cpp)
 target_sources(visionflow_acquisition PRIVATE src/application/CommunicationMigration.cpp)
-target_sources(visionflow_acquisition PRIVATE src/application/MachineSetup.cpp src/application/StationSourceSetup.cpp src/application/CommunicationWorkspace.cpp src/application/RobotCalibrationWorkspace.cpp)
+target_sources(visionflow_acquisition PRIVATE src/application/MachineSetup.cpp src/application/StationSourceSetup.cpp src/application/CommunicationWorkspace.cpp src/application/RobotCalibrationWorkspace.cpp src/application/CommunicationClientProfiles.cpp)
 target_sources(visionflow_acquisition PRIVATE src/application/CommunicationStationComposition.cpp)
 target_compile_definitions(visionflow_acquisition PRIVATE
   VISIONFLOW_DIAGNOSTIC_BUILD_TYPE="$<CONFIG>"
@@ -239,6 +239,12 @@ if(BUILD_TESTING)
   add_executable(communication_workspace_test tests/communication_workspace_test.cpp)
   target_link_libraries(communication_workspace_test PRIVATE visionflow_acquisition)
   add_test(NAME communication_workspace_contract COMMAND communication_workspace_test)
+  add_executable(communication_clients_test tests/communication_clients_test.cpp)
+  target_link_libraries(communication_clients_test PRIVATE visionflow_acquisition)
+  target_compile_definitions(communication_clients_test PRIVATE
+    VISIONFLOW_PYTHON="${Python3_EXECUTABLE}"
+    VISIONFLOW_SIMULATOR="${CMAKE_SOURCE_DIR}/scripts/communication_v4_simulator.py")
+  add_test(NAME communication_clients_contract COMMAND communication_clients_test)
   add_executable(station_recipe_selection_test tests/station_recipe_selection_test.cpp)
   target_link_libraries(station_recipe_selection_test PRIVATE visionflow_acquisition)
   add_test(NAME station_recipe_selection_contract COMMAND station_recipe_selection_test)

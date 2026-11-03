@@ -16,6 +16,8 @@
 #include <QScrollBar>
 #include <QKeyEvent>
 #include <QJsonDocument>
+#include <QJsonObject>
+#include <QFile>
 #include <QTextStream>
 #include <QTcpSocket>
 #include <QElapsedTimer>
@@ -55,6 +57,26 @@ int main(int argc,char** argv){QApplication app(argc,argv);app.setStyle("Fusion"
     auto button=[&](const char* name){panel.findChild<QPushButton*>(name)->click();};
     check(table->rowCount()==3,"All three stations visible concurrently");
     check(panel.findChild<QWidget*>("robotCalibrationWorkspace") && panel.findChild<QLabel*>("robotCalibrationReadiness")->text().contains("PHYSICAL BLOCKED"),"Robot calibration belongs to single Communication workspace and physical gate stays closed");
+    // VF-05: controlling client registration, test-profile export/verify and epoch rollover.
+    auto* clientTable=panel.findChild<QTableWidget*>("communicationClients");auto* message=panel.findChild<QLabel*>("communicationMessage");
+    check(clientTable->rowCount()==0 && panel.findChild<QLabel*>("clientStatus")->text().contains("Etkin istemci yok"),"No client on the fresh machine, with the required action shown");
+    button("clientEnroll");panel.refresh();check(workspace.clients().size()==1 && workspace.clients().first().active && clientTable->rowCount()==1,"Registered client visible in the panel");
+    button("clientEnroll");check(message->text().contains("İkinci etkin kimlik") && workspace.clients().size()==1,"Second active client rejected with the required action");
+    const auto clientFile=root.filePath("client-profile.json");
+    panel.saveFile=[&](const QString&,const QString&,const QString&){return clientFile;};button("clientExport");
+    check(QFile::exists(clientFile),"Test profile exported from the panel");
+    QFile profileFile(clientFile);check(profileFile.open(QIODevice::ReadOnly),"Read exported profile");const auto exported=QJsonDocument::fromJson(profileFile.readAll()).object();profileFile.close();
+    check(exported["installation"].toString()==QString::fromLatin1(identities.load().installation.toRfc4122().toHex()),"Export carries the live installation");
+    panel.openFile=[&](const QString&,const QString&){return clientFile;};button("clientVerify");
+    check(message->text().contains("Profil doğrulandı"),"Exported profile verifies locally");
+    auto foreign=exported;foreign["installation"]=QString::fromLatin1(QUuid::createUuid().toRfc4122().toHex());const auto foreignFile=root.filePath("foreign-profile.json");
+    {QFile f(foreignFile);check(f.open(QIODevice::WriteOnly|QIODevice::Truncate),"Write foreign profile");f.write(QJsonDocument(foreign).toJson(QJsonDocument::Compact));}
+    panel.openFile=[&](const QString&,const QString&){return foreignFile;};button("clientVerify");
+    check(message->text().contains("başka makine"),"Foreign installation profile rejected in the panel");
+    const auto oldEpoch=workspace.clients().first().epoch;button("clientRollover");panel.refresh();
+    check(workspace.clients().size()==2 && !workspace.clients()[0].active && workspace.clients()[1].active && workspace.clients()[1].epoch!=oldEpoch,"Epoch rollover keeps history and one active identity");
+    panel.openFile=[&](const QString&,const QString&){return clientFile;};button("clientVerify");
+    check(message->text().contains("emekli"),"Retired profile rejected in the panel");
     QTcpSocket peer;peer.connectToHost(QHostAddress::LocalHost,profile.port);until([&]{return peer.state()==QAbstractSocket::ConnectedState && server.peer();});panel.refresh();
     check(listener->text().contains("CONNECTED") && table->item(0,1)->text()=="STOPPED" && table->item(0,2)->text()=="OFF","Connected stopped never implies production readiness");
     const auto generation=server.listenerGeneration();
@@ -64,7 +86,7 @@ int main(int argc,char** argv){QApplication app(argc,argv);app.setStyle("Fusion"
     bool stale=false;try{workspace.command(ids[0],QUuid::createUuid(),"run");}catch(...){stale=true;}check(stale,"Stale displayed activation cannot Run");
     // A real durable unresolved control intent makes pending visible and blocks
     // Run/Auto. Stop stays available. No artificial GUI pending flag is used.
-    auto cat=identities.load();const auto peerId=QUuid::createUuid(),epoch=QUuid::createUuid();registry.enrollEpoch(cat.revision,peerId,epoch);
+    auto cat=identities.load();const auto client=workspace.clients().last();const auto peerId=client.peer,epoch=client.epoch;check(workspace.clients().size()==2,"Pending fixture uses the single active controlling identity");
     CommunicationV4Frame request;request.header={6,snapshots[1]->station.key,1,QUuid::createUuid(),peerId,epoch,snapshots[1]->selection.recipeKey,saved[snapshots[1]->selection.recipeKey].templateKey,snapshots[1]->activation};request.body=QByteArray(384,0);
     auto accepted=CommunicationV4Frame{request.header,QByteArray(896,0)};accepted.header.kind=110;CommunicationV4Codec::putUInt32(accepted.body,100,1);CommunicationV4Codec::putUInt32(accepted.body,824,6);
     V4RequestIdentity key{cat.installation,peerId,epoch,ids[1],1};check(ledger.reserve({key,{request,accepted,CommunicationV4Codec::requestFingerprint(CommunicationV4Codec::encode(request,V4Direction::Request)),false},true})==0,"Durable pending fixture");

@@ -67,6 +67,14 @@ int main(int argc,char** argv) {
             registry.bind(c.revision,{CatalogueCategory(category),id(),category==1 || category==4?QUuid{}:id(),{}},"Category");c=store.load();
         }
         check(store.load().entries.size()==18,"All 13 frozen categories supported");
+        // Product controlling identity: enrollment refuses a second active epoch;
+        // rollover retires the previous active record atomically and keeps history.
+        c=store.load();const auto activePeer=c.epochs.last().peer;const auto rolloverEpoch=id();
+        rejects([&]{registry.enrollControllingEpoch(c.revision,id(),id());});
+        registry.replaceControllingEpoch(c.revision,activePeer,rolloverEpoch);c=store.load();
+        check(c.epochs.size()==3 && c.epochs[0].retired && c.epochs[1].retired && !c.epochs[2].retired && c.epochs[2].peer==activePeer && c.epochs[2].epoch==rolloverEpoch,"Atomic controlling rollover");
+        rejects([&]{registry.replaceControllingEpoch(c.revision,activePeer,rolloverEpoch);});
+        rejects([&]{registry.enrollControllingEpoch(c.revision,id(),id());});
         auto raceRevision=c.revision;QProcess writer1,writer2;
         const QStringList raceArgs{"--race",root.filePath("registry.json"),raceRevision.toString()};
         writer1.start(app.applicationFilePath(),raceArgs);writer2.start(app.applicationFilePath(),raceArgs);

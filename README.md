@@ -6,8 +6,8 @@ UI algoritma veya donanım SDK'sını doğrudan çağırmaz.
 
 **Güncel görev, son doğrulama ve açık engeller [devir özetindedir](docs/progress.md).**
 
-Birleşik kamera/7×7 kalibrasyon ve Runtime sürümü `main` dalındadır.
-[Başlatıcı ve fiziksel restart devir rehberi](docs/architecture/camera-integration-handoff.md).
+Birleşik kamera/7×7 kalibrasyon ve Runtime `main` dalındadır
+([başlatıcı/restart devri](docs/architecture/camera-integration-handoff.md)).
 
 ## Uygulanan kapsam
 
@@ -23,7 +23,8 @@ Birleşik kamera/7×7 kalibrasyon ve Runtime sürümü `main` dalındadır.
   kare isteği ortak worker/provider yolundadır. Industrial Load çevrimdışı beyanı
   gösterir. Desteklenen Opto/OECS kamera ayarları gerçek readback ile okunup
   kaydedilir; bu işlem görüntü edinim izninden bağımsızdır. Industrial Run
-  tam native kabul ister. Native production kapalıdır; mevcut COE-U için normal kamera komutları OECS edinim yolunu seçer.
+  tam native kabul ister; native production kapalıdır ve COE-U normal
+  komutları OECS edinim yolunu seçer.
 
 Editor reçetesini açık düzenleme komutuyla açmak bağlı kameraları arka planda
 hazırlar; Görüntü al/Run Flow aynı bağlantıyı kullanır. Save bağlantıyı korur;
@@ -96,12 +97,13 @@ OECS / GenTL probe komutları, sandbox sınırları ve kanıt bağlantıları
    Load/Run hazırlığı tek başına sonuç değildir. Stop → yeniden Load sürümü değiştirir.
 
 Communication → İstasyon ekle: ad/kamera/test görüntüsünü kaydet ve yeniden başlat.
-[Kalıcı kaynak ayarları ve sınırlar](docs/architecture/communication-v4/communication-workspace.md#vf-02--istasyonun-kalıcı-dosya-kaynağı).
+İstemciler → Yetkili istemci kaydet → Test profilini dışa aktar (tek etkin
+peer/epoch); Epoch yenile eskisini emekliye ayırır.
+[VF-02/VF-05 sınırları](docs/architecture/communication-v4/communication-workspace.md).
 
 Communication tek V4 listener, station Run/Auto/Stop, aktif revision, kamera
-sahibi ve pending ACK durumunu gösterir. Restart Run/Auto açmaz;
-Remote Enable açılışta kapalıdır. V2/V3 sayfaları kaldırıldı; geçmiş salt
-okunurdur. Image File yolu doğrulandı; native/robot kabulü açık.
+sahibi ve pending ACK durumunu gösterir. Restart Run/Auto açmaz; Remote Enable
+açılışta kapalıdır. V2/V3 sayfaları kaldırıldı; geçmiş salt okunurdur.
 [Kullanım/migration](docs/architecture/communication-v4/communication-workspace.md);
 [kabul](docs/architecture/communication-v4/acceptance-comm4-26.md).
 

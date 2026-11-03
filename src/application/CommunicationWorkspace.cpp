@@ -1,9 +1,12 @@
 #include "CommunicationWorkspace.hpp"
+#include "CommunicationClientProfiles.hpp"
+#include "StationIdentityRegistry.hpp"
 #include "MachineSetup.hpp"
 #include "StationSourceSetup.hpp"
 #include <QJsonDocument>
 #include <QJsonArray>
 #include <QFileInfo>
+#include <algorithm>
 
 namespace visionflow {
 CommunicationWorkspace::CommunicationWorkspace(CommunicationServerLifecycle& s,const CommunicationServerProfiles& p,StationIdentityStore& i):server_(s),profiles_(p),identities_(i){}
@@ -53,6 +56,52 @@ QString CommunicationWorkspace::machineDirectory() const {
     return QFileInfo(machineWorkspace_).absolutePath();
 }
 QString CommunicationWorkspace::setupStatus() const {owner();return MachineSetup(machineDirectory()).status();}
+QVector<CommunicationClientView> CommunicationWorkspace::clients() const {
+    owner();const auto cat=identities_.load();validateIdentityCatalogue(cat);
+    QVector<CommunicationClientView> result;
+    for(const auto& e:cat.epochs)result.append({e.peer,e.epoch,!e.retired});
+    return result;
+}
+CommunicationClientView CommunicationWorkspace::enrollClient(){
+    owner();const auto cat=identities_.load();validateIdentityCatalogue(cat);
+    if(!drained())throw std::runtime_error("Önce bütün station Runtime'larını Stop/drain yapın");
+    if(remoteEnabled())throw std::runtime_error("Remote Enable kapatılmadan istemci kaydı değiştirilemez");
+    if(ledger_)for(const auto& r:ledger_->recovery())if(!r.value.acknowledged)
+        throw std::runtime_error("PENDING ACK: bekleyen teslim varken istemci kimliği değiştirilemez; exact ACK / reconcile gerekir");
+    if(std::count_if(cat.epochs.cbegin(),cat.epochs.cend(),[](const auto& e){return !e.retired;})!=0)
+        throw std::runtime_error("Etkin istemci var. İkinci etkin kimlik kaydedilemez; önce 'Epoch yenile' ile mevcut istemciyi emekliye ayırın.");
+    const QUuid peer=QUuid::createUuid(),epoch=QUuid::createUuid();
+    StationIdentityRegistry(identities_).enrollControllingEpoch(cat.revision,peer,epoch);
+    return {peer,epoch,true};
+}
+CommunicationClientView CommunicationWorkspace::rolloverClient(){
+    owner();const auto cat=identities_.load();validateIdentityCatalogue(cat);
+    if(!drained())throw std::runtime_error("Önce bütün station Runtime'larını Stop/drain yapın");
+    if(remoteEnabled())throw std::runtime_error("Remote Enable kapatılmadan epoch değiştirilemez");
+    if(ledger_)for(const auto& r:ledger_->recovery())if(!r.value.acknowledged)
+        throw std::runtime_error("PENDING ACK: bekleyen teslim varken epoch değiştirilemez; exact ACK / reconcile gerekir");
+    const PeerEpochIdentity* active=nullptr;
+    for(const auto& e:cat.epochs){if(!e.retired){if(active)throw std::runtime_error("Birden fazla etkin istemci; önce katalog onarımı gerekir");active=&e;}}
+    if(!active)throw std::runtime_error("Etkin istemci yok; önce 'Yetkili istemci kaydet' kullanın");
+    const auto peer=active->peer;const QUuid epoch=QUuid::createUuid();
+    StationIdentityRegistry(identities_).replaceControllingEpoch(cat.revision,peer,epoch);
+    return {peer,epoch,true};
+}
+QByteArray CommunicationWorkspace::exportClientProfile(const QString& label) const {
+    owner();const auto cat=identities_.load();validateIdentityCatalogue(cat);
+    const auto listener=profiles_.load();
+    if(!listener)throw std::runtime_error("Önce listener profilini kaydedin; test profili bağlantı bilgisi taşır");
+    const PeerEpochIdentity* active=nullptr;int count=0;
+    for(const auto& e:cat.epochs)if(!e.retired){++count;active=&e;}
+    if(count!=1 || !active)throw std::runtime_error("Test profili için tek etkin istemci gerekir; önce istemci kaydedin");
+    CommunicationClientProfile profile{label,cat.installation,active->peer,active->epoch,
+        CommunicationPeerSessionService::contractRevision(),listener->address,listener->port};
+    return exportCommunicationClientProfile(cat,profile);
+}
+void CommunicationWorkspace::checkClientProfile(const QByteArray& bytes) const {
+    owner();const auto cat=identities_.load();validateIdentityCatalogue(cat);
+    validateCommunicationClientProfile(readCommunicationClientProfile(bytes),cat);
+}
 void CommunicationWorkspace::startSetup(){owner();if(restartRequired_)throw std::runtime_error("Migration sonrası yeniden başlatın.");MachineSetup(machineDirectory()).start();if(setupCompleted_)setupCompleted_();}
 void CommunicationWorkspace::saveStationSource(const QUuid& expected,const QUuid& station,const QString& name,const QUuid& camera,const QString& cameraName,const QString& path){
     owner();if(!drained() || remoteEnabled())throw std::runtime_error("Önce Stop/drain yapın ve Remote Enable kapatın.");
