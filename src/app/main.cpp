@@ -30,7 +30,7 @@ int main(int argc, char* argv[]) {
     const bool endpointsOnly=app.arguments().contains("--endpoints-smoke");
     const bool resultOnly=app.arguments().contains("--result-smoke");
     const bool assignmentsOnly=app.arguments().contains("--assignments-smoke");
-    const bool variablesOnly=app.arguments().contains("--variables-smoke");
+    const bool vf03Only=app.arguments().contains("--vf03-smoke");    const bool variablesOnly=app.arguments().contains("--variables-smoke");
     const bool roiOnly=app.arguments().contains("--roi-smoke");
     const bool multiRuntimeOnly=app.arguments().contains("--multi-source-runtime-smoke");
     const bool recipeFieldsOnly=app.arguments().contains("--recipe-fields-smoke");
@@ -49,9 +49,16 @@ int main(int argc, char* argv[]) {
     const bool failureOnly=app.arguments().contains("--runtime-failure-smoke");
     const bool visibilityOnly=app.arguments().contains("--runtime-visibility-smoke");
     const bool overlaysOnly=app.arguments().contains("--runtime-overlays-smoke");
-    const bool smoke = flowRemovalOnly || publicationOnly || endpointsOnly || resultOnly || assignmentsOnly || variablesOnly || overlaysOnly || visibilityOnly || restartOnly || failureOnly || responsivenessOnly || runtimeCamerasOnly || editorCamerasOnly || roiOnly || app.arguments().contains("--smoke-test") || circleOnly || geometryOnly || poseOnly || usabilityOnly || systemOnly || multiOnly || multiRuntimeOnly || experimentalOnly || recipeFieldsOnly;
+    const bool smoke = flowRemovalOnly || publicationOnly || endpointsOnly || resultOnly || assignmentsOnly || variablesOnly || overlaysOnly || visibilityOnly || restartOnly || failureOnly || responsivenessOnly || runtimeCamerasOnly || editorCamerasOnly || roiOnly || app.arguments().contains("--smoke-test") || circleOnly || geometryOnly || poseOnly || usabilityOnly || systemOnly || multiOnly || multiRuntimeOnly || experimentalOnly || recipeFieldsOnly || vf03Only;
     const QDir buildDir(smoke ? qEnvironmentVariable("VISIONFLOW_TEST_ARTIFACTS",QCoreApplication::applicationDirPath()):QCoreApplication::applicationDirPath());
     if(smoke)QDir().mkpath(buildDir.absolutePath());
+    // The VF-03 UI acceptance always starts from an empty machine directory inside
+    // the test artifacts; real user data outside build/ is never touched.
+    if(vf03Only){
+        QDir(buildDir.filePath("v4-machine")).removeRecursively();
+        QFile::remove(buildDir.filePath("ui-smoke.ini"));
+        for(const auto& name:buildDir.entryList({"vf03-*"},QDir::Dirs))QDir(buildDir.filePath(name)).removeRecursively();
+    }
     const QDir communicationDirectory(smoke ? buildDir.filePath("v4-machine") : qEnvironmentVariable("VISIONFLOW_USER_DATA_DIRECTORY",QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation)));
     QJsonObject communicationSelection;QString selectionError;
     try{communicationSelection=visionflow::CommunicationStationComposition::restoreSelection(communicationDirectory.absolutePath());}
@@ -87,6 +94,7 @@ int main(int argc, char* argv[]) {
         if(endpointsOnly){bool valid=false;try{valid=window.verifyEndpointProfiles(buildDir.absolutePath());}catch(const std::exception& e){QTextStream(stderr)<<e.what()<<'\n';}window.close();app.exit(valid?0:1);return;}
         if(resultOnly){bool valid=false;try{valid=window.verifyResultUi(buildDir.absolutePath());}catch(const std::exception& e){QTextStream(stderr)<<e.what()<<'\n';}window.close();app.exit(valid?0:1);return;}
         if(assignmentsOnly){bool valid=false;try{valid=window.verifyAssignmentUi(buildDir.absolutePath());}catch(const std::exception& e){QTextStream(stderr)<<e.what()<<'\n';}window.close();app.exit(valid?0:1);return;}
+        if(vf03Only){bool valid=false;try{valid=window.verifyVf03Publication(buildDir.absolutePath());}catch(const std::exception& e){QTextStream(stderr)<<e.what()<<'\n';}QTextStream(stdout)<<(valid?"PASS":"FAIL")<<": VF-03 publish data editor → machine catalogue → Communication recipe list\n";window.close();app.exit(valid?0:1);return;}
         if(variablesOnly){bool valid=false;try{valid=window.verifyVariableCatalog(buildDir.absolutePath());}catch(const std::exception& e){QTextStream(stderr)<<e.what()<<'\n';}window.close();app.exit(valid?0:1);return;}
         if(overlaysOnly){bool valid=false;try{valid=window.verifyRuntimeOverlays(buildDir.absolutePath());}catch(const std::exception& e){QTextStream(stderr)<<e.what()<<'\n';}window.close();app.exit(valid?0:1);return;}
         if(visibilityOnly){QFontDatabase::addApplicationFont(QDir(qEnvironmentVariable("WINDIR", "C:/Windows")).filePath("Fonts/segoeui.ttf"));bool valid=false;try{valid=window.verifyRuntimeVisibility(buildDir.absolutePath());}catch(const std::exception& e){QTextStream(stderr)<<e.what()<<'\n';}window.close();app.exit(valid ? 0:1);return;}

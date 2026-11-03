@@ -33,13 +33,12 @@ Runtime Load çevrimdışıdır. Run bağlı kamera kümesini arka planda hazır
 tümü hazır olunca Running olur. Tek çevrimler aynı bağlantıları kullanır.
 Stop gerçek kamera kapanışını bekler; disk kayıt retry kamerayı tutmaz.
 
-Kalibrasyon listesi bağlantı açmaz. Canlı sihirbaz hedef kamerayı arka planda
-hazırlar; çekimler bağlantıyı paylaşır. Dosyaya geçiş, Stop/İptal ve başarılı
-Kaydet ve kullan bağlantıyı kapatır; çıkış gerçek kapanışı bekler.
+Kalibrasyon listesi bağlantı açmaz. Canlı sihirbaz kamerayı hazırlar;
+çekimler bağlantıyı paylaşır. Dosya, Stop, İptal ve Kaydet/kullan kapanır.
 
 Hazırlık/keşif üretim kabulü değildir; gerçek sonuç olmadan PASS, skor veya
 robot pose gösterilmez. Robot ekranları hazırlıktır. Yazılım testleri fiziksel
-kamera/ölçüm, PLC/robot, lens, native DPI, CUDA veya dağıtım kabulünü kapatmaz.
+kamera, PLC/robot, lens, DPI, CUDA ve dağıtım kabulünü kapatmaz.
 
 ## Yerel derleme ve test — PowerShell
 
@@ -90,6 +89,8 @@ OECS / GenTL probe komutları, sandbox sınırları ve kanıt bağlantıları
    Eksik/atlanan kaynak önceki OK sonucunu korumaz. Editor dışarı göndermez.
    Properties → Çıkışlar sonuç listesinde gösterilecek portları seçer; tercih yerel
    INI’de saklanır. Viewer/overlay ve Logs/CSV/PLC verisi bu seçimden bağımsızdır.
+   İstasyonda yayımla kaydedilmiş reçeteden değişmez revision üretir; yükleme VF-04
+   işidir ([VF-03](docs/architecture/communication-v4/communication-workspace.md#vf-03--değişmez-reçete-yayımlama)).
 4. Kaydedilmiş reçete için Load Recipe → Kaynağı doğrula → Run → Tek çevrim; sonuçlar Logs/CSV'de.
    Doğrulama kayıtlı metrik kaynak iznini yeni kareyle denetler; Run başlatmaz.
    Load/Run hazırlığı tek başına sonuç değildir. Stop → yeniden Load sürümü değiştirir.

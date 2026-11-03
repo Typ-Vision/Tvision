@@ -3,7 +3,9 @@
 #include "StationExecutionRegistry.hpp"
 #include "StationRuntimeAdmissionBoundary.hpp"
 #include "persistence/StationActivationStore.hpp"
+#include "PublicationPublisher.hpp"
 #include <QDir>
+#include <QDateTime>
 
 namespace visionflow {
 // The normal entry point and software integration tests use this same owner.
@@ -17,6 +19,10 @@ public:
     void attach(CommunicationServerLifecycle&,CommunicationWorkspace&);
     void poll();
     void refreshTemplates();
+    // Immutable publication catalogue is discovered from the machine directory;
+    // it never creates or changes an activation.
+    void refreshPublished();
+    QString publicationStatus() const{return publicationStatus_;}
     static QJsonObject restoreSelection(const QString& machineDirectory);
 private:
     struct Station {
@@ -44,6 +50,10 @@ private:
     std::unique_ptr<StationRuntimeAdmissionBoundary> admissionBoundary_;
     std::unique_ptr<StationAdmissionService> admission_;
     QVector<V4RequestIdentity> completed_;
+    QMap<quint32,PublishedRecipe> published_;
+    QString publicationStatus_;
+    QDateTime publishedStamp_;
+    qint64 publishedSize_=-1;
     QString error_;
     bool remoteEnabled_=false;
 };

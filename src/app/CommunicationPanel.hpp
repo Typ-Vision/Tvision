@@ -12,13 +12,14 @@ public:
     std::function<QString()> legacyHistory;
 private:
     void selection();
+    void refreshRecipeList();
     void sourceSettings(bool create);
     void command(const QString&);
     void migration(const QString&);
     RobotCalibrationPanel* calibration_;
     CommunicationWorkspace* workspace_=nullptr;
     QVector<CommunicationStationView> rows_;
-    QLabel *listener_,*message_,*detail_,*setupStatus_;
+    QLabel *listener_,*message_,*detail_,*setupStatus_,*publicationStatus_;
     QTableWidget* stations_;
     QPlainTextEdit *history_,*migrationReport_;
     QLineEdit *address_,*migrationRequest_;
@@ -26,6 +27,7 @@ private:
     QCheckBox* enabled_;
     QCheckBox* remote_;
     QComboBox* recipes_;
+    QString recipeSignature_;
     QPushButton *run_,*automatic_,*manual_,*stop_;
     std::optional<CommunicationMigrationInput> reviewedInput_;
     QString reviewedRequest_,workspacePath_,packagePath_;

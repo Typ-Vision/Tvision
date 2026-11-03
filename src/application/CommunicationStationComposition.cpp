@@ -1,5 +1,6 @@
 #include "CommunicationStationComposition.hpp"
 #include "FixedSlotPublication.hpp"
+#include "PublicationPublisher.hpp"
 #include "persistence/ProjectRepository.hpp"
 #include "persistence/StationIdentityStore.hpp"
 #include "domain/ToolRegistry.hpp"
@@ -10,6 +11,7 @@
 #include <QCryptographicHash>
 #include <QSaveFile>
 #include <algorithm>
+#include <QDateTime>
 
 namespace visionflow {
 namespace {
@@ -43,6 +45,7 @@ CommunicationStationComposition::CommunicationStationComposition(QString machine
         auto addTemplate=[&](const QString& path){const auto publication=PublicationTemplate::fromJson(QJsonDocument::fromJson(read(path)).object());templates_.insert(key(catalogue,CatalogueCategory::TemplateRevision,publication.id,publication.revision),publication);};
         if(selection_.value("mode")=="v4"){selectedBytes(selection_,"template");addTemplate(selection_["template"].toString());selectedBytes(selection_,"template");}
         for(const auto& file:QDir(directory_.filePath("publication-templates-v4")).entryList({"*.json"},QDir::Files))addTemplate(directory_.filePath("publication-templates-v4/"+file));
+        refreshPublished();
         auto save=[&](const StationRecipeSelection& choice){
             const auto a=recipePublicationAssignments(choice.recipe.definition);if(!a)return;
             // Historical selections stay in the archive, but retired recipe,
@@ -102,13 +105,67 @@ void CommunicationStationComposition::refreshTemplates(){
         added.insert(key(catalogue,CatalogueCategory::TemplateRevision,t.id,t.revision),t);
     }
     for(auto i=added.cbegin();i!=added.cend();++i)templates_.insert(i.key(),i.value());
+    refreshPublished();
+}
+void CommunicationStationComposition::refreshPublished(){
+    QMap<quint32,PublishedRecipe> loaded;QStringList errors;
+    PublicationCatalogueStore store(directory_.path());
+    const QFileInfo info(store.path());
+    publishedStamp_=info.exists()?info.lastModified():QDateTime{};
+    publishedSize_=info.exists()?info.size():-1;
+    if(!info.exists()){
+        published_=loaded;
+        publicationStatus_="Yayımlanmış reçete yok. Editor → İstasyonda kullanım için yayımla ile değişmez revision oluşturun.";
+        return;
+    }
+    try{
+        QFile file(store.path());
+        need(!QFileInfo(store.path()).isSymLink() && file.open(QIODevice::ReadOnly) && file.size()<=32*1024*1024,"Yayın kataloğu okunamadı.");
+        QUuid installation,revision;
+        const auto rows=PublicationCatalogueStore::decode(file.readAll(),&installation,&revision);
+        const auto catalogue=identities_.load();validateIdentityCatalogue(catalogue);
+        need(installation==catalogue.installation,"Yayın kataloğu farklı makine kurulumuna ait.");
+        for(const auto& publication:rows)try{
+            const auto assignments=recipePublicationAssignments(publication.recipe.definition);
+            need(bool(assignments),"Yayın slot ataması yok.");
+            need(key(catalogue,CatalogueCategory::RecipeRevision,publication.recipeId,publication.revision)==publication.recipeKey,"Yayın reçete anahtarı katalogla uyuşmuyor.");
+            need(key(catalogue,CatalogueCategory::TemplateRevision,assignments->templateId,assignments->templateRevision)==publication.templateKey,"Yayın şablon anahtarı katalogla uyuşmuyor.");
+            need(templates_.contains(publication.templateKey),"Yayın şablon manifesti yok.");
+            // Same immutable evaluator as Runtime; a published entry that cannot
+            // be captured is never offered as loadable.
+            FixedSlotPublication::capture(templates_[publication.templateKey],*assignments,publicationBindings(publication.recipe.definition),"publication");
+            loaded.insert(publication.recipeKey,publication);
+        }catch(const std::exception& e){errors<<QString("%1: %2").arg(publication.recipe.name,QString::fromUtf8(e.what()));}
+    }catch(const std::exception& e){errors<<QString::fromUtf8(e.what());}
+    published_=loaded;
+    publicationStatus_=errors.isEmpty()
+        ?QString("Yayımlanmış reçete: %1 • makine kataloğu hazır. Yükleme ayrı istasyon seçimidir.").arg(published_.size())
+        :QString("Yayın kataloğu sorunlu (%1 geçerli yayın): %2").arg(published_.size()).arg(errors.join(" • "));
 }
 void CommunicationStationComposition::attach(CommunicationServerLifecycle& server,CommunicationWorkspace& workspace){
     workspace.setMachinePaths(directory_.filePath("migration"),directory_.filePath("communication-identities-v4.json"));
     if(ledger_)workspace.setLedger(ledger_.get());if(!error_.isEmpty()){workspace.setNotice("Station composition unavailable: "+error_);return;}
     need(QDir().mkpath(directory_.filePath("migration")),"Machine migration workspace unavailable");
     for(const auto& s:stations_){const auto id=s->definition.id;server.addStation(*s->run);workspace.bind({s->definition,s->run.get(),[this,id]{return activations_.snapshot(id);},[this,id](bool automatic){const auto m=manifest(id);need(bool(m),"Immutable publication manifest unavailable");controls_->setAuto(id,m->station->activation,automatic);},"Immutable saved template",{},[this,id]{return manifest(id)?QString{}:QString("Immutable publication / source provider unavailable; Run/Auto kapalı.");}});}
-    workspace.setRecipeControl([this]{QVector<StationSavedRecipe> values;for(auto k:recipes_.keys())if(const auto saved=recipe(k))values.append(*saved);return values;},[this](const QUuid& id,const QUuid& expected,quint32 r,quint32 t){controls_->select(id,expected,r,t);});
+    workspace.setRecipeControl([this]{
+        QVector<StationSavedRecipe> values;
+        for(auto k:recipes_.keys())if(const auto saved=recipe(k))values.append(*saved);
+        for(auto it=published_.cbegin();it!=published_.cend();++it){
+            StationSavedRecipe entry;
+            entry.selection.revision=it->revision;
+            entry.selection.recipeKey=it->recipeKey;
+            entry.selection.recipe=it->recipe;
+            entry.selection.projectDirectory=it->projectDirectory;
+            entry.templateKey=it->templateKey;
+            entry.publicationOnly=true;
+            values.append(entry);
+        }
+        return values;
+    },[this](const QUuid& id,const QUuid& expected,quint32 r,quint32 t){
+        if(published_.contains(r) && !recipes_.contains(r))throw std::runtime_error("Yayımlanmış reçete istasyon kamera/dosya eşleşmesine çözülmeden yüklenemez.");
+        controls_->select(id,expected,r,t);
+    });
+    workspace.setPublicationControl([this]{return publicationStatus_;},[this]{refreshPublished();});
     workspace.setPoll([this]{poll();});
     workspace.setRemoteControl([this]{return remoteEnabled_;},[this](bool enabled){controls_->setRemoteEnabled(enabled);remoteEnabled_=enabled;});
     // Remote Enable is process-local, defaults false on every startup. It is an
@@ -143,7 +200,12 @@ void CommunicationStationComposition::attach(CommunicationServerLifecycle& serve
         metadata.replace(8,32,QCryptographicHash::hash(content,QCryptographicHash::Sha256));metadata.replace(40,32,QCryptographicHash::hash(dependencies,QCryptographicHash::Sha256));return metadata;
     });
 }
-void CommunicationStationComposition::poll(){if(!error_.isEmpty())return;controls_->poll();execution_.poll();for(auto it=completed_.begin();it!=completed_.end();)if(admission_->release(*it))it=completed_.erase(it);else ++it;}
+void CommunicationStationComposition::poll(){
+    if(!error_.isEmpty())return;
+    // Published revisions are discovered without a restart or migration package.
+    const QFileInfo catalogue(directory_.filePath("publication-catalogue-v4.json"));
+    if(catalogue.exists()!=(publishedSize_>=0) || (catalogue.exists() && (catalogue.lastModified()!=publishedStamp_ || catalogue.size()!=publishedSize_)))refreshPublished();
+    controls_->poll();execution_.poll();for(auto it=completed_.begin();it!=completed_.end();)if(admission_->release(*it))it=completed_.erase(it);else ++it;}
 void CommunicationStationComposition::complete(const StationAdmissionIntent& intent,const ProductionCycle&,const CycleResult& result){
     // Retry the same sealed terminal, never regenerate result UUIDs after a
     // partial terminal/pending commit.

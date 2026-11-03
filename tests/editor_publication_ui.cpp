@@ -1,5 +1,9 @@
 #include "app/MainWindow.hpp"
 #include "app/PublishDataEditor.hpp"
+#include "application/MachineSetup.hpp"
+#include "application/PublicationPublisher.hpp"
+#include "application/CommunicationWorkspace.hpp"
+#include "persistence/StationIdentityStore.hpp"
 #include "domain/PublicationTemplate.hpp"
 #include "app/EndpointProfileEditor.hpp"
 #include "app/DeliveryDiagnosticsWidget.hpp"
@@ -14,6 +18,7 @@
 #include <QLabel>
 #include <QPushButton>
 #include <QTableWidget>
+#include <QScrollArea>
 #include <QScrollArea>
 #include <QScrollBar>
 #include <QTemporaryDir>
@@ -198,5 +203,79 @@ bool MainWindow::verifyPublicationUi(const QString& artifacts){
     slotTable=w.findChild<QTableWidget*>("publishSlots");slotTable->setFocus();
     check(QApplication::focusWidget()==slotTable,"slot table accepts keyboard focus");
     check(group.producerId==producer && group.fields[0].fieldId==variables[0].id,"UUID binding preserved");QTextStream(stdout)<<"PASS Publish UI: three fields, mapping errors, UUID reopen, Editor network=0, Runtime terminal dispatch=1, machine template slot assignment/no-op\n";return true;
+}
+bool MainWindow::verifyVf03Publication(const QString& artifacts){
+    auto check=[](bool ok,const char* text){if(!ok)throw std::runtime_error(text);};
+    auto readBytes=[](const QString& path){QFile file(path);if(!file.open(QIODevice::ReadOnly))return QByteArray{};return file.readAll();};
+    check(communicationWorkspace_!=nullptr,"Communication workspace bound by the normal launcher");
+    // Same machine setup action the operator uses; repeated runs resume the
+    // existing installation instead of replacing it.
+    communicationWorkspace_->startSetup();
+    const auto machine=communicationWorkspace_->machineDirectory();
+    check(!machine.isEmpty(),"Machine directory available");
+    JsonStationIdentityStore identities(QDir(machine).filePath("communication-identities-v4.json"));
+    const auto catalogue=identities.load();
+    const auto measurement=MachineSetup::defaults(catalogue.installation)[1];
+    const auto stationsPath=QDir(machine).filePath("communication-stations-v4.json");
+    const auto stationsBefore=readBytes(stationsPath);
+    const auto recipesBefore=communicationWorkspace_->recipes().size();
+
+    const QString root=QDir(artifacts).filePath("vf03-"+QUuid::createUuid().toString(QUuid::WithoutBraces));
+    check(QDir().mkpath(root),"Isolated project directory");
+    const QString imagePath=QDir(root).filePath("surface.png");
+    QImage image(48,32,QImage::Format_Grayscale8);image.fill(210);check(image.save(imagePath),"Source raster");
+    service_.createProject("VF03 kabul","",QDir(root).filePath("vf03.vfproject"),"file");
+    const auto recipe=service_.createRecipe("Ölçüm A","",ApplicationType::Measurement,"file");
+    service_.setImageFile(imagePath);
+    VariableDefinition value;value.name="Value";value.type=VariableType::Int32;const auto valueId=service_.addVariable(value);
+    VariableDefinition flag;flag.name="Flag";flag.type=VariableType::Boolean;const auto flagId=service_.addVariable(flag);
+    ValueEnvelope number;number.type=ScalarType::Int32;number.validity=ValueValidity::Valid;number.value=qint32(42);
+    ValueEnvelope boolean;boolean.type=ScalarType::Boolean;boolean.validity=ValueValidity::Valid;boolean.value=false;
+    const auto producer=service_.addTool("set_variables");
+    for(auto tool:service_.tools())if(tool.id==producer){tool.parameters=encodeAssignmentConfig({producer,1,{{valueId,ConstantAssignmentSource{number}},{flagId,ConstantAssignmentSource{boolean}}}});service_.updateTool(tool);}
+    service_.setPublicationAssignments(PublicationAssignments{measurement.id,measurement.revision,
+        {{PublicationSlotKind::Number,0,{PublicationSourceKind::Variable,valueId,{},0}},
+         {PublicationSlotKind::Flag,0,{PublicationSourceKind::Variable,flagId,{},0}}}});
+    service_.save();refreshWorkspace();selectPage("editor");
+    auto* publish=findChild<QPushButton*>("publishRecipeV4");
+    check(publish && publish->isVisible(),"Publish action visible in Recipe Editor");
+    check(!service_.dirty(),"Recipe is saved before publishing");
+    publish->click();
+    check(workspaceError_==nullptr || workspaceError_->text().isEmpty() || !workspaceError_->isVisible(),"Publish succeeded without editor error");
+    const auto recipesAfter=communicationWorkspace_->recipes().size();
+    check(recipesAfter==recipesBefore+1,"Published revision added to station recipe list");
+    const auto published=[&]{for(const auto& item:communicationWorkspace_->recipes())if(item.publicationOnly && item.selection.recipe.name=="Ölçüm A")return item;return StationSavedRecipe{};}();
+    check(published.publicationOnly && published.selection.recipeKey>0 && !published.selection.revision.isNull(),"Exact published revision present");
+    check(published.selection.cameras.isEmpty(),"Publishing does not invent a station camera binding");
+    check(readBytes(stationsPath)==stationsBefore,"Publishing leaves station activation bytes unchanged");
+    check(communicationWorkspace_->stations().isEmpty(),"Publishing does not load or activate a station");
+    for(const auto size:{QSize(1400,900),QSize(850,600)}){
+        resize(size);QApplication::processEvents();
+        check(grab().save(QDir(artifacts).filePath(QString("vf03-editor-%1x%2.png").arg(size.width()).arg(size.height()))),"Editor visual");
+        selectPage("communication");refreshCommunication();QApplication::processEvents();
+        auto* picker=findChild<QComboBox*>("communicationSavedRecipe");
+        check(picker && picker->count()>=1,"Communication recipe selector visible");
+        bool listed=false;for(int i=0;i<picker->count();++i)listed|=picker->itemText(i).contains("Ölçüm A") && picker->itemText(i).contains("yayım");
+        check(listed,"Published revision listed by the existing Communication selector");
+        if(auto* scroll=findChild<QScrollArea*>("communicationScroll")){scroll->ensureWidgetVisible(picker);QApplication::processEvents();}
+        check(grab().save(QDir(artifacts).filePath(QString("vf03-communication-%1x%2.png").arg(size.width()).arg(size.height()))),"Communication visual");
+        if(picker){auto* panel=findChild<QWidget*>("communicationWorkspace");check(panel && panel->grab().save(QDir(artifacts).filePath(QString("vf03-recipe-list-%1x%2.png").arg(size.width()).arg(size.height()))),"Recipe list visual");}
+        selectPage("editor");QApplication::processEvents();
+    }
+    // Unsaved editor changes are rejected explicitly and never publish.
+    service_.editRecipeMetadata(recipe,"Ölçüm A","kaydedilmemiş taslak");
+    publish=findChild<QPushButton*>("publishRecipeV4");
+    publish->click();
+    check(workspaceError_->isVisible() && workspaceError_->text().contains("Kaydedilmemiş"),"Unsaved draft rejected with explicit reason");
+    check(communicationWorkspace_->recipes().size()==recipesAfter,"Rejected draft adds nothing");
+    service_.discardChanges();refreshWorkspace();
+    // Identical saved content stays the same immutable revision.
+    publish=findChild<QPushButton*>("publishRecipeV4");publish->click();
+    check(communicationWorkspace_->recipes().size()==recipesAfter,"Identical content is a no-op revision");
+    check(statusBar()->currentMessage().contains("zaten") || statusBar()->currentMessage().contains("Yayım"),"Publish result reported");
+    const auto status=communicationWorkspace_->publicationStatus();
+    check(status.contains("Yayımlanmış reçete"),"Machine catalogue status visible");
+    QTextStream(stdout)<<"PASS VF-03 normal UI: editor publish + Communication recipe list + unsaved rejection\n";
+    return true;
 }
 }

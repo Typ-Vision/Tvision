@@ -43,6 +43,11 @@ public:
     void setRecipeControl(RecipeList recipes,std::function<void(const QUuid&,const QUuid&,quint32,quint32)> select){recipes_=std::move(recipes);select_=std::move(select);}
     QVector<StationSavedRecipe> recipes() const {owner();return recipes_?recipes_():QVector<StationSavedRecipe>{};}
     void selectRecipe(const QUuid&,const QUuid&,quint32 recipeKey,quint32 templateKey);
+    // Published machine catalogue discovery is a read-only refresh; it never
+    // selects, loads or activates a recipe.
+    void setPublicationControl(std::function<QString()> status,std::function<void()> refresh){publicationStatus_=std::move(status);publicationRefresh_=std::move(refresh);}
+    QString publicationStatus() const {owner();return publicationStatus_?publicationStatus_():QString{};}
+    void refreshPublished(){owner();if(publicationRefresh_)publicationRefresh_();}
     void setPoll(std::function<void()> poll){poll_=std::move(poll);}
     void setNotice(QString notice){notice_=std::move(notice);}
     void setRemoteControl(std::function<bool()> read,std::function<void(bool)> write){remoteRead_=std::move(read);remoteWrite_=std::move(write);}
@@ -79,6 +84,8 @@ private:
     std::function<void()> setupCompleted_;
     RecipeList recipes_;
     std::function<void(const QUuid&,const QUuid&,quint32,quint32)> select_;
+    std::function<QString()> publicationStatus_;
+    std::function<void()> publicationRefresh_;
     std::function<void()> poll_;
     QString notice_;
     bool restartRequired_=false;

@@ -79,6 +79,7 @@ QWidget* MainWindow::makeEditor() {
     // Mouse commands retain the editing control: Save/Add commit it themselves,
     // avoiding an editingFinished refresh followed by the command refresh.
     auto* save=new QPushButton("Save"); save->setObjectName("saveWorkspace"); save->setFocusPolicy(Qt::TabFocus); commands->addWidget(save); connect(save,&QPushButton::clicked,this,&MainWindow::saveProject);
+    auto* publish=new QPushButton("İstasyonda yayımla");publish->setObjectName("publishRecipeV4");publish->setToolTip("Kaydedilmiş reçeteden değişmez bir revision üretir ve istasyon reçete listesine ekler. Kaydetmez; yüklü reçeteyi veya activation'ı değiştirmez.");commands->addWidget(publish);connect(publish,&QPushButton::clicked,this,&MainWindow::publishEditingRecipe);
     auto* multi=new QPushButton("Çok kaynaklı Editor");multi->setObjectName("enableMultiSource");multi->setToolTip("Reçeteyi açıkça editor9 şemasına geçirir; mevcut bağlantılar korunur.");detailLayout->addWidget(multi);detailLayout->addStretch();
     connect(multi,&QPushButton::clicked,this,[this]{if(editorSession_.busy() || !applyToolProperties())return;try{service_.enableMultiSource();editorSession_.sourceFrames.clear();editorSession_.frame.reset();editorSession_.invalidateResults();refreshWorkspace();}catch(const std::exception& e){displayError(QString::fromUtf8(e.what()));}});
     auto* runFlowButton=new QPushButton("Run Flow"); runFlowButton->setObjectName("runFlow"); commands->addWidget(runFlowButton); connect(runFlowButton,&QPushButton::clicked,this,&MainWindow::runFlow);

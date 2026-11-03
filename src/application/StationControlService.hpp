@@ -6,7 +6,7 @@
 namespace visionflow {
 // Only the saved, immutable revision catalogue may supply this value. Editor
 // drafts/imports are not a source. templateKey belongs to the same saved manifest.
-struct StationSavedRecipe {StationRecipeSelection selection;quint32 templateKey=0;};
+struct StationSavedRecipe {StationRecipeSelection selection;quint32 templateKey=0;bool publicationOnly=false;};
 struct StationControlRecord {
     CommunicationV4Frame request, replay;
     QByteArray fingerprint;

@@ -273,3 +273,45 @@ Kalıcılık, bozuk görüntü, stale CAS, kilit, yarım yazım ve legacy/restar
 korumasının hedefli testi `station_source_setup_contract`'tır. K1 ürün kabulü
 normal başlatıcı ve izole kullanıcı verisiyle, elle katalog üretmeden yapılır.
 Güncel sonuç ve kanıt yolları [devir özetindedir](../../progress.md).
+
+## VF-03 · Değişmez reçete yayımlama
+
+Recipe Editor → reçeteyi aç → Publish Data → hazır Yüzey/Ölçüm şablonunu seç →
+zorunlu çıktıyı bağla → **İstasyonda yayımla**. Düğme Save'den ayrıdır: taslak
+kaydedilmez, yalnız diskteki kayıtlı proje yayımlanır. Kaydedilmemiş değişiklik
+açık hata verir. Yayımlama istasyonun yüklü reçetesini, activation'ını,
+stationSources kaydını veya sonuç geçmişini değiştirmez.
+
+Yayın, `publication-catalogue-v4.json` içinde checksum'lı tek katalogdur;
+kayıt alanları recipeKey, revision, templateKey, recipeId, proje dizini,
+publishedAt, tam reçete içeriği ve içerik SHA256'sıdır. İçerik = reçete
+baytları + bağlı şablon id/revision; şablon değişimi yeni revizyon üretir.
+Aynı içerik tekrar yayımlandığında baytlar ve anahtar değişmez (no-op).
+Değişen içerik yeni RecipeRevision katalog anahtarı ve yeni revision alır;
+önceki kayıtlar salt okunur kalır.
+
+Sıra kesintiden sürdürülebilir: identity CAS ile önce değişmez revision kimliği
+ve katalog anahtarı bağlanır, sonra QLockFile + QSaveFile ile katalog atomik
+yazılır. Yarım kalan dosya hiçbir zaman yüklenebilir sayılmaz; aynı içerikle
+yeniden deneme aynı revision/anahtarı üretir. Bozuk katalog sessizce
+sıfırlanmaz; mevcut dosya korunur ve yayımlama reddedilir.
+
+Yayımlamadan önce aynı `FixedSlotPublication` doğrulaması çalışır: yanlış
+tip/birim, eksik zorunlu slot, çözülemeyen kaynak veya DAG döngüsü hiçbir dosya
+yazmadan reddedilir. Ölçüm şablonunun Number[0] slotu zorunludur; birim/ölçek
+sözleşmesi (`Int32 • mm • scale n/d • offset n/d`) editörde görünür. Eksik veya
+geçersiz ölçüm geçerli sıfır olarak gösterilmez; editör satırı `✗ Gerekli slot
+atanmadı` / `✗ Değer üretilmedi` der. Yüzey şablonunda ek slot gerekmez.
+
+Composition yayın kataloğunu normal açılışta ve dosya değişiminde migration
+paketi olmadan okur; Communication reçete seçicisinde `• yayım` etiketiyle
+listeler. Katalog makine kurulum kimliğiyle eşleşmeli, tüm anahtarlar canlı
+identity kataloğunda ve şablon manifesti mevcut olmalıdır; aksi kayıt listeye
+girmez. Liste yalnız keşiftir: yayımlanmış reçeteyi istasyon kamerasına
+çözümleyip yükleme VF-04'e aittir. Çözümleme olmadan seçim açık hatayla
+reddedilir; Run/Auto veya activation üretilmez.
+
+Hedefli testler `publication_publish_contract` (tip/birim/eksik slot/unsaved/
+kesinti/no-op/yeni revizyon/bozuk katalog/activation korunumu) ve
+`ui_publication_v4` (gerçek editör düğmesi + Communication listesi) olarak
+çalışır.

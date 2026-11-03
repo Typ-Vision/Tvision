@@ -16,12 +16,14 @@
 #include <QTimer>
 #include <QFileInfo>
 #include <QTabWidget>
+#include <QStatusBar>
 #include <QApplication>
 #include <QDir>
 #include "CommunicationPanel.hpp"
 #include <QJsonDocument>
 #include <QJsonArray>
 #include "DeliveryDiagnosticsWidget.hpp"
+#include "application/PublicationPublisher.hpp"
 
 namespace visionflow {
 MultiSourceDependencies MainWindow::withPublication(const Recipe& r,MultiSourceDependencies d) const {
@@ -96,6 +98,23 @@ bool MainWindow::verifyEndpointProfiles(const QString& artifacts) {
     return communicationPanel_ && !findChild<QComboBox*>("endpointList") && !findChild<QPushButton*>("plc_listen") && !runtime_;
 }
 void MainWindow::refreshCommunication() {if(communicationPanel_)communicationPanel_->refresh();}
+void MainWindow::publishEditingRecipe() {
+    if(!applyToolProperties())return;
+    const auto* recipe=service_.activeRecipe();
+    if(!service_.hasProject() || !recipe){displayError("Yayımlamak için kayıtlı proje ve reçete gerekir.");return;}
+    if(service_.dirty()){displayError("Kaydedilmemiş değişiklikler var. Önce Save ile projeyi kaydedin; yayımlama kaydetmez ve taslağı yayımlamaz.");return;}
+    if(!communicationWorkspace_ || communicationWorkspace_->machineDirectory().isEmpty()){displayError("Makine kurulumu bağlanmadı. Communication → Makine kurulumu → Kurulumu başlat ile kimlik ve şablonları hazırlayın.");return;}
+    try{
+        PublicationPublisher publisher(communicationWorkspace_->machineDirectory());
+        const auto result=publisher.publish(service_.path(),recipe->id,communicationTemplatePath(),recipe);
+        communicationWorkspace_->refreshPublished();
+        refreshCommunication();
+        statusBar()->showMessage(QString("Yayım %1: %2 / %3 • reçete anahtarı #%4 • şablon #%5")
+            .arg(result.created?"oluşturuldu":"değişmez içerik zaten yayımlı",recipe->name,
+                 result.publication.revision.toString(QUuid::WithoutBraces))
+            .arg(result.publication.recipeKey).arg(result.publication.templateKey),12000);
+    }catch(const std::exception& e){displayError("Yayımlanamadı: "+QString::fromUtf8(e.what()));}
+}
 void MainWindow::initializeCommunication() {
     // Legacy settings are retained as history. They cannot start a hidden parser.
     plc_=std::make_unique<PlcRuntimeSocket>();

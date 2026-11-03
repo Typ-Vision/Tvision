@@ -54,6 +54,7 @@ public:
     bool verifyEditorPropertyCommits(const QString& artifacts);
     bool verifyVariableCatalog(const QString& artifacts);
     bool verifyPublicationUi(const QString& artifacts);
+    bool verifyVf03Publication(const QString& artifacts);
     bool verifyResultUi(const QString& artifacts);
     bool verifyAssignmentUi(const QString& artifacts);
     bool verifyWorkspace(const QString& artifactDirectory);
@@ -131,6 +132,7 @@ private:
     void refreshWorkspaceHeader();
     void refreshRecipes();
     void saveProject();
+    void publishEditingRecipe();
     bool resolveUnsavedChanges();
     void displayError(const QString& message);
     void refreshEditor();

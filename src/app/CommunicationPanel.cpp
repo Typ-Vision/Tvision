@@ -61,6 +61,7 @@ CommunicationPanel::CommunicationPanel(QWidget* parent):QWidget(parent){
     connect(editSource,&QPushButton::clicked,this,[this]{sourceSettings(false);});
     auto* recipeRow=new QHBoxLayout;recipes_=new QComboBox;recipes_->setObjectName("communicationSavedRecipe");recipes_->setAccessibleName("Kayıtlı immutable reçete revision");recipes_->setMinimumContentsLength(16);recipes_->setSizeAdjustPolicy(QComboBox::AdjustToMinimumContentsLengthWithIcon);recipeRow->addWidget(recipes_,1);
     auto* choose=new QPushButton("Seçili station'a reçeteyi yükle (Run açmaz)");choose->setObjectName("stationSelectRecipe");recipeRow->addWidget(choose);layout->addLayout(recipeRow);
+    publicationStatus_=plain();publicationStatus_->setObjectName("communicationPublicationStatus");publicationStatus_->setAccessibleName("Yayımlanmış reçete kataloğu");layout->addWidget(publicationStatus_);
     connect(choose,&QPushButton::clicked,this,[this]{const int n=stations_->currentRow();if(!workspace_ || n<0 || n>=rows_.size() || recipes_->currentIndex()<0)return;try{const auto& row=rows_[n];workspace_->selectRecipe(row.station.id,row.snapshot?row.snapshot->activation:QUuid{},recipes_->currentData().toUInt(),recipes_->currentData(Qt::UserRole+1).toUInt());message_->setText("Station reçete seçimi kaydedildi; Run / Auto kapalı.");}catch(const std::exception& e){message_->setText(QString::fromUtf8(e.what()));}refresh();});
     auto* commands=new QHBoxLayout;auto add=[&](QString title,QString name,QString cmd){auto* b=new QPushButton(title);b->setObjectName(name);commands->addWidget(b);connect(b,&QPushButton::clicked,this,[this,cmd]{command(cmd);});return b;};
     run_=add("&Run","stationRun","run");automatic_=add("&Auto","stationAuto","auto");manual_=add("Auto kapat","stationManual","manual");stop_=add("&Stop / drain","stationStop","stop");layout->addLayout(commands);
@@ -78,11 +79,29 @@ CommunicationPanel::CommunicationPanel(QWidget* parent):QWidget(parent){
     layout->setSizeConstraint(QLayout::SetMinimumSize);
     auto* timer=new QTimer(this);timer->setInterval(500);connect(timer,&QTimer::timeout,this,[this]{if(isVisible())refresh();});timer->start();selection();
 }
-void CommunicationPanel::bind(CommunicationWorkspace* w){workspace_=w;calibration_->bind(w?&w->calibration():nullptr);if(w)try{const auto p=w->profile();enabled_->setChecked(p.enabled);address_->setText(p.address);port_->setValue(p.port);QSignalBlocker block(remote_);remote_->setChecked(w->remoteEnabled());recipes_->clear();for(const auto& recipe:w->recipes()){recipes_->addItem(recipe.selection.recipe.name+" / "+recipe.selection.revision.toString(QUuid::WithoutBraces),recipe.selection.recipeKey);recipes_->setItemData(recipes_->count()-1,recipe.templateKey,Qt::UserRole+1);}}catch(const std::exception& e){message_->setText(QString::fromUtf8(e.what()));}refresh();}
+void CommunicationPanel::bind(CommunicationWorkspace* w){workspace_=w;calibration_->bind(w?&w->calibration():nullptr);recipeSignature_.clear();if(w)try{const auto p=w->profile();enabled_->setChecked(p.enabled);address_->setText(p.address);port_->setValue(p.port);QSignalBlocker block(remote_);remote_->setChecked(w->remoteEnabled());}catch(const std::exception& e){message_->setText(QString::fromUtf8(e.what()));}refresh();}
+void CommunicationPanel::refreshRecipeList(){
+    if(!workspace_)return;
+    const auto recipes=workspace_->recipes();
+    QStringList signature;
+    for(const auto& recipe:recipes)signature<<QString("%1|%2|%3|%4|%5").arg(recipe.selection.recipeKey).arg(recipe.selection.revision.toString(QUuid::WithoutBraces),recipe.selection.recipe.name).arg(recipe.templateKey).arg(recipe.publicationOnly?1:0);
+    const auto next=signature.join('\n');
+    if(next==recipeSignature_)return;
+    recipeSignature_=next;
+    const auto selected=recipes_->currentData().toUInt();
+    const QSignalBlocker block(recipes_);recipes_->clear();
+    for(const auto& recipe:recipes){
+        recipes_->addItem(recipe.selection.recipe.name+" / "+recipe.selection.revision.toString(QUuid::WithoutBraces)+(recipe.publicationOnly?" • yayım":""),recipe.selection.recipeKey);
+        recipes_->setItemData(recipes_->count()-1,recipe.templateKey,Qt::UserRole+1);
+        if(recipe.publicationOnly)recipes_->setItemData(recipes_->count()-1,"Yayımlanmış değişmez revision; yükleme istasyon kamera/dosya eşleşmesiyle ayrı yapılır.",Qt::ToolTipRole);
+    }
+    const int restore=recipes_->findData(selected);if(restore>=0)recipes_->setCurrentIndex(restore);
+}
 void CommunicationPanel::refresh(){
     if(!workspace_)return;
     try{
         workspace_->poll();listener_->setText(workspace_->listener());setupStatus_->setText(workspace_->setupStatus());
+        refreshRecipeList();publicationStatus_->setText(workspace_->publicationStatus());
         QUuid selected;const auto previous=stations_->currentRow();if(previous>=0 && previous<rows_.size())selected=rows_[previous].station.id;
         auto next=workspace_->stations();QSignalBlocker block(stations_);rows_=std::move(next);stations_->setRowCount(rows_.size());int restore=-1;
         for(int n=0;n<rows_.size();++n){const auto& v=rows_[n];const QStringList values{v.station.name+QString(" (#%1)").arg(v.station.key),CommunicationWorkspace::modeName(v.runtime.mode),v.automatic?"ON":"OFF",v.snapshot?v.snapshot->selection.recipe.name+" / "+v.snapshot->selection.revision.toString(QUuid::WithoutBraces):"Seçilmedi",v.cameraOwners,v.runtime.deliveryPending?"PENDING ACK":"Pending yok",v.runtime.health.isEmpty()?v.unavailable:v.runtime.health};

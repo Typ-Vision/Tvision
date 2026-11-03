@@ -6,6 +6,7 @@ görev” ifadeleri yazıldıkları tarihe aittir.
 
 | Dönem / görev | Kayıt |
 | --- | --- |
+| 3 Kasım 2026 — VF-03 | [Değişmez reçete yayımlama, makine kataloğu keşfi ve editör/Communication kabulü](2026-11-03-vf-03.md) |
 | 2 Kasım 2026 — VF-02 | [Kalıcı istasyon/kamera/dosya ve K1 geçti; OFF158+1skip, tam ON kullanıcı isteğiyle açık bırakıldı](2026-11-02-vf-02.md) |
 | 2 Kasım 2026 — VF-01 | [Açık makine kurulumu, idempotent hazır şablonlar, hedefli test ve kullanıcı kabulü](2026-11-02-vf-01.md) |
 | 2 Kasım 2026 — COMM4-26 | [Kamerasız entegre yazılım kapanışı; tam ON/OFF, görsel kabul ve açık fiziksel devir](2026-11-02-comm4-26.md) |
