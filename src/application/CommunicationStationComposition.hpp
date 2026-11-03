@@ -23,6 +23,9 @@ public:
     // it never creates or changes an activation.
     void refreshPublished();
     QString publicationStatus() const{return publicationStatus_;}
+    // Bounded station file provider: exact one Image File, pixel tools only.
+    // Setup/calibration dependencies require their real provider, never empty evidence.
+    static MultiSourceDependencies fileSources(const Recipe&,bool configurationOnly=false);
     static QJsonObject restoreSelection(const QString& machineDirectory);
 private:
     struct Station {

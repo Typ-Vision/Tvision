@@ -5,9 +5,10 @@
 
 ## Devam noktası
 
-**[VF-04](archive/2026-11-03-vf-04.md): Dashboard + gerçek istasyon kaynağı.**
-Hedefli ON11/OFF9; tam ON203+1skip/OFF160+1skip, hata0.
-İki restart ve 1400×900/850×600 geçti. Sıradaki VF-05; TCP A/B VF-08’de.
+**[VF-04a](archive/2026-11-03-vf-04a.md): editor9 tek dosya provider düzeltildi.**
+Hedefli ON12/OFF10; tam ON203+1skip/1timeout; timeout izole2/2 geçti. Tam OFF kullanıcı isteğiyle yok.
+Kullanıcı “Uyumlu oldu” dedi. Modern Dashboard/restart ve preview mesajı geçti.
+[VF-04](archive/2026-11-03-vf-04.md) korunur. Sıradaki VF-05; TCP A/B VF-08’de.
 
 **[VF-03](archive/2026-11-03-vf-03.md):** değişmez yayın; tam regresyon devri VF-04’te karşılandı.
 **[VF-02](archive/2026-11-02-vf-02.md):** K1 geçti; tam ON/Pose UI devri VF-04’te karşılandı.

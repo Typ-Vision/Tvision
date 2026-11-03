@@ -23,6 +23,21 @@ QByteArray selectedBytes(const QJsonObject& selection,const QString& name){const
 quint32 key(const IdentityCatalogue& c,CatalogueCategory category,const QUuid& entity,const QUuid& revision={}){for(const auto& e:c.entries)if(!e.retired && e.identity==CatalogueIdentity{category,entity,revision,{}})return e.key;throw std::runtime_error("Immutable manifest catalogue key missing/retired");}
 QUuid cameraRevision(const StationSnapshot& s){QByteArray bytes("visionflow.camera-set/1\0",23);for(const auto& c:s.selection.cameras){bytes+=c.sourceId.toUtf8();bytes+=c.camera.toRfc4122();QByteArray n(4,0);C::putUInt32(n,0,c.cameraKey);bytes+=n;}if(s.selection.resolvedSource){bytes+=s.selection.resolvedSource->revision.toRfc4122();bytes+=s.selection.resolvedSource->path.toUtf8();}return QUuid::fromRfc4122(QCryptographicHash::hash(bytes,QCryptographicHash::Sha256).first(16));}
 }
+MultiSourceDependencies CommunicationStationComposition::fileSources(const Recipe& recipe,bool configurationOnly){
+    const auto tools=editorTools(recipe.definition);
+    const auto graph=validateSourceGraph(tools,executionConnections(recipe.definition));
+    need(graph.valid() && graph.requiredSources.size()==1,"İstasyon tek geçerli görüntü kaynağı gerektirir.");
+    need(!recipe.calibrationBinding && recipe.calibrationReference.isEmpty() && !SystemCalibration::requestsCalibration(recipe,false),
+        "Kalibrasyonlu araçlar için istasyona bağlı gerçek kalibrasyon sağlayıcısı gerekir.");
+    MultiSourceDependencies set;set.configurationOnly=configurationOnly;
+    for(const auto& source:graph.requiredSources){
+        const auto branch=SystemCalibration::branch(recipe,source);const auto tool=SystemCalibration::source(branch);
+        need(tool.kind=="image_file","İstasyon dosya sağlayıcısı yalnız Image File destekler.");
+        need(!SystemCalibration::setupReference(branch),"Kaynak kurulumunu doğrulayacak istasyon sağlayıcısı gerekir.");
+        set.sources.insert(source,ProductionDependencies{});
+    }
+    return set;
+}
 QJsonObject CommunicationStationComposition::restoreSelection(const QString& machine){
     const QDir root(machine);const auto work=root.filePath("migration");if(!QFile::exists(work+"/active.json"))return {};
     const auto selected=CommunicationMigrationTransaction::resolveSelection(work);
@@ -71,7 +86,8 @@ CommunicationStationComposition::CommunicationStationComposition(QString machine
         }
         for(const auto& entry:catalogue.entries)if(!entry.retired && entry.identity.category==CatalogueCategory::Station){
             auto station=std::make_unique<Station>();station->definition={entry.identity.entity,entry.key,entry.name};
-            station->runtime=std::make_unique<RuntimeService>(selection_.value("archive").toString().isEmpty()?directory_.filePath("production"):selection_["archive"].toString(),directory_.filePath("calibrations.json"),RuntimeIdentity::localEngineer());
+            station->runtime=std::make_unique<RuntimeService>(selection_.value("archive").toString().isEmpty()?directory_.filePath("production"):selection_["archive"].toString(),directory_.filePath("calibrations.json"),RuntimeIdentity::localEngineer(),RuntimeService::SystemProvider{},RuntimeService::ScopedProvider{},RuntimeService::AcquisitionProvider{},[](const Recipe& r){return fileSources(r);});
+            station->runtime->setConfigurationProviders({},[](const Recipe& r){return fileSources(r,true);});
             station->coordinator=std::make_unique<RuntimeCoordinator>(*station->runtime);boundary_.bind(entry.identity.entity,*station->runtime,*station->coordinator);station->run=std::make_unique<StationRunController>(boundary_,entry.identity.entity);controls_->bind(station->definition,*station->run);
             execution_.bind(entry.identity.entity,*station->coordinator,directory_.filePath("calibrations.json"),[this](const auto& i,const auto& c,const auto& r){complete(i,c,r);});stations_.push_back(std::move(station));
         }

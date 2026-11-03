@@ -31,10 +31,11 @@ bool MainWindow::verifyVf04Dashboard(const QString& artifacts){
         bool submitted=false;
         QTimer::singleShot(0,this,[&]{auto* dialog=qobject_cast<QDialog*>(QApplication::activeModalWidget());if(!dialog)return;dialog->findChild<QLineEdit*>("stationName")->setText("İstasyon 1");dialog->findChild<QLineEdit*>("stationSourcePath")->setText(stationPath);auto* buttons=dialog->findChild<QDialogButtonBox*>();buttons->button(QDialogButtonBox::Save)->click();submitted=true;});
         findChild<QPushButton*>("stationAdd")->click();check(submitted && row().source.has_value(),"Station saved through normal source dialog");
+        bool restartNotice=false;try{communicationWorkspace_->previewRecipe(row().station.id,0);}catch(const std::exception& e){restartNotice=QString::fromUtf8(e.what()).contains("yeniden açın");}check(restartNotice,"Preview before restart explains required restart");
         const auto t=MachineSetup::defaults(communicationWorkspace_->sourceCatalogue().installation)[0];
         image.fill(0);const auto recipePath=root.filePath("vf04-recipe.png");check(image.save(recipePath),"Distinct recipe raster");
         for(const auto& name:{QString("Yüzey A"),QString("Yüzey B"),QString("Uyumsuz C")}){
-            service_.createProject(name,"",root.filePath(name+".vfproject"),"file");service_.createRecipe(name,"",ApplicationType::DefectInspection,"file");service_.setImageFile(recipePath);
+            service_.createProject(name,"",root.filePath(name+".vfproject"),"file");service_.createRecipe(name,"",ApplicationType::DefectInspection,"file");service_.enableMultiSource();service_.setImageFile(recipePath);
             if(name=="Uyumsuz C"){service_.enableMultiSource();const auto extra=service_.addTool("image_file");service_.setImageFile(recipePath,extra);}
             service_.setPublicationAssignments(PublicationAssignments{t.id,t.revision,{}});service_.save();refreshWorkspace();selectPage("editor");
             findChild<QPushButton*>("publishRecipeV4")->click();check(!communicationWorkspace_->recipes().isEmpty(),"Published through actual editor action");
@@ -48,7 +49,7 @@ bool MainWindow::verifyVf04Dashboard(const QString& artifacts){
         check(!row().snapshot && dashboardLoad_->text()=="Reçete yükle","First selection label");
         auto choose=[&](QString name){int index=-1;for(int n=0;n<dashboardPublished_->count();++n)if(dashboardPublished_->itemText(n).startsWith(name+" /"))index=n;check(index>=0,"Published choice");dashboardPublished_->setCurrentIndex(index);};
         choose("Yüzey A");findChild<QPushButton*>("dashboardCheckRecipe")->click();check(dashboardStationMessage_->text().contains("Uyumlu"),"Read-only compatibility preview");
-        dashboardLoad_->click();check(row().snapshot && row().snapshot->selection.recipe.name=="Yüzey A","Dashboard loads A");const auto a=row().snapshot;
+        dashboardLoad_->click();check(row().snapshot && row().snapshot->selection.recipe.name=="Yüzey A","Dashboard loads A");check(row().snapshot->selection.recipe.definition["editor"].toObject()["schemaVersion"]==9,"Dashboard loads unchanged editor9 publication");const auto a=row().snapshot;
         check(dashboardLoad_->text()=="Reçete değiştir","Subsequent selection label");
         choose("Yüzey B");dashboardLoad_->click();const auto b=row().snapshot;check(b->selection.recipe.name=="Yüzey B" && a->activation!=b->activation && !row().automatic,"B changes activation without Auto");
         choose("Uyumsuz C");findChild<QPushButton*>("dashboardCheckRecipe")->click();check(dashboardStationMessage_->text().contains("Uyumsuz"),"Incompatible preview");dashboardLoad_->click();check(row().snapshot->activation==b->activation && dashboardStationMessage_->text().contains("yüklenemedi"),"Incompatible C keeps B activation");

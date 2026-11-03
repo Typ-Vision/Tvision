@@ -43,7 +43,7 @@ public:
     void setRecipeControl(RecipeList recipes,std::function<void(const QUuid&,const QUuid&,quint32,quint32)> select){recipes_=std::move(recipes);select_=std::move(select);}
     QVector<StationSavedRecipe> recipes() const {owner();return recipes_?recipes_():QVector<StationSavedRecipe>{};}
     void setRecipePreview(std::function<void(const QUuid&,quint32)> preview){preview_=std::move(preview);}
-    void previewRecipe(const QUuid& station,quint32 recipe) const {owner();if(!preview_)throw std::runtime_error("Uyumluluk denetimi bağlanmadı");preview_(station,recipe);}
+    void previewRecipe(const QUuid& station,quint32 recipe) const {owner();if(restartRequired_ || !bindings_.contains(station))throw std::runtime_error("İstasyon / kaynak kaydedildi. Programı tamamen kapatıp yeniden açın.");if(!preview_)throw std::runtime_error("Uyumluluk denetimi bağlanmadı");preview_(station,recipe);}
     void selectRecipe(const QUuid&,const QUuid&,quint32 recipeKey,quint32 templateKey);
     // Published machine catalogue discovery is a read-only refresh; it never
     // selects, loads or activates a recipe.

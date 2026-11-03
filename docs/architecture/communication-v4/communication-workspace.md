@@ -367,3 +367,18 @@ iki istasyon izolasyonu, source/selection CAS yarışları ve schema 1→2 geçi
 Editor yayımlama düğmesi, Dashboard A→B/uyumsuz ret, iki executable restart ve
 1400×900/850×600 görselleri. Her koşum yeni artifact dizinindedir. Bağımsız
 simülatörle TCP uçtan uca B görüntüsü kabulü VF-08’de yapılır.
+
+### VF-04a · Tek dosyada editor9 kaynak kümesi
+
+Editor schema 9, yalnız bir Image File olduğunda da whole-source Runtime yolunu
+kullanır. Station composition configuration-only ve operational provider’larını
+ayrı bağlar. `fileSources` tam grafiği ve tek dosya kaynağını doğrular; schema 9
+korunur, yayımlanmış içerik değiştirilmez. Kurulum/kalibrasyon isteyen reçeteler
+gerçek bağlı provider olmadan boş evidence ile kabul edilmez. Bu piksel yolu
+kalibrasyonlu mm veya native kamera kabulü oluşturmaz.
+
+İstasyon/kaynak kaydından sonra restart beklenirken preview de açık yeniden
+başlatma mesajı verir; `Station runtime not bound` genel hatasına düşmez.
+`station_recipe_selection_editor9_contract`, eski biçimin yanı sıra modern tek
+Image File ile gerçek admission/worker/terminal ve kaynak değişmezliğini sınar.
+Dashboard UI kabulü artık modern schema 9 yayını kullanır.

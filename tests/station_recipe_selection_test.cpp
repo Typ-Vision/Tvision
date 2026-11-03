@@ -26,7 +26,7 @@ struct ReentrantBoundary:StationActivationBoundary {
 QByteArray read(const QString& path){QFile f(path);check(f.open(QIODevice::ReadOnly),"Read");return f.readAll();}
 }
 int main(int argc,char** argv){QCoreApplication app(argc,argv);try{
-    using C=CommunicationV4Codec;
+    using C=CommunicationV4Codec;const bool editor9=app.arguments().contains("--editor9");
     QTemporaryDir temp(app.applicationDirPath()+"/vf04-XXXXXX");check(temp.isValid(),"Temp");QDir root(temp.path());
     MachineSetup(root.path()).start();JsonStationIdentityStore ids(root.filePath("communication-identities-v4.json"));
     const auto station=QUuid::createUuid(),camera=QUuid::createUuid(),station2=QUuid::createUuid(),camera2=QUuid::createUuid();
@@ -38,7 +38,7 @@ int main(int argc,char** argv){QCoreApplication app(argc,argv);try{
     const auto templ=MachineSetup::defaults(ids.load().installation)[0];
     PublicationPublisher publisher(root.path());
     auto publish=[&](QString name,int sourceCount,bool missingCalibration=false){
-        ProjectService p;p.createProject(name,"",root.filePath(name+".vfproject"),"file");p.createRecipe(name,"",ApplicationType::DefectInspection,"file");p.setImageFile(other);
+        ProjectService p;p.createProject(name,"",root.filePath(name+".vfproject"),"file");p.createRecipe(name,"",ApplicationType::DefectInspection,"file");if(editor9)p.enableMultiSource();p.setImageFile(other);
         if(sourceCount>1){p.enableMultiSource();const auto extra=p.addTool("image_file");p.setImageFile(other,extra);}
         if(sourceCount<0){p.removeTool(p.tools().first().id);p.addTool("webcam");}
         const auto blob=p.addTool("blob");if(sourceCount>1)p.setConnections({{p.tools().first().id,"image",blob,"image"}});
@@ -80,10 +80,11 @@ int main(int argc,char** argv){QCoreApplication app(argc,argv);try{
         ws.command(station,last->activation,"run");ws.poll();
         rejects([&]{ws.selectRecipe(station,last->activation,a.recipeKey,a.templateKey);});
         ws.command(station,{},"stop");ws.poll();
-        RuntimeService runtime(root.filePath("direct"),root.filePath("calibrations.json"),RuntimeIdentity::localEngineer());RuntimeCoordinator coordinator(runtime);
+        RuntimeService runtime(root.filePath("direct"),root.filePath("calibrations.json"),RuntimeIdentity::localEngineer(),RuntimeService::SystemProvider{},RuntimeService::ScopedProvider{},RuntimeService::AcquisitionProvider{},[](const Recipe& r){return CommunicationStationComposition::fileSources(r);});RuntimeCoordinator coordinator(runtime);
         StationRuntimeBoundary boundary;boundary.bind(station,runtime,coordinator);boundary.load(last);coordinator.start();
         const auto cycle=coordinator.begin(RuntimeTrigger::Manual);const auto result=RuntimeService::execute(cycle,root.filePath("calibrations.json"),coordinator.cancellation());coordinator.finish(cycle.ticket,result);
         check(result.state==ExecutionState::Done && result.frames.size()==1,"Real worker completed resolved source");
+        if(editor9)check(cycle.snapshot->recipe().definition["editor"].toObject()["schemaVersion"]==9,"Editor9 preserved in executable snapshot");
         bool white=false;for(const auto& tool:result.tools)for(const auto& port:tool.outputs)if(port.valid)if(const auto* frame=std::get_if<ImageFrame>(&port.data))white=frame->preview().pixelColor(0,0).red()==255;
         check(white,"Actual B execution processed Kamera 1 white raster");coordinator.stop();
         // Remote SELECT uses the same resolver; wrong remote permission and
