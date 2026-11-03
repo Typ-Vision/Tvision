@@ -1,5 +1,6 @@
 #include "CommunicationStationComposition.hpp"
 #include "FixedSlotPublication.hpp"
+#include "StationSourceSetup.hpp"
 #include "PublicationPublisher.hpp"
 #include "persistence/ProjectRepository.hpp"
 #include "persistence/StationIdentityStore.hpp"
@@ -20,7 +21,7 @@ void need(bool ok,const char* reason){if(!ok)throw std::runtime_error(reason);}
 QByteArray read(const QString& path){QFile f(path);need(!QFileInfo(path).isSymLink() && f.open(QIODevice::ReadOnly) && f.size()<=20*1024*1024,"Machine manifest unavailable");return f.readAll();}
 QByteArray selectedBytes(const QJsonObject& selection,const QString& name){const auto bytes=read(selection[name].toString());need(QCryptographicHash::hash(bytes,QCryptographicHash::Sha256).toHex()==selection[name+"Digest"].toString().toLatin1(),"Selected immutable manifest changed after validation");return bytes;}
 quint32 key(const IdentityCatalogue& c,CatalogueCategory category,const QUuid& entity,const QUuid& revision={}){for(const auto& e:c.entries)if(!e.retired && e.identity==CatalogueIdentity{category,entity,revision,{}})return e.key;throw std::runtime_error("Immutable manifest catalogue key missing/retired");}
-QUuid cameraRevision(const StationSnapshot& s){QByteArray bytes("visionflow.camera-set/1\0",23);for(const auto& c:s.selection.cameras){bytes+=c.sourceId.toUtf8();bytes+=c.camera.toRfc4122();QByteArray n(4,0);C::putUInt32(n,0,c.cameraKey);bytes+=n;}return QUuid::fromRfc4122(QCryptographicHash::hash(bytes,QCryptographicHash::Sha256).first(16));}
+QUuid cameraRevision(const StationSnapshot& s){QByteArray bytes("visionflow.camera-set/1\0",23);for(const auto& c:s.selection.cameras){bytes+=c.sourceId.toUtf8();bytes+=c.camera.toRfc4122();QByteArray n(4,0);C::putUInt32(n,0,c.cameraKey);bytes+=n;}if(s.selection.resolvedSource){bytes+=s.selection.resolvedSource->revision.toRfc4122();bytes+=s.selection.resolvedSource->path.toUtf8();}return QUuid::fromRfc4122(QCryptographicHash::hash(bytes,QCryptographicHash::Sha256).first(16));}
 }
 QJsonObject CommunicationStationComposition::restoreSelection(const QString& machine){
     const QDir root(machine);const auto work=root.filePath("migration");if(!QFile::exists(work+"/active.json"))return {};
@@ -56,7 +57,9 @@ CommunicationStationComposition::CommunicationStationComposition(QString machine
             if(recipes_.contains(choice.recipeKey))need(stationRecipeBytes(recipes_[choice.recipeKey].selection)==stationRecipeBytes(choice),"Immutable saved recipe conflict");
             recipes_[choice.recipeKey]={choice,tk};
         };
-        for(const auto& s:selectionStore_.load().history)save(s.selection);
+        for(const auto& s:selectionStore_.load().history)if(!s.selection.resolvedSource)save(s.selection);
+        controls_->setResolver([this](const auto& id,const auto& saved){return resolve(id,saved);});
+        controls_->setSelectionBarrier([this](const auto& id,bool reserved){need(!ledger_->pending(id,true) && (reserved || !ledger_->pending(id)),"PENDING_ACK — önce exact ACK / reconcile gerekir");});
         if(selection_.value("mode")=="v4"){
             const auto expected=selectedBytes(selection_,"project");const auto project=ProjectRepository{}.load(selection_["project"].toString());need(ProjectRepository::encode(project)==expected,"Selected project changed during load");
             for(const auto& r:project.recipes){
@@ -86,15 +89,36 @@ CommunicationStationComposition::CommunicationStationComposition(QString machine
 }
 CommunicationStationComposition::~CommunicationStationComposition(){sessions_.setMetadata({});sessions_.setStatusHandler({});sessions_.setTriggerHandler({});sessions_.setControlHandler({});sessions_.setDeliveryLedger(nullptr);}
 std::optional<StationSavedRecipe> CommunicationStationComposition::recipe(quint32 k) const {
+    if(published_.contains(k)){
+        const auto& p=published_[k];StationSavedRecipe saved;
+        saved.selection={p.revision,p.recipeKey,p.recipe,p.projectDirectory,{}};saved.templateKey=p.templateKey;saved.publicationOnly=true;
+        try {const auto c=identities_.load();need(key(c,CatalogueCategory::RecipeRevision,p.recipeId,p.revision)==k,"Retired recipe");
+            const auto a=recipePublicationAssignments(p.recipe.definition);need(bool(a) && templates_.contains(p.templateKey),"Missing template");
+            need(key(c,CatalogueCategory::TemplateRevision,a->templateId,a->templateRevision)==p.templateKey,"Retired template");return saved;
+        }catch(...){return {};}
+    }
     if(!recipes_.contains(k))return {};
     try{const auto& saved=recipes_[k];const auto catalogue=identities_.load();const auto a=recipePublicationAssignments(saved.selection.recipe.definition);if(!a)return {};
         need(key(catalogue,CatalogueCategory::RecipeRevision,QUuid(saved.selection.recipe.id),saved.selection.revision)==k,"Retired recipe");need(key(catalogue,CatalogueCategory::TemplateRevision,a->templateId,a->templateRevision)==saved.templateKey,"Retired template");for(const auto& c:saved.selection.cameras)need(key(catalogue,CatalogueCategory::Camera,c.camera)==c.cameraKey,"Retired camera");return saved;
     }catch(...){return {};}
 }
+StationRecipeSelection CommunicationStationComposition::resolve(const QUuid& id,const StationRecipeSelection& saved,bool inspect) const {
+    const auto catalogue=identities_.load();
+    for(const auto& source:catalogue.stationSources)if(source.station==id){
+        auto resolved=saved;resolved.cameras.clear();resolved.resolvedSource=source;
+        for(const auto& tool:editorTools(saved.recipe.definition))if(tool.enabled && ToolRegistry::get(tool.kind).acquisitionSource){
+            need(tool.kind=="image_file","İstasyon dosya kaynağı yalnız Image File reçetesiyle uyumludur.");
+            resolved.cameras.append({tool.id,source.camera,key(catalogue,CatalogueCategory::Camera,source.camera)});
+        }
+        need(resolved.cameras.size()==1,"İstasyon tek görüntü kaynağı gerektirir; reçetenin kaynak sayısı uyumsuz.");
+        if(inspect)StationSourceSetup::inspectImage(source.path);stationExecutionRecipe(resolved);return resolved;
+    }
+    need(!saved.cameras.isEmpty() && !saved.resolvedSource,"Kalıcı istasyon kamera / dosya eşleşmesi yok.");return saved;
+}
 std::optional<StationAdmissionSnapshot> CommunicationStationComposition::manifest(const QUuid& id) const {
     const auto catalogue=identities_.load();
-    for(const auto& source:catalogue.stationSources)if(source.station==id)return {}; // VF-04 resolves the station source into the immutable execution snapshot.
-    const auto s=activations_.snapshot(id);if(!s || s->selection.cameras.size()>32)return {};const auto r=recipe(s->selection.recipeKey);if(!r || stationRecipeBytes(r->selection)!=stationRecipeBytes(s->selection))return {};
+    const auto s=activations_.snapshot(id);if(!s || s->selection.cameras.size()>32)return {};const auto r=recipe(s->selection.recipeKey);if(!r || !stationManifestMatches(r->selection,s->selection))return {};
+    try{if(stationRecipeBytes(resolve(id,r->selection,false))!=stationRecipeBytes(s->selection))return {};}catch(...){return {};}
     for(const auto& t:editorTools(s->selection.recipe.definition))if(t.enabled && ToolRegistry::get(t.kind).acquisitionSource && t.kind!="image_file")return {};
     return StationAdmissionSnapshot{s,r->templateKey,cameraRevision(*s),{},{},{}};
 }
@@ -146,10 +170,10 @@ void CommunicationStationComposition::attach(CommunicationServerLifecycle& serve
     workspace.setMachinePaths(directory_.filePath("migration"),directory_.filePath("communication-identities-v4.json"));
     if(ledger_)workspace.setLedger(ledger_.get());if(!error_.isEmpty()){workspace.setNotice("Station composition unavailable: "+error_);return;}
     need(QDir().mkpath(directory_.filePath("migration")),"Machine migration workspace unavailable");
-    for(const auto& s:stations_){const auto id=s->definition.id;server.addStation(*s->run);workspace.bind({s->definition,s->run.get(),[this,id]{return activations_.snapshot(id);},[this,id](bool automatic){const auto m=manifest(id);need(bool(m),"Immutable publication manifest unavailable");controls_->setAuto(id,m->station->activation,automatic);},"Immutable saved template",{},[this,id]{return manifest(id)?QString{}:QString("Immutable publication / source provider unavailable; Run/Auto kapalı.");}});}
+    for(const auto& s:stations_){const auto id=s->definition.id;server.addStation(*s->run);workspace.bind({s->definition,s->run.get(),[this,id]{return activations_.snapshot(id);},[this,id](bool automatic){const auto m=manifest(id);need(bool(m),"Immutable publication manifest unavailable");controls_->setAuto(id,m->station->activation,automatic);},"Immutable saved template",{},[this,id]{return manifest(id)?QString{}:QString("Reçete yükleyin veya kaynak / şablon uyumluluğunu denetleyin; Run/Auto kapalı.");}});}
     workspace.setRecipeControl([this]{
         QVector<StationSavedRecipe> values;
-        for(auto k:recipes_.keys())if(const auto saved=recipe(k))values.append(*saved);
+        for(auto k:recipes_.keys())if(!published_.contains(k))if(const auto saved=recipe(k))values.append(*saved);
         for(auto it=published_.cbegin();it!=published_.cend();++it){
             StationSavedRecipe entry;
             entry.selection.revision=it->revision;
@@ -162,9 +186,9 @@ void CommunicationStationComposition::attach(CommunicationServerLifecycle& serve
         }
         return values;
     },[this](const QUuid& id,const QUuid& expected,quint32 r,quint32 t){
-        if(published_.contains(r) && !recipes_.contains(r))throw std::runtime_error("Yayımlanmış reçete istasyon kamera/dosya eşleşmesine çözülmeden yüklenemez.");
         controls_->select(id,expected,r,t);
     });
+    workspace.setRecipePreview([this](const QUuid& id,quint32 k){const auto saved=recipe(k);need(bool(saved),"Yayımlanmış reçete bulunamadı.");StationSnapshot candidate;candidate.station.id=id;candidate.selection=resolve(id,saved->selection);boundary_.checkConfiguration(candidate);});
     workspace.setPublicationControl([this]{return publicationStatus_;},[this]{refreshPublished();});
     workspace.setPoll([this]{poll();});
     workspace.setRemoteControl([this]{return remoteEnabled_;},[this](bool enabled){controls_->setRemoteEnabled(enabled);remoteEnabled_=enabled;});
@@ -190,11 +214,14 @@ void CommunicationStationComposition::attach(CommunicationServerLifecycle& serve
         }else if(e.identity.category==CatalogueCategory::RecipeRevision){
             const auto r=recipe(e.key);if(!r)return QByteArray{};
             content="visionflow.recipe-manifest/1"+QJsonDocument(r->selection.recipe.definition).toJson(QJsonDocument::Compact)+r->selection.revision.toRfc4122();dependencies=QByteArray::number(r->templateKey);for(const auto& c:r->selection.cameras)dependencies+=c.camera.toRfc4122();
-            C::putUInt32(metadata,72,r->selection.recipe.applicationType==ApplicationType::Measurement?1:r->selection.recipe.applicationType==ApplicationType::DefectInspection?2:3);C::putUInt32(metadata,76,r->selection.cameras.size());C::putUInt32(metadata,80,r->templateKey);
+            int sourceCount=r->selection.cameras.size();
+            if(r->publicationOnly){content="visionflow.recipe-manifest/2"+PublicationCatalogueStore::recipeBytes(r->selection.recipe)+r->selection.revision.toRfc4122();sourceCount=0;for(const auto& tool:editorTools(r->selection.recipe.definition))if(tool.enabled && ToolRegistry::get(tool.kind).acquisitionSource)++sourceCount;}
+            C::putUInt32(metadata,72,r->selection.recipe.applicationType==ApplicationType::Measurement?1:r->selection.recipe.applicationType==ApplicationType::DefectInspection?2:3);C::putUInt32(metadata,76,sourceCount);C::putUInt32(metadata,80,r->templateKey);
         }else if(e.identity.category==CatalogueCategory::TemplateRevision){
             if(!templates_.contains(e.key))return QByteArray{};content=QJsonDocument(templates_[e.key].toJson()).toJson(QJsonDocument::Compact);dependencies=templates_[e.key].revision.toRfc4122();for(auto [o,v]:{std::pair{72,16},{76,32},{80,4},{84,1},{88,64},{92,1},{96,1},{100,1}})C::putUInt32(metadata,o,v);
         }else if(e.identity.category==CatalogueCategory::Camera){
             bool found=false;for(const auto& r:recipes_)for(const auto& c:r.selection.cameras)if(c.cameraKey==e.key){content="visionflow.camera-manifest/1"+c.camera.toRfc4122();dependencies=r.selection.revision.toRfc4122();for(const auto& t:editorTools(r.selection.recipe.definition))if(t.id==c.sourceId){C::putUInt32(metadata,72,t.kind=="image_file"?1:t.kind=="webcam"?2:3);C::putUInt32(metadata,88,t.kind=="image_file"?3:0);found=true;}}
+            if(!found)for(const auto& source:cat.stationSources)if(source.camera==e.identity.entity){content="visionflow.camera-manifest/1"+source.camera.toRfc4122();dependencies=source.revision.toRfc4122();C::putUInt32(metadata,72,1);C::putUInt32(metadata,88,3);found=true;}
             if(!found)return QByteArray{};
         }else return QByteArray{};
         metadata.replace(8,32,QCryptographicHash::hash(content,QCryptographicHash::Sha256));metadata.replace(40,32,QCryptographicHash::hash(dependencies,QCryptographicHash::Sha256));return metadata;

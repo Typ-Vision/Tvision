@@ -89,8 +89,8 @@ OECS / GenTL probe komutları, sandbox sınırları ve kanıt bağlantıları
    Eksik/atlanan kaynak önceki OK sonucunu korumaz. Editor dışarı göndermez.
    Properties → Çıkışlar sonuç listesinde gösterilecek portları seçer; tercih yerel
    INI’de saklanır. Viewer/overlay ve Logs/CSV/PLC verisi bu seçimden bağımsızdır.
-   İstasyonda yayımla kaydedilmiş reçeteden değişmez revision üretir; yükleme VF-04
-   işidir ([VF-03](docs/architecture/communication-v4/communication-workspace.md#vf-03--değişmez-reçete-yayımlama)).
+   İstasyonda yayımla kaydedilmiş reçeteden değişmez revision üretir; Dashboard →
+   İstasyonlar → yayımlanmış revision → Uyumluluğu denetle → Reçete yükle/değiştir ([VF-04](docs/architecture/communication-v4/communication-workspace.md#vf-04--dashboarddan-reçete-yükleme-ve-istasyon-kaynağı)).
 4. Kaydedilmiş reçete için Load Recipe → Kaynağı doğrula → Run → Tek çevrim; sonuçlar Logs/CSV'de.
    Doğrulama kayıtlı metrik kaynak iznini yeni kareyle denetler; Run başlatmaz.
    Load/Run hazırlığı tek başına sonuç değildir. Stop → yeniden Load sürümü değiştirir.

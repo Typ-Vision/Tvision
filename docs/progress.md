@@ -5,17 +5,13 @@
 
 ## Devam noktası
 
-**[VF-03](archive/2026-11-03-vf-03.md): değişmez reçete yayını.**
-Editor `İstasyonda yayımla`; liste Communication seçicisinde.
-Hedefli ON 14/OFF 11. Tam ON 166/202'de durdu (164 geçti, 0 hata);
-tam OFF yok. VF-04 başlatılmadı.
+**[VF-04](archive/2026-11-03-vf-04.md): Dashboard + gerçek istasyon kaynağı.**
+Hedefli ON11/OFF9; tam ON203+1skip/OFF160+1skip, hata0.
+İki restart ve 1400×900/850×600 geçti. Sıradaki VF-05; TCP A/B VF-08’de.
 
-**[VF-02](archive/2026-11-02-vf-02.md): K1 geçti.** Restart/küçük ekran OK.
-Hedefli8/7; OFF158+1skip. ON196/1skip/3timeout; 2 tekrar geçti.
-Pose UI/tam ON kullanıcı isteğiyle açık.
-
-**[VF-01](archive/2026-11-02-vf-01.md):** şablonlar; hedefli5/5,
-restart/1280×720 onaylı. Tam ON/OFF kesildi (OFF timeout arşivde).
+**[VF-03](archive/2026-11-03-vf-03.md):** değişmez yayın; tam regresyon devri VF-04’te karşılandı.
+**[VF-02](archive/2026-11-02-vf-02.md):** K1 geçti; tam ON/Pose UI devri VF-04’te karşılandı.
+**[VF-01](archive/2026-11-02-vf-01.md):** şablonlar; restart/küçük ekran geçti.
 
 **[COMM4-26](archive/2026-11-02-comm4-26.md)**: yazılım tamam;
 ON197/1skip, OFF156/1skip; hata0. Hedefli34/29; Qt iki viewport.

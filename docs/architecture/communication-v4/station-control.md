@@ -70,3 +70,17 @@ scheduler'ı burada bağlanmaz. Bunlar09/13/14/16 entegrasyonlarının sorumlulu
 `station_control_contract`, fake shared ledger ve gerçek Image File Runtime ile
 bu portları sınar. Bu fixture disk/crash dayanıklılığı veya fiziksel PLC/kamera
 üretim kabulü değildir. Native OECS correlation/drain kapısı değişmez.
+
+## VF-04 kaynak çözümleme
+
+Yayımlanmış reçetenin tam canonical içeriği ve istasyona özgü resolved source
+ayrıdır. Yerel `select` ve wire SELECT_RECIPE aynı `selectImpl` resolver/config
+yolunu kullanır. Yerel seçim ledger’daki normal/control pending kayıtlarını
+engeller; wire seçim yalnız kendisine ayrılmış normal intent’i aşabilir,
+başka pending kontrol kaydını aşamaz. Rezervasyon öncesindeki ortak ledger
+bariyeri diğer üretim/kontrol teslimlerini korur.
+
+`StationActivationService` kaynak snapshot’ını identity kataloğuyla eşleştirir,
+configuration sonrasında identity revision ve idle/drained durumunu tekrar
+denetler, ardından activation CAS yapar. Runtime/executor aynı çözülmüş recipe
+kopyasını kullanır. [Sürüm/Runtime sözleşmesi](communication-workspace.md#vf-04--dashboarddan-reçete-yükleme-ve-istasyon-kaynağı).

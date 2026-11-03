@@ -1,5 +1,6 @@
 #include "MainWindow.hpp"
 #include <QFormLayout>
+#include <QTableWidget>
 #include <QGridLayout>
 #include <QScrollArea>
 #include <QSettings>
@@ -91,11 +92,45 @@ void MainWindow::bindCommunication(CommunicationWorkspace* workspace){
         return QString{};
     });
     communicationPanel_->bind(workspace);
+    refreshDashboardStations();
 }
 bool MainWindow::verifyEndpointProfiles(const QString& artifacts) {
     selectPage("communication");
     for(const auto size:{QSize(1400,900),QSize(850,600)}){resize(size);QApplication::processEvents();if(!grab().save(QDir(artifacts).filePath(QString("communication-%1x%2.png").arg(size.width()).arg(size.height()))))return false;}
     return communicationPanel_ && !findChild<QComboBox*>("endpointList") && !findChild<QPushButton*>("plc_listen") && !runtime_;
+}
+void MainWindow::refreshDashboardStations(){
+    if(!dashboardStations_ || !communicationWorkspace_)return;
+    try{
+        const auto rows=communicationWorkspace_->stations();const int selected=dashboardStations_->currentRow();
+        const QSignalBlocker block(dashboardStations_);dashboardStations_->setRowCount(rows.size());
+        const auto catalogue=communicationWorkspace_->sourceCatalogue();
+        for(int n=0;n<rows.size();++n){const auto& row=rows[n];QString camera="Eşleşmedi";
+            if(row.source)for(const auto& e:catalogue.entries)if(e.identity.category==CatalogueCategory::Camera && e.identity.entity==row.source->camera)camera=e.name;
+            QStringList columns{row.station.name,camera,row.snapshot?row.snapshot->selection.recipe.name+"\n"+row.snapshot->selection.revision.toString(QUuid::WithoutBraces):"Yüklenmedi",row.runtime.mode==StationMode::Stopped?"Durduruldu":CommunicationWorkspace::modeName(row.runtime.mode)};
+            for(int c=0;c<4;++c){auto* item=new QTableWidgetItem(columns[c]);item->setToolTip(columns[c]);dashboardStations_->setItem(n,c,item);}
+            dashboardStations_->item(n,0)->setData(Qt::UserRole,row.station.id.toString());dashboardStations_->item(n,0)->setData(Qt::UserRole+1,row.snapshot?row.snapshot->activation.toString():QString{});
+        }
+        if(!rows.isEmpty())dashboardStations_->selectRow(qBound(0,selected,int(rows.size())-1));
+        dashboardStations_->resizeRowsToContents();
+        const auto recipes=communicationWorkspace_->recipes();QStringList signature;for(const auto& saved:recipes)if(saved.publicationOnly)signature<<QString::number(saved.selection.recipeKey)+saved.selection.revision.toString();
+        if(signature.join('/')!=dashboardRecipeSignature_){
+            dashboardRecipeSignature_=signature.join('/');const QSignalBlocker recipeBlock(dashboardPublished_);const auto recipeKey=dashboardPublished_->currentData().toUInt();dashboardPublished_->clear();
+            for(const auto& saved:recipes)if(saved.publicationOnly){dashboardPublished_->addItem(saved.selection.recipe.name+" / "+saved.selection.revision.toString(QUuid::WithoutBraces),saved.selection.recipeKey);dashboardPublished_->setItemData(dashboardPublished_->count()-1,saved.templateKey,Qt::UserRole+1);}
+            const int index=dashboardPublished_->findData(recipeKey);if(index>=0)dashboardPublished_->setCurrentIndex(index);
+        }
+        const int row=dashboardStations_->currentRow();const bool loaded=row>=0 && !dashboardStations_->item(row,0)->data(Qt::UserRole+1).toString().isEmpty();
+        dashboardLoad_->setText(loaded?"Reçete değiştir":"Reçete yükle");dashboardLoad_->setEnabled(row>=0 && dashboardPublished_->count()>0);
+    }catch(const std::exception& e){dashboardStationMessage_->setText(QString::fromUtf8(e.what()));}
+}
+void MainWindow::loadDashboardRecipe(){
+    const int n=dashboardStations_->currentRow();if(!communicationWorkspace_ || n<0 || dashboardPublished_->currentIndex()<0)return;
+    try{
+        const auto* row=dashboardStations_->item(n,0);
+        communicationWorkspace_->selectRecipe(QUuid(row->data(Qt::UserRole).toString()),QUuid(row->data(Qt::UserRole+1).toString()),dashboardPublished_->currentData().toUInt(),dashboardPublished_->currentData(Qt::UserRole+1).toUInt());
+        dashboardStationMessage_->setText("Uyumluluk doğrulandı. Reçete yüklendi; Auto kapalı, istasyon durduruldu.");
+    }catch(const std::exception& e){dashboardStationMessage_->setText("Reçete yüklenemedi: "+QString::fromUtf8(e.what()));}
+    refreshDashboardStations();
 }
 void MainWindow::refreshCommunication() {if(communicationPanel_)communicationPanel_->refresh();}
 void MainWindow::publishEditingRecipe() {

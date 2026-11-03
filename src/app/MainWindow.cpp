@@ -21,6 +21,10 @@
 #include <QTabWidget>
 #include <QTimer>
 #include <QVBoxLayout>
+#include <QTableWidget>
+#include <QHeaderView>
+#include <QComboBox>
+#include "application/CommunicationWorkspace.hpp"
 
 namespace visionflow {
 namespace {
@@ -40,6 +44,7 @@ MainWindow::MainWindow(const QString& settingsFile) : settingsFile_(settingsFile
     smokeMode_=smokeMode_ || QCoreApplication::arguments().contains("--runtime-failure-smoke") || QCoreApplication::arguments().contains("--restart-runtime-smoke");
     smokeMode_=smokeMode_ || QCoreApplication::arguments().contains("--editor-camera-sessions-smoke") || QCoreApplication::arguments().contains("--runtime-camera-sessions-smoke");
     smokeMode_=smokeMode_ || QCoreApplication::arguments().contains("--runtime-visibility-smoke") || QCoreApplication::arguments().contains("--runtime-overlays-smoke") || QCoreApplication::arguments().contains("--flow-removal-smoke");
+    smokeMode_=smokeMode_ || QCoreApplication::arguments().contains("--vf04-smoke");
     setWindowTitle("VisionFlow Industrial Vision Suite"); resize(1400,900); setMinimumSize(850,600);
     auto* file = menuBar()->addMenu("File");
     auto* create=file->addAction("New Project"); create->setShortcut(QKeySequence::New);
@@ -133,10 +138,21 @@ QWidget* MainWindow::makePlaceholder(const QString& title, const QString& text) 
 }
 QWidget* MainWindow::makeDashboard() {
     auto* page = new QWidget; auto* layout = new QVBoxLayout(page);
-    layout->addWidget(card("Çalışma alanına hoş geldiniz","Önce bir proje ve reçete oluşturulacak. Donanım bağlantısı ve üretim sonucu henüz yok."));
-    auto* row = new QHBoxLayout; row->addWidget(card("Kamera","Bağlı değil"));
-    auto* recipeCard=card("Reçete","Seçilmedi"); dashboardRecipe_=recipeCard->findChild<QLabel*>("muted");
-    row->addWidget(recipeCard); row->addWidget(card("Son çevrim","Çalıştırılmadı")); layout->addLayout(row);
+    layout->addWidget(card("İstasyonlar","Yayımlanmış reçeteyi seçin ve istasyona yükleyin. Yükleme sonrası otomatik çalışma kapalıdır."));
+    dashboardStations_=new QTableWidget(0,4);dashboardStations_->setObjectName("dashboardStations");
+    dashboardStations_->setHorizontalHeaderLabels({"İstasyon","Bağlı kamera","Yüklü reçete / revizyon","Çalışma durumu"});
+    dashboardStations_->setEditTriggers(QAbstractItemView::NoEditTriggers);dashboardStations_->setSelectionBehavior(QAbstractItemView::SelectRows);
+    dashboardStations_->setSelectionMode(QAbstractItemView::SingleSelection);dashboardStations_->horizontalHeader()->setSectionResizeMode(QHeaderView::Fixed);dashboardStations_->horizontalHeader()->setSectionResizeMode(2,QHeaderView::Stretch);dashboardStations_->setMinimumHeight(130);
+    dashboardStations_->setColumnWidth(0,110);dashboardStations_->setColumnWidth(1,110);dashboardStations_->setColumnWidth(3,120);
+    layout->addWidget(dashboardStations_,1);
+    dashboardPublished_=new QComboBox;dashboardPublished_->setObjectName("dashboardPublishedRecipe");dashboardPublished_->setMinimumContentsLength(16);dashboardPublished_->setSizeAdjustPolicy(QComboBox::AdjustToMinimumContentsLengthWithIcon);layout->addWidget(dashboardPublished_);
+    auto* preview=new QPushButton("Uyumluluğu denetle");preview->setObjectName("dashboardCheckRecipe");layout->addWidget(preview);
+    connect(preview,&QPushButton::clicked,this,[this]{const int n=dashboardStations_->currentRow();if(!communicationWorkspace_ || n<0)return;try{communicationWorkspace_->previewRecipe(QUuid(dashboardStations_->item(n,0)->data(Qt::UserRole).toString()),dashboardPublished_->currentData().toUInt());dashboardStationMessage_->setText(dashboardStations_->item(n,1)->text()+" • "+dashboardPublished_->currentText()+" • Uyumlu; yüklemeye hazır.");}catch(const std::exception& e){dashboardStationMessage_->setText("Uyumsuz: "+QString::fromUtf8(e.what()));}});
+    dashboardLoad_=new QPushButton("Reçete yükle");dashboardLoad_->setObjectName("dashboardLoadRecipe");layout->addWidget(dashboardLoad_);
+    dashboardStationMessage_=label("");dashboardStationMessage_->setObjectName("dashboardStationMessage");layout->addWidget(dashboardStationMessage_);
+    connect(dashboardLoad_,&QPushButton::clicked,this,&MainWindow::loadDashboardRecipe);
+    connect(dashboardStations_,&QTableWidget::itemSelectionChanged,this,[this]{const auto row=dashboardStations_->currentRow();const bool loaded=row>=0 && !dashboardStations_->item(row,0)->data(Qt::UserRole+1).toString().isEmpty();dashboardLoad_->setText(loaded?"Reçete değiştir":"Reçete yükle");});
+    auto* stationTimer=new QTimer(this);stationTimer->setInterval(500);connect(stationTimer,&QTimer::timeout,this,[this]{if(dashboardStations_->isVisible())refreshDashboardStations();});stationTimer->start();
     auto* projects = new QPushButton("Project Manager'a git"); projects->setObjectName("primary"); layout->addWidget(projects);
     connect(projects,&QPushButton::clicked,this,[this]{selectPage("projects");}); layout->addStretch(); return page;
 }

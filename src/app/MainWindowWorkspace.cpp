@@ -294,7 +294,6 @@ void MainWindow::refreshWorkspaceHeader() {
     editorContext_->setText(active ? QString("%1%2 · %3 · v%4")
         .arg(statusKey(active->status),service_.recipeDirty(active->id) ? " • Kaydedilmedi":"",typeLabel(active->applicationType),QString::number(active->recipeVersion)) : "Aktif reçete yok");
     editorContext_->setToolTip(context_->text()+(active ? "\nKaynak: "+active->cameraReference:QString{}));
-    dashboardRecipe_->setText(active ? active->name+" / "+typeLabel(active->applicationType)+" / "+statusKey(active->status) : "Seçilmedi");
     for (const auto& id : {"newRecipe","saveProject","saveRecipes","editProject"})
         if (auto* button=findChild<QPushButton*>(id)) button->setEnabled(has);
     // A clean service can still have an uncommitted Properties spin-box value.

@@ -24,7 +24,7 @@ QVector<CommunicationStationView> CommunicationWorkspace::stations() const {
             if(v.snapshot && recipes_)for(const auto& saved:recipes_())if(saved.selection.recipeKey==v.snapshot->selection.recipeKey){const auto assignments=recipePublicationAssignments(saved.selection.recipe.definition);if(assignments)v.publication=QString("Template #%1 • %2 / %3").arg(saved.templateKey).arg(assignments->templateId.toString(QUuid::WithoutBraces),assignments->templateRevision.toString(QUuid::WithoutBraces));}
             v.canRun=v.snapshot && ledger_ && b->run->drained();v.canAuto=v.snapshot && ledger_ && bool(b->automatic);
             if(b->unavailableReason && !v.unavailable.isEmpty()){v.canRun=false;v.canAuto=false;}
-            if(v.snapshot && recipes_){bool saved=false;for(const auto& candidate:recipes_())saved|=stationRecipeBytes(candidate.selection)==stationRecipeBytes(v.snapshot->selection);if(!saved){v.canRun=false;v.canAuto=false;v.unavailable="Immutable recipe/template manifest unavailable or retired";}}
+            if(v.snapshot && recipes_){bool saved=false;for(const auto& candidate:recipes_())saved|=stationManifestMatches(candidate.selection,v.snapshot->selection);if(!saved){v.canRun=false;v.canAuto=false;v.unavailable="Immutable recipe/template manifest unavailable or retired";}}
         }else v.unavailable="Station Runtime / immutable manifest bağlanmadı.";
         v.runtime.deliveryPending=v.runtime.deliveryPending || pending.contains(v.station.id);
         if(!ledger_)v.unavailable+="\nLedger bağlanmadı; pending yokluğu doğrulanmadı.";
@@ -81,7 +81,7 @@ void CommunicationWorkspace::command(const QUuid& id,const QUuid& expected,const
     if(!ledger_)throw std::runtime_error("Durable ledger bağlanmadı");
     const auto snapshot=b->snapshot?b->snapshot():nullptr;
     if(!snapshot || snapshot->activation!=expected)throw std::runtime_error("STALE_ACTIVATION");
-    if(recipes_){bool saved=false;for(const auto& candidate:recipes_())saved|=stationRecipeBytes(candidate.selection)==stationRecipeBytes(snapshot->selection);if(!saved)throw std::runtime_error("Immutable recipe/template manifest unavailable or retired");}
+    if(recipes_){bool saved=false;for(const auto& candidate:recipes_())saved|=stationManifestMatches(candidate.selection,snapshot->selection);if(!saved)throw std::runtime_error("Immutable recipe/template manifest unavailable or retired");}
     if(ledger_ && (ledger_->pending(id) || ledger_->pending(id,true)))throw std::runtime_error("PENDING_ACK — önce exact ACK / reconcile gerekir");
     if(command=="run")b->run->run(snapshot);
     else if(command=="auto" && b->automatic)b->automatic(true);

@@ -30,6 +30,7 @@ int main(int argc, char* argv[]) {
     const bool endpointsOnly=app.arguments().contains("--endpoints-smoke");
     const bool resultOnly=app.arguments().contains("--result-smoke");
     const bool assignmentsOnly=app.arguments().contains("--assignments-smoke");
+    const bool vf04Only=app.arguments().contains("--vf04-smoke");
     const bool vf03Only=app.arguments().contains("--vf03-smoke");    const bool variablesOnly=app.arguments().contains("--variables-smoke");
     const bool roiOnly=app.arguments().contains("--roi-smoke");
     const bool multiRuntimeOnly=app.arguments().contains("--multi-source-runtime-smoke");
@@ -49,8 +50,10 @@ int main(int argc, char* argv[]) {
     const bool failureOnly=app.arguments().contains("--runtime-failure-smoke");
     const bool visibilityOnly=app.arguments().contains("--runtime-visibility-smoke");
     const bool overlaysOnly=app.arguments().contains("--runtime-overlays-smoke");
-    const bool smoke = flowRemovalOnly || publicationOnly || endpointsOnly || resultOnly || assignmentsOnly || variablesOnly || overlaysOnly || visibilityOnly || restartOnly || failureOnly || responsivenessOnly || runtimeCamerasOnly || editorCamerasOnly || roiOnly || app.arguments().contains("--smoke-test") || circleOnly || geometryOnly || poseOnly || usabilityOnly || systemOnly || multiOnly || multiRuntimeOnly || experimentalOnly || recipeFieldsOnly || vf03Only;
-    const QDir buildDir(smoke ? qEnvironmentVariable("VISIONFLOW_TEST_ARTIFACTS",QCoreApplication::applicationDirPath()):QCoreApplication::applicationDirPath());
+    const bool smoke = flowRemovalOnly || publicationOnly || endpointsOnly || resultOnly || assignmentsOnly || variablesOnly || overlaysOnly || visibilityOnly || restartOnly || failureOnly || responsivenessOnly || runtimeCamerasOnly || editorCamerasOnly || roiOnly || app.arguments().contains("--smoke-test") || circleOnly || geometryOnly || poseOnly || usabilityOnly || systemOnly || multiOnly || multiRuntimeOnly || experimentalOnly || recipeFieldsOnly || vf03Only || vf04Only;
+    QString artifactDirectory=smoke ? qEnvironmentVariable("VISIONFLOW_TEST_ARTIFACTS",QCoreApplication::applicationDirPath()):QCoreApplication::applicationDirPath();
+    if(vf04Only && !app.arguments().contains("--vf04-child"))artifactDirectory=QDir(artifactDirectory).filePath("run-"+QUuid::createUuid().toString(QUuid::WithoutBraces));
+    const QDir buildDir(artifactDirectory);
     if(smoke)QDir().mkpath(buildDir.absolutePath());
     // The VF-03 UI acceptance always starts from an empty machine directory inside
     // the test artifacts; real user data outside build/ is never touched.
@@ -94,6 +97,7 @@ int main(int argc, char* argv[]) {
         if(endpointsOnly){bool valid=false;try{valid=window.verifyEndpointProfiles(buildDir.absolutePath());}catch(const std::exception& e){QTextStream(stderr)<<e.what()<<'\n';}window.close();app.exit(valid?0:1);return;}
         if(resultOnly){bool valid=false;try{valid=window.verifyResultUi(buildDir.absolutePath());}catch(const std::exception& e){QTextStream(stderr)<<e.what()<<'\n';}window.close();app.exit(valid?0:1);return;}
         if(assignmentsOnly){bool valid=false;try{valid=window.verifyAssignmentUi(buildDir.absolutePath());}catch(const std::exception& e){QTextStream(stderr)<<e.what()<<'\n';}window.close();app.exit(valid?0:1);return;}
+        if(vf04Only){bool valid=false;try{valid=window.verifyVf04Dashboard(buildDir.absolutePath());}catch(const std::exception& e){QTextStream(stderr)<<e.what()<<'\n';}QTextStream(stdout)<<(valid?"PASS":"FAIL")<<": VF-04 Dashboard selection / restart\n";window.close();app.exit(valid?0:1);return;}
         if(vf03Only){bool valid=false;try{valid=window.verifyVf03Publication(buildDir.absolutePath());}catch(const std::exception& e){QTextStream(stderr)<<e.what()<<'\n';}QTextStream(stdout)<<(valid?"PASS":"FAIL")<<": VF-03 publish data editor → machine catalogue → Communication recipe list\n";window.close();app.exit(valid?0:1);return;}
         if(variablesOnly){bool valid=false;try{valid=window.verifyVariableCatalog(buildDir.absolutePath());}catch(const std::exception& e){QTextStream(stderr)<<e.what()<<'\n';}window.close();app.exit(valid?0:1);return;}
         if(overlaysOnly){bool valid=false;try{valid=window.verifyRuntimeOverlays(buildDir.absolutePath());}catch(const std::exception& e){QTextStream(stderr)<<e.what()<<'\n';}window.close();app.exit(valid?0:1);return;}

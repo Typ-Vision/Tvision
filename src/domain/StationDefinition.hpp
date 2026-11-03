@@ -1,5 +1,6 @@
 #pragma once
 #include "Project.hpp"
+#include "StationIdentityRegistry.hpp"
 #include <QUuid>
 #include <QByteArray>
 #include <cstdint>
@@ -30,6 +31,8 @@ struct StationRecipeSelection {
     Recipe recipe;
     QString projectDirectory;
     QVector<StationCameraBinding> cameras;
+    // The published recipe remains immutable; only execution resolves this source.
+    std::optional<StationFileSource> resolvedSource;
 };
 struct StationSnapshot {
     StationDefinition station;
@@ -42,6 +45,9 @@ struct StationActivationCatalogue {
     QVector<StationSnapshot> history;
 };
 QByteArray stationRecipeBytes(const StationRecipeSelection&);
+QByteArray stationPublicationBytes(const StationRecipeSelection&);
+bool stationManifestMatches(const StationRecipeSelection& saved,const StationRecipeSelection& selected);
+Recipe stationExecutionRecipe(const StationRecipeSelection&);
 QByteArray encodeStationCatalogue(const StationActivationCatalogue&);
 StationActivationCatalogue decodeStationCatalogue(const QByteArray&);
 void validateStationCatalogue(const StationActivationCatalogue&);

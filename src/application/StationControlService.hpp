@@ -33,6 +33,9 @@ class StationControlService final {
 public:
     using SavedRecipes=std::function<std::optional<StationSavedRecipe>(quint32 recipeKey)>;
     StationControlService(StationActivationService&,StationIdentityStore&,StationControlStore*,SavedRecipes);
+    using Resolve=std::function<StationRecipeSelection(const QUuid&,const StationRecipeSelection&)>;
+    void setResolver(Resolve resolve){resolve_=std::move(resolve);}
+    void setSelectionBarrier(std::function<void(const QUuid&,bool)> barrier){selectionBarrier_=std::move(barrier);}
     void bind(const StationDefinition&,StationRunController&);
     void setRemoteEnabled(bool); // machine-local setting; never taken from wire
     std::optional<CommunicationV4Frame> handle(const V4RequestIdentity&,const CommunicationV4Frame&);
@@ -45,6 +48,9 @@ public:
 private:
     struct Binding {StationDefinition station;StationRunController* run;};
     struct Pending {V4RequestIdentity key;CommunicationV4Frame request;quint64 generation=0;bool automatic=false;std::optional<CommunicationV4Header> selected;};
+    std::shared_ptr<const StationSnapshot> selectImpl(const QUuid&,const QUuid&,quint32,quint32,bool reserved);
+    Resolve resolve_;
+    std::function<void(const QUuid&,bool)> selectionBarrier_;
     void prepareAuto(const QUuid&,const QUuid& expected);
     void owner() const;
     Binding& binding(const QUuid&);

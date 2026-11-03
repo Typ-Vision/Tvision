@@ -250,7 +250,8 @@ yolu yeni kaynak revizyonu üretir. Aynı dosya/ad tekrar kaydı no-op'tur.
 İlk açık kaynak kaydı JSON payload schemaVersion=2 üretir. Eski schemaVersion=1
 boş stationSources ile okunur ve kaynak eklenmedikçe aynı biçimde yazılır.
 SchemaVersion=2 eksik/çift kaynak, bilinmeyen alan, hatalı kimlik veya checksum
-ile reddedilir. StationActivationCatalogue formatı ve geçmiş baytları değişmez.
+ile reddedilir. VF-02’de StationActivationCatalogue biçimi değişmedi; VF-04 aşağıdaki sürümlü
+çözülmüş kaynak kaydını ekler ve eski manifest baytlarını korur.
 Eski activation'lardan kamera otomatik çıkarılmaz; Kaynak ayarları ile bir
 kez açık eşleme yapılır. İlk ürün sürümünde kaydedilmiş kamera kimliği korunur
 ve başka istasyona sessizce atanmaz.
@@ -263,11 +264,10 @@ uygulamanın yeniden başlatılmasını ister; o süreçte Run/Auto/Remote Enabl
 reçete seçimi engellenir. Sonraki normal composition istasyon kimliklerini
 yeniden bağlar, başlangıç Run/Auto/Remote Enable kapalı kalır.
 
-VF-02 kaynak kaydı üretim reçetesi seçmez. Makine kaynağını reçetenin tool
-kimliklerine çözümleyip aynı immutable admission/execution snapshot'ına taşıma
-VF-04'e aittir. Kaynağı açıkça bağlanan istasyonda bu çözümleme hazır olmadan
-eski reçete dosyası üzerinden Run/Auto açılmaz. A/B görüntü işleme kanıtı VF-08'e
-aittir. VF-03 ve sonraki kartlar bu teslimin kapsamına girmez.
+VF-02 kaynak kaydı üretim reçetesi seçmez. VF-04 makine kaynağını reçetenin
+tool kimliklerine çözümler; admission ve execution aynı çözülmüş snapshot’ı
+kullanır. Eski reçete dosyasına sessiz dönüş yoktur. Gerçek TCP üzerinden A/B
+kabulü VF-08’e aittir.
 
 Kalıcılık, bozuk görüntü, stale CAS, kilit, yarım yazım ve legacy/restart
 korumasının hedefli testi `station_source_setup_contract`'tır. K1 ürün kabulü
@@ -307,11 +307,63 @@ Composition yayın kataloğunu normal açılışta ve dosya değişiminde migrat
 paketi olmadan okur; Communication reçete seçicisinde `• yayım` etiketiyle
 listeler. Katalog makine kurulum kimliğiyle eşleşmeli, tüm anahtarlar canlı
 identity kataloğunda ve şablon manifesti mevcut olmalıdır; aksi kayıt listeye
-girmez. Liste yalnız keşiftir: yayımlanmış reçeteyi istasyon kamerasına
-çözümleyip yükleme VF-04'e aittir. Çözümleme olmadan seçim açık hatayla
-reddedilir; Run/Auto veya activation üretilmez.
+girmez. Liste keşfi activation üretmez; açık Dashboard/Communication yüklemesi
+VF-04 çözümlemesini kullanır. Kalıcı istasyon kaynağı olmadan yeni yayın
+yüklenemez; başarısız çözümleme activation veya Run/Auto üretmez.
 
 Hedefli testler `publication_publish_contract` (tip/birim/eksik slot/unsaved/
 kesinti/no-op/yeni revizyon/bozuk katalog/activation korunumu) ve
 `ui_publication_v4` (gerçek editör düğmesi + Communication listesi) olarak
 çalışır.
+
+## VF-04 · Dashboard’dan reçete yükleme ve istasyon kaynağı
+
+Dashboard → İstasyonlar → satır → yayımlanmış revision → **Uyumluluğu denetle**
+→ **Reçete yükle**; sonraki seçimde **Reçete değiştir**. Satır istasyon, bağlı
+kamera, yüklü reçete/revision ve çalışma durumunu gösterir. Önizleme salt okunur;
+yükleme aynı uyumluluk denetimini tekrar yapar. Çalışan istasyon önce Stop/drain
+olmalıdır; bekleyen üretim veya kontrol terminali exact ACK/reconcile bekler.
+Başarı yeni activation üretir, Auto kapalı kalır. Ret mevcut seçimi, kamera
+eşlemesini ve activation’ı korur. Editor açma/kaydetme/yayımlama seçimi değiştirmez.
+
+`StationRecipeSelection.recipe` yayımlanmış içeriğin tamamını aynen tutar.
+Ayrı `resolvedSource`, makineye ait station/camera/source revision/absolute path
+kaydını dondurur; `cameras` yeni reçetenin source tool UUID’sini aynı makine
+kamerasına bağlar. İlk dosya kaynağı sürümünde tam bir etkin Image File gerekir;
+çoklu kaynak, Webcam/Industrial Camera veya eksik setup/kalibrasyon reddedilir.
+İstasyonun dosyası seçimde gerçekten decode edilir. Kaynak yapılandırması ve
+reçete içeriği aynı şey değildir: `stationPublicationBytes` reçetenin bütün
+alanlarını, revision/key ve proje dizinini karşılaştırır; `stationRecipeBytes`
+çözülmüş kamera/kaynak kaydını da içerir. Yeni yol eski manifest denetimini
+devre dışı bırakmaz. Legacy seçimler tam eski kamera/manifest eşitliğini korur.
+
+Activation kataloğu schema 1’i okur; yalnız çözülmüş seçim varsa schema 2 yazar.
+Schema 2 her seçimde kaynak varlığı ve varsa dondurulmuş kaynak alanlarını taşır.
+Eski activation ve canonical manifest baytları geçişte korunur; geçmiş kayıtlar
+yeniden seçilmiş sayılmaz. Yeni kod hem sürümü okur; eski binary schema 2’yi
+reddeder. Geçişte aynı dosyayı eski/yeni sürümle eşzamanlı kullanmayın.
+Checksummed QSaveFile/QLockFile ve append-only revision CAS aynı kalır.
+
+Yerel ve yetkili uzak SELECT_RECIPE aynı resolver, configuration ve drain
+kapısından geçer. Kaynak identity revision’ı configuration sonrasında yeniden
+denetlenir; reentrant seçimde yalnız CAS kazananı kalır. Admission manifest’i
+güncel makine kaydıyla exact resolved snapshot eşitliği ister. Runtime yükleme
+ve configuration için `stationExecutionRecipe` yalnız kopyadaki Image File
+yolunu çözer; executor aynı kopyayı ticket snapshot’ıyla karşılaştırır. Sonuç
+yayını aynı admission snapshot’ına bağlıdır. Kamera-set revision’ı kaynak
+revision/yolunu da kapsar. Recipe metadata v2 istasyona özgü kamera listesi
+yerine değişmez içeriği ve gerekli kaynak sayısını taşır; legacy metadata v1’dir.
+
+Restart son başarılı seçimi/kaynak snapshot’ını geri getirir; Run, Auto ve
+Remote Enable açılmaz. Kaynak kaydı sonradan değişmişse eski seçime üretim izni
+verilmez; durdurulmuş istasyonda açık yükleme gerekir. Fiziksel kamera/PLC/robot
+ve kalibrasyon doğruluğu bu dosya kaynağı kabulüyle kapanmaz.
+
+`station_recipe_selection_contract`: farklı kaynak UUID’li A/B, beyaz istasyon
+ve siyah reçete görüntüsü, gerçek worker pikseli ve composition terminal Flag0,
+uyumsuz tür/sayı/kalibrasyon, eski activation, missing file, pending ACK,
+iki istasyon izolasyonu, source/selection CAS yarışları ve schema 1→2 geçişi.
+`ui_station_dashboard`: normal executable, ürün kurulum/kaynak dialogu, gerçek
+Editor yayımlama düğmesi, Dashboard A→B/uyumsuz ret, iki executable restart ve
+1400×900/850×600 görselleri. Her koşum yeni artifact dizinindedir. Bağımsız
+simülatörle TCP uçtan uca B görüntüsü kabulü VF-08’de yapılır.

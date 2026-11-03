@@ -27,6 +27,7 @@ class QListWidget;
 class QStackedWidget;
 class QSplitter;
 class QLabel;
+class QPushButton;
 class QCloseEvent;
 class QFormLayout;
 namespace visionflow {
@@ -55,6 +56,7 @@ public:
     bool verifyVariableCatalog(const QString& artifacts);
     bool verifyPublicationUi(const QString& artifacts);
     bool verifyVf03Publication(const QString& artifacts);
+    bool verifyVf04Dashboard(const QString&);
     bool verifyResultUi(const QString& artifacts);
     bool verifyAssignmentUi(const QString& artifacts);
     bool verifyWorkspace(const QString& artifactDirectory);
@@ -210,7 +212,13 @@ private:
     QLabel* editorContext_{};
     QLabel* workspaceError_{};
     QLabel* recipeCount_{};
-    QLabel* dashboardRecipe_{};
+    QString dashboardRecipeSignature_;
+    QTableWidget* dashboardStations_{};
+    QComboBox* dashboardPublished_{};
+    QPushButton* dashboardLoad_{};
+    QLabel* dashboardStationMessage_{};
+    void refreshDashboardStations();
+    void loadDashboardRecipe();
     QTableWidget* recipeTable_{};
     QComboBox* typeFilter_{};
     QLineEdit* recipeSearch_{};

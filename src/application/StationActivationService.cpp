@@ -31,10 +31,14 @@ std::shared_ptr<const StationSnapshot> StationActivationService::activate(const 
     entry(identity,station.key,CatalogueCategory::Station,station.id);
     entry(identity,selection.recipeKey,CatalogueCategory::RecipeRevision,QUuid(selection.recipe.id),selection.revision);
     for(const auto& b:selection.cameras)entry(identity,b.cameraKey,CatalogueCategory::Camera,b.camera);
+    bool hasSource=false;
+    for(const auto& source:identity.stationSources)if(source.station==station.id){hasSource=true;need(selection.resolvedSource && *selection.resolvedSource==source,"Station source snapshot mismatch");}
+    need(hasSource==bool(selection.resolvedSource),"Station source resolution required");
     StationSnapshot next{station,QUuid::createUuid(),selection};c.history.append(next);const auto previous=c.revision;c.revision=QUuid::createUuid();validateStationCatalogue(c);
     boundary_.checkConfiguration(next);
     // Configuration check is synchronous/read-only. Recheck a reentrant boundary before commit.
     need(boundary_.idleAndDrained(station.id),"STATION_NOT_DRAINED");
+    need(identities_.load().revision==identity.revision,"Station source catalogue changed during selection");
     store_.compareExchange(previous,c);return std::make_shared<const StationSnapshot>(std::move(next));
 }
 }

@@ -6,6 +6,7 @@ görev” ifadeleri yazıldıkları tarihe aittir.
 
 | Dönem / görev | Kayıt |
 | --- | --- |
+| 3 Kasım 2026 — VF-04 | [Dashboard seçimi, gerçek istasyon kaynağı, schema 1→2; tam ON/OFF ve iki restart](2026-11-03-vf-04.md) |
 | 3 Kasım 2026 — VF-03 | [Değişmez reçete yayımlama, makine kataloğu keşfi ve editör/Communication kabulü](2026-11-03-vf-03.md) |
 | 2 Kasım 2026 — VF-02 | [Kalıcı istasyon/kamera/dosya ve K1 geçti; OFF158+1skip, tam ON kullanıcı isteğiyle açık bırakıldı](2026-11-02-vf-02.md) |
 | 2 Kasım 2026 — VF-01 | [Açık makine kurulumu, idempotent hazır şablonlar, hedefli test ve kullanıcı kabulü](2026-11-02-vf-01.md) |

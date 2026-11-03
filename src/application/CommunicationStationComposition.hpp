@@ -32,6 +32,7 @@ private:
         std::unique_ptr<StationRunController> run;
     };
     std::optional<StationSavedRecipe> recipe(quint32) const;
+    StationRecipeSelection resolve(const QUuid&,const StationRecipeSelection&,bool inspect=true) const;
     std::optional<StationAdmissionSnapshot> manifest(const QUuid&) const;
     void complete(const StationAdmissionIntent&,const ProductionCycle&,const CycleResult&);
     QDir directory_;QJsonObject selection_;

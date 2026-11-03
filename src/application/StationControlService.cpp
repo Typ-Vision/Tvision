@@ -43,7 +43,7 @@ void StationControlService::bind(const StationDefinition& s,StationRunController
 }
 quint32 StationControlService::templateKey(const StationSnapshot& s) const {
     const auto saved=recipes_?recipes_(s.selection.recipeKey):std::nullopt;
-    if(!saved || !saved->templateKey || saved->selection.revision!=s.selection.revision || stationRecipeBytes(saved->selection)!=stationRecipeBytes(s.selection))throw std::runtime_error("Missing saved manifest");
+    if(!saved || !saved->templateKey || saved->selection.revision!=s.selection.revision || !stationManifestMatches(saved->selection,s.selection))throw std::runtime_error("Missing saved manifest");
     return saved->templateKey;
 }
 bool StationControlService::exact(const QUuid& id,const CommunicationV4Header& h) const {
@@ -67,11 +67,19 @@ void StationControlService::setRemoteEnabled(bool enabled){
     }
 }
 std::shared_ptr<const StationSnapshot> StationControlService::select(const QUuid& id,const QUuid& expected,quint32 recipeKey,quint32 wantedTemplate){
+    return selectImpl(id,expected,recipeKey,wantedTemplate,false);
+}
+std::shared_ptr<const StationSnapshot> StationControlService::selectImpl(const QUuid& id,const QUuid& expected,quint32 recipeKey,quint32 wantedTemplate,bool reserved){
     owner();auto& b=binding(id);
+    if(!b.run->drained())throw std::runtime_error("STATION_NOT_DRAINED");
+    if(selectionBarrier_)selectionBarrier_(id,reserved);
     if(!store_ || blocked_.contains(id))throw std::runtime_error("Durable control unavailable");
     const auto saved=recipes_?recipes_(recipeKey):std::nullopt;
     if(!saved || !wantedTemplate || saved->templateKey!=wantedTemplate)throw std::runtime_error("Unknown immutable saved recipe/template");
-    const auto result=activations_.activate(b.station,expected,saved->selection);
+    const auto selection=resolve_?resolve_(id,saved->selection):saved->selection;
+    if(!stationManifestMatches(saved->selection,selection))throw std::runtime_error("Immutable recipe changed during source resolution");
+    if(selectionBarrier_)selectionBarrier_(id,reserved);
+    const auto result=activations_.activate(b.station,expected,selection);
     b.run->setAuto(false);return result;
 }
 void StationControlService::setAuto(const QUuid& id,const QUuid& expected,bool value){
@@ -142,7 +150,7 @@ std::optional<CommunicationV4Frame> StationControlService::handle(const V4Reques
         try{if(auto reason=store_->reserve(intent))return reject(reason);}catch(...){blocked_.insert(key.station);stop(key.station);return reject(8);}
         Pending p{key,f,run.controlGeneration(),kind==5 && bool(C::uint32(f.body,0))};
         try{
-            if(kind==4){const auto s=select(key.station,f.header.activation,C::uint32(f.body,0),C::uint32(f.body,4));p.selected=f.header;p.selected->activation=s->activation;p.selected->recipeRevisionKey=s->selection.recipeKey;p.selected->templateRevisionKey=templateKey(*s);}
+            if(kind==4){const auto s=selectImpl(key.station,f.header.activation,C::uint32(f.body,0),C::uint32(f.body,4),true);p.selected=f.header;p.selected->activation=s->activation;p.selected->recipeRevisionKey=s->selection.recipeKey;p.selected->templateRevisionKey=templateKey(*s);}
             else if(kind==5 && p.automatic){
                 // Do not enable Auto until a durable READY terminal is sealed.
                 prepareAuto(key.station,f.header.activation);

@@ -35,7 +35,7 @@ void StationExecutionRegistry::dispatch(const StationAdmissionIntent& intent,con
     if(!bindings_.contains(id) || jobs_.contains(id) || !permit || permit->released || permit.get()!=lease.get()
        || !intent.snapshot.station || intent.snapshot.station->station.id!=id || !cycle.snapshot || !cycle.ticket
        || cycle.snapshot->recipe().id!=intent.snapshot.station->selection.recipe.id
-       || cycle.snapshot->recipe().definition!=intent.snapshot.station->selection.recipe.definition)
+       || cycle.snapshot->recipe().definition!=stationExecutionRecipe(intent.snapshot.station->selection).definition)
         throw std::runtime_error("Station execution lease mismatch");
     auto& binding=bindings_[id];auto job=std::make_shared<Job>();job->intent=intent;job->cycle=cycle;job->lease=lease;job->permit=permit;
     job->cancel=binding.coordinator->cancellation();if(!job->cancel)throw std::runtime_error("Missing Runtime cancellation lease");

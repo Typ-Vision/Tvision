@@ -18,7 +18,7 @@ bool StationRuntimeBoundary::idleAndDrained(const QUuid& id) const {
 }
 void StationRuntimeBoundary::checkConfiguration(const StationSnapshot& snapshot) const {
     const auto& b=binding(snapshot.station.id);
-    b.runtime->checkConfiguration(snapshot.selection.recipe,snapshot.selection.projectDirectory);
+    b.runtime->checkConfiguration(stationExecutionRecipe(snapshot.selection),snapshot.selection.projectDirectory);
 }
 StationRuntimeState StationRuntimeBoundary::state(const QUuid& id) const {
     const auto& b=binding(id);StationRuntimeState result;result.deliveryPending=b.coordinator->deliveryPending();result.health=b.coordinator->error();
@@ -36,6 +36,6 @@ void StationRuntimeBoundary::load(const std::shared_ptr<const StationSnapshot>& 
     const auto& b=binding(snapshot->station.id);
     // Legacy load also blocks pending delivery. Selection itself remains independent;
     // the immutable pending terminal must be ACKed before preparing the next Runtime.
-    b.coordinator->load(snapshot->selection.recipe,snapshot->selection.projectDirectory,RuntimeTrigger::Manual);
+    b.coordinator->load(stationExecutionRecipe(snapshot->selection),snapshot->selection.projectDirectory,RuntimeTrigger::Manual);
 }
 }
