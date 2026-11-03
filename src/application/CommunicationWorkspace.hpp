@@ -4,6 +4,7 @@
 #include "CameraLeaseArbiter.hpp"
 #include "CommunicationMigration.hpp"
 #include "RobotCalibrationWorkspace.hpp"
+#include <QElapsedTimer>
 
 namespace visionflow {
 struct CommunicationStationView {
@@ -73,6 +74,9 @@ public:
     CommunicationServerProfile profile() const;
     void saveProfile(const CommunicationServerProfile&);
     void command(const QUuid&,const QUuid& expectedActivation,const QString&);
+    void startAutomaticProduction();
+    bool automaticProductionBusy() const {return batchActive_;}
+    QString automaticProductionStatus() const {return batchStatus_;}
     void poll();
     bool drained() const;
     static QString modeName(StationMode);
@@ -84,6 +88,14 @@ public:
     void rollback(const CommunicationMigrationInput&,const QString& workspace,const QByteArray& pointer,const QByteArray& ledger);
     QJsonObject reviewRollback(const CommunicationMigrationInput&,const QString& workspace) const;
 private:
+    void advanceAutomaticProduction();
+    void cancelAutomaticProduction(const QString&);
+    struct AutoTarget {QUuid station, activation; bool started=false, changed=false, wasAutomatic=false; quint64 generation=0;};
+    QVector<AutoTarget> batch_;
+    int batchIndex_=0;
+    bool batchActive_=false, batchRollback_=false, batchEnabling_=false;
+    QString batchStatus_;
+    QElapsedTimer batchTimer_;
     void owner() const;
     void maintenance() const;
     void machineInput(const CommunicationMigrationInput&,const QString&) const;

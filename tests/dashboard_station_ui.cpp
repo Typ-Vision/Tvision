@@ -17,6 +17,7 @@
 #include <QProcessEnvironment>
 #include <QTextStream>
 #include <QImage>
+#include <QElapsedTimer>
 namespace visionflow {
 bool MainWindow::verifyVf04Dashboard(const QString& artifacts){
     auto check=[](bool value,const char* message){if(!value)throw std::runtime_error(message);};
@@ -55,7 +56,16 @@ bool MainWindow::verifyVf04Dashboard(const QString& artifacts){
         choose("Uyumsuz C");findChild<QPushButton*>("dashboardCheckRecipe")->click();check(dashboardStationMessage_->text().contains("Uyumsuz"),"Incompatible preview");dashboardLoad_->click();check(row().snapshot->activation==b->activation && dashboardStationMessage_->text().contains("yüklenemedi"),"Incompatible C keeps B activation");
         // Editing, saving and publishing another draft must leave B selected.
         service_.openProject(root.filePath("Yüzey A.vfproject"));service_.selectRecipe(service_.project().recipes[0].id);service_.save();refreshWorkspace();selectPage("editor");findChild<QPushButton*>("publishRecipeV4")->click();check(row().snapshot->activation==b->activation,"Editor open/save/publish does not switch station");selectPage("dashboard");refreshDashboardStations();
+        auto* start=findChild<QPushButton*>("dashboardStartAutomatic");check(start,"Automatic production action exists");start->click();
+        QElapsedTimer preparation;preparation.start();while(communicationWorkspace_->automaticProductionBusy() && preparation.elapsed()<10000){communicationWorkspace_->poll();QApplication::processEvents();}
+        check(row().automatic && !communicationWorkspace_->remoteEnabled(),"Dashboard single action enables actual Run/Auto without Remote");refreshDashboardStations();
+        check(dashboardAutoStatus_->text().contains("doğrulandı"),"Actual Auto completion displayed");
         for(const auto size:{QSize(1400,900),QSize(850,600)}){resize(size);QApplication::processEvents();check(grab().save(root.filePath(QString("vf04-dashboard-%1x%2.png").arg(size.width()).arg(size.height()))),"Dashboard visual");check(dashboardLoad_->isVisible() && dashboardLoad_->geometry().width()>100,"Load action reachable");}
+        communicationWorkspace_->command(row().station.id,{},"stop");communicationWorkspace_->poll();
+        const auto sourcePath=row().source->path;check(QFile::rename(sourcePath,sourcePath+".vf06-held"),"Hide product source");start->click();
+        check(!row().automatic && row().runtime.mode==StationMode::Stopped && dashboardAutoStatus_->text().contains("Kaynak"),"Missing source explains correction and does not start");
+        check(grab().save(root.filePath("vf06-dashboard-missing-source.png")),"Missing source visual");check(QFile::rename(sourcePath+".vf06-held",sourcePath),"Restore product source");
+        start->click();preparation.restart();while(communicationWorkspace_->automaticProductionBusy() && preparation.elapsed()<10000){communicationWorkspace_->poll();QApplication::processEvents();}check(row().automatic,"Restart acceptance begins from actual Auto");
         QFile expected(root.filePath("vf04-activation"));check(expected.open(QIODevice::WriteOnly),"Expected activation");expected.write(b->activation.toRfc4122());expected.close();writeStage("restore");restart();return true;
     }
     check(stage=="restore","Known acceptance stage");QFile expected(root.filePath("vf04-activation"));check(expected.open(QIODevice::ReadOnly),"Read expected activation");

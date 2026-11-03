@@ -419,3 +419,31 @@ Hedefli testler `communication_clients_contract` (kayıt, ikinci etkin ret, yeni
 pending ret, restart kalıcılığı, profil şema/uyum redleri ve bağımsız Python
 HELLO) ve genişletilmiş `ui_communication_workspace` (panel düğmeleri, export/verify
 dosya akışı, emekli profil reddi, normal/küçük ekran görselleri).
+
+## VF-06 · Dashboard'dan otomatik üretim
+
+Dashboard → **Otomatik üretimi başlat**, kayıtlı bütün etkin istasyonları üretime
+alır. Önce tamamında kalıcı kamera/dosya, seçili immutable revision/yayın, durable
+ledger, pending teslim ve gerçek çalışma durumu denetlenir. Bir eksik varsa hiçbir
+istasyon başlatılmaz; istasyon adı ve düzeltme nedeni gösterilir. **Kaynak ayarları /
+teslim ve çalışma durumu** Communication ekranına götürür; eksik reçete Dashboard'dan
+yüklenir. Bu eylem Remote Enable açmaz; yerel Auto normal kayıtlı istemci tetiği içindir.
+Remote Enable kapatılması mevcut davranış gereği istasyonlara Stop verir.
+
+Workspace owner thread üzerinde tek geçiş tutar; art arda başlatma reddedilir.
+Duran istasyonlar sırayla Run ile hazırlanır, gerçek Armed durumundan sonra ortak
+kontrol servisine Auto verilir. Sonraki istasyona ancak gerçek Auto doğrulandıktan
+sonra geçilir. Her poll kaynak, activation, manifest/pending ve tamamlanan
+istasyonların Auto durumunu yeniden denetler. 30 saniyede tamamlanmayan hazırlık
+hata kabul edilir. Stop/generation değişimi geç gelen hazırlığın Auto açmasını önler.
+
+Hata halinde yalnız bu geçişle Run başlatılan sahipler Stop/drain yapılır. Önceden
+manual Run olanın bu işlemle açılan Auto izni geri alınır; önceden Auto olan istasyon
+korunur. Gerçek drain tamamlanana kadar geçiş sürüyor gösterilir. Pending sonuçlar
+silinmez. Geçiş durumu/üretim izni kalıcılaştırılmaz; yeniden açılış Run/Auto/Remote
+kapalıdır. Satırlar gerçek hazırlık, Auto, çevrim ve pending ACK durumunu gösterir.
+
+Hedefli kanıt: `communication_workspace_contract` (tek/iki istasyon, ön kontrol,
+ikinci istasyon hatası, rollback, önceki Run/Auto korunması, tekrarlı eylem, Stop ve
+kaynak kaybı); `ui_station_dashboard` (normal ürün düğmesi, eksik kaynak ve restart).
+İki istasyonlu normal ürün kabulü VF-08'e, TCP terminal/exact ACK VF-07'ye aittir.

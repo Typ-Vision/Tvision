@@ -124,7 +124,8 @@ CommunicationServerProfile CommunicationWorkspace::profile() const {owner();retu
 void CommunicationWorkspace::saveProfile(const CommunicationServerProfile& p){owner();profiles_.save(p);}
 void CommunicationWorkspace::command(const QUuid& id,const QUuid& expected,const QString& command){
     owner();auto b=bindings_.find(id);if(b==bindings_.end())throw std::runtime_error("Station Runtime bağlanmadı");
-    if(command=="stop"){b->run->stop();return;}
+    if(command=="stop"){if(batchActive_)cancelAutomaticProduction("Operatör Stop verdi; toplu geçiş iptal edildi.");b->run->stop();return;}
+    if(batchActive_)throw std::runtime_error("Otomatik üretim geçişi sürüyor; önce Stop verin");
     if(restartRequired_)throw std::runtime_error("Migration selection changed: restart required");
     if(b->unavailableReason){const auto reason=b->unavailableReason();if(!reason.isEmpty())throw std::runtime_error(reason.toStdString());}
     if(!ledger_)throw std::runtime_error("Durable ledger bağlanmadı");
@@ -137,8 +138,71 @@ void CommunicationWorkspace::command(const QUuid& id,const QUuid& expected,const
     else if(command=="manual" && b->automatic)b->automatic(false);
     else throw std::runtime_error("Üretim publication/dispatch portu bağlanmadı");
 }
-void CommunicationWorkspace::poll(){owner();for(auto& b:bindings_)b.run->poll();if(poll_)poll_();}
-void CommunicationWorkspace::selectRecipe(const QUuid& id,const QUuid& expected,quint32 recipe,quint32 publication){owner();if(restartRequired_ || !select_ || !bindings_.contains(id))throw std::runtime_error("Saved recipe selection unavailable / restart required");select_(id,expected,recipe,publication);}
+void CommunicationWorkspace::startAutomaticProduction(){
+    owner();if(batchActive_)throw std::runtime_error("Otomatik üretim geçişi zaten sürüyor");
+    const auto rows=stations();QStringList problems;
+    if(rows.isEmpty())problems<<"İstasyon yok → Communication / İstasyon ekle";
+    for(const auto& row:rows){
+        const auto mode=row.runtime.mode;
+        QString reason=row.unavailable;
+        if(!row.source)reason+=" Kalıcı kamera eşleşmesi yok → Kaynak ayarları";
+        if(!row.snapshot)reason+=" Reçete yükleyin → Dashboard / Reçete yükle";
+        if(row.runtime.deliveryPending)reason+=" PENDING ACK → Communication / exact ACK veya reconcile";
+        if(!row.canAuto && reason.isEmpty())reason="Run/Auto portu hazır değil → Communication";
+        if(mode!=StationMode::Stopped && mode!=StationMode::ArmedManual && mode!=StationMode::ArmedAuto)
+            reason+=" Çalışma/hazırlık tamamlanmalı → Communication / Stop";
+        if(!reason.trimmed().isEmpty())problems<<row.station.name+": "+reason;
+    }
+    if(!problems.isEmpty()){batchStatus_="Başlatılamadı:\n"+problems.join('\n');throw std::runtime_error(batchStatus_.toStdString());}
+    batch_.clear();for(const auto& row:rows)batch_.append({row.station.id,row.snapshot->activation,false,false,row.automatic,bindings_[row.station.id].run->controlGeneration()});
+    batchIndex_=0;batchActive_=true;batchRollback_=false;batchEnabling_=false;batchTimer_.start();
+    batchStatus_="İstasyonlar sırayla hazırlanıyor; Remote Enable bağımsızdır.";
+    advanceAutomaticProduction();
+}
+void CommunicationWorkspace::cancelAutomaticProduction(const QString& reason){
+    if(!batchActive_ || batchRollback_)return;
+    batchRollback_=true;batchStatus_=reason+"\nBu işlemle başlatılan istasyonlar durduruluyor; pending sonuç korunur.";
+    for(const auto& target:batch_){auto& b=bindings_[target.station];
+        if(target.started)b.run->stop();
+        else if(target.changed && !target.wasAutomatic){if(b.automatic)b.automatic(false);}
+    }
+}
+void CommunicationWorkspace::advanceAutomaticProduction(){
+    if(!batchActive_)return;
+    if(batchRollback_){for(const auto& target:batch_)if(target.started && !bindings_[target.station].run->drained())return;
+        batchActive_=false;batchStatus_+="\nDurdurma tamamlandı. Nedeni düzeltip yeniden başlatın.";return;}
+    try{
+        const auto rows=stations();
+        for(const auto& target:batch_){
+            auto it=std::find_if(rows.cbegin(),rows.cend(),[&](const auto& row){return row.station.id==target.station;});
+            if(it==rows.cend() || !it->snapshot || it->snapshot->activation!=target.activation || !it->source || !it->canAuto || !it->unavailable.isEmpty())
+                throw std::runtime_error((bindings_[target.station].station.name+": Hazırlık değişti; kaynak / reçete / pending teslimi Communication ekranında denetleyin.").toStdString());
+        }
+        for(int n=0;n<batch_.size();++n)if((n<batchIndex_ || batch_[n].wasAutomatic) && !bindings_[batch_[n].station].run->automatic())
+            throw std::runtime_error("Önceden hazırlanan istasyonun Auto izni değişti → Communication / Stop");
+        if(batchTimer_.elapsed()>30000)throw std::runtime_error("Hazırlık zaman aşımı → Communication / Stop ve kaynak ayarları");
+        if(batchIndex_==batch_.size()){batchActive_=false;batchStatus_="Otomatik üretim açık. Tüm istasyonlarda Run / Auto doğrulandı. Remote Enable bağımsızdır.";return;}
+        auto& target=batch_[batchIndex_];auto& b=bindings_[target.station];
+        if(target.wasAutomatic){++batchIndex_;return;}
+        auto mode=b.run->state().mode;
+        if(!target.changed){
+            target.changed=true;
+            if(mode==StationMode::Stopped){target.started=true;b.run->run(b.snapshot());}
+            target.generation=b.run->controlGeneration();
+            batchStatus_=b.station.name+": hazırlanıyor";return;
+        }
+        if(b.run->controlGeneration()!=target.generation && !(batchEnabling_ && b.run->automatic() && b.run->controlGeneration()==target.generation+1))
+            throw std::runtime_error((b.station.name+": Çalışma izni değişti → Communication / Stop").toStdString());
+        mode=b.run->state().mode;
+        if(mode==StationMode::Preparing)return;
+        if(mode!=StationMode::ArmedManual && mode!=StationMode::ArmedAuto)throw std::runtime_error((b.station.name+": Hazırlık başarısız: "+b.run->state().health+" → Kaynak ayarları / Reçete yükle").toStdString());
+        if(!batchEnabling_){b.automatic(true);batchEnabling_=true;return;}
+        if(!b.run->automatic())return;
+        ++batchIndex_;batchEnabling_=false;
+    }catch(const std::exception& e){cancelAutomaticProduction(QString::fromUtf8(e.what()));}
+}
+void CommunicationWorkspace::poll(){owner();try{for(auto& b:bindings_)b.run->poll();if(poll_)poll_();}catch(const std::exception& e){if(batchActive_)cancelAutomaticProduction(QString::fromUtf8(e.what()));else throw;}advanceAutomaticProduction();}
+void CommunicationWorkspace::selectRecipe(const QUuid& id,const QUuid& expected,quint32 recipe,quint32 publication){owner();if(batchActive_)throw std::runtime_error("Önce otomatik üretim geçişini Stop ile bitirin");if(restartRequired_ || !select_ || !bindings_.contains(id))throw std::runtime_error("Saved recipe selection unavailable / restart required");select_(id,expected,recipe,publication);}
 bool CommunicationWorkspace::drained() const {owner();for(const auto& b:bindings_)if(!b.run->drained())return false;return true;}
 void CommunicationWorkspace::maintenance() const {owner();if(maintenanceBarrier_){const auto reason=maintenanceBarrier_();if(!reason.isEmpty())throw std::runtime_error(reason.toStdString());}if(!drained())throw std::runtime_error("Önce bütün station Runtime'larını Stop/drain yapın");if(!CameraLeaseArbiter::diagnostics().isEmpty())throw std::runtime_error("Kamera lease / drain tamamlanmadı");if(server_.state()==CommunicationServerState::Listening || server_.state()==CommunicationServerState::PeerConnected || server_.state()==CommunicationServerState::Closing)throw std::runtime_error("Listener açık: disabled profil ile yeniden başlatıp bakım yapın");}
 CommunicationMigrationPlan CommunicationWorkspace::analyze(const CommunicationMigrationInput& in) const {owner();return CommunicationMigrationPlanner(in).analyze();}

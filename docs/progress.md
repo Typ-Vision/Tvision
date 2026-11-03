@@ -6,14 +6,13 @@
 
 ## Devam noktası
 
-**[VF-05](archive/2026-11-03-vf-05.md): istemci kaydı/test profili tamam.**
-Tek etkin peer/epoch; ikinci kayıt ve pending/remote altında yenileme reddedilir.
-Profil bağımsız Python HELLO ile doğrulandı; gerçek TCP tetik/ACK VF-07’de.
-Sıradaki VF-06.
+**[VF-06](archive/2026-11-04-vf-06.md): toplu Run/Auto tamam.**
+Ön kontrol/rollback/restart geçti; tam ON/OFF hatasız. Sıradaki VF-07/K2: TCP/exact ACK.
+[VF-05](archive/2026-11-03-vf-05.md): tek peer/epoch; ikinci kayıt, pending/remote
+yenileme ret; profil HELLO geçti.
 
 **[VF-04a](archive/2026-11-03-vf-04a.md): editor9 tek dosya provider düzeltildi.**
-Hedefli ON12/OFF10; tam ON203+1skip/1timeout; timeout izole2/2. Tam OFF yok.
-Kullanıcı “Uyumlu oldu” dedi. [VF-04](archive/2026-11-03-vf-04.md) korunur;
+[VF-04](archive/2026-11-03-vf-04.md) korunur;
 TCP A/B VF-08’de.
 
 **[VF-03](archive/2026-11-03-vf-03.md):** değişmez yayın; tam regresyon VF-04’te.
@@ -21,7 +20,7 @@ TCP A/B VF-08’de.
 **[VF-01](archive/2026-11-02-vf-01.md):** şablonlar; restart/küçük ekran geçti.
 
 **[COMM4-26](archive/2026-11-02-comm4-26.md)**: yazılım tamam;
-ON197/1skip, OFF156/1skip; hata0. Hedefli34/29; Qt iki viewport.
+ON/OFF ve Qt kanıtı arşivde.
 [Fiziksel devir](architecture/communication-v4/acceptance-comm4-26.md):
 COMM4-PHYS-01/02 ve UI-NATIVE-01 açık. COMM4-21–25 arşivdedir.
 COMM4-17–20 geçmişi/kalıcı kararları COMM4-26 ve arşivdedir.

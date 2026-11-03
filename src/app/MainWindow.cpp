@@ -139,6 +139,10 @@ QWidget* MainWindow::makePlaceholder(const QString& title, const QString& text) 
 QWidget* MainWindow::makeDashboard() {
     auto* page = new QWidget; auto* layout = new QVBoxLayout(page);
     layout->addWidget(card("İstasyonlar","Yayımlanmış reçeteyi seçin ve istasyona yükleyin. Yükleme sonrası otomatik çalışma kapalıdır."));
+    dashboardAuto_=new QPushButton("Otomatik üretimi başlat");dashboardAuto_->setObjectName("dashboardStartAutomatic");layout->addWidget(dashboardAuto_);
+    dashboardAutoStatus_=label("Run / Auto açar. Remote Enable ayrı izindir; kapatılması istasyonlara Stop verir.");dashboardAutoStatus_->setObjectName("dashboardAutomaticStatus");layout->addWidget(dashboardAutoStatus_);
+    connect(dashboardAuto_,&QPushButton::clicked,this,[this]{if(!communicationWorkspace_)return;try{communicationWorkspace_->startAutomaticProduction();}catch(const std::exception& e){dashboardAutoStatus_->setText(QString::fromUtf8(e.what()));}refreshDashboardStations();});
+    auto* fix=new QPushButton("Kaynak ayarları / teslim ve çalışma durumu");fix->setObjectName("dashboardFixAutomatic");layout->addWidget(fix);connect(fix,&QPushButton::clicked,this,[this]{selectPage("communication");});
     dashboardStations_=new QTableWidget(0,4);dashboardStations_->setObjectName("dashboardStations");
     dashboardStations_->setHorizontalHeaderLabels({"İstasyon","Bağlı kamera","Yüklü reçete / revizyon","Çalışma durumu"});
     dashboardStations_->setEditTriggers(QAbstractItemView::NoEditTriggers);dashboardStations_->setSelectionBehavior(QAbstractItemView::SelectRows);

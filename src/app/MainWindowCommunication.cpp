@@ -102,12 +102,16 @@ bool MainWindow::verifyEndpointProfiles(const QString& artifacts) {
 void MainWindow::refreshDashboardStations(){
     if(!dashboardStations_ || !communicationWorkspace_)return;
     try{
+        dashboardAuto_->setEnabled(!communicationWorkspace_->automaticProductionBusy());
+        if(!communicationWorkspace_->automaticProductionStatus().isEmpty())dashboardAutoStatus_->setText(communicationWorkspace_->automaticProductionStatus());
         const auto rows=communicationWorkspace_->stations();const int selected=dashboardStations_->currentRow();
         const QSignalBlocker block(dashboardStations_);dashboardStations_->setRowCount(rows.size());
         const auto catalogue=communicationWorkspace_->sourceCatalogue();
         for(int n=0;n<rows.size();++n){const auto& row=rows[n];QString camera="Eşleşmedi";
             if(row.source)for(const auto& e:catalogue.entries)if(e.identity.category==CatalogueCategory::Camera && e.identity.entity==row.source->camera)camera=e.name;
             QStringList columns{row.station.name,camera,row.snapshot?row.snapshot->selection.recipe.name+"\n"+row.snapshot->selection.revision.toString(QUuid::WithoutBraces):"Yüklenmedi",row.runtime.mode==StationMode::Stopped?"Durduruldu":CommunicationWorkspace::modeName(row.runtime.mode)};
+            columns[3]+=row.runtime.deliveryPending?"\nACK bekliyor":"\nTeslim yok";
+            if(!row.unavailable.isEmpty())columns[3]+="\n"+row.unavailable;
             for(int c=0;c<4;++c){auto* item=new QTableWidgetItem(columns[c]);item->setToolTip(columns[c]);dashboardStations_->setItem(n,c,item);}
             dashboardStations_->item(n,0)->setData(Qt::UserRole,row.station.id.toString());dashboardStations_->item(n,0)->setData(Qt::UserRole+1,row.snapshot?row.snapshot->activation.toString():QString{});
         }

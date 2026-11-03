@@ -216,6 +216,8 @@ private:
     QTableWidget* dashboardStations_{};
     QComboBox* dashboardPublished_{};
     QPushButton* dashboardLoad_{};
+    QPushButton* dashboardAuto_{};
+    QLabel* dashboardAutoStatus_{};
     QLabel* dashboardStationMessage_{};
     void refreshDashboardStations();
     void loadDashboardRecipe();

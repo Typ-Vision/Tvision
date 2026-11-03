@@ -6,6 +6,7 @@ görev” ifadeleri yazıldıkları tarihe aittir.
 
 | Dönem / görev | Kayıt |
 | --- | --- |
+| 4 Kasım 2026 — VF-06 | [Dashboard tek eylemle toplu Run/Auto, ön kontrol ve hata durdurması](2026-11-04-vf-06.md) |
 | 3 Kasım 2026 — VF-05 | [Yetkili tek istemci kaydı, epoch yenileme ve bağımsız simülatör test profili](2026-11-03-vf-05.md) |
 | 3 Kasım 2026 — MCP-02 | [Geliştirme MCP/plugin araştırması; Context7 kuruldu, Ponytail/clangd ertelendi](2026-11-03-mcp-02.md) |
 | 3 Kasım 2026 — VF-04a | [Modern tek dosya Runtime provider ve preview restart düzeltmesi; yeni tam ON/OFF](2026-11-03-vf-04a.md) |

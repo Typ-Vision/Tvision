@@ -18,24 +18,19 @@ Birleşik kamera/7×7 kalibrasyon ve Runtime `main` dalındadır
   tek komutta yapar, başarısız denetimde önceki model seçimi korunur.
 - Çok kaynaklı Editor ve immutable Runtime hazırlığı; gerçek çevrim, kalıcı terminal
   kayıtları, restart geçmişi, Logs/CSV ve vf.socket2 scalar mapping.
-- Image File/Webcam edinimi; Camera Manager'da keşif, kamera kaydı ve Mono8 profil
-  taslağı. Industrial Editor kaynağına kayıtlı kamera/kurulum/profil bağlanır;
-  kare isteği ortak worker/provider yolundadır. Industrial Load çevrimdışı beyanı
-  gösterir. Desteklenen Opto/OECS kamera ayarları gerçek readback ile okunup
-  kaydedilir; bu işlem görüntü edinim izninden bağımsızdır. Industrial Run
-  tam native kabul ister; native production kapalıdır ve COE-U normal
-  komutları OECS edinim yolunu seçer.
+- Image File/Webcam; Camera Manager keşif/kayıt ve Mono8 profil taslağı.
+  Industrial kaynak kayıtlı kamera/setup/profile bağlanır; edinim ortak worker/provider
+  yolundadır. Opto/OECS ayarları gerçek readback ile kaydedilir; edinim izni ayrıdır.
+  Industrial Load çevrimdışıdır. Tam native kabul olmadan production kapalıdır;
+  COE-U komutları OECS edinim yolunu seçer.
 
-Editor reçetesini açık düzenleme komutuyla açmak bağlı kameraları arka planda
-hazırlar; Görüntü al/Run Flow aynı bağlantıyı kullanır. Save bağlantıyı korur;
-kabul edilen çıkış ve Stop kapatır. Program/proje/ekran restore bağlantı açmaz.
 
-Runtime Load çevrimdışıdır. Run bağlı kamera kümesini arka planda hazırlar;
-tümü hazır olunca Running olur. Tek çevrimler aynı bağlantıları kullanır.
-Stop gerçek kamera kapanışını bekler; disk kayıt retry kamerayı tutmaz.
-
-Kalibrasyon listesi bağlantı açmaz. Canlı sihirbaz kamerayı hazırlar;
-çekimler bağlantıyı paylaşır. Dosya, Stop, İptal ve Kaydet/kullan kapanır.
+Editor reçetesini açık düzenleme komutuyla açmak kameraları worker'da hazırlar;
+Görüntü al/Run Flow bağlantıyı paylaşır, Save korur, Stop ve kabul edilen çıkış kapatır.
+Program/proje/ekran restore bağlantı açmaz. Runtime Load çevrimdışıdır; Run kamera
+kümesini hazırlar, tümü hazırsa Running olur. Çevrimler bağlantıyı paylaşır; Stop
+kapanışı bekler, disk retry kamerayı tutmaz. Kalibrasyon listesi bağlantı açmaz;
+canlı sihirbaz bağlantıyı paylaşır, Dosya/Stop/İptal/Kaydet-kullan kapatır.
 
 Hazırlık/keşif üretim kabulü değildir; gerçek sonuç olmadan PASS, skor veya
 robot pose gösterilmez. Robot ekranları hazırlıktır. Yazılım testleri fiziksel
@@ -62,7 +57,7 @@ cmake --build build/kmc9-core-off -j 6
 ctest --test-dir build/kmc9-core-off --output-on-failure
 ```
 
-`ctest --test-dir build/reference-ui -N` testleri listeler; `-R` tam suite değildir.
+CTest `-N` testleri listeler; `-R` tam suite değildir.
 Socket testleri localhost ister. UI değişikliğinde Release build,
 ilgili CTest ve normal/küçük ekran görsel kontrolü yapılır.
 
@@ -100,6 +95,10 @@ Communication → İstasyon ekle: ad/kamera/test görüntüsünü kaydet ve yeni
 İstemciler → Yetkili istemci kaydet → Test profilini dışa aktar (tek etkin
 peer/epoch); Epoch yenile eskisini emekliye ayırır.
 [VF-02/VF-05 sınırları](docs/architecture/communication-v4/communication-workspace.md).
+
+Dashboard → Otomatik üretimi başlat: tüm istasyonlar ön kontrolden geçer, sırayla
+Run/Auto açılır. Eksiklerin düzeltme yolu gösterilir; hatada yeni başlayanlar durur.
+Remote Enable ayrıdır.
 
 Communication tek V4 listener, station Run/Auto/Stop, aktif revision, kamera
 sahibi ve pending ACK durumunu gösterir. Restart Run/Auto açmaz; Remote Enable
