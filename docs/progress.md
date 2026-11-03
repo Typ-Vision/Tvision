@@ -1,6 +1,7 @@
 # VisionFlow — devir
 
-[Arşiv](archive/README.md). [MCP](archive/2026-10-24-mcp-01.md).
+[Arşiv](archive/README.md). [MCP](archive/2026-10-24-mcp-01.md),
+[MCP-02](archive/2026-11-03-mcp-02.md): Context7 kuruldu.
 [LIC-01](archive/2026-11-02-lic-01.md): lisans; SDK/paket açık.
 
 ## Devam noktası
