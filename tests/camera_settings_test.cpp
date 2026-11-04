@@ -88,9 +88,12 @@ int main(int argc,char** argv){QCoreApplication app(argc,argv);try{
         f.local.setRoute(f.r.device.identity,TransportLocator{"oecs",{},"stale","stale"});
         reject([&]{f.open(d);});{auto s=f.open();connect(*s);}
         d.cancelled=true;reject([&]{f.open(d);});}
-    {Fixture f;auto e=f.repo.load();e.current.setups.first().geometry.resolution={2,3};e.current.setups.first().geometry.sensorRoi=QRect(0,0,2,3);
-        MeasurementEnvironmentRegistry reg(f.repo);e.current.setups.first()=f.r.setup.revised(e.current.setups.first());reg.replace(e.current);
-        auto s=f.open();connect(*s);apply(*s,{250,2});check(s->snapshot().geometryChanged && f.repo.load().current.setups.first().revision==3,"critical geometry reported separately");}
+    {Fixture f;auto e=f.repo.load();const auto stale=e.current.setups.first();auto next=stale;next.geometry.resolution={1,1};next.geometry.sensorRoi=QRect(0,0,1,1);
+        e.current.setups.first()=stale.revised(next);MeasurementEnvironmentRegistry(f.repo).replace(e.current);const auto beforeRead=f.repo.load().encode();const int staleRevision=f.repo.load().current.setups.first().revision;
+        auto s=f.open();connect(*s);check(s->snapshot().actual.geometry.resolution==QSize(3,2) && s->snapshot().actual.geometry.resolution!=QSize(1,1),"readback exposes real raster instead of stored 1x1");
+        check(f.repo.load().encode()==beforeRead,"reading settings never changes saved geometry");
+        apply(*s,{250,2});check(s->snapshot().geometryChanged && f.repo.load().current.setups.first().geometry.resolution==QSize(3,2) && f.repo.load().current.setups.first().revision==staleRevision+1,"explicit apply saves real geometry");}
+    {Fixture f;f.h->sensor={2448,2048};auto s=f.open();connect(*s);check(s->snapshot().sensorSize==QSize(2448,2048) && s->snapshot().sensorSize!=s->snapshot().actual.geometry.resolution,"sensor extent is separate display evidence");}
     {Fixture f;MeasurementEnvironmentRegistry reg(f.repo);auto camera=f.r.camera;camera.id={"pending"};camera.physical->serial="pending";
         const auto id=reg.registerCamera(camera,"CAM_02",reg.snapshot().revision).camera;auto d=f.r.device;d.identity=*camera.physical;
         auto s=CameraSettingsService::open(f.repo,id,f.repo.load().revision,{{d},{},false},f.local,f.factory,[]{return true;},[]{});connect(*s);apply(*s,{250,2});

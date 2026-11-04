@@ -13,6 +13,7 @@ struct CameraSettingsSnapshot {
     CameraSettingsValues requested;
     CameraFeature exposure, gain, exposureAuto, gainAuto;
     AcquisitionReadback actual;
+    QSize sensorSize;
     bool saved=false, profileChanged=false, geometryChanged=false, deviceChanged=false, unusable=false;
     QString error;
 };
@@ -48,6 +49,7 @@ private:
 };
 class CameraSettingsService {
 public:
+    static QString unavailableReason(const DiscoveredDevice&,const CameraProviderFactory&,const QString& runtime);
     static bool available(const DiscoveredDevice&,const CameraProviderFactory&,const QString& runtime);
     static std::unique_ptr<CameraSettingsSession> open(
         MeasurementEnvironmentRepository,const CameraId&,int expectedRevision,

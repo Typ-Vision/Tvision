@@ -23,7 +23,7 @@ CameraSettingsSnapshot inspect(IndustrialCameraBackend& backend){
     CameraSettingsSnapshot s;
     s.exposure=backend.setting("ExposureTime");s.gain=backend.setting("Gain");
     s.exposureAuto=backend.setting("ExposureAuto");s.gainAuto=backend.setting("GainAuto");
-    s.actual=backend.readback();s.actual.validate();return s;
+    s.actual=backend.readback();s.actual.validate();s.sensorSize=backend.sensorSize();return s;
 }
 void checkLive(const CameraTicket& t){require(!t.cancel->load() && !t.deadline.expired(),"Settings cancelled/expired");}
 }
@@ -54,10 +54,13 @@ CameraState CameraSettingsSession::state() const{return worker_->lifecycle().sta
 QString CameraSettingsSession::error() const{return worker_->lifecycle().error();}
 void CameraSettingsSession::stop(){if(applying_){applying_=false;invalidate_();}worker_->requestShutdown();}
 
-bool CameraSettingsService::available(const DiscoveredDevice& d,const CameraProviderFactory& factory,const QString& runtime){
-    if(factory.injected_){const auto caps=factory.capabilities(d);return caps.open && caps.configure;}
-    return OecsCameraSettings::available(d,runtime);
+QString CameraSettingsService::unavailableReason(const DiscoveredDevice& d,const CameraProviderFactory& factory,const QString& runtime){
+    if(factory.injected_){const auto caps=factory.capabilities(d);
+        if(caps.open && caps.configure)return {};
+        return caps.unavailableReason.isEmpty()?"Ayar backend'i desteklenmiyor":caps.unavailableReason;}
+    return OecsCameraSettings::unavailableReason(d,runtime);
 }
+bool CameraSettingsService::available(const DiscoveredDevice& d,const CameraProviderFactory& factory,const QString& runtime){return unavailableReason(d,factory,runtime).isEmpty();}
 std::unique_ptr<CameraSettingsSession> CameraSettingsService::open(MeasurementEnvironmentRepository repo,
     const CameraId& id,int revision,const IndustrialDiscoverySnapshot& discovery,const CameraLocalConfiguration& local,
     const CameraProviderFactory& factory,std::function<bool()> gate,std::function<void()> invalidate,

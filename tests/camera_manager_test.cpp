@@ -71,7 +71,7 @@ int main(int argc,char** argv){QApplication app(argc,argv);try{
         return CameraService::combine({},snapshot);
     };
     auto state=std::make_shared<State>();
-    auto h=std::make_shared<camera_settings_fixture::SettingsHardware>();h->actual.settings=request().profile.requested;
+    auto h=std::make_shared<camera_settings_fixture::SettingsHardware>();h->actual.settings=request().profile.requested;h->sensor={4,3};
     auto& geometry=h->actual.geometry;geometry.resolution={3,2};geometry.offsetEvidence=geometry.binningEvidence=geometry.decimationEvidence=geometry.reverseEvidence=GeometryEvidence::Reported;
     for(const auto& n:QStringList{"ExposureTime","Gain"}){CameraFeature f;f.name=n;f.type=FeatureType::Float;f.access=FeatureAccess::ReadWrite;f.value=n=="Gain"?1.:100.;f.minimum=n=="Gain"?0.:10.;f.maximum=n=="Gain"?20.:1000.;f.unit=n=="Gain"?"dB":"us";h->nodes[n]=f;}
     for(const auto& n:QStringList{"ExposureAuto","GainAuto"}){CameraFeature f;f.name=n;f.type=FeatureType::Enumeration;f.access=FeatureAccess::ReadWrite;f.value=QString("Off");f.entries={{"Off",0},{"Continuous",1}};h->nodes[n]=f;}
@@ -118,15 +118,29 @@ int main(int argc,char** argv){QApplication app(argc,argv);try{
     QTimer::singleShot(0,[&]{auto* dialog=qobject_cast<QDialog*>(QApplication::activeModalWidget());check(dialog,"profile draft dialog");
         dialog->findChild<QLineEdit*>("draftProfileName")->setText("Synthetic profile");
         dialog->findChild<QLineEdit*>("draftLens")->setText("test lens");dialog->findChild<QLineEdit*>("draftPlane")->setText("test plane");
-        dialog->findChild<QSpinBox*>("draftWidth")->setValue(3);dialog->findChild<QSpinBox*>("draftHeight")->setValue(2);
+        dialog->findChild<QSpinBox*>("draftWidth")->setValue(1);dialog->findChild<QSpinBox*>("draftHeight")->setValue(1);
         dialog->findChild<QLineEdit*>("draftExposure")->setText("100");dialog->findChild<QLineEdit*>("draftGain")->setText("1");
         dialog->grab().save(evidence+"/camera-profile-draft.png");
         dialog->findChild<QDialogButtonBox*>()->button(QDialogButtonBox::Save)->click();
     });view.findChild<QPushButton*>("cameraProfileEdit")->click();
-    check(workspace.environment().current.profiles.size()==1 && view.findChild<QLabel*>("cameraReadback")->text().contains("yok"),"draft profile saved without claiming readback");
+    check(workspace.environment().current.profiles.size()==1 && view.findChild<QLabel*>("cameraReadback")->text().contains("yok"),"stale 1x1 profile saved without claiming readback");
     auto* apply=view.findChild<QPushButton*>("cameraApply");auto* preview=view.findChild<QPushButton*>("cameraPreview");
+    const auto beforeRead=workspace.environment().encode();
     view.findChild<QGroupBox*>("cameraAdvanced")->setChecked(false);view.findChild<QPushButton*>("cameraSettingsRead")->click();waitUi([&]{return !jobs.busy();});
     check(apply->isEnabled() && preview->isEnabled(),"test provider capabilities enable supported controls");
+    check(workspace.environment().encode()==beforeRead,"reading settings never changes the saved project");
+    check(view.findChild<QLabel*>("cameraReadback")->text().contains("3×2 px") && view.findChild<QLabel*>("cameraReadback")->text().contains("sensör maksimumu: 4×3 px"),"readback shows active raster and sensor maximum in px");
+    check(view.findChild<QLabel*>("cameraSetupStatus")->text().contains("1×1 px") && view.findChild<QLabel*>("cameraSetupStatus")->text().contains("gerçek aktif raster 3×2 px"),"stored 1x1 is not silently shown as correct");
+    QTimer::singleShot(0,[&]{auto* d=qobject_cast<QDialog*>(QApplication::activeModalWidget());check(d,"geometry correction dialog");
+        check(d->findChild<QSpinBox*>("draftWidth")->value()==3 && d->findChild<QSpinBox*>("draftHeight")->value()==2,"real raster prefilled for explicit correction");
+        check(d->findChild<QLabel*>("draftGeometryInfo")->text().contains("Kayıtlı geometri 1×1 px") && d->findChild<QLabel*>("draftGeometryInfo")->text().contains("Sensör maksimumu 4×3 px"),"stored/real difference and sensor maximum visible");
+        d->grab().save(evidence+"/camera-geometry-correction.png");
+        d->findChild<QSpinBox*>("draftWidth")->setValue(2);d->findChild<QDialogButtonBox*>()->button(QDialogButtonBox::Save)->click();
+        check(!d->findChild<QLabel*>("draftError")->text().isEmpty(),"raster inconsistent with real readback is rejected with a reason");
+        d->findChild<QSpinBox*>("draftWidth")->setValue(3);d->findChild<QDialogButtonBox*>()->button(QDialogButtonBox::Save)->click();
+    });view.findChild<QPushButton*>("cameraProfileEdit")->click();
+    check(workspace.environment().current.setups.first().geometry.resolution==QSize(3,2) && workspace.environment().current.setups.first().revision>1,"explicit save corrects stored geometry");
+    view.findChild<QPushButton*>("cameraSettingsRead")->click();waitUi([&]{return !jobs.busy();});
     view.findChild<QLineEdit*>("cameraExposure")->setText("110");apply->click();
     check(jobs.busy() && !apply->isEnabled() && !preview->isEnabled(),"busy blocks settings and new session");
     waitUi([&]{return !jobs.busy();});

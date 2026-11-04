@@ -6,6 +6,7 @@ görev” ifadeleri yazıldıkları tarihe aittir.
 
 | Dönem / görev | Kayıt |
 | --- | --- |
+| 4 Kasım 2026 — CAM-OECS-01 | [SDK'lı build, px/readback sunumu, gerçek aktif raster ve sensör maksimumu; fiziksel exact readback ve scalar geri yükleme](2026-11-04-cam-oecs-01.md) |
 | 4 Kasım 2026 — CAM-SDK-01 | [Yerel runtime, çoklu producer ve kabul kaydı](2026-11-04-cam-sdk-01.md) |
 | 4 Kasım 2026 — CAM-PLAN-03 | [Altı kamera uygulama kartı ve kesinleşen pylon C API kararı](2026-11-04-cam-plan-03.md) |
 | 4 Kasım 2026 — CAM-PLAN-02 | [Basler USB keşfi, çok markalı SDK/GenTL yol analizi ve sıralı uygulama planı](2026-11-04-cam-plan-02.md) |

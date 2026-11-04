@@ -31,6 +31,7 @@ namespace {
 QLabel* text(QString value,QString name={}){auto* l=new QLabel(value);l->setObjectName(name);l->setWordWrap(true);l->setTextFormat(Qt::PlainText);l->setSizePolicy(QSizePolicy::Ignored,QSizePolicy::Preferred);return l;}
 QPushButton* button(QLayout* l,QString value,QString name){auto* b=new QPushButton(value);b->setObjectName(name);l->addWidget(b);return b;}
 bool matches(const MeasurementCamera& c,const CameraDiscoveryEntry& d){return c.physical ? d.industrial && *c.physical==d.industrial->identity : d.webcam && c.device.adapter==d.webcam->adapter && c.device.providerId==d.webcam->providerId;}
+QString raster(const QSize& s){return QString("%1×%2 px").arg(s.width()).arg(s.height());}
 }
 CameraManager::CameraManager(std::function<MeasurementWorkspace*()> context,std::function<bool()> gate,CameraSession& jobs,
     QString settings,QWidget* parent,Scanner scanner,CameraProviderFactory factory,ExperimentalOecsAcquisition::ApiFactory experimentalApi,std::function<QString(QWidget*)> framePathChooser)
@@ -168,7 +169,7 @@ void CameraManager::refresh(){attempt([this]{
 });}
 void CameraManager::select(){attempt([this]{
     if(previewActive_)stop();
-    clearFrame();settingsKnown_=false;shortId_->clear();
+    clearFrame();settingsKnown_=false;settingsSensor_={};shortId_->clear();
     QSignalBlocker rb(routes_),pb(profiles_);routes_->clear();profiles_->clear();name_->clear();profiles_->hide();findChild<QWidget*>("cameraProfilesLabel")->hide();findChild<QPushButton*>("cameraDefaultsSave")->hide();exposure_->clear();gain_->clear();readback_->setText("Gerçek readback yok.");image_->clearImage("Önizleme yok.");
     const int index=table_->currentRow();if(index<0 || index>=rows_.size()){setupStatus_->setText("Kayıtlı kamera seçin.");detail_->setText("Kamera seçin.");controls();return;}
     const auto& row=rows_[index];selectedKey_=row.camera?row.camera->id.value:row.discovery->industrial?(row.discovery->industrial->identity.vendor+"/"+row.discovery->industrial->identity.model+"/"+row.discovery->industrial->identity.serial):row.discovery->webcam->providerId;name_->setText(row.camera?row.camera->name:row.discovery->industrial?row.discovery->industrial->identity.model:"Webcam");
@@ -210,19 +211,23 @@ void CameraManager::controls(){
         setupStatus_->setText("Kurulum / profil seçimi gerekli.");
         bool pending=false;
         for(const auto& p:e.current.profiles)if(p.id.value==profiles_->currentData().toString())for(const auto& s:e.current.setups)if(s.id==p.setup){pending=s.pending || p.pending;
-            setupStatus_->setText(QString("%1 • %2\nOptik: %3\nDüzlem: %4\n%5×%6 • %7")
+            QString geometry=s.pending?"Geometri bekleniyor":raster(s.geometry.resolution);
+            if(!s.pending && settingsKnown_ && settingsGeometry_!=s.geometry.resolution)
+                geometry+=QString(" • gerçek aktif raster %1 (kayıtlıdan farklı; Optik / Geometri kartından kaydedin)").arg(raster(settingsGeometry_));
+            setupStatus_->setText(QString("%1 • %2\nOptik: %3\nDüzlem: %4\n%5 • %6")
                 .arg(s.name).arg(s.pending || p.pending?"Eksik / taslak":"Tamamlandı • ölçüm izni ayrıca denetlenir").arg(s.opticalProfile,s.workingPlane)
-                .arg(s.geometry.resolution.width()).arg(s.geometry.resolution.height()).arg(e.operational.value(rows_[row].camera->id.value)==s.id.value?"Operasyonel":"Operasyonel değil"));
+                .arg(geometry).arg(e.operational.value(rows_[row].camera->id.value)==s.id.value?"Operasyonel":"Operasyonel değil"));
         }
         findChild<QPushButton*>("cameraProfileEdit")->setText(pending?"Optik / geometri taslağını tamamla…":"Optik / geometriyi düzenle…");
     }else setupStatus_->setText("Kayıtlı kamera seçin.");
     const bool configured=selected && rows_[row].camera && profiles_->currentIndex()>=0 && route;
     bool acquisitionReady=false;if(configured)try{request();acquisitionReady=true;}catch(const std::exception&){}
     const bool exp=selected && rows_[row].camera && AcquisitionPolicy::camera(*rows_[row].camera);
-    bool expAvailable=false,settingsAvailable=false;
+    bool expAvailable=false,settingsAvailable=false;QString settingsReason;
     if(route){const auto& device=rows_[row].discovery->industrial->routes[routes_->currentIndex()];
         expAvailable=ExperimentalOecsAcquisition::available(device,runtime_->text().trimmed());
-        settingsAvailable=CameraSettingsService::available(device,factory_,runtime_->text().trimmed());}
+        settingsReason=CameraSettingsService::unavailableReason(device,factory_,runtime_->text().trimmed());
+        settingsAvailable=settingsReason.isEmpty();}
     runtime_->setEnabled(idle);
     for(const auto& name:QStringList{"cameraProducers","cameraProducerEnable","cameraProducerDisable","cameraProducerRemove","cameraBaslerRuntime","cameraRuntimeDependencies_oecs","cameraRuntimeDependencies_basler","cameraRuntimeChoose_oecs","cameraRuntimeChoose_basler","cameraRuntimeSave_oecs","cameraRuntimeSave_basler"})findChild<QWidget*>(name)->setEnabled(idle);
     save_->setEnabled(lastFrame_.has_value() && experimentalSession_ && !closing_ && previewSession_.state()!=PreviewState::Stopping);
@@ -236,7 +241,7 @@ void CameraManager::controls(){
     else if(!rows_[row].camera->physical)guidance="Kamera kayıtlı. Webcam exposure/gain ve bu sayfada önizleme desteklenmiyor; görüntü için Editor / Kalibrasyon kullanın.";
     else if(!route)guidance="Kamera kayıtlı. Ayarlar için yeniden tarayın ve gerekirse Ayrıntılar’dan tek bir bağlantı rotası seçin.";
     else if(!configured)guidance="Kamera kayıtlı. Optik / Geometri kartından kurulum/profil seçimini tamamlayın.";
-    else if(!settingsAvailable)guidance="Kamera kayıtlı; bu cihaz için ayar backend’i veya OECS runtime kullanılamıyor.";
+    else if(!settingsAvailable)guidance="Kamera kayıtlı; ayar okuma kullanılamıyor: "+settingsReason+".";
     else guidance="Kamera kayıtlı. Ayarları oku → exposure/gain → Uygula ve kaydet. Görüntü almak için Tek görüntü veya Canlı görüntü kullanın.";
     settingsRead_->setToolTip(guidance);
     if(!settingsKnown_ && !settings_){readback_->setText("Gerçek readback yok. "+guidance);const auto hint=configured && settingsAvailable?"Önce Ayarları oku":"Ayar okuma kullanılamıyor";exposure_->setPlaceholderText(hint);gain_->setPlaceholderText(hint);}
@@ -253,25 +258,39 @@ void CameraManager::editProfile(bool add){
     for(const auto& p:e.current.profiles)if(!add && p.id.value==profiles_->currentData().toString())old=p;
     if(old)for(const auto& s:e.current.setups)if(s.id==old->setup)setup=s;
     QDialog dialog(this);dialog.setObjectName("cameraProfileDialog");dialog.setWindowTitle(add?"Yeni kurulum / profil":"Optik / geometri düzenle");auto* layout=new QVBoxLayout(&dialog);
-    layout->addWidget(text("Tam sensör Mono8, offset 0, binning/decimation 1 ve reverse kapalı istenir. Kaydet gerçek readback veya kalibrasyon etkinleştirmesi değildir."));
+    layout->addWidget(text("Genişlik/yükseklik px cinsinden aktif rasterdır; binning/decimation 1×1 ayrıdır. Tam sensör Mono8, offset 0 ve reverse kapalı istenir. Kaydet gerçek readback veya kalibrasyon etkinleştirmesi değildir."));
     auto* form=new QFormLayout;form->setRowWrapPolicy(QFormLayout::WrapLongRows);layout->addLayout(form);
     auto line=[&](QString label,QString name,QString value){auto* field=new QLineEdit(value);field->setObjectName(name);field->setMaxLength(128);form->addRow(label,field);return field;};
     auto* profileName=line("Profil adı","draftProfileName",old?old->name:QString{});
     auto* lens=line("Optik kurulum / lens","draftLens",setup?setup->opticalProfile:QString{});
     auto* plane=line("Çalışma düzlemi","draftPlane",setup?setup->workingPlane:QString{});
     auto size=[&](QString label,QString name,int value){auto* field=new QSpinBox;field->setObjectName(name);field->setRange(0,1000000);field->setSpecialValueText("Gerekli");field->setValue(value);form->addRow(label,field);return field;};
-    const auto geometry=setup && !setup->pending?setup->geometry.resolution:settingsKnown_?settingsGeometry_:QSize{};
-    auto* width=size("İstenen sensör genişliği","draftWidth",geometry.width());
-    auto* height=size("İstenen sensör yüksekliği","draftHeight",geometry.height());
+    const auto savedGeometry=setup && !setup->pending?setup->geometry.resolution:QSize{};
+    const auto geometry=settingsKnown_?settingsGeometry_:savedGeometry;
+    auto* width=size("İstenen aktif raster genişliği (px)","draftWidth",geometry.width());
+    auto* height=size("İstenen aktif raster yüksekliği (px)","draftHeight",geometry.height());
+    QString geometryInfo;
+    if(savedGeometry.isValid() && settingsKnown_ && savedGeometry!=settingsGeometry_)
+        geometryInfo+=QString("Kayıtlı geometri %1; gerçek aktif raster %2. Kaydet, kurulum geometrisini gerçek readback ile düzeltir.").arg(raster(savedGeometry),raster(settingsGeometry_));
+    if(settingsKnown_ && settingsSensor_.isValid())
+        geometryInfo+=QString("%1Sensör maksimumu %2; aktif raster bundan küçükse ROI uygulanmıştır.").arg(geometryInfo.isEmpty()?QString{}:"\n").arg(raster(settingsSensor_));
+    if(!geometryInfo.isEmpty())layout->addWidget(text(geometryInfo,"draftGeometryInfo"));
     auto* exposure=line("Exposure (µs)","draftExposure",old && !old->pending?QString::number(old->requested.exposureTimeUs):settingsKnown_?exposure_->text():QString{});
     auto* gain=line("Gain (dB)","draftGain",old && !old->pending?QString::number(old->requested.gain):settingsKnown_?gain_->text():QString{});
     auto* trigger=new QComboBox;trigger->setObjectName("draftTriggerSelector");trigger->addItems({"Off","FrameStart","FrameBurstStart"});if(old && old->requested.trigger.enabled && trigger->findText(old->requested.trigger.selector)<0)trigger->addItem(old->requested.trigger.selector);trigger->setCurrentText(old?(old->requested.trigger.enabled?old->requested.trigger.selector:"Off"):"FrameStart");form->addRow("Software trigger selector",trigger);
-    auto* error=text({});layout->addWidget(error);auto* buttons=new QDialogButtonBox(QDialogButtonBox::Save|QDialogButtonBox::Cancel);layout->addWidget(buttons);
+    auto* error=text({},"draftError");layout->addWidget(error);auto* buttons=new QDialogButtonBox(QDialogButtonBox::Save|QDialogButtonBox::Cancel);layout->addWidget(buttons);
     connect(buttons,&QDialogButtonBox::rejected,&dialog,&QDialog::reject);
     connect(buttons,&QDialogButtonBox::accepted,&dialog,[&]{try{
         if(jobs_.busy() || !gate_() || context_()!=ws)throw std::runtime_error("Çalışma bağlamı değişti.");
         bool a=false,b=false;auto us=exposure->text().toDouble(&a),db=gain->text().toDouble(&b);if(!a || !b)throw std::runtime_error("Sayısal exposure/gain gerekli.");
-        GeometryDescriptor g;g.resolution={width->value(),height->value()};g.sensorRoi=QRect(QPoint(0,0),g.resolution);g.binning=QSize(1,1);g.decimation=QSize(1,1);g.reverse=GeometryMirror{};g.complete=true;
+        const QSize requested(width->value(),height->value());
+        if(settingsKnown_){
+            if(settingsSensor_.isValid() && (requested.width()>settingsSensor_.width() || requested.height()>settingsSensor_.height()))
+                throw std::runtime_error(("İstenen raster "+raster(requested)+" sensör maksimumu "+raster(settingsSensor_)+" değerini aşıyor.").toStdString());
+            if(requested!=settingsGeometry_)
+                throw std::runtime_error(("İstenen raster "+raster(requested)+" gerçek aktif raster "+raster(settingsGeometry_)+" ile uyuşmuyor; Ayarları oku ile yenileyin.").toStdString());
+        }
+        GeometryDescriptor g;g.resolution=requested;g.sensorRoi=QRect(QPoint(0,0),g.resolution);g.binning=QSize(1,1);g.decimation=QSize(1,1);g.reverse=GeometryMirror{};g.complete=true;
         auto next=setup.value_or(MeasurementSetupDescriptor{});if(!setup){next.id={QUuid::createUuid().toString(QUuid::WithoutBraces)};next.camera=camera.id;}
         next.pending=false;next.name=profileName->text();next.opticalProfile=lens->text();next.workingPlane=plane->text();next.geometry=g;next.deviceRevision=camera.device.revision;
         if(setup)next=setup->revised(next);else next.validate();
@@ -283,7 +302,9 @@ void CameraManager::editProfile(bool add){
         if(old){for(auto& p:candidate.profiles)if(p.id==profile.id)p=profile;}else candidate.profiles.append(profile);
         ws->replace(candidate,e.revision);dialog.accept();
     }catch(const std::exception& ex){error->setText(QString::fromUtf8(ex.what()));}});
-    dialog.resize(560,560);if(dialog.exec()==QDialog::Accepted){refresh();status_->setText("Kurulum / profil kaydedildi. Cihaza ayar uygulanmadı; edinim yeteneği ayrıca denetlenir.");if(onChanged)onChanged();}
+    dialog.resize(560,560);if(dialog.exec()==QDialog::Accepted){
+        const bool corrected=settingsKnown_ && setup && !setup->pending && setup->geometry.resolution!=settingsGeometry_;
+        refresh();status_->setText(QString(corrected?"Kurulum / profil kaydedildi; geometri gerçek readback ile düzeltildi. ":"Kurulum / profil kaydedildi. ")+"Cihaza ayar uygulanmadı; edinim yeteneği ayrıca denetlenir.");if(onChanged)onChanged();}
 }
 void CameraManager::scan(){attempt([this]{
     if(jobs_.busy() || previewActive_ || settings_ || !gate_())return;
@@ -348,7 +369,7 @@ void CameraManager::settings(bool apply){
 }
 void CameraManager::settingsReadback(){
     const auto s=settings_->snapshot();settingsKnown_=true;
-    settingsGeometry_=s.actual.geometry.resolution;
+    settingsGeometry_=s.actual.geometry.resolution;settingsSensor_=s.sensorSize;
     exposureWritable_=s.exposure.access==FeatureAccess::ReadWrite;gainWritable_=s.gain.access==FeatureAccess::ReadWrite;
     const auto show=[](QLineEdit* field,const CameraFeature& f){
         if(!f.readable() || (f.type!=FeatureType::Float && f.type!=FeatureType::Integer)){field->clear();field->setToolTip("Desteklenmiyor");return;}
@@ -356,8 +377,11 @@ void CameraManager::settingsReadback(){
         field->setText(QString::number(value,'g',12));field->setToolTip(QString("%1 – %2 %3").arg(f.minimum).arg(f.maximum).arg(f.unit));
     };
     show(exposure_,s.exposure);show(gain_,s.gain);
-    readback_->setText(QString("Gerçek readback: %1×%2 • exposure %3 %4 [%5–%6] • gain %7 %8 [%9–%10]")
-        .arg(s.actual.geometry.resolution.width()).arg(s.actual.geometry.resolution.height()).arg(exposure_->text()).arg(s.exposure.unit).arg(s.exposure.minimum).arg(s.exposure.maximum).arg(gain_->text()).arg(s.gain.unit).arg(s.gain.minimum).arg(s.gain.maximum));
+    QString detail=QString("Gerçek aktif raster: %1").arg(raster(s.actual.geometry.resolution));
+    if(s.sensorSize.isValid())detail+=QString(" • sensör maksimumu: %1").arg(raster(s.sensorSize));
+    detail+=QString(" • exposure %1 %2 [%3–%4] • gain %5 %6 [%7–%8]")
+        .arg(exposure_->text()).arg(s.exposure.unit).arg(s.exposure.minimum).arg(s.exposure.maximum).arg(gain_->text()).arg(s.gain.unit).arg(s.gain.minimum).arg(s.gain.maximum);
+    readback_->setText(detail);
 }
 void CameraManager::leave(std::function<void()> done){
     afterStop_=std::move(done);stop();

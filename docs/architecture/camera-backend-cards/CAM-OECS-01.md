@@ -1,6 +1,7 @@
 # CAM-OECS-01 — OECS SDK'lı build ve doğru px/readback sunumu
 
-Durum: Planlandı. Bağlı: [CAM-SDK-01](CAM-SDK-01.md).
+Durum: Uygulandı; hedefli ON/OFF geçti, tam suite koşulmadı.
+[Kapanış](../../archive/2026-11-04-cam-oecs-01.md). Bağlı: [CAM-SDK-01](CAM-SDK-01.md).
 Sonraki: [ICM-BAS-01](ICM-BAS-01.md).
 
 ## Oku

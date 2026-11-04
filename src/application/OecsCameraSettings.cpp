@@ -42,6 +42,10 @@ public:
         require(QStringList{"ExposureTime","Gain","ExposureAuto","GainAuto"}.contains(name),"Unsupported basic setting");
         autoAccess(name,[&]{session_.writeFeature(name,value);return true;});
     }
+    QSize sensorSize() const override {
+        const auto integer=[&](const char* n){const auto f=session_.feature(n);require(f.readable() && f.type==FeatureType::Integer,"OECS sensor size unavailable");const auto v=std::get<qint64>(f.value);require(v>0 && v<=65536,"OECS sensor size out of bounds");return int(v);};
+        return {integer("SensorWidth"),integer("SensorHeight")};
+    }
     AcquisitionReadback readback() const override {
         AcquisitionReadback result;auto& g=result.geometry;auto& s=result.settings;
         const auto integer=[&](const char* n){const auto f=session_.feature(n);require(f.readable() && f.type==FeatureType::Integer,"OECS integer readback unavailable");const auto v=std::get<qint64>(f.value);require(v>=0 && v<=65536,"OECS geometry out of bounds");return int(v);};
@@ -68,7 +72,14 @@ public:
 };
 }
 QString OecsCameraSettings::installedRuntime(){return CameraLocalConfiguration::defaultRuntime("oecs");}
-bool OecsCameraSettings::available(const DiscoveredDevice& d,const QString& runtime){return supported(d.identity) && oecsSdkBindingCompiled() && QFileInfo(runtime).isAbsolute() && QFileInfo(runtime).isFile();}
+QString OecsCameraSettings::unavailableReason(const DiscoveredDevice& d,const QString& runtime){
+    if(!supported(d.identity))return "Desteklenmeyen endüstriyel kimlik (Opto Engineering COE-050-M-USB-050-IR-C gerekir)";
+    if(!oecsSdkBindingCompiled())return "OECS SDK bağlayıcısı bu build'de derlenmemiş; VISIONFLOW_OECS_INCLUDE_DIR ile yeniden yapılandırın";
+    if(!QFileInfo(runtime).isAbsolute())return "OECS runtime DLL yolu mutlak değil";
+    if(!QFileInfo(runtime).isFile())return "OECS runtime DLL bulunamadı";
+    return {};
+}
+bool OecsCameraSettings::available(const DiscoveredDevice& d,const QString& runtime){return unavailableReason(d,runtime).isEmpty();}
 std::unique_ptr<IndustrialCameraBackend> OecsCameraSettings::create(const DiscoveredDevice& d,const QString& runtime,ApiFactory api){
     d.validate();require(supported(d.identity) && QFileInfo(runtime).isAbsolute() && bool(api),"Supported OECS identity/runtime required");return std::make_unique<Backend>(d,runtime,std::move(api));
 }

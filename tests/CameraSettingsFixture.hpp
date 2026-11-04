@@ -3,6 +3,7 @@
 namespace camera_settings_fixture {
 struct SettingsHardware {
     AcquisitionReadback actual;
+    QSize sensor;
     QMap<QString,CameraFeature> nodes;
     QString failure,clamp;
     bool rollbackFailure=false,failed=false,disconnect=false;
@@ -19,6 +20,7 @@ public:
     SettingsBackend(IndustrialCameraRequest r,std::shared_ptr<SettingsHardware> h):r_(std::move(r)),h_(std::move(h)){h_->worker=std::this_thread::get_id();}
     PhysicalDeviceIdentity actualIdentity() const override {worker();return r_.device.identity;}
     AcquisitionReadback readback() const override {worker();if(h_->disconnect)throw std::runtime_error("disconnected");return h_->actual;}
+    QSize sensorSize() const override {worker();return h_->sensor;}
     CameraFeature setting(const QString& n) const override {worker();if(h_->disconnect)throw std::runtime_error("disconnected");auto f=h_->nodes.value(n);
         if(h_->dynamicAuto && n=="ExposureTime" && h_->actual.settings.exposureAuto!=AutoMode::Off)f.access=FeatureAccess::ReadOnly;return f;}
     void writeSetting(const QString& n,const FeatureValue& value) override {

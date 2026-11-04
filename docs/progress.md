@@ -6,19 +6,20 @@
 
 ## Devam noktası
 
-**[VF07-A](archive/2026-11-04-vf07-a.md):** Result cache/V4 Properties/Stop/revizyon; hedefli kabul.
-O görevde tam ON/OFF kullanıcı isteğiyle atlandı; K2 teyidi tamam.
+**[CAM-OECS-01](archive/2026-11-04-cam-oecs-01.md):** SDK'lı build, px aktif
+raster/sensör maksimumu, 1×1 kayıt düzeltme. ON 6/6, OFF 5/5, fiziksel
+readback + scalar geri yükleme geçti; tam suite koşulmadı.
+Sonra ICM-BAS-01; VF-08 bekler.
 
+[VF07-A](archive/2026-11-04-vf07-a.md): Result cache/V4 Properties/Stop/revizyon.
 [CAM-SDK-01](archive/2026-11-04-cam-sdk-01.md): çoklu CTI/runtime.
-6/6, OECS/Basler keşfi/görsel geçti; OFF 163+1skip; tam ON kullanıcı isteğiyle kesildi.
-Sonra CAM-OECS-01; VF-08 bekler.
 
 [VF-07](archive/2026-11-04-vf-07.md): TCP/exact ACK.
 [VF-06](archive/2026-11-04-vf-06.md): toplu Auto/rollback.
 [VF-05](archive/2026-11-03-vf-05.md): istemci/HELLO.
 
 [VF-04a](archive/2026-11-03-vf-04a.md): provider;
-[VF-04](archive/2026-11-03-vf-04.md): TCP A/B → VF-08.
+[VF-04](archive/2026-11-03-vf-04.md): TCP A/B.
 
 [VF-03](archive/2026-11-03-vf-03.md): değişmez yayın.
 [VF-02](archive/2026-11-02-vf-02.md): K1; ON/Pose UI VF-04’te.

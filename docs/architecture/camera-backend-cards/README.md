@@ -8,7 +8,7 @@ Kullanıcı kararı: Basler **pylon C API**; uygulama C++20/Qt/MinGW olarak kal�
 | Sıra | Kart | Bağımlılık | Durum |
 | --- | --- | --- | --- |
 | 1 | [CAM-SDK-01](CAM-SDK-01.md) | Mevcut yerel konfigürasyon/keşif | Uygulandı; tam ON ertelendi |
-| 2 | [CAM-OECS-01](CAM-OECS-01.md) | CAM-SDK-01 | Planlandı |
+| 2 | [CAM-OECS-01](CAM-OECS-01.md) | CAM-SDK-01 | Uygulandı; hedefli ON/OFF geçti |
 | 3 | [ICM-BAS-01](ICM-BAS-01.md) | Önceki iki kart; Basler fiziksel erişimi | Planlandı |
 | 4 | [ICM-BAS-02a](ICM-BAS-02a.md) | ICM-BAS-01/G0 | Planlandı |
 | 5 | [ICM-BAS-02b](ICM-BAS-02b.md) | ICM-BAS-02a | Planlandı |

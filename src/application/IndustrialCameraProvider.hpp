@@ -24,6 +24,8 @@ class IndustrialCameraBackend : public CameraWorkerBackend {
 public:
     virtual PhysicalDeviceIdentity actualIdentity() const=0;
     virtual AcquisitionReadback readback() const=0;
+    // Optional full-sensor extent for display only; never an acquisition admission.
+    virtual QSize sensorSize() const {return {};}
     // Optional worker-only basic settings access. Older/admitted providers fail closed.
     virtual CameraFeature setting(const QString&) const {throw std::runtime_error("Settings readback unsupported by backend");}
     virtual void writeSetting(const QString&,const FeatureValue&) {throw std::runtime_error("Settings write unsupported by backend");}

@@ -62,8 +62,14 @@ cmake -S . -B build/reference-ui -DVISIONFLOW_OECS_INCLUDE_DIR="C:/Program Files
 cmake --build build/reference-ui -j 6
 ```
 
+Bu yapılandırmadan sonra günlük başlatıcı (`VisionFlow.cmd` →
+`scripts/run-local.ps1`) aynı `build/reference-ui` EXE'sini çalıştırır; ayrı DLL
+kopyalamak gerekmez. Header yolu yalnız CMake cache'indedir, projeye yazılmaz.
+`Ayarları oku` yalnız okur; kayıtlı geometriyi değiştirmez.
+
 Camera Manager'da kamerayı kaydedin, ayarları okuyun ve gerçek optik/geometri
-taslağını tamamlayın. **Tek görüntü / Canlı görüntü / Durdur** normal komutları
+taslağını tamamlayın. Genişlik/yükseklik **px cinsinden aktif rasterdır**;
+sensör maksimumu ayrı gösterilir ve binning/decimation 1×1'den farklıdır. **Tek görüntü / Canlı görüntü / Durdur** normal komutları
 uygun backend'i application katmanında seçer; ayrıca OECS seçim kutusu yoktur.
 Ayrıntılar'daki OECS sürücü DLL yolu yerel ayardır. Eski FrameStart profili
 FrameBurstStart / Software'e sessiz dönüştürülmez. Günlük kullanım

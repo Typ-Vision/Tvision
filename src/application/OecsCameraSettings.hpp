@@ -7,6 +7,7 @@ namespace visionflow {
 struct OecsCameraSettings {
     using ApiFactory=std::function<std::unique_ptr<OecsCApi>()>;
     static QString installedRuntime();
+    static QString unavailableReason(const DiscoveredDevice&,const QString& runtime);
     static bool available(const DiscoveredDevice&,const QString& runtime);
     static std::unique_ptr<IndustrialCameraBackend> create(const DiscoveredDevice&,const QString&,ApiFactory);
 };

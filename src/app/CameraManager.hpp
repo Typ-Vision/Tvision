@@ -59,7 +59,7 @@ private:
     CameraSettingsValues desired_;
     bool settingsApply_=false, settingsClosing_=false, settingsKnown_=false;
     bool exposureWritable_=false, gainWritable_=false;
-    QSize settingsGeometry_;
+    QSize settingsGeometry_,settingsSensor_;
     QString selectedKey_;
     QComboBox *routes_,*profiles_;
     QSpinBox* timeout_;

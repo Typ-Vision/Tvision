@@ -56,6 +56,10 @@ int main(int argc,char** argv){QCoreApplication app(argc,argv);try{
         check(found,"physical Opto camera not discovered");QTextStream(stdout)<<"PASS physical settings read/apply/temporary project save; scalar update only with --physical-update, restored on successful run; no acquisition or mm acceptance\n";return 0;
     }
     const auto runtime=QDir::current().absoluteFilePath("settings-fixture.dll");QFile marker(runtime);check(marker.open(QIODevice::WriteOnly),"fixture marker");marker.write("fixture");marker.close();
+    const auto d=request().device;auto wrong=d;wrong.identity.model="Other";
+    check(!OecsCameraSettings::unavailableReason(d,QString{}).isEmpty() && OecsCameraSettings::unavailableReason(wrong,runtime).contains("Desteklenmeyen"),"settings availability reports the real reason");
+    if(oecsSdkBindingCompiled())check(OecsCameraSettings::unavailableReason(d,QString{}).contains("mutlak") && OecsCameraSettings::unavailableReason(d,runtime).isEmpty(),"compiled binding distinguishes path reasons");
+    else check(OecsCameraSettings::unavailableReason(d,runtime).contains("derlenmemiş"),"uncompiled binding reason");
     for(int scenario=0;scenario<6;++scenario){auto h=state();const auto d=request().device;
         if(scenario==1){h->dynamicAuto=true;h->nodes["TriggerMode"].value=QString("On");h->nodes["TriggerSource"].value=QString("Software");}
         if(scenario==2)for(const auto n:{"BinningHorizontal","BinningVertical","DecimationHorizontal","DecimationVertical"}){h->nodes[n].access=FeatureAccess::Missing;h->nodes[n].type=FeatureType::Unsupported;}
@@ -65,7 +69,7 @@ int main(int argc,char** argv){QCoreApplication app(argc,argv);try{
         auto backend=OecsCameraSettings::create(d,runtime,[h]{return std::make_unique<Api>(h);});
         CameraTicket ticket;ticket.operation=CameraOperation::Connect;ticket.cancel=std::make_shared<std::atomic_bool>(false);ticket.deadline=Deadline(5000);
         if(scenario==4){rejects([&]{backend->execute(ticket);});continue;}
-        backend->execute(ticket);check(backend->actualIdentity()==d.identity,"exact settings identity");
+        backend->execute(ticket);check(backend->actualIdentity()==d.identity,"exact settings identity");check(backend->sensorSize()==QSize(2448,2048),"sensor extent readback");
         if(scenario==5){rejects([&]{backend->setting("ExposureAuto");});check(h->nodes["TriggerMode"].value==FeatureValue(QString("On")),"failed temporary trigger write restores mode");backend->shutdown();continue;}
         const auto before=backend->readback();backend->writeSetting("ExposureTime",6000.);check(backend->readback().settings.exposureTimeUs==6000.,"OECS actual exposure write/readback");
         backend->writeSetting("ExposureTime",before.settings.exposureTimeUs);check(backend->readback()==before,"readback restored");
