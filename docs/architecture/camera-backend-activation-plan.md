@@ -56,10 +56,10 @@ ortamını yenilemez. Yeni oturum veya explicit yerel seçim gerekir.
   AcquisitionPolicy aynı Runtime reçetesinde OECS ile native kamera karışımını
   bugün reddeder; iki markayı ayrı ayrı desteklemek bu sınırı kendiliğinden kaldırmaz.
 
-## 3. Önerilen bağlantı kararı
+## 3. Bağlantı kararı
 
-**Ortak GenTL keşfi + gerekli markada dar C API adaptörü** ilk tercihtir.
-Basler için aday edinim yolu pylon C API'dir. Kurulu C header'ı extern C,
+**Kullanıcı kararı: ortak GenTL keşfi + Basler pylon C API adaptörü.**
+Uygulama C++20/Qt/MinGW kalır. Kurulu C header'ı extern C,
 calling convention ve packing tanımlarını sunuyor. Mevcut Qt/MinGW ürününe
 MSVC C++ nesne/exception ABI'si taşınmaz; QLibrary ile C export çözümlemesi,
 mevcut OECS yaklaşımı gibi ayrı hardware katmanında denenir.
@@ -165,6 +165,8 @@ semantiğiyle kanıtlanır; OECS engeli Basler'e aktarılmaz veya kapanmış say
 ## 7. Sıralı uygulama kartları
 
 Her satır ayrı görev/commit; ajanlar paralel çalışmaz. Uygulama henüz başlamadı.
+**[Altı ayrı uygulama kartı ve ortak kabul](camera-backend-cards/README.md)**
+CAM-PLAN-03 ile yazıldı; uygulamada seçili kart esas alınır.
 
 | Sıra / ID | Teslim ve sahiplik | Kabul / çıkış |
 | --- | --- | --- |

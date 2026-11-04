@@ -4,6 +4,8 @@
 mevcut ürün probe'unda GenTL keşfi doğrulandı; native G0/G1 henüz tamam değil.
 [CAM-PLAN-02](camera-backend-activation-plan.md) yerel SDK/CTI çözümleme,
 OECS onarımı ve ICM-BAS-01 → 02a/02b → 03 sırasını tanımlar.
+[Altı uygulama kartı](camera-backend-cards/README.md) hazır; kullanıcı Basler için
+pylon C API'yi seçti. C++ API/MSVC geçişi bu sıranın kapsamında değildir.
 Basler için aşağıdaki tarihsel cihaz-bekleniyor/PoE varsayımı yerine bu USB hedefi
 geçerlidir. Daheng fiziksel cihazı hâlâ bekleniyor; uygulama başlamadı.
 
@@ -29,7 +31,7 @@ Model/firmware/SDK değişiminde etkilenen kabul yeniden değerlendirilir.
 
 | Paket | SDK adayı; karar 01'de | Başlangıç durumu |
 | --- | --- | --- |
-| ICM-BAS | GenTL keşfi + pylon C edinim adayı; 01'de ABI kararı | acA1920-40um/23102780 U3V keşfedildi; firmware/readback/G0/G1 açık |
+| ICM-BAS | GenTL keşfi + seçilmiş pylon C API; 01'de ABI doğrulaması | acA1920-40um/23102780 U3V keşfedildi; firmware/readback/G0/G1 açık |
 | ICM-DAH | Daheng Galaxy veya uygun GenTL yolu | Model/SDK/cihaz kanıtı bekleniyor; ortak G2'yi engellemez |
 | OECS | Mevcut ICM-02 C API kararı | 04d native açık/ertelenmiş; G1 kapalı |
 
