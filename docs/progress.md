@@ -6,7 +6,7 @@
 
 ## Devam noktası
 
-[CAM-DLL-01](archive/2026-11-05-cam-dll-01.md): sistem DLL.
+[CAM-DLL-01a](archive/2026-11-05-cam-dll-01a.md): Opto teyidi.
 [CAM-REG-01](archive/2026-11-05-cam-reg-01.md): Ekle/rota.
 [BAS-03](archive/2026-11-05-icm-bas-03.md): **G1/G3 açık**, production kapalı;
 VF-08 bekler. [02b](archive/2026-11-05-icm-bas-02b.md).
