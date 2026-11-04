@@ -56,7 +56,16 @@ int main(int argc,char** argv){QCoreApplication app(argc,argv);try{
     CameraProviderFactory product;check(!product.capabilities(r.device).softwareTrigger,"product G1 remains closed");reject([&]{product.open(r,CameraLeaseUse::Runtime,FrameQueueMode::ProductionFifo);});
     QTemporaryDir dir(QDir::currentPath()+"/basler-worker-XXXXXX");check(dir.isValid(),"worker fixture directory");
     const auto oldConfig=qgetenv("VISIONFLOW_CAMERA_CONFIGURATION");const auto local=dir.filePath("camera.ini");CameraLocalConfiguration(local).setRuntime("basler",dll);qputenv("VISIONFLOW_CAMERA_CONFIGURATION",local.toUtf8());
+    const auto caps=product.capabilities(r.device);
+    check(caps.open && caps.configure && caps.preview && !caps.softwareTrigger && caps.unavailableReason.contains("G1"),"configured SDK exposes preview without production authority");
+    const auto beforeRejected=triggers();
+    for(const auto use:{CameraLeaseUse::Calibration,CameraLeaseUse::Editor,CameraLeaseUse::Runtime,CameraLeaseUse::Preview}){
+        try{product.open(r,use,FrameQueueMode::ProductionFifo);throw std::runtime_error("production unexpectedly admitted");}
+        catch(const std::exception& e){check(QString::fromUtf8(e.what()).contains("Basler production/G1 admission unavailable"),"configured product rejects G1 before opening hardware");}
+    }
+    check(resources()==0 && triggers()==beforeRejected,"rejected production opens no handles and triggers no capture");
     r.profile.requested.trigger={};mode(40);
+    reject([&]{product.open(r,CameraLeaseUse::Runtime,FrameQueueMode::PreviewLatest);});
     {auto worker=product.open(r,CameraLeaseUse::Preview,FrameQueueMode::PreviewLatest,1);start(*worker);command(*worker,CameraOperation::Grab);const auto frame=worker->take();check(frame && frame->sourceId==r.sourceId && triggers()==0,"product native preview on common worker");
         command(*worker,CameraOperation::Grab);worker->requestStop();command(*worker,CameraOperation::Stop);check(!worker->take(),"Stop retires preview generation");worker->requestShutdown();until([&]{return worker->shutdownState()==ShutdownState::Ready;});check(worker->cleanShutdown()==true,"native owner cleanup");}
     qputenv("VISIONFLOW_CAMERA_CONFIGURATION",oldConfig);check(resources()==0,"worker resources released");

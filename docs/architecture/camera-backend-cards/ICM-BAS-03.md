@@ -1,6 +1,8 @@
 # ICM-BAS-03 — Basler Calibration–Editor–Runtime ürün kabulü
 
-Durum: Planlandı. Bağlı: [ICM-BAS-02b](ICM-BAS-02b.md)/G1 ve mevcut ortak G2.
+Durum: Hedefli yazılım kabulü ve H01–H08 envanteri yapıldı; **fiziksel G3
+önkoşul G1 nedeniyle açık**. [Kabul kaydı](../../archive/2026-11-05-icm-bas-03.md).
+Bağlı: [ICM-BAS-02b](ICM-BAS-02b.md)/G1 ve mevcut ortak G2.
 Sonraki: kamera fazı değerlendirmesi → VF-08; bu kart VF-08'i başlatmaz.
 
 ## Oku

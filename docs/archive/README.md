@@ -6,6 +6,7 @@ görev” ifadeleri yazıldıkları tarihe aittir.
 
 | Dönem / görev | Kayıt |
 | --- | --- |
+| 5 Kasım 2026 — ICM-BAS-03 | [Hedefli ürün kabulü, SDK ayarlı üretim ret testi ve H01–H08 açık engel matrisi; G1/G3 açık](2026-11-05-icm-bas-03.md) |
 | 5 Kasım 2026 — ICM-BAS-02b | [Basler owned stream, native önizleme, tek/100 tetik ve hedefli kabul; G1 açık](2026-11-05-icm-bas-02b.md) |
 | 4 Kasım 2026 — ICM-BAS-02a | [Basler ürün ayar yolu, gerçek readback/rollback, hedefli ON/OFF ve fiziksel scalar restore/UI](2026-11-04-icm-bas-02a.md) |
 | 4 Kasım 2026 — ICM-BAS-01 | [pylon C/MinGW ABI, exact USB kimlik/node envanteri, native G0 ve Viewer busy/reopen; hedefli ON/OFF](2026-11-04-icm-bas-01.md) |
