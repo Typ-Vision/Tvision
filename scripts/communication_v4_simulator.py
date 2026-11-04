@@ -3,8 +3,10 @@
 import argparse
 import hashlib
 import json
+import os
 import socket
 import struct
+import sys
 import time
 import uuid
 from pathlib import Path
@@ -89,7 +91,7 @@ def decode(raw):
             raise ValueError('terminal SHA256 mismatch')
     return {'raw': raw, 'kind': kind, 'station': u32(raw, 20),
             'request': int.from_bytes(raw[24:32], 'big'), 'session': raw[32:48],
-            'body': raw[128:], 'reason': u32(raw, 204)}
+            'body': raw[128:], 'reason': u32(raw, 916 if kind == 103 else 204)}
 
 
 class Peer:
@@ -164,16 +166,16 @@ class Peer:
                    result=raw[128:144].hex(), digest=raw[160:192].hex())
         return reply
 
-    def wait(self, request, kinds):
+    def wait(self, request, kinds, station=None):
         deadline = time.monotonic() + self.timeout
         while time.monotonic() < deadline:
             for index, reply in enumerate(self.pending):
-                if reply['request'] == request and reply['kind'] in kinds:
+                if reply['request'] == request and (station is None or reply['station'] == station) and reply['kind'] in kinds:
                     return self.pending.pop(index)
             reply = self.receive()
-            if reply['request'] == request and reply['kind'] in kinds:
+            if reply['request'] == request and (station is None or reply['station'] == station) and reply['kind'] in kinds:
                 return reply
-            if reply['kind'] in {190, 191} and reply['request'] == request:
+            if reply['kind'] in {190, 191} and reply['request'] == request and (station is None or reply['station'] == station):
                 raise ValueError(f"request {request} rejected: {reply['reason']}")
             self.pending.append(reply)
             if len(self.pending) > 256:
@@ -186,13 +188,221 @@ class Peer:
         ack = self.make(11, request=terminal['request'], station=terminal['station'],
                         recipe=u32(raw, 80), template=u32(raw, 84), activation=raw[88:104], body=body)
         self.send(ack)
-        reply = self.wait(terminal['request'], {112})
-        if reply['reason']:
+        reply = self.wait(terminal['request'], {112}, terminal['station'])
+        if (reply['reason'] or reply['raw'][80:104] != raw[80:104]
+                or reply['raw'][128:144] != raw[128:144]
+                or reply['raw'][160:192] != raw[160:192]):
             raise ValueError('exact ACK rejected')
         return reply
 
 
+class RequestState:
+    """One fsynced counter and unresolved intent per installation/peer/epoch.
+
+    A crashed writer leaves a lock: fail closed and require operator review.
+    Never reset/delete this file to resolve an uncertain production outcome.
+    """
+    def __init__(self, path, profile):
+        self.path = Path(path)
+        self.namespace = {k: profile[k] for k in ('installation', 'peer', 'epoch')}
+        self.lock = self.path.with_name(self.path.name + '.lock')
+        self.state = None
+
+    def __enter__(self):
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        self.fd = os.open(self.lock, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
+        try:
+            if self.path.exists():
+                self.state = json.loads(self.path.read_text(encoding='utf-8'))
+                if (self.state.get('schema') != 1 or self.state.get('namespace') != self.namespace
+                        or not isinstance(self.state.get('last'), str)
+                        or not self.state['last'].isdigit()
+                        or not 0 <= int(self.state['last']) < 2**64):
+                    raise ValueError('request state corrupt or belongs to another installation/peer/epoch')
+                pending = self.state.get('pending')
+                if pending is not None:
+                    raw = bytes.fromhex(pending)
+                    if (len(raw) != 512 or u32(raw, 8) != 10 or not u32(raw, 20)
+                            or int.from_bytes(raw[24:32], 'big') != int(self.state['last'])
+                            or raw[48:64] != identity(self.namespace['peer'])
+                            or raw[64:80] != identity(self.namespace['epoch'])):
+                        raise ValueError('unresolved request state corrupt')
+            else:
+                self.state = dict(schema=1, namespace=self.namespace, last='0', pending=None)
+                self.save()
+            return self
+        except BaseException:
+            self.__exit__(None, None, None)
+            raise
+
+    def __exit__(self, *_):
+        os.close(self.fd)
+        self.lock.unlink()
+
+    def save(self):
+        temporary = self.path.with_name(self.path.name + '.tmp')
+        with temporary.open('w', encoding='utf-8') as output:
+            json.dump(self.state, output)
+            output.flush()
+            os.fsync(output.fileno())
+        os.replace(temporary, self.path)
+
+    def reserve(self, peer, station):
+        if self.state['pending'] is not None:
+            raise ValueError('unresolved request exists; use --recover; no new trigger sent')
+        request = int(self.state['last']) + 1
+        if request >= 2**64:
+            raise ValueError('request counter exhausted; wrap is forbidden')
+        body = bytearray(384)
+        body[:16] = station['camera_set']
+        raw = peer.make(10, request=request, station=station['key'], recipe=station['recipe'],
+                        template=station['template'], activation=station['activation'], body=body)
+        self.state.update(last=str(request), pending=raw.hex())
+        self.save()  # durable before the first network write
+        return raw
+
+    def recover(self, peer):
+        if not self.state['pending']:
+            raise ValueError('no unresolved request to recover')
+        raw = bytearray.fromhex(self.state['pending'])
+        raw[32:48] = peer.session  # transport only; durable identity/body unchanged
+        return bytes(raw)
+
+    def complete(self):
+        self.state['pending'] = None
+        self.save()
+
+
+def discover(peer, category=1, revision=ZERO):
+    rows, key, seen = [], 0, set()
+    for _ in range(4096):
+        body = bytearray(384)
+        put32(body, 0, category)
+        put32(body, 4, key)
+        body[8:24] = revision
+        raw = peer.make(3, body=body)
+        peer.send(raw)
+        reply = peer.wait(int.from_bytes(raw[24:32], 'big'), {103}, 0)
+        data = reply['raw']
+        if reply['reason']:
+            # UNKNOWN_KEY with an empty category is not an invented entry.
+            if key == 0 and reply['reason'] == 10:
+                return rows, revision
+            raise ValueError(f"catalogue rejected: {reply['reason']}; refresh selection before retry")
+        current = data[128:144]
+        if revision != ZERO and current != revision:
+            raise ValueError('catalogue changed; no trigger sent')
+        revision = current
+        actual, size = u32(data, 148), u32(data, 200)
+        if (u32(data, 144) != category or not actual or actual in seen or size > 64
+                or (key and actual != key) or u32(data, 268) != 256
+                or u32(data, 272) != 1 or u32(data, 276) != 256):
+            raise ValueError('invalid or cyclic catalogue response')
+        seen.add(actual)
+        row = dict(key=actual, name=data[204:204+size].decode('utf-8'), raw=data)
+        if category == 1:
+            row.update(recipe=u32(data, 348), template=u32(data, 352),
+                       activation=data[360:376], camera_set=data[376:392])
+        rows.append(row)
+        key = u32(data, 912)
+        if not key:
+            return rows, revision
+    raise ValueError('catalogue page limit')
+
+
+def station_status(peer, station):
+    raw = peer.make(2, station=station['key'])
+    peer.send(raw)
+    reply = peer.wait(int.from_bytes(raw[24:32], 'big'), {102}, station['key'])
+    data = reply['raw']
+    if (reply['reason'] or (u32(data, 80), u32(data, 84), data[88:104]) !=
+            (station['recipe'], station['template'], station['activation'])):
+        raise ValueError('station selection changed; refresh before explicitly triggering')
+    return dict(ready=bool(u32(data, 884)), busy=bool(u32(data, 888)), pending=u32(data, 892))
+
+
+def terminal_summary(terminal, request):
+    raw = terminal['raw']
+    if (terminal['kind'] != 111 or raw[20:32] != request[20:32]
+            or raw[80:104] != request[80:104] or raw[128:144] == ZERO
+            or raw[144:160] == ZERO or u32(raw, 952) != 10):
+        raise ValueError('terminal does not match station/request/selection/production cycle')
+    execution, decision, valid = u32(raw, 192), u32(raw, 196), u32(raw, 200)
+    if (execution not in {1, 2, 3} or decision not in {0, 1, 2} or valid not in {0, 1}
+            or (execution != 1 and (decision or valid))):
+        raise ValueError('invalid terminal execution/decision/validity')
+    number_bits, flag_bits, text_bits = u32(raw, 208), u32(raw, 212), u32(raw, 220)
+    if number_bits >> 16 or text_bits >> 4 or u32(raw, 216) & ~flag_bits:
+        raise ValueError('invalid terminal slot validity')
+    return dict(station=terminal['station'], request=str(terminal['request']),
+                result=raw[128:144].hex(), digest=raw[160:192].hex(), camera=u32(raw, 948),
+                recipe=u32(raw, 80), template=u32(raw, 84), activation=raw[88:104].hex(),
+                execution={1:'DONE', 2:'ERROR', 3:'CANCELED'}[execution],
+                decision={0:'NOT_EVALUATED', 1:'OK', 2:'NOK'}[decision], valid=bool(valid),
+                numbers={str(i): struct.unpack_from('>i', raw, 280+4*i)[0]
+                         for i in range(16) if number_bits & (1 << i)},
+                flags={str(i): bool(u32(raw, 216) & (1 << i))
+                       for i in range(32) if flag_bits & (1 << i)},
+                delivery='AWAITING_ACK', reason=terminal['reason'])
+
+
+def production(peer, profile, args):
+    hello = peer.connect()
+    if hello['raw'][128:144] != identity(profile['installation']):
+        raise ValueError('profile belongs to another installation')
+    state_path = args.state or args.profile.parent / ('.vf4-' + profile['peer'] + '-' + profile['epoch'] + '.json')
+    with RequestState(state_path, profile) as state:
+        if args.recover:
+            raw = state.recover(peer)
+        else:
+            stations, revision = discover(peer)
+            recipes, revision = discover(peer, 2, revision)
+            templates, revision = discover(peer, 3, revision)
+            for station in stations:
+                status = station_status(peer, station)
+                record = dict(station=station['key'], name=station['name'], recipe=station['recipe'],
+                              template=station['template'], activation=station['activation'].hex(), **status)
+                peer.event('station', **record)
+                print(json.dumps(record, ensure_ascii=False), flush=True)
+            if not args.trigger:
+                return
+            if state.state['pending']:
+                raise ValueError('unresolved request exists; use --recover; no new trigger sent')
+            matches = [s for s in stations if str(s['key']) == args.station or s['name'] == args.station]
+            if len(matches) != 1:
+                raise ValueError('--station must match one discovered name or wire key')
+            station = matches[0]
+            if (station['recipe'] not in {r['key'] for r in recipes}
+                    or station['template'] not in {t['key'] for t in templates}
+                    or station['activation'] == ZERO or station['camera_set'] == ZERO):
+                raise ValueError('station has no complete published selection')
+            status = station_status(peer, station)
+            if not status['ready'] or status['busy'] or status['pending']:
+                raise ValueError('station is not ready or has pending delivery; no trigger sent')
+            raw = state.reserve(peer, station)
+        request, station_key = int.from_bytes(raw[24:32], 'big'), u32(raw, 20)
+        peer.send(raw)  # recovery sends the SAME identity/body; never a new cycle request
+        reply = peer.wait(request, {110, 111}, station_key)
+        if reply['kind'] == 110:
+            if reply['reason']:
+                raise ValueError('ACCEPTED carried a failure reason')
+            peer.event('accepted', station=station_key, request=str(request), delivery='NOT_COMPLETED')
+            print(f'ACCEPTED station={station_key} request={request}; awaiting terminal', flush=True)
+            reply = peer.wait(request, {111}, station_key)
+        summary = terminal_summary(reply, raw)
+        peer.event('terminal', **summary)
+        print(json.dumps(summary, ensure_ascii=False), flush=True)
+        peer.ack(reply)
+        state.complete()  # only exact ACKED commits completion locally
+        summary['delivery'] = 'ACKED'
+        peer.event('delivery', **summary)
+        print(json.dumps(summary, ensure_ascii=False), flush=True)
+        if args.expect_decision and (summary['decision'] != args.expect_decision or not summary['valid']):
+            raise ValueError('terminal decision/validity differs from the expected surface result')
+
+
 def main():
+    sys.stdout.reconfigure(encoding='utf-8')
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--host', help='listener address; profile address is used when omitted')
     parser.add_argument('--port', type=int, help='listener port; profile port is used when omitted')
@@ -200,8 +410,20 @@ def main():
     parser.add_argument('--peer', help='locally enrolled peer UUID; overrides the profile')
     parser.add_argument('--epoch', help='locally enrolled persistent epoch UUID; overrides the profile')
     parser.add_argument('--plan', type=Path, help='JSON list: kind, station/recipe/template/activation, body_hex, request decimal string, expect_kind, ack')
+    parser.add_argument('--stations', action='store_true', help='discover actual station keys and readiness')
+    parser.add_argument('--station', help='exact discovered station name or wire key')
+    parser.add_argument('--trigger', action='store_true', help='send ONE durable production request, then exact ACK')
+    parser.add_argument('--recover', action='store_true', help='recover the unresolved request; never create a new request')
+    parser.add_argument('--state', type=Path, help='durable counter/intent file; retain across runs')
+    parser.add_argument('--expect-decision', choices=['OK', 'NOK', 'NOT_EVALUATED'])
     parser.add_argument('--log', type=Path, required=True, help='JSONL protocol/failure log')
     args = parser.parse_args()
+    if args.trigger and not args.station:
+        parser.error('--trigger requires --station (discover with --stations)')
+    if args.recover and args.trigger:
+        parser.error('--recover and --trigger are mutually exclusive')
+    if (args.stations or args.trigger or args.recover) and (not args.profile or args.plan):
+        parser.error('production mode requires --profile and cannot be combined with --plan')
     profile = load_profile(args.profile) if args.profile else None
     peer_id = args.peer or (profile['peer'] if profile else None)
     epoch_id = args.epoch or (profile['epoch'] if profile else None)
@@ -216,6 +438,10 @@ def main():
             if profile:
                 peer.event('profile', label=profile['label'], installation=profile['installation'],
                            schema=profile['schema'])
+            if args.stations or args.trigger or args.recover:
+                production(peer, profile, args)
+                peer.event('completed', physical='BLOCKED', exactly_once=False)
+                return
             peer.connect()
             operations = json.loads(args.plan.read_text(encoding='utf-8')) if args.plan else [{'kind': 2, 'expect_kind': 102}]
             for operation in operations:

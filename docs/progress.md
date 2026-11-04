@@ -6,10 +6,11 @@
 
 ## Devam noktası
 
-**[VF-06](archive/2026-11-04-vf-06.md): toplu Run/Auto tamam.**
-Ön kontrol/rollback/restart geçti; tam ON/OFF hatasız. Sıradaki VF-07/K2: TCP/exact ACK.
-[VF-05](archive/2026-11-03-vf-05.md): tek peer/epoch; ikinci kayıt, pending/remote
-yenileme ret; profil HELLO geçti.
+**[VF-07](archive/2026-11-04-vf-07.md): tek istasyon TCP/exact ACK tamam.**
+Yüzey A OK/valid; bayat seçim, yanlış ACK, timeout/kopma kurtarma geçti.
+K2 yazılım kanıtı arşivde; operatör tekrarı hazır. Sonraki VF-08/K3.
+[VF-06](archive/2026-11-04-vf-06.md): toplu Run/Auto, ön kontrol/rollback/restart.
+[VF-05](archive/2026-11-03-vf-05.md): tek peer/epoch, profil HELLO; pending/Remote ret.
 
 **[VF-04a](archive/2026-11-03-vf-04a.md): editor9 tek dosya provider düzeltildi.**
 [VF-04](archive/2026-11-03-vf-04.md) korunur;

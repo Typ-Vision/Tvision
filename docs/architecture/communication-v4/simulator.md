@@ -27,9 +27,73 @@ restart Auto başlatmaz.
 python scripts/communication_v4_simulator.py --host 127.0.0.1 --port 5000 --peer <enrolled-UUID> --epoch <enrolled-epoch-UUID> --log build/comm4/manual/status.jsonl
 ```
 
-Plan verilmezse exact HELLO ve global STATUS çalışır; acquisition yoktur. Eski
+`--stations`, `--trigger` veya `--recover` verilmezse exact HELLO ve global STATUS
+çalışır; acquisition yoktur. Eski
 `visionflow_plc_simulator` v2/v3 executable'ı korunur; V4 açıkça bu Python CLI'dır.
 Protocol auto-detect/downgrade yoktur. `--help` mevcut seçenekleri gösterir.
+
+## VF-07 · Tek istasyonu tetikle ve teslimi oku
+
+Communication'da istemci profilini dışa aktarın. Dashboard'da Yüzey A'yı yükleyip
+**Otomatik üretimi başlat** eylemini kullanın. Normal tetik için Remote Enable
+açılması gerekmez. Ayrı terminalde profili açıp gerçek istasyon adını/anahtarını görün:
+
+```powershell
+python scripts/communication_v4_simulator.py --profile client.json --stations --log stations.jsonl
+python scripts/communication_v4_simulator.py --profile client.json --station "İstasyon 1" --trigger --expect-decision OK --log trigger.jsonl
+```
+
+`--station` katalogdaki tam ad veya gerçek wire anahtarıdır; görünen sıra numarası
+varsayılmaz. İstemci exact katalog revision'ıyla station, recipe ve template
+sayfalarını okur, STATUS hazır/busy/pending ve aktif seçimi denetler. Operatörün
+her `--trigger` komutu en çok bir yeni üretim isteği gönderir. Önceden seçilmiş
+örneğin beklenen kararı NOK ise `--expect-decision NOK` kullanın. Eşleşmeyen karar
+veya resultValid=false kabulü başarısız yapar; geçerli terminal yine exact ACK'lenir.
+
+Çıktıda ACCEPTED yalnız çevrimin kabulüdür; terminalde DONE/ERROR/CANCELED, karar,
+**valid**, cameraKey, station/request, revision ve result/digest görünür. Teslim
+önce AWAITING_ACK, yalnız exact ACKED yanıtıyla ACKED olur. Sayısal slotlar yalnız
+geçerlilik biti açıksa ham signed32 wire değeri olarak gösterilir; bunlara örtük
+mm/birim veya ölçek atanmaz. Ölçümün operatör kabulü VF-08 kapsamındadır.
+
+Profilin yanındaki `.vf4-<peer>-<epoch>.json` dosyası kalıcı uint64 sayaç ve
+çözülmemiş tetiği taşır. `--state yol.json` açık bir konum seçebilir; aynı
+installation/peer/epoch için sonraki koşumlarda **aynı dosyayı koruyun**. İstek
+ilk socket yazımından önce fsync/atomic replace ile kaydedilir; sayaç wrap yapmaz.
+Eşzamanlı ikinci istemci state lock nedeniyle reddedilir. Crash sonrasında kalan
+`.lock` dosyasını yalnız önceki sürecin kapandığı ve state'in korunduğu denetlendikten
+sonra kaldırın; counter/intent dosyasını silerek belirsiz işi çözmeyin.
+
+Timeout veya kopmada otomatik yeni tetik yoktur. Çözülmemiş isteği açıkça kurtarın:
+
+```powershell
+python scripts/communication_v4_simulator.py --profile client.json --recover --log recovery.jsonl
+```
+
+Kurtarma yeni HELLO session'ıyla **aynı station/request/body**'yi yeniden gönderir;
+kalıcı sonuç aynı result UUID/digest ile gelir ve exact ACK edilir. Başarıyla ACKED
+alınana kadar yeni `--trigger` kapalıdır. Bayat seçim reddinde katalog/operatör
+seçimi gözden geçirilir; istemci kendi başına yeni üretim kimliği oluşturmaz.
+Yanlış result/digest/selection taşıyan ACKED yerel intent'i kapatmaz.
+
+Ürün kabulü, boş izole makinede gerçek MainWindow/Communication/Dashboard/Runtime
+ve ayrı Python process'iyle çalışır; fixture server içermez:
+
+```powershell
+ctest --test-dir build/reference-ui --output-on-failure -R 'communication_v4_operator_contract|ui_station_tcp'
+# Aynı kabulü normal başlatıcı üzerinden, kullanıcı verisine dokunmadan çalıştır:
+$env:VISIONFLOW_TEST_ARTIFACTS='D:/TVision/build/vf-07/launcher'
+.\VisionFlow.cmd -Vf07Acceptance
+```
+
+`-Vf07Acceptance` açık test seçeneğidir; normal başlatmayı değiştirmez. Test yeni
+run dizininde istasyonu ürün dialoguyla oluşturur, yayımlanmış Yüzey A'yı Dashboard'da
+yükler, panelden istemci kaydeder/profil dışa aktarır ve yerel Auto açar. Gerçek
+dosya görüntüsü→Blob→Result ile beklenen OK/resultValid ve exact ACKED doğrulanır.
+Bayat dört seçim alanı, yanlış ACK, timeout, kopma/aynı terminal kurtarma ve
+restart'ta izinlerin kapalı olması da sınanır. `build/vf-07/ui/run-*/vf07-tcp/`
+altında result.json/JSONL ve normal/küçük Dashboard görselleri saklanır. Bu yazılım
+kanıtı fiziksel PLC/kamera veya robot hareketi kabulü oluşturmaz.
 
 `--plan path.json` bir JSON işlem listesi okur. Her satır `kind`, beklenen
 `expect_kind`, gerekiyorsa `station`, `recipe`, `template`, `activation` ve exact

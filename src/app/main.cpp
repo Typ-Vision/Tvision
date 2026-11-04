@@ -30,7 +30,7 @@ int main(int argc, char* argv[]) {
     const bool endpointsOnly=app.arguments().contains("--endpoints-smoke");
     const bool resultOnly=app.arguments().contains("--result-smoke");
     const bool assignmentsOnly=app.arguments().contains("--assignments-smoke");
-    const bool vf04Only=app.arguments().contains("--vf04-smoke");
+    const bool vf04Only=app.arguments().contains("--vf04-smoke") || app.arguments().contains("--vf07-smoke");
     const bool vf03Only=app.arguments().contains("--vf03-smoke");    const bool variablesOnly=app.arguments().contains("--variables-smoke");
     const bool roiOnly=app.arguments().contains("--roi-smoke");
     const bool multiRuntimeOnly=app.arguments().contains("--multi-source-runtime-smoke");
@@ -97,7 +97,7 @@ int main(int argc, char* argv[]) {
         if(endpointsOnly){bool valid=false;try{valid=window.verifyEndpointProfiles(buildDir.absolutePath());}catch(const std::exception& e){QTextStream(stderr)<<e.what()<<'\n';}window.close();app.exit(valid?0:1);return;}
         if(resultOnly){bool valid=false;try{valid=window.verifyResultUi(buildDir.absolutePath());}catch(const std::exception& e){QTextStream(stderr)<<e.what()<<'\n';}window.close();app.exit(valid?0:1);return;}
         if(assignmentsOnly){bool valid=false;try{valid=window.verifyAssignmentUi(buildDir.absolutePath());}catch(const std::exception& e){QTextStream(stderr)<<e.what()<<'\n';}window.close();app.exit(valid?0:1);return;}
-        if(vf04Only){bool valid=false;try{valid=window.verifyVf04Dashboard(buildDir.absolutePath());}catch(const std::exception& e){QTextStream(stderr)<<e.what()<<'\n';}QTextStream(stdout)<<(valid?"PASS":"FAIL")<<": VF-04 Dashboard selection / restart\n";window.close();app.exit(valid?0:1);return;}
+        if(vf04Only){bool valid=false;try{valid=window.verifyVf04Dashboard(buildDir.absolutePath());}catch(const std::exception& e){QTextStream(stderr)<<e.what()<<'\n';}QTextStream(stdout)<<(valid?"PASS":"FAIL")<<(app.arguments().contains("--vf07-smoke")?": VF-07 normal product TCP / exact ACK / restart\n":": VF-04 Dashboard selection / restart\n");window.close();app.exit(valid?0:1);return;}
         if(vf03Only){bool valid=false;try{valid=window.verifyVf03Publication(buildDir.absolutePath());}catch(const std::exception& e){QTextStream(stderr)<<e.what()<<'\n';}QTextStream(stdout)<<(valid?"PASS":"FAIL")<<": VF-03 publish data editor → machine catalogue → Communication recipe list\n";window.close();app.exit(valid?0:1);return;}
         if(variablesOnly){bool valid=false;try{valid=window.verifyVariableCatalog(buildDir.absolutePath());}catch(const std::exception& e){QTextStream(stderr)<<e.what()<<'\n';}window.close();app.exit(valid?0:1);return;}
         if(overlaysOnly){bool valid=false;try{valid=window.verifyRuntimeOverlays(buildDir.absolutePath());}catch(const std::exception& e){QTextStream(stderr)<<e.what()<<'\n';}window.close();app.exit(valid?0:1);return;}

@@ -6,8 +6,7 @@ UI algoritma veya donanım SDK'sını doğrudan çağırmaz.
 
 **Güncel görev, son doğrulama ve açık engeller [devir özetindedir](docs/progress.md).**
 
-Birleşik kamera/7×7 kalibrasyon ve Runtime `main` dalındadır
-([başlatıcı/restart devri](docs/architecture/camera-integration-handoff.md)).
+Kamera/kalibrasyon/Runtime: [başlatıcı/restart](docs/architecture/camera-integration-handoff.md).
 
 ## Uygulanan kapsam
 
@@ -57,9 +56,8 @@ cmake --build build/kmc9-core-off -j 6
 ctest --test-dir build/kmc9-core-off --output-on-failure
 ```
 
-CTest `-N` testleri listeler; `-R` tam suite değildir.
-Socket testleri localhost ister. UI değişikliğinde Release build,
-ilgili CTest ve normal/küçük ekran görsel kontrolü yapılır.
+CTest `-N` listeler; `-R` tam suite değildir. Socket testleri localhost ister.
+UI değişikliğinde Release, ilgili CTest ve iki boyutta görsel kontrol gerekir.
 
 `run-local.ps1` DLL yollarını yalnız başlattığı sürece ekler. Başka build için
 `-BuildDirectory build`, offscreen smoke için `-SmokeTest` verilebilir.
@@ -99,6 +97,9 @@ peer/epoch); Epoch yenile eskisini emekliye ayırır.
 Dashboard → Otomatik üretimi başlat: tüm istasyonlar ön kontrolden geçer, sırayla
 Run/Auto açılır. Eksiklerin düzeltme yolu gösterilir; hatada yeni başlayanlar durur.
 Remote Enable ayrıdır.
+
+[V4 simülatörü](docs/architecture/communication-v4/simulator.md): `--stations`,
+`--trigger`, kopmada `--recover`. Kalıcı sayaç korunur; teslim exact ACKED ile biter.
 
 Communication tek V4 listener, station Run/Auto/Stop, aktif revision, kamera
 sahibi ve pending ACK durumunu gösterir. Restart Run/Auto açmaz; Remote Enable

@@ -1,5 +1,6 @@
 param(
     [switch]$SmokeTest,
+    [switch]$Vf07Acceptance,
     [string]$BuildDirectory = 'build/reference-ui',
     [string]$QtRoot = 'C:/Qt/6.12.0/mingw_64',
     [string]$OpenCVRoot = 'C:/OpenCV/5.0.0/x64/mingw',
@@ -14,7 +15,9 @@ $previousPath = $env:PATH
 $previousPlatform = $env:QT_QPA_PLATFORM
 try {
     $env:PATH = "$OpenCVRoot/bin;$QtRoot/bin;$CompilerBin;" + $previousPath
-    if ($SmokeTest) {
+    if ($Vf07Acceptance) {
+        & $executable --vf07-smoke
+    } elseif ($SmokeTest) {
         $env:QT_QPA_PLATFORM = 'offscreen'
         & $executable --smoke-test
     } else { & $executable }
