@@ -1,6 +1,8 @@
 # ICM-BAS-01 — pylon C bağlantısı, exact kimlik ve G0
 
-Durum: Planlandı. Bağlı: [CAM-OECS-01](CAM-OECS-01.md).
+Durum: Uygulandı; native G0 geçti. [Kapanış ve kanıt](../../archive/2026-11-04-icm-bas-01.md).
+Hedefli ON/OFF kabulü yapıldı; tam suite kullanıcı yönlendirmesiyle koşulmadı.
+Bağlı: [CAM-OECS-01](CAM-OECS-01.md).
 Sonraki: [ICM-BAS-02a](ICM-BAS-02a.md).
 
 ## Oku
@@ -41,3 +43,39 @@ Kanıt: `build/icm/bas-01/`. Teknik feasibility başarısızsa G0 açık kalır;
 
 Kapsam dışı: feature yazma, görüntü/trigger, ürün ayar butonlarını açma, G1/G3/G4,
 SDK binary/header dağıtımı. Geçmiş GenTL discovery yalnız kimlik başlangıç kanıtıdır.
+
+## Uygulanan bağlantı ve yerel kullanım
+
+`PylonSession` hardware katmanındadır. `VISIONFLOW_PYLON_INCLUDE_DIR` boşsa
+bağlayıcı unavailable derlenir; runtime ürünün import bağımlılığı değildir.
+Kurulu 10.1.4.1565 C header'ları MinGW 13.1 ile derlendi. `PylonHeaders.hpp`
+yalnız stdint yeniden tanımı ve `_stdcall` yazımı için uyumluluk sağlar;
+üretici dosyaları değiştirilmez. Pointer/return/bool/enum, packing ve kullanılan
+`PylonDeviceInfo_t` boyut/offset değerleri compile-time doğrulanır.
+
+Oturum aynı sahip thread'de açılıp kapanır. Tek pylon oturumu atomik SDK sahipliğini
+init → enumerate → exact create/open → readback → close/destroy → terminate
+boyunca tutar; ikinci oturum beklemek yerine busy alır. Enumeration index'i
+yalnız exact vendor/model/serial + `BaslerUsb` eşleşmesinden sonra kullanılır;
+open sonrası native ve remote kimlik yeniden doğrulanır. Seçili fiziksel
+kameranın ortak `CameraLeaseArbiter` rezervasyonunu çağıran katman tutar;
+manuel probe bunu yapar. Ürün worker/factory entegrasyonu 02a/02b'dedir.
+Cleanup hatasında owner retry mümkündür; destructor da temizleyemezse SDK ve
+handle pinlenir, yeni native oturum açılmaz; süreç yeniden başlatılmalıdır.
+
+Node envanteri mevcut selector bağlamını okur; selector/auto/trigger dahil
+hiçbir feature yazmaz. Eksik node `missing`, erişilemeyen node NI/NA/WO olarak
+kalır. Komut capability'si korelasyon, cancel/drain veya üretim izni değildir.
+Yol ve bağımlılıklar CAM-SDK-01 `CameraLocalConfiguration`/`RuntimeLibrary`
+üzerinden çözülür; header/runtime repoya kopyalanmaz.
+
+```powershell
+cmake -S . -B build/reference-ui '-DVISIONFLOW_PYLON_INCLUDE_DIR=C:/Program Files/Basler/pylon/Development/include'
+cmake --build build/reference-ui -j 6 --target visionflow_pylon_probe pylon_binding_test pylon_test_sdk
+# README toolchain PATH'i ile; --runtime verilmezse yerel Basler runtime çözümlemesi kullanılır.
+./build/reference-ui/visionflow_pylon_probe.exe --vendor Basler --model acA1920-40um --serial 23102780
+```
+
+Probe JSON/exit üretir; manuel fiziksel denemedir, CTest'e eklenmez.
+`pylon_backend_binding` fake export + gerçek header ABI testidir;
+SDK'sız yapılandırmada yerine `pylon_backend_unavailable` kaydedilir.

@@ -1,7 +1,7 @@
 # ICM — marka ve model bazlı kamera entegrasyonları
 
 4 Kasım 2026: **Basler USB hedefi erişilebilir:** acA1920-40um / 23102780 / U3V,
-mevcut ürün probe'unda GenTL keşfi doğrulandı; native G0/G1 henüz tamam değil.
+GenTL keşfi ve [pylon C native G0](../archive/2026-11-04-icm-bas-01.md) geçti; G1 açık.
 [CAM-PLAN-02](camera-backend-activation-plan.md) yerel SDK/CTI çözümleme,
 OECS onarımı ve ICM-BAS-01 → 02a/02b → 03 sırasını tanımlar.
 [Altı uygulama kartı](camera-backend-cards/README.md) hazır; kullanıcı Basler için
@@ -31,7 +31,7 @@ Model/firmware/SDK değişiminde etkilenen kabul yeniden değerlendirilir.
 
 | Paket | SDK adayı; karar 01'de | Başlangıç durumu |
 | --- | --- | --- |
-| ICM-BAS | GenTL keşfi + seçilmiş pylon C API; 01'de ABI doğrulaması | acA1920-40um/23102780 U3V keşfedildi; firmware/readback/G0/G1 açık |
+| ICM-BAS | GenTL keşfi + pylon C API; 01'de ABI doğrulandı | acA1920-40um/23102780 U3V firmware/readback/G0 geçti; G1 açık |
 | ICM-DAH | Daheng Galaxy veya uygun GenTL yolu | Model/SDK/cihaz kanıtı bekleniyor; ortak G2'yi engellemez |
 | OECS | Mevcut ICM-02 C API kararı | 04d native açık/ertelenmiş; G1 kapalı |
 

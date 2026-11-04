@@ -6,10 +6,10 @@
 
 ## Devam noktası
 
-**[CAM-OECS-01](archive/2026-11-04-cam-oecs-01.md):** SDK'lı build, px aktif
-raster/sensör maksimumu, 1×1 kayıt düzeltme. ON 6/6, OFF 5/5, fiziksel
-readback + scalar geri yükleme geçti; tam suite koşulmadı.
-Sonra ICM-BAS-01; VF-08 bekler.
+**[ICM-BAS-01](archive/2026-11-04-icm-bas-01.md):** pylon C/G0, Viewer
+busy/reopen geçti; ON 6 + startup, OFF 10. Tam suite koşulmadı.
+Sonraki ICM-BAS-02a; VF-08 bekler.
+[CAM-OECS-01](archive/2026-11-04-cam-oecs-01.md): SDK/px/readback düzeltildi.
 
 [VF07-A](archive/2026-11-04-vf07-a.md): Result cache/V4 Properties/Stop/revizyon.
 [CAM-SDK-01](archive/2026-11-04-cam-sdk-01.md): çoklu CTI/runtime.
@@ -113,8 +113,8 @@ Arşiv rasteri karanlık/kısmen bulanık; **bağımsız fiziksel mm kabulü aç
   Device ID=1 seri değildir. Lens tam modeli/kurulum eksik. Sandbox içi keşfin 0
   sonucu cihaz yokluğu değildir; sandbox dışı C API keşif/open/readback/grab var.
   [Tanı/başlatma rehberi](windows-camera-diagnostics.md).
-- ICM-01b, native G0/G1/G3/G4 ve H01–H08 açık; Basler/Daheng cihaz/model/SDK
-  kanıtı bekler. [09b](archive/2026-10-18-icm-09b-start.md).
+- ICM-01b, OECS/Daheng G0, G1/G3/G4, H01–H08 açık; Basler G0 geçti.
+  [09b](archive/2026-10-18-icm-09b-start.md).
   Test adaptörü normal ürüne açılmaz. G2 yazılım; G4 kurulum kabulüdür.
 - Kaynak/model invalidation, immutable snapshot ve legacy no-op/hash korunur.
   Rename farklı, fiziksel/geometri değişimi farklıdır; A→B→A eski izni canlandırmaz.

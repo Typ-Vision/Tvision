@@ -164,7 +164,8 @@ semantiğiyle kanıtlanır; OECS engeli Basler'e aktarılmaz veya kapanmış say
 
 ## 7. Sıralı uygulama kartları
 
-Her satır ayrı görev/commit; ajanlar paralel çalışmaz. CAM-SDK-01 uygulandı;
+Her satır ayrı görev/commit; ajanlar paralel çalışmaz. ICM-BAS-01/G0
+[tamamlandı](../archive/2026-11-04-icm-bas-01.md); CAM-SDK-01 uygulandı;
 [kapanış ve ertelenen tam ON kabulü](../archive/2026-11-04-cam-sdk-01.md).
 **[Altı ayrı uygulama kartı ve ortak kabul](camera-backend-cards/README.md)**
 CAM-PLAN-03 ile yazıldı; uygulamada seçili kart esas alınır.
@@ -173,7 +174,7 @@ CAM-PLAN-03 ile yazıldı; uygulamada seçili kart esas alınır.
 | --- | --- | --- |
 | 1 — CAM-SDK-01 | CameraLocalConfiguration, CameraService, GenTLTransport, CameraManager, başlatıcı ve ilgili testler: çoklu CTI çözümleme, backend yerel runtime kaydı, nedenli tanı, seçili producer hata izolasyonu | Eski ortam, yanlış x86/eksik DLL/export, bozuk başka producer, çift rota, no-SDK startup/file/webcam, restart ve proje taşınabilirliği; runtime bağımlılığı için gerçek yükleme kanıtı |
 | 2 — CAM-OECS-01 | CMake/yerel build ve mevcut OECS ayar/readback yolu; CameraManager px/aktif geometri açıklaması ve 1×1/readback önceliği düzeltmesi | Doğru SDK'lı Release, gerçek exact readback; mevcut scalar no-op apply/save; yanlış geometri ve eski model izin denetimi; yeni canlı crop yok, native OECS engeli korunur |
-| 3 — ICM-BAS-01 | Mevcut backend kartının USB hedefi: dar pylon C binding/feasibility, vendor runtime entegrasyonu, salt okunur kimlik/node envanteri; hardware katmanı/CMake/probe | acA1920-40um/23102780 exact native identity, firmware/runtime/hash/ABI ve exclusive open-close; Viewer contention; G0 kararı. Keşif kanıtı devralınır, G0 tamam denmez |
+| 3 — ICM-BAS-01 | Dar pylon C binding, yerel runtime ve salt okunur exact kimlik/node probe'u uygulandı | acA1920-40um/23102780 native G0 geçti: header ABI, firmware/readback, exclusive open-close, Viewer busy/reopen ve yanlış seri ret. Hedefli ON/OFF geçti; tam suite koşulmadı |
 | 4 — ICM-BAS-02a | Basler settings adaptörü, CameraSettingsService ve ürün factory composition; mevcut worker/lease/rollback kullanılır | Pending kurulumda gerçek ayar/ROI/range readback, desteklenen scalar apply/save, doğrulanmış rollback ve unsupported node; acquisition yetkisi üretilmez |
 | 5 — ICM-BAS-02b | Basler native owned Mono8 capture, preview, software trigger ve Stop/recovery; mevcut ICM-BAS-02/G1 kapsamı | Belgeli korelasyon, gerçek tek/100 trigger, aynı görüntülü yeni kare, pending/timeout/Stop/reopen/kopma/buffer ömrü negatifleri; G1+ortak admission şartı |
 | 6 — ICM-BAS-03 | Camera Manager, Calibration, Editor, Runtime ürün zinciri ve eski kart H01–H08/G3 | Gerçek 1000 cycle, teardown, history/Logs/CSV, üç applicationType, UI; yalnız Basler tek kamera kapsamı |
