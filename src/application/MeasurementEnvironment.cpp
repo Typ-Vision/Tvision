@@ -139,9 +139,10 @@ CameraRegistrationResult MeasurementEnvironmentRegistry::registerCamera(Measurem
     for(const auto& c:state_.current.cameras){
         const bool same=c.physical && camera.physical ? c.physical->usable() && camera.physical->usable() && *c.physical==*camera.physical:
             !c.physical && !camera.physical && c.device.confidence!=DeviceIdentityConfidence::Unavailable && camera.device.confidence!=DeviceIdentityConfidence::Unavailable && c.device.adapter==camera.device.adapter && c.device.providerId==camera.device.providerId;
-        if(same){require(!state_.archivedCameras.contains(c.id.value),"Physical camera is archived");
+        if(same){
             // Compare disk even on an idempotent duplicate request.
-            const auto existing=c.id;state_=repository_.commit(state_,state_);return {existing,true};}
+            const auto existing=c.id;auto next=state_;next.archivedCameras.remove(existing.value);
+            state_=repository_.commit(state_,next,fault);return {existing,true};}
     }
     require(!state_.current.cameras.contains(camera),"Duplicate camera");
     auto next=state_;QString alias=shortId.trimmed();

@@ -104,9 +104,15 @@ int main(int argc,char** argv){QCoreApplication app(argc,argv);try{
         MeasurementEnvironmentRegistry stale(r);reg.renameCamera(camera(0).id,"LEFT","New name",reg.snapshot().revision);
         reject([&]{stale.registerCamera(camera(5),{},stale.snapshot().revision);},"disk stale revision detected under lock");
         reg.archiveCamera(camera(0).id);check(reg.snapshot().defaults(camera(0).id).status==CameraDefaultsStatus::Archived,"archived camera cannot resolve defaults");
-        reject([&]{reg.registerCamera(camera(0),{},reg.snapshot().revision);},"archived physical camera cannot be registered again");
         reject([&]{reg.renameCamera(camera(0).id,"LEFT","Archived",reg.snapshot().revision);},"archived camera cannot be renamed");
         reject([&]{reg.registerCamera(camera(5),"LEFT",reg.snapshot().revision);},"archived alias remains reserved");
+        const auto archived=reg.snapshot();const auto archivedBytes=bytes(r.path());
+        for(auto fault:{MeasurementEnvironmentRepository::Fault::BeforeWrite,MeasurementEnvironmentRepository::Fault::BeforeCommit}){
+            reject([&]{reg.registerCamera(camera(0),{},archived.revision,fault);},"restore failure is atomic");check(bytes(r.path())==archivedBytes,"failed restore preserves archive");}
+        reject([&]{reg.registerCamera(camera(0),{},archived.revision-1);},"stale restore rejected");
+        const auto restored=reg.registerCamera(camera(0),{},archived.revision);
+        check(restored.existing && restored.camera==camera(0).id && !reg.snapshot().archivedCameras.contains(restored.camera.value),"explicit add restores immutable camera identity");
+        check(reg.snapshot().current.toJson(10)==archived.current.toJson(10) && reg.snapshot().history==archived.history && reg.snapshot().registrations==archived.registrations && reg.snapshot().operational.isEmpty(),"restore preserves camera setup profile alias and history without operational permission");
         reg.archiveSetup(reg.snapshot().registrations["new-1"].setup);check(reg.snapshot().defaults(camera(1).id).status==CameraDefaultsStatus::Archived,"archived default never silently falls back");
         MeasurementEnvironmentRepository copy(dir.path()+"/ccux-import.vfproject","other",10);copy.importBundle(r.exportBundle());
         check(copy.load().registrations==reg.snapshot().registrations && copy.load().current.toJson(10)==reg.snapshot().current.toJson(10) && copy.load().projectId=="other" && copy.load().operational.isEmpty(),"bundle preserves defaults/aliases/archives without admission");

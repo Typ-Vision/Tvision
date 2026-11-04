@@ -30,6 +30,8 @@ kullanıcının CAM_01 gibi görünen kısa ID'si ayrılır; kısa ID benzersiz,
 bağlar immutable ID ile kalıcıdır. Açıklama isteğe bağlıdır. Eski UUID yeniden
 üretilmez. Fiziksel kimlik vendor/model/seri; USB sırası/Device ID/IP değildir.
 Tek fiziksel kamerayı tekrar ekleme yeni kayıt üretmez; açıkça mevcut kayıt gösterilir.
+Arşivlenmiş kamerayı açık Ekle komutu aynı CameraId, alias ve kurulumlarla geri
+getirir; arşivlenmiş kurulumlar ve geçmiş korunur, operasyonel/üretim izni açılmaz.
 
 Yeni kamera için tek varsayılan setup/profile application katmanında otomatik
 oluşturulur. Lens/çalışma düzlemi kullanıcıya tekrar tekrar sorulmaz; bilinmeyen

@@ -105,7 +105,7 @@ CameraManager::CameraManager(std::function<MeasurementWorkspace*()> context,std:
         const auto i=table_->currentRow();if(i<0 || !rows_[i].discovery || !rows_[i].discovery->industrial || routes_->currentIndex()<0)throw std::runtime_error("Exact kamera ve rota seçin.");
         const auto& group=*rows_[i].discovery->industrial;
         if(group.ambiguous || !CameraService::routeComplete(inventory_.industrial,group.routes[routes_->currentIndex()].route))throw std::runtime_error("Seçili producer için tam keşif gerekli.");
-        resolveRoutes(group.identity,inventory_.industrial.devices);local_.setRoute(group.identity,group.routes[routes_->currentIndex()].route);status_->setText("Yerel rota hatırlandı; edinim izni değişmedi.");
+        resolveRoutes(group.identity,inventory_.industrial.devices);local_.setRoute(group.identity,group.routes[routes_->currentIndex()].route);refresh();status_->setText("Yerel rota hatırlandı; edinim izni değişmedi.");
     });});
     exposure_=new QLineEdit;exposure_->setObjectName("cameraExposure");gain_=new QLineEdit;gain_->setObjectName("cameraGain");
     form->addRow("Exposure (µs)",exposure_);form->addRow("Gain (dB)",gain_);
@@ -161,7 +161,7 @@ void CameraManager::refresh(){attempt([this]{
     }}
     for(const auto& d:inventory_.devices){bool registered=false;for(const auto& row:rows_)if(row.camera && matches(*row.camera,d))registered=true;if(!registered)rows_.append({{},d});}
     for(int i=0;i<rows_.size();++i){const auto& r=rows_[i];QStringList cells;
-        if(r.camera){const auto& c=*r.camera;cells={ws->environment().registrations.value(c.id.value).shortId+" • "+c.name,c.physical?c.physical->model:"Webcam",c.physical?c.physical->serial:c.device.providerId,c.physical?"Industrial":"Qt",ws->availability(c)};}
+        if(r.camera){const auto& c=*r.camera;cells={ws->environment().registrations.value(c.id.value).shortId+" • "+c.name,c.physical?c.physical->model:"Webcam",c.physical?c.physical->serial:c.device.providerId,c.physical?"Industrial":"Qt",ws->availability(c,c.physical?local_.route(*c.physical):std::nullopt)};}
         else if(r.discovery->industrial){const auto& g=*r.discovery->industrial;cells={g.identity.vendor,g.identity.model,g.identity.serial,"Industrial",g.ambiguous?"Belirsiz":"Keşfedildi • kayıtlı değil"};}
         else cells={"Webcam","Qt kamera",r.discovery->webcam->providerId,"Qt","Keşfedildi • kayıtlı değil"};
         table_->insertRow(i);for(int col=0;col<cells.size();++col){auto* item=new QTableWidgetItem(cells[col]);item->setToolTip(cells[col]);table_->setItem(i,col,item);}
@@ -330,7 +330,7 @@ void CameraManager::registerSelected(){
     auto* ws=context_();const int i=table_->currentRow();if(!ws || i<0 || !rows_[i].discovery || rows_[i].camera)throw std::runtime_error("Keşfedilmiş, kayıtlı olmayan kamera seçin.");
     auto entry=*rows_[i].discovery;ws->observeInventory(inventory_);const auto result=ws->registerCamera(entry,shortId_->text(),name_->text(),ws->environment().revision);const auto id=result.camera;selectedKey_=id.value;
     if(entry.industrial && routes_->currentIndex()>=0)local_.setRoute(entry.industrial->identity,entry.industrial->routes[routes_->currentIndex()].route);
-    refresh();status_->setText((result.existing?"Kamera zaten kayıtlı • CameraId: ":"Kamera kaydedildi • CameraId: ")+id.value+". Kalibrasyon sistem özetinde aynı kayıttır.");if(onChanged)onChanged();
+    refresh();status_->setText((result.existing?"Mevcut kamera kaydı geri getirildi • CameraId: ":"Kamera kaydedildi • CameraId: ")+id.value+". Kalibrasyon sistem özetinde aynı kayıttır.");if(onChanged)onChanged();
 }
 IndustrialCameraRequest CameraManager::request() const {
     auto* ws=context_();const int i=table_->currentRow();if(!ws || i<0 || !rows_[i].camera)throw std::runtime_error("Kayıtlı kamera gerekli.");

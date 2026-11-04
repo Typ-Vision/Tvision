@@ -157,11 +157,12 @@ public:
             inventory_.industrial,local,factory,ownerGate?std::move(ownerGate):gate_,[this,id]{active_.disconnect(id);},
             MeasurementEnvironmentRepository::Fault::None,std::move(runtime),std::move(api));
     }
-    QString availability(const MeasurementCamera& c) const {
+    QString availability(const MeasurementCamera& c,std::optional<TransportLocator> localRoute={}) const {
         if(c.physical){
             if(!inventoryDone_)return "Keşif yapılmadı • kayıtlı endüstriyel kamera";
             if(inventory_.cancelled)return "Keşif eksik / SDK kullanılamıyor";
-            try{const auto routes=resolveRoutes(*c.physical,inventory_.industrial.devices);
+            try{if(localRoute){CameraService::resolveIndustrial(c,inventory_.industrial,localRoute);return "Keşfedildi • yerel rota seçili";}
+                const auto routes=resolveRoutes(*c.physical,inventory_.industrial.devices);
                 for(auto i:routes)if(!CameraService::routeComplete(inventory_.industrial,inventory_.industrial.devices[i].route))return "Keşif eksik / SDK kullanılamıyor";
                 return routes.size()>1 ? "Keşfedildi • yerel rota seçimi gerekli" : "Keşfedildi";
             }catch(const std::exception&){return "Çevrimdışı / belirsiz • otomatik eşleme yok";}

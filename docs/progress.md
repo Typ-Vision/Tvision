@@ -6,10 +6,9 @@
 
 ## Devam noktası
 
-**[ICM-BAS-03](archive/2026-11-05-icm-bas-03.md):** hedefli kabul/H01–H08.
-**G1/G3 açık, production kapalı**; tam suite yok.
-Devam: G1 → BAS-03; VF-08 bekler.
-[02b](archive/2026-11-05-icm-bas-02b.md).
+**[CAM-REG-01](archive/2026-11-05-cam-reg-01.md):** arşivden Ekle/rota durumu.
+[BAS-03](archive/2026-11-05-icm-bas-03.md): **G1/G3 açık**, production kapalı;
+VF-08 bekler. [02b](archive/2026-11-05-icm-bas-02b.md).
 [02a ayar/rollback](archive/2026-11-04-icm-bas-02a.md).
 [ICM-BAS-01](archive/2026-11-04-icm-bas-01.md): pylon C/G0, Viewer busy/reopen.
 [CAM-OECS-01](archive/2026-11-04-cam-oecs-01.md): SDK/px/readback düzeltildi.

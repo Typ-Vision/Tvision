@@ -135,6 +135,14 @@ int main(int argc,char** argv){QApplication app(argc,argv);try{
     view.findChild<QLineEdit*>("cameraShortId")->setText("CAM_MAIN");view.findChild<QPushButton*>("cameraRegister")->click();auto e=workspace.environment();
     check(e.current.cameras.size()==1,"register shared CameraId");const auto camera=e.current.cameras.first();
     check(e.current.setups.size()==1 && e.current.profiles.size()==1 && e.registrations.value(camera.id.value).shortId=="CAM_MAIN","atomic automatic defaults and alias");
+    multiRoute=true;count=1;scan();routes->setCurrentIndex(1);view.findChild<QPushButton*>("cameraRememberRoute")->click();
+    check(table->item(table->currentRow(),4)->text().contains("yerel rota seçili") && !table->item(table->currentRow(),4)->text().contains("gerekli"),"remembered route updates registered status immediately");
+    auto staleRoute=*CameraLocalConfiguration(dir.path()+"/local.ini").route(*camera.physical);staleRoute.interfaceId="offline";
+    check(!workspace.availability(camera,staleRoute).contains("yerel rota seçili"),"offline remembered route cannot look selected");
+    workspace.archive(camera.id);view.refresh();view.findChild<QPushButton*>("cameraRegister")->click();
+    check(!workspace.environment().archivedCameras.contains(camera.id.value) && workspace.environment().current.cameras.size()==1 && workspace.environment().current.setups==e.current.setups && workspace.environment().operational.isEmpty(),"Add restores archived physical camera with same defaults and no permission");
+    for(const auto size:{QSize(1400,900),QSize(850,600)}){view.resize(size);view.findChild<QScrollArea*>()->verticalScrollBar()->setValue(0);table->horizontalScrollBar()->setValue(table->horizontalScrollBar()->maximum());QApplication::processEvents();CameraFlowSmokeAudit::save(view,evidence+QString("/restored-route-%1.png").arg(size.width()));}
+    multiRoute=false;count=10;CameraLocalConfiguration(dir.path()+"/local.ini").setRoute(*camera.physical,request().device.route);
     view.findChild<QPushButton*>("cameraRegister")->click();scan();check(workspace.environment().current.cameras.size()==1,"repeat scan/register does not duplicate");
     table->selectRow(9);const auto serial=table->item(9,2)->text();reversed=true;scan();check(table->item(table->currentRow(),2)->text()==serial,"rescan preserves physical selection after reorder");reversed=false;scan();table->selectRow(0);
     auto* alias=view.findChild<QLineEdit*>("cameraShortId");alias->setText(QString(32,'A'));view.findChild<QLineEdit*>("cameraName")->setText(QString(120,'N'));view.findChild<QPushButton*>("cameraRename")->click();
