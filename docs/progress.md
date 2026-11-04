@@ -11,8 +11,8 @@ Dashboard Stop/revizyon; hedefli kabul kayıtta.
 Tam ON/OFF kullanıcı talimatıyla atlandı. K2 kullanıcı teyidi tamam → VF-08.
 [Kart](architecture/communication-v4/cards/VF07-A.md).
 
-[Kamera analizi](archive/2026-11-04-cam-analysis-01.md): SDK'sız build, px/1×1.
-Devam: kamera planı; VF-08 bekler.
+[Kamera planı](archive/2026-11-04-cam-plan-02.md): OECS+Basler USB/yol çözümü.
+Devam: CAM-SDK-01; VF-08 bekler.
 
 [VF-07](archive/2026-11-04-vf-07.md): TCP/exact ACK.
 [VF-06](archive/2026-11-04-vf-06.md): toplu Auto/rollback.

@@ -1,5 +1,12 @@
 # ICM — marka ve model bazlı kamera entegrasyonları
 
+4 Kasım 2026: **Basler USB hedefi erişilebilir:** acA1920-40um / 23102780 / U3V,
+mevcut ürün probe'unda GenTL keşfi doğrulandı; native G0/G1 henüz tamam değil.
+[CAM-PLAN-02](camera-backend-activation-plan.md) yerel SDK/CTI çözümleme,
+OECS onarımı ve ICM-BAS-01 → 02a/02b → 03 sırasını tanımlar.
+Basler için aşağıdaki tarihsel cihaz-bekleniyor/PoE varsayımı yerine bu USB hedefi
+geçerlidir. Daheng fiziksel cihazı hâlâ bekleniyor; uygulama başlamadı.
+
 21 Ekim 2026: **Basler/Daheng cihaz bekliyor; öncelik eldeki OECS ile
 [EXP-01–03 deneysel kullanım](industrial-camera-oecs-experimental-plan.md).**
 18 Ekim backend paketleri korunur; hiçbir yeni native destek açılmadı.
@@ -9,7 +16,7 @@ Ajanlar sıralı çalışır; paketlerin ayrı olması paralel ajan çalışmas�
 
 ## Kapsam ve kabul birimi
 
-Gelecek hedef Basler/Daheng PoE kameralardır. Exact model, firmware, seri, SDK sürümü,
+Basler güncel hedefi USB'dir; Daheng için eski PoE hedefi korunur. Exact model, firmware, seri, SDK sürümü,
 transport ve gerekli Mono8/software-trigger yetenekleri seçilmeden destek ilan edilmez.
 PoE güç beslemesidir; GigE Vision transport veya vendor SDK desteği tek başına
 tetik–kare eşleşmesi garantisi değildir. Ortak kod belirli node/sayaç isimlerini
@@ -22,7 +29,7 @@ Model/firmware/SDK değişiminde etkilenen kabul yeniden değerlendirilir.
 
 | Paket | SDK adayı; karar 01'de | Başlangıç durumu |
 | --- | --- | --- |
-| ICM-BAS | Basler pylon veya uygun GenTL yolu | Model/SDK/cihaz kanıtı bekleniyor; ortak G2'yi engellemez |
+| ICM-BAS | GenTL keşfi + pylon C edinim adayı; 01'de ABI kararı | acA1920-40um/23102780 U3V keşfedildi; firmware/readback/G0/G1 açık |
 | ICM-DAH | Daheng Galaxy veya uygun GenTL yolu | Model/SDK/cihaz kanıtı bekleniyor; ortak G2'yi engellemez |
 | OECS | Mevcut ICM-02 C API kararı | 04d native açık/ertelenmiş; G1 kapalı |
 
