@@ -63,6 +63,8 @@ int main(int argc, char* argv[]) {
         for(const auto& name:buildDir.entryList({"vf03-*"},QDir::Dirs))QDir(buildDir.filePath(name)).removeRecursively();
     }
     const QDir communicationDirectory(smoke ? buildDir.filePath("v4-machine") : qEnvironmentVariable("VISIONFLOW_USER_DATA_DIRECTORY",QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation)));
+    const auto settingsFile=!smoke && qEnvironmentVariableIsSet("VISIONFLOW_USER_DATA_DIRECTORY") ? communicationDirectory.filePath("ui.ini") : buildDir.filePath(smoke ? "ui-smoke.ini" : "../config/local.ui.ini");
+    qputenv("VISIONFLOW_CAMERA_CONFIGURATION",settingsFile.toUtf8());
     QJsonObject communicationSelection;QString selectionError;
     try{communicationSelection=visionflow::CommunicationStationComposition::restoreSelection(communicationDirectory.absolutePath());}
     catch(const std::exception& e){selectionError=QString::fromUtf8(e.what());}
@@ -88,7 +90,7 @@ int main(int argc, char* argv[]) {
     });
     if(selectionBlocked)communicationWorkspace.setNotice("Migration selection unavailable / legacy rollback: "+selectionError);
     QTimer stationPoll;stationPoll.setInterval(50);QObject::connect(&stationPoll,&QTimer::timeout,&app,[&]{try{communicationWorkspace.poll();}catch(const std::exception& e){qWarning()<<"V4 station poll:"<<e.what();}});stationPoll.start();
-    visionflow::MainWindow window(!smoke && qEnvironmentVariableIsSet("VISIONFLOW_USER_DATA_DIRECTORY") ? communicationDirectory.filePath("ui.ini") : buildDir.filePath(smoke ? "ui-smoke.ini" : "../config/local.ui.ini"));
+    visionflow::MainWindow window(settingsFile);
     window.bindCommunication(&communicationWorkspace);
     window.show();
     if (smoke) QTimer::singleShot(100, &app, [&]{

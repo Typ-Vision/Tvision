@@ -1,4 +1,6 @@
 #include "application/CameraService.hpp"
+#include "application/CameraLocalConfiguration.hpp"
+#include "hardware/RuntimeLibrary.hpp"
 #include <QCoreApplication>
 #include <QDir>
 #include <QFile>
@@ -16,7 +18,7 @@ template<class F> void rejects(F action,const char* message){bool rejected=false
 int main(int argc,char** argv) {
     QCoreApplication app(argc,argv);
     try {
-        check(app.arguments().size()==3,"fixture paths required");
+        check(app.arguments().size()>=3,"fixture paths required");
         const QString file=app.arguments()[1],incomplete=app.arguments()[2];
         QLibrary fixture(file);check(fixture.load(),"load test fixture");
         const auto live=reinterpret_cast<int(*)()>(fixture.resolve("FixtureLiveHandles"));
@@ -45,6 +47,69 @@ int main(int argc,char** argv) {
         mode(4);report=CameraService{}.discover({file});check(report.devices.isEmpty() && report.errors.isEmpty() && live()==0,"zero interface producer");
         mode(5);report=CameraService{}.discover({file});check(report.devices.size()==1 && report.devices[0].serialNumber.isEmpty(),"optional unsupported metadata");
         mode(0);report=CameraService{}.discover({incomplete,file});check(report.errors.size()==1 && report.devices.size()==1 && live()==0,"producer failure isolation and missing export");
+        const auto partial=CameraService::industrialSnapshot(report);
+        check(partial.producerResults.size()==2 && !partial.producerResults[0].complete && partial.producerResults[1].complete,"per-producer completion and error origin");
+        MeasurementCamera registered{{"fixture"},"Fixture",{"gentl",{},DeviceIdentityConfidence::Unavailable,1,{}},partial.devices[0].identity};
+        check(CameraService::resolveIndustrial(registered,partial)==partial.devices[0],"broken A does not block healthy B");
+        auto broken=partial;broken.producerResults[1].complete=false;
+        rejects([&]{CameraService::resolveIndustrial(registered,broken);},"selected B partial rejected");
+        broken=partial;broken.errors.append("unattributed inventory error");
+        rejects([&]{CameraService::resolveIndustrial(registered,broken);},"unknown error origin cannot grant route use");
+        broken=partial;broken.cancelled=true;
+        rejects([&]{CameraService::resolveIndustrial(registered,broken);},"cancelled inventory rejected despite completed B");
+        CameraLocalConfiguration local(directory.filePath("local.ini"));
+        local.setProducers({file});qputenv("GENICAM_GENTL64_PATH",directory.path().toUtf8());
+        check(local.automaticProducers().size()==2,"remembered additions merge process environment");
+        local.setProducers({file,file});check(local.automaticProducers().size()==2,"canonical repeated producer deduplicates");
+        local.setProducerEnabled(copy,false);check(local.automaticProducers().size()==1,"environment producer disabled locally");
+        local.setProducerEnabled(copy,true);local.removeProducer(file);check(local.automaticProducers().size()==1,"remove A keeps B");
+        local.setProducers({file});local.setProducerEnabled(file,true);
+        const auto config=qgetenv("VISIONFLOW_CAMERA_CONFIGURATION");qputenv("VISIONFLOW_CAMERA_CONFIGURATION",directory.filePath("local.ini").toUtf8());
+        mode(0);report=CameraService{}.discover();check(report.producers.size()==2,"product automatic scan uses local and environment union");
+        CameraService{}.discover({incomplete});check(local.producers().size()==1,"explicit diagnostic never mutates automatic list");
+        local.setProducerEnabled(file,false);local.setProducerEnabled(copy,false);
+        check(CameraService{}.discover().producers.isEmpty(),"all producers disabled cannot resurrect environment");
+        qputenv("VISIONFLOW_CAMERA_CONFIGURATION",config);qputenv("GENICAM_GENTL64_PATH","");
+        const auto runtime=directory.filePath("runtime.dll");check(QFile::copy(incomplete,runtime),"runtime PE fixture");
+        local.setRuntime("oecs",runtime,{directory.path()});
+        check(CameraLocalConfiguration(directory.filePath("local.ini")).runtime("oecs").path==QFileInfo(runtime).canonicalFilePath(),"runtime restart persistence");
+        check(!local.runtime("oecs",directory.filePath("missing.dll")).error.isEmpty(),"broken explicit choice cannot fallback");
+        check(QFile::remove(runtime),"remove saved runtime");check(!local.runtime("oecs").error.isEmpty() && local.runtime("oecs").path==runtime,"broken remembered selection cannot silently change SDK");
+#ifdef Q_OS_WIN
+        QByteArray x86(90,'\0');x86.replace(0,2,"MZ");x86[60]=64;x86.replace(64,4,QByteArray("PE\0\0",4));x86[68]=char(0x4c);x86[69]=1;x86[88]=char(0x0b);x86[89]=1;
+        {QFile f(runtime);check(f.open(QIODevice::WriteOnly),"x86 fixture");f.write(x86);}
+        check(runtimeBinaryError(runtime).contains("x64"),"wrong x86 architecture diagnosed before load");
+        rejects([&]{local.setRuntime("basler",runtime);},"x86 cannot be saved as backend runtime");QFile::remove(runtime);
+#endif
+        check(QFile::copy(incomplete,runtime),"valid runtime PE copy");
+        rejects([&]{local.setRuntime("oecs",runtime,{directory.filePath("absent")});},"missing dependency directory rejected");
+        const auto vendor=qgetenv("PYLON_DEV_DIR");
+        QDir().mkpath(directory.filePath("pylon/Development"));QDir().mkpath(directory.filePath("pylon/Runtime/x64"));
+        check(QFile::copy(incomplete,directory.filePath("pylon/Runtime/x64/PylonC_v1.dll")),"vendor runtime fixture");
+        qputenv("PYLON_DEV_DIR",directory.filePath("pylon/Development").toUtf8());
+        check(!local.runtime("basler").path.isEmpty() && local.runtime("basler").error.isEmpty(),"vendor environment resolves same installation runtime");
+        check(QFile::copy(incomplete,directory.filePath("pylon/Runtime/x64/PylonC_v2.dll")),"second runtime fixture");
+        check(!local.runtime("basler").error.isEmpty() && local.runtime("basler").path.isEmpty(),"multiple runtime versions demand selection");
+        local.setRuntime("basler",directory.filePath("pylon/Runtime/x64/PylonC_v1.dll"));
+        check(local.runtime("basler").error.isEmpty(),"saved explicit runtime resolves multiple installations");
+        qputenv("PYLON_DEV_DIR",vendor);
+#ifdef Q_OS_WIN
+        check(app.arguments().size()==4,"dependency fixture required");
+        const auto dependent=directory.filePath("dependent.dll");check(QFile::copy(app.arguments()[3],dependent),"dependent runtime copy");
+        RuntimeLibrary dependencyLoader;QString dependencyError;
+        check(!dependencyLoader.load(dependent,{},dependencyError) && dependencyError.contains("bağımlılık"),"missing dependency diagnosed by actual Windows loader");
+        local.setRuntime("basler",dependent,{QFileInfo(app.arguments()[3]).absolutePath()});
+        qputenv("VISIONFLOW_CAMERA_CONFIGURATION",directory.filePath("local.ini").toUtf8());
+        check(dependencyLoader.load(dependent,{},dependencyError),"saved backend process dependency directory resolves load");
+        qputenv("VISIONFLOW_CAMERA_CONFIGURATION",config);
+        QLibrary dependentLibrary(dependent);check(dependentLibrary.load(),"loaded dependent runtime");
+        const auto dependentFunction=reinterpret_cast<int(*)()>(dependentLibrary.resolve("CameraRuntimeFixture"));
+        check(dependentFunction && dependentFunction()==42,"dependency function executes from configured installation");
+        dependentLibrary.unload();dependencyLoader.unload();
+        RuntimeLibrary siblingLoader;
+        check(siblingLoader.load(app.arguments()[3],{},dependencyError),"forward-slash Qt path resolves sibling DLLs without PATH changes");
+#endif
+
         report=CameraService{}.discover({directory.filePath("missing.cti")});check(report.devices.isEmpty() && report.errors.size()==1,"missing producer");
         const auto invalid=directory.filePath("invalid.cti");{QFile f(invalid);check(f.open(QIODevice::WriteOnly),"invalid producer");f.write("not a DLL");}
         report=CameraService{}.discover({invalid});check(report.errors.size()==1,"invalid binary");

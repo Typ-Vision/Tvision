@@ -35,7 +35,7 @@ süreçte boş. Kurulum öncesi açılan host/terminal eski ortamı miras bırak
 Ürün normal olarak sürecinin ortamını okur; registry değişikliği çalışan sürecin
 ortamını yenilemez. Yeni oturum veya explicit yerel seçim gerekir.
 
-## 2. Mevcut kodun sınırları
+## 2. Plan başlangıcındaki kodun sınırları
 
 - `GenTLTransport` discovery ve readonly open/close sunuyor. Remote node map,
   feature ayarı, stream/event/buffer edinimi bu sınıfta yok.
@@ -164,7 +164,8 @@ semantiğiyle kanıtlanır; OECS engeli Basler'e aktarılmaz veya kapanmış say
 
 ## 7. Sıralı uygulama kartları
 
-Her satır ayrı görev/commit; ajanlar paralel çalışmaz. Uygulama henüz başlamadı.
+Her satır ayrı görev/commit; ajanlar paralel çalışmaz. CAM-SDK-01 uygulandı;
+[kapanış ve ertelenen tam ON kabulü](../archive/2026-11-04-cam-sdk-01.md).
 **[Altı ayrı uygulama kartı ve ortak kabul](camera-backend-cards/README.md)**
 CAM-PLAN-03 ile yazıldı; uygulamada seçili kart esas alınır.
 

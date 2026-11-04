@@ -1,4 +1,5 @@
 #include "hardware/OecsCApi.hpp"
+#include "RuntimeLibrary.hpp"
 #include <QFileInfo>
 #include <QLibrary>
 #include <mutex>
@@ -24,9 +25,10 @@ public:
     bool load(const QString& dllPath,QString& reason) override {
         if(library_.isLoaded()){reason="OECS kütüphanesi zaten yüklü";return false;}
         if(!QFileInfo(dllPath).isAbsolute()){reason="OECS DLL yolu mutlak olmalı";return false;}
+        if(!runtime_.load(dllPath,{},reason))return false;
         library_.setFileName(dllPath);
-        if(!library_.load()){reason=library_.errorString();return false;}
-        const auto fail=[&](const char* name){unbind();library_.unload();reason=QString("OECS export eksik: %1").arg(name);return false;};
+        if(!library_.load()){reason=library_.errorString();runtime_.unload();return false;}
+        const auto fail=[&](const char* name){unbind();library_.unload();runtime_.unload();reason=QString("OECS export eksik: %1").arg(name);return false;};
         if(!bind(version_,"MV_CC_GetSDKVersion"))return fail("MV_CC_GetSDKVersion");
         if(!bind(enum_,"MV_CC_EnumDevices"))return fail("MV_CC_EnumDevices");
         if(!bind(create_,"MV_CC_CreateHandleWithoutLog"))return fail("MV_CC_CreateHandleWithoutLog");
@@ -60,6 +62,7 @@ public:
         xmlCache_.clear();
         deviceInfos_.clear();
         library_.unload();
+        runtime_.unload();
         return true;
     }
     quint32 sdkVersion() override {return version_?quint32(version_()):0;}
@@ -232,6 +235,7 @@ private:
     decltype(&::MV_CC_StopGrabbing) stop_=nullptr;
     decltype(&::MV_CC_ClearImageBuffer) clear_=nullptr;
     decltype(&::MV_CC_SetCommandValue) command_=nullptr;
+    RuntimeLibrary runtime_;
     QLibrary library_;
     decltype(&::MV_CC_GetSDKVersion) version_=nullptr;
     decltype(&::MV_CC_EnumDevices) enum_=nullptr;

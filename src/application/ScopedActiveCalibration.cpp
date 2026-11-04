@@ -189,7 +189,7 @@ void ScopedActiveCalibrationService::notifyOpticalChange(const CameraId& camera,
 void ScopedActiveCalibrationService::refreshAvailability(const QVector<DeviceBinding>& devices,const IndustrialDiscoverySnapshot& industrial){
     const auto e=environment();for(const auto& c:e.current.cameras)try{
         if(c.physical){
-            require(!industrial.cancelled && industrial.errors.isEmpty(),"Industrial inventory incomplete");
+            require(!industrial.cancelled,"Industrial inventory cancelled");
             resolveRoutes(*c.physical,industrial.devices);
             for(const auto& p:permissions_)if(p.selection.target.camera==c.id){
                 require(p.device.has_value(),"Industrial device evidence missing");

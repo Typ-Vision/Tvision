@@ -116,3 +116,29 @@ Sol şerit hover/tıklama veya Tab ve Space ile açılır; içerik üzerinde yü
 Panelde klavye odağı varken açık kalır; Escape odağı şeride döndürür.
 İlk kullanım ve panel sıfırlama sabit moddur.
 
+
+## Yerel producer ve runtime yolları — CAM-SDK-01
+
+Camera Manager → Ayrıntılar → Producer ekle, hatırlanan listeye ekler.
+Boş tanı alanıyla tarama, bu listeyi süreç GENICAM_GENTL64_PATH ile canonical
+birleştirir. Producer etkinleştir/devre dışı bırak/kaldır yalnız yerel kaydı
+etkiler; başka markayı silmez. Metin alanındaki tek CTI yalnız o taramanın
+tanısıdır, otomatik listeyi değiştirmez. Kaldırma, ortamdan tekrar gelmesini de
+engeller; yeniden etkinleştirme mümkündür.
+
+OECS/Basler runtime alanları ve noktalı virgülle ayrılan bağımlılık dizinleri
+makineye özel INI'dedir; proje/Save As/export'a taşınmaz. Otomatik sıra:
+açık seçim, kayıtlı seçim, vendor ortamı, bilinen kurulum. Birden fazla adayda
+DLL seçin; bozulmuş kayıt başka SDK'ya sessiz geçmez. Değişiklik için önce
+Stop/close, sonra yeniden açma gerekir; bağımlılık değişikliğinde uygulamayı
+yeniden başlatın. SDK header yolu yalnız CMake cache'indedir. Başlatıcı/global
+PATH değişikliği gerekmez: Windows yükleyici ana DLL'in dizinini ve kayıtlı
+bağımlılık dizinlerini süreç içinde kullanır. Aynı adlı başka kurulum DLL'i
+yüklüyse yeniden başlatma hatası gösterilir.
+
+Yol bulunması adaptör desteği değildir. Basler C adaptörü bu kartta derlenmemiştir;
+OECS derleme/readback kabulü CAM-OECS-01'dir. Eksik/x86 runtime, export veya
+bağımlılık yükleme hatası; eksik/kısmi producer taraması, çevrimdışı ve meşgul
+cihaz ayrı nedenlerle gösterilir. Başka producer'ın hatası görünür kalırken
+sağlıklı rota kullanılabilir; seçili producer'ın tamamlanmamış taraması,
+iptal, eksik seri ve çoklu/çift rota kapıları korunur. Program açılışı kamera açmaz.

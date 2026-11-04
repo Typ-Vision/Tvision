@@ -57,7 +57,7 @@ int main(int argc,char** argv){QApplication app(argc,argv);try{
         for(const auto size:{QSize(1400,900),QSize(850,600)}){view.resize(size);QApplication::processEvents();view.findChild<QScrollArea*>()->ensureWidgetVisible(read);QApplication::processEvents();check(CameraFlowSmokeAudit::save(view,evidence+QString("/physical-settings-%1.png").arg(size.width())),"physical settings screenshot");}
         QTextStream(stdout)<<"PASS physical Camera Manager: scan -> select -> Ekle -> read -> current-value apply/save; temporary project only; "<<view.findChild<QLabel*>("cameraReadback")->text()<<'\n';return 0;
     }
-    bool gate=true;int count=0;bool missing=false;bool ambiguous=false;bool reversed=false;bool multiRoute=false;
+    bool gate=true;int count=0;bool missing=false;bool ambiguous=false;bool reversed=false;bool multiRoute=false;bool attributed=false;bool partialProducer=false;
     QFile project(dir.path()+"/project.vfproject");check(project.open(QIODevice::WriteOnly),"saved project fixture");project.write("{}");project.close();
     CameraSession jobs;
     MeasurementWorkspace workspace(dir.path()+"/project.vfproject","camera-ui",[&]{return gate && !jobs.busy();});
@@ -67,7 +67,7 @@ int main(int argc,char** argv){QApplication app(argc,argv);try{
         if(multiRoute){auto d=snapshot.devices.first();d.route.interfaceId="second-route";d.route.backend="gentl";d.route.producer="C:/synthetic/second.cti";d.backend.adapter="gentl";snapshot.devices.append(d);}
         if(ambiguous){auto d=snapshot.devices.first();snapshot.devices.append(d);}
         if(reversed)std::reverse(snapshot.devices.begin(),snapshot.devices.end());
-        if(missing)snapshot.errors.append("Synthetic: producer/SDK missing");if(cancel->load()){snapshot.devices.clear();snapshot.cancelled=true;}
+        if(missing)snapshot.errors.append("Synthetic: producer/SDK missing");if(attributed)snapshot.producerResults={{"broken-producer",false,{"Synthetic: producer/SDK missing"}},{"",!partialProducer,{}}};if(cancel->load()){snapshot.devices.clear();snapshot.cancelled=true;}
         return CameraService::combine({},snapshot);
     };
     auto state=std::make_shared<State>();
@@ -78,6 +78,21 @@ int main(int argc,char** argv){QApplication app(argc,argv);try{
     auto factory=CameraProviderFactory::forTests(std::make_shared<UiProvider>(state,h));
     CameraManager view([&]{return &workspace;},[&]{return gate;},jobs,dir.path()+"/local.ini",nullptr,scanner,factory);
     view.resize(1400,900);view.show();
+    const auto runtimeFixture=dir.filePath("runtime.dll");
+    check(QFile::copy(QCoreApplication::applicationDirPath()+"/gentl_incomplete_producer.cti",runtimeFixture),"local runtime UI fixture");
+    view.findChild<QGroupBox*>("cameraAdvanced")->setChecked(true);
+    view.findChild<QLineEdit*>("cameraBaslerRuntime")->setText(runtimeFixture);
+    view.findChild<QPushButton*>("cameraRuntimeSave_basler")->click();
+    check(CameraLocalConfiguration(dir.filePath("local.ini")).runtime("basler").path==QFileInfo(runtimeFixture).canonicalFilePath(),"runtime UI saves only machine-local path");
+    check(view.findChild<QLabel*>("cameraRuntimeStatus_basler")->text().contains("derlenmemiş"),"runtime found does not grant an uncompiled adapter");
+    for(const auto size:{QSize(1400,900),QSize(850,600)}){
+        view.resize(size);QApplication::processEvents();
+        auto* sdkScroll=view.findChild<QScrollArea*>();sdkScroll->ensureWidgetVisible(view.findChild<QPushButton*>("cameraRuntimeSave_basler"));QApplication::processEvents();
+        check(sdkScroll->horizontalScrollBar()->maximum()==0,"runtime/producer controls fit both window sizes");
+        check(CameraFlowSmokeAudit::save(view,evidence+QString("/camera-sdk-%1.png").arg(size.width())),"runtime configuration screenshot");
+    }
+    view.resize(1400,900);
+    view.findChild<QGroupBox*>("cameraAdvanced")->setChecked(false);
     auto* table=view.findChild<QTableWidget*>("cameraDevices");
     auto* status=view.findChild<QLabel*>("cameraStatus");
     auto scan=[&]{view.scan();waitUi([&]{return !jobs.busy();});};
@@ -165,11 +180,14 @@ int main(int argc,char** argv){QApplication app(argc,argv);try{
     live->click();waitUi([&]{return image->hasImage();});table->selectRow(1);
     check(!image->hasImage(),"camera change immediately retires old frame");waitUi([&]{return !jobs.busy();});table->selectRow(0);
     ambiguous=true;count=1;scan();check(!preview->isEnabled() && !view.findChild<QPushButton*>("cameraSettingsRead")->isEnabled(),"ambiguous physical identity cannot open");CameraFlowSmokeAudit::save(view,evidence+"/camera-ambiguous.png");ambiguous=false;
-    gate=false;view.refresh();check(!apply->isEnabled(),"external Runtime busy gate");gate=true;
+    gate=false;view.refresh();check(!apply->isEnabled() && !view.findChild<QPushButton*>("cameraRuntimeSave_oecs")->isEnabled() && !view.findChild<QPushButton*>("cameraProducerDisable")->isEnabled(),"external Runtime busy gate blocks runtime and producer changes");gate=true;
     count=0;scan();check(table->rowCount()==1 && table->item(0,4)->text().contains("Çevrimdışı"),"registered camera remains offline");
     missing=true;scan();check(status->text().contains("SDK missing") && !preview->isEnabled(),"missing SDK error no preview");
     view.findChild<QLabel*>("cameraTitle")->setText("Sentetik UI fixture • SDK eksik / kayıtlı kamera");
     view.resize(850,600);view.findChild<QScrollArea*>()->verticalScrollBar()->setValue(0);CameraFlowSmokeAudit::save(view,evidence+"/camera-small-error.png");
+    attributed=true;missing=true;count=1;scan();check(preview->isEnabled() && status->text().contains("SDK missing"),"healthy selected route remains usable while another producer error stays visible");
+    partialProducer=true;scan();check(!preview->isEnabled() && !view.findChild<QPushButton*>("cameraSettingsRead")->isEnabled(),"selected producer partial scan cannot open from UI");view.checkConnection();check(!jobs.busy() && status->text().contains("tamamlanmadı"),"direct UI connection command also rejects partial producer");
+    attributed=false;partialProducer=false;
     missing=false;count=1;view.scan();view.stop();waitUi([&]{return !jobs.busy();});
     check(view.inventory().cancelled && table->rowCount()==1,"cancel keeps registry but clears discovery");
     // A late preview completion after Stop cannot repopulate the image or release ownership early.

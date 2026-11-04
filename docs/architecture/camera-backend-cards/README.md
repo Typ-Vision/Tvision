@@ -1,13 +1,13 @@
 # Kamera SDK ve Basler uygulama kartları
 
-4 Kasım 2026 · CAM-PLAN-03. Durum: **planlandı; uygulama başlamadı**.
+4 Kasım 2026 · CAM-PLAN-03. Durum: **CAM-SDK-01 uygulandı; kalan tam ON kabulü kullanıcı isteğiyle ertelendi**.
 Kullanıcı kararı: Basler **pylon C API**; uygulama C++20/Qt/MinGW olarak kalır.
 [Ana plan](../camera-backend-activation-plan.md),
 [önceki analiz](../../archive/2026-11-04-cam-analysis-01.md).
 
 | Sıra | Kart | Bağımlılık | Durum |
 | --- | --- | --- | --- |
-| 1 | [CAM-SDK-01](CAM-SDK-01.md) | Mevcut yerel konfigürasyon/keşif | Planlandı |
+| 1 | [CAM-SDK-01](CAM-SDK-01.md) | Mevcut yerel konfigürasyon/keşif | Uygulandı; tam ON ertelendi |
 | 2 | [CAM-OECS-01](CAM-OECS-01.md) | CAM-SDK-01 | Planlandı |
 | 3 | [ICM-BAS-01](ICM-BAS-01.md) | Önceki iki kart; Basler fiziksel erişimi | Planlandı |
 | 4 | [ICM-BAS-02a](ICM-BAS-02a.md) | ICM-BAS-01/G0 | Planlandı |

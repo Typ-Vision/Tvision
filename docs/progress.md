@@ -6,13 +6,12 @@
 
 ## Devam noktası
 
-**[VF07-A](archive/2026-11-04-vf07-a.md):** Result cache, V4 Properties,
-Dashboard Stop/revizyon; hedefli kabul kayıtta.
-Tam ON/OFF kullanıcı talimatıyla atlandı. K2 kullanıcı teyidi tamam → VF-08.
-[Kart](architecture/communication-v4/cards/VF07-A.md).
+**[VF07-A](archive/2026-11-04-vf07-a.md):** Result cache/V4 Properties/Stop/revizyon; hedefli kabul.
+O görevde tam ON/OFF kullanıcı isteğiyle atlandı; K2 teyidi tamam.
 
-[Kamera kartları](archive/2026-11-04-cam-plan-03.md): 6 kart hazır, pylon C API.
-Devam: CAM-SDK-01; VF-08 bekler.
+[CAM-SDK-01](archive/2026-11-04-cam-sdk-01.md): çoklu CTI/runtime.
+6/6, OECS/Basler keşfi/görsel geçti; OFF 163+1skip; tam ON kullanıcı isteğiyle kesildi.
+Sonra CAM-OECS-01; VF-08 bekler.
 
 [VF-07](archive/2026-11-04-vf-07.md): TCP/exact ACK.
 [VF-06](archive/2026-11-04-vf-06.md): toplu Auto/rollback.

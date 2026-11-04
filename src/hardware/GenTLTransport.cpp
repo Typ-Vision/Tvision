@@ -1,4 +1,5 @@
 #include "GenTLTransport.hpp"
+#include "RuntimeLibrary.hpp"
 #include <cstdint>
 #define GCTLI_NO_DECLSPEC_STATEMENTS
 #include <GenTL.h>
@@ -34,6 +35,7 @@ template<class F> QByteArray text(F read) {
 }
 struct GenTLTransport::Impl {
     std::unique_lock<std::mutex> lock{producerMutex,std::try_to_lock};
+    RuntimeLibrary runtime;
     QLibrary library;
     QString path;
     bool initialized=false;
@@ -48,6 +50,7 @@ struct GenTLTransport::Impl {
     explicit Impl(const QString& file):path(QFileInfo(file).canonicalFilePath()) {
         if(!lock.owns_lock())fail("Başka bir GenTL oturumu çalışıyor; tamamlanınca tekrar deneyin.");
         if(path.isEmpty() || QFileInfo(path).suffix().compare("cti",Qt::CaseInsensitive)!=0)fail("Mevcut bir .cti producer dosyası seçin.");
+        QString error;if(!runtime.load(path,{},error))fail(error);
         library.setFileName(path);library.setLoadHints(QLibrary::ResolveAllSymbolsHint);
         if(!library.load())fail("GenTL producer yüklenemedi: "+library.errorString());
         init=resolve<GenTL::PGCInitLib>(library,"GCInitLib");finish=resolve<GenTL::PGCCloseLib>(library,"GCCloseLib");lastError=resolve<GenTL::PGCGetLastError>(library,"GCGetLastError");
@@ -68,7 +71,8 @@ struct GenTLTransport::Impl {
         if(code==GenTL::GC_ERR_SUCCESS)return;
         char message[2048]{};size_t size=sizeof(message);GenTL::GC_ERROR detail=0;
         lastError(&detail,message,&size);message[sizeof(message)-1]='\0';
-        fail(QString("%1: GenTL %2 — %3").arg(operation).arg(code).arg(QString::fromUtf8(message)));
+        const auto reason=code==GenTL::GC_ERR_RESOURCE_IN_USE || code==GenTL::GC_ERR_ACCESS_DENIED ? "Cihaz meşgul / erişim reddedildi • " : code==GenTL::GC_ERR_INVALID_ID ? "Cihaz çevrimdışı / kimlik bulunamadı • " : "";
+        fail(QString("%1%2: GenTL %3 — %4").arg(reason,operation).arg(code).arg(QString::fromUtf8(message)));
     }
     QString info(GenTL::IF_HANDLE handle,const QByteArray& id,GenTL::DEVICE_INFO_CMD command) {
         GenTL::INFO_DATATYPE type=GenTL::INFO_DATATYPE_UNKNOWN;

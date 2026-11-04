@@ -1,4 +1,5 @@
 #include "OecsCameraSettings.hpp"
+#include "CameraLocalConfiguration.hpp"
 #include <QFileInfo>
 #include <cmath>
 
@@ -66,7 +67,7 @@ public:
     void shutdown() override {session_.close();}
 };
 }
-QString OecsCameraSettings::installedRuntime(){return "C:/Program Files (x86)/Common Files/OECS/Runtime/Win64_x64/MvCameraControl.dll";}
+QString OecsCameraSettings::installedRuntime(){return CameraLocalConfiguration::defaultRuntime("oecs");}
 bool OecsCameraSettings::available(const DiscoveredDevice& d,const QString& runtime){return supported(d.identity) && oecsSdkBindingCompiled() && QFileInfo(runtime).isAbsolute() && QFileInfo(runtime).isFile();}
 std::unique_ptr<IndustrialCameraBackend> OecsCameraSettings::create(const DiscoveredDevice& d,const QString& runtime,ApiFactory api){
     d.validate();require(supported(d.identity) && QFileInfo(runtime).isAbsolute() && bool(api),"Supported OECS identity/runtime required");return std::make_unique<Backend>(d,runtime,std::move(api));

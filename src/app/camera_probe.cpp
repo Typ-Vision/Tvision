@@ -19,7 +19,8 @@ int main(int argc,char** argv) {
     const auto scanWait=parser.value("scan-wait").toInt(&ok);
     if(!ok || scanWait<=0 || scanWait>60000){QTextStream(stderr)<<"Scan wait 1–60000 ms aralığında olmalı.\n";return 2;}
     const auto discovery=CameraService{}.discover(parser.values("producer"),timeout,{},scanWait);
-    QJsonArray devices,producers,errors;for(const auto& p:discovery.producers)producers.append(p);for(const auto& e:discovery.errors)errors.append(e);
+    QJsonArray devices,producers,errors,producerResults;for(const auto& p:discovery.producers)producers.append(p);for(const auto& e:discovery.errors)errors.append(e);
+    for(const auto& p:discovery.producerResults){QJsonArray failures;for(const auto& e:p.errors)failures.append(e);producerResults.append(QJsonObject{{"producer",p.producer},{"complete",p.complete},{"errors",failures}});}
     for(const auto& d:discovery.devices) {
         QJsonObject device{{"producer",d.producerPath},{"interfaceId",d.interfaceId},{"deviceId",d.deviceId},{"vendor",d.vendor},{"model",d.model},{"serial",d.serialNumber},{"transport",d.transport}};
         if(parser.isSet("open-check"))try {CameraService{}.checkConnection(d);device["readOnlyOpenClose"]="ok";}
@@ -27,6 +28,6 @@ int main(int argc,char** argv) {
         devices.append(device);
     }
     const QString status=producers.isEmpty() ? "NO_PRODUCER" : !errors.isEmpty() ? "ERROR" : "DONE";
-    QTextStream(stdout)<<QJsonDocument(QJsonObject{{"status",status},{"producers",producers},{"devices",devices},{"errors",errors},{"discoveryBudgetMs",timeout},{"scanWaitCapMs",scanWait},{"acquisitionImplemented",false}}).toJson();
+    QTextStream(stdout)<<QJsonDocument(QJsonObject{{"status",status},{"producers",producers},{"producerResults",producerResults},{"devices",devices},{"errors",errors},{"discoveryBudgetMs",timeout},{"scanWaitCapMs",scanWait},{"acquisitionImplemented",false}}).toJson();
     return status=="DONE" ? 0 : 1;
 }

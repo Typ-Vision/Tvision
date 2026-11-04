@@ -1,6 +1,7 @@
 # CAM-SDK-01 — Ortak runtime/yol yönetimi ve çoklu producer
 
-Durum: Planlandı. Sonraki: [CAM-OECS-01](CAM-OECS-01.md).
+Durum: Uygulandı; kalan tam ON testleri kullanıcı isteğiyle ertelendi.
+[Kapanış](../../archive/2026-11-04-cam-sdk-01.md). Sonraki: [CAM-OECS-01](CAM-OECS-01.md).
 
 ## Oku
 

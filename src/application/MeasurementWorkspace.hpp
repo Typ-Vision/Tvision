@@ -127,9 +127,10 @@ public:
         if(entry.webcam && !entry.industrial){camera.device=*entry.webcam;camera.device.resolve(discovered_);}
         else if(entry.industrial && !entry.webcam){
             camera.device={"gentl",{},DeviceIdentityConfidence::Unavailable,1,{}};camera.physical=entry.industrial->identity;
-            if(!inventoryDone_ || inventory_.cancelled || !inventory_.errors.isEmpty() || entry.industrial->ambiguous)
+            if(!inventoryDone_ || inventory_.cancelled || entry.industrial->ambiguous)
                 throw std::runtime_error("Tam ve belirsiz olmayan keşif gerekli.");
-            resolveRoutes(*camera.physical,inventory_.industrial.devices);
+            const auto routes=resolveRoutes(*camera.physical,inventory_.industrial.devices);
+            for(auto index:routes)if(!CameraService::routeComplete(inventory_.industrial,inventory_.industrial.devices[index].route))throw std::runtime_error("Selected producer discovery incomplete.");
         }else throw std::runtime_error("Tek keşif kaydı gerekli.");
         camera.validate();return registry_.registerCamera(camera,shortId,expectedRevision);
     }
@@ -151,7 +152,7 @@ public:
         // an in-flight gate that excludes only its own CameraSession reservation.
         if(!changeAllowed())throw std::runtime_error("Workspace busy");
         if(!QFileInfo(path_).isFile())throw std::runtime_error("Saved project required");
-        if(!inventoryDone_ || inventory_.cancelled || !inventory_.errors.isEmpty())throw std::runtime_error("Complete discovery required");
+        if(!inventoryDone_ || inventory_.cancelled)throw std::runtime_error("Complete discovery required");
         return CameraSettingsService::open(repository_,id,expectedRevision,
             inventory_.industrial,local,factory,ownerGate?std::move(ownerGate):gate_,[this,id]{active_.disconnect(id);},
             MeasurementEnvironmentRepository::Fault::None,std::move(runtime),std::move(api));
@@ -159,8 +160,9 @@ public:
     QString availability(const MeasurementCamera& c) const {
         if(c.physical){
             if(!inventoryDone_)return "Keşif yapılmadı • kayıtlı endüstriyel kamera";
-            if(inventory_.cancelled || !inventory_.errors.isEmpty())return "Keşif eksik / SDK kullanılamıyor";
+            if(inventory_.cancelled)return "Keşif eksik / SDK kullanılamıyor";
             try{const auto routes=resolveRoutes(*c.physical,inventory_.industrial.devices);
+                for(auto i:routes)if(!CameraService::routeComplete(inventory_.industrial,inventory_.industrial.devices[i].route))return "Keşif eksik / SDK kullanılamıyor";
                 return routes.size()>1 ? "Keşfedildi • yerel rota seçimi gerekli" : "Keşfedildi";
             }catch(const std::exception&){return "Çevrimdışı / belirsiz • otomatik eşleme yok";}
         }

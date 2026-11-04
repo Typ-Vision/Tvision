@@ -1,4 +1,5 @@
 #include "ExperimentalOecsAcquisition.hpp"
+#include "CameraLocalConfiguration.hpp"
 #include "IndustrialCameraConfiguration.hpp"
 #include "vision/ImageAccess.hpp"
 #include <QFileInfo>
@@ -99,7 +100,7 @@ public:
 };
 }
 QString ExperimentalOecsAcquisition::notice(){return QString::fromUtf8("Deneysel kamera — tetik eşleşmesi doğrulanmadı");}
-QString ExperimentalOecsAcquisition::installedRuntime(){return "C:/Program Files (x86)/Common Files/OECS/Runtime/Win64_x64/MvCameraControl.dll";}
+QString ExperimentalOecsAcquisition::installedRuntime(){return CameraLocalConfiguration::defaultRuntime("oecs");}
 bool ExperimentalOecsAcquisition::available(const DiscoveredDevice& device,const QString& dll){
     return supported(device.identity) && oecsSdkBindingCompiled() && QFileInfo(dll).isAbsolute() && QFileInfo(dll).isFile();
 }
