@@ -13,9 +13,9 @@
 | Yeni | Dashboard → İstasyonlar → İstasyon 1 → Reçete yükle → Yüzey A | Uyumlu reçete yüklenir. Satırda Kamera 1, Yüzey A ve Durduruldu görünür. | VF-04 |
 | Yeni | Communication → İstemciler → Simülatör istemcisi kaydet → Simülatör testi → Test profilini dışa aktar | İstemci profili oluşturulur. Kullanıcı UUID üretmez. Profil dışa aktarımı gerçek PLC veya kamera kurulumu için şart değildir. | VF-05 |
 | Yeni | Dashboard → Otomatik üretimi başlat | Önkoşullar geçerse üretime dahil istasyonlarda Run ve Auto açılır. Eksik varsa başlamadan istasyon, neden ve düzeltme düğmesi gösterilir. | VF-06 |
-| Değişecek | V4 simülatörü → Profili aç → Bağlan → İstasyon 1 → Tetikle | Beklenen yüzey kararı ve geçerlilik görünür. Teslim exact ACK ile kapanır. K2 burada durur. | VF-07 |
+| Değişecek | V4 simülatörü → Profili aç → Bağlan → İstasyon 1 → Tetikle | Beklenen yüzey kararı ve geçerlilik görünür. Teslim exact ACK ile kapanır. VF07-A sonrası operatör K2 tekrarı burada durur. | VF-07 / VF07-A |
 | Yeni | Aynı ekranlardan İstasyon 2 → Kamera 2 → Ölçüm A → Ölçüm şablonu → sayısal çıktıyı seç → yayımla ve yükle | Aynı TCP bağlantısında İstasyon 2 tetiklenir. Beklenen ölçüm doğru birim ve ölçekle gelir. | VF-08 |
-| Değişecek | Dashboard → İstasyon 1 → Stop → Reçete değiştir → Yüzey B | Uyumluysa aynı Kamera 1 ve yeni activation ile B yüklenir. Uyumsuz aday reddedilirse önceki seçim korunur. | VF-04/08 |
+| Değişecek | Dashboard → Stop (tüm istasyonlar) → İstasyon 1 → Reçete değiştir → Yüzey B | Durdurma ve bekleyen teslim tamamlanınca uyumlu B yeni activation ile yüklenir. Ret önceki seçimi korur. | VF-04 / VF07-A / VF-08 |
 | Değişecek | Uygulamayı kapat → yeniden aç → Dashboard → İstasyonlar | Son seçimler geri gelir. Run, Auto ve Remote Enable kapalıdır. Bekleyen terminal varsa teslim kurtarılır. | VF-02/06/08 |
 
 ## 2. Uygulamayı bağlayan kararlar
@@ -32,7 +32,7 @@
 
 Ön incelemede normal başlatıcı D:/TVision/VisionFlow.cmd üzerinden build/reference-ui/visionflow.exe idi. Makine dizininde listener profili ve kapanış kaydı vardı. İstasyon kimlik kataloğu ve publication-templates-v4 dizini yoktu. Mevcut panelin reçete yükleme düğmesi kayıtlı istasyon ve yayımlanmış reçete gerektiriyor. Publish Data şablonları makineden okuyor. Bugünkü station tanımı kimlik, anahtar ve ad taşırken kamera eşleşmeleri reçete seçimiyle saklanıyor. Mevcut dosya yolu reçete aracından yürütmeye ulaşıyor. Bu nedenle yalnız tabloya kamera adı eklemek yeterli değildir.
 
-Sıra **VF-01 → VF-02 → K1 → VF-03 → VF-04 → VF-05 → VF-06 → VF-07 → K2 → VF-08 → K3**. VF-03 ve VF-05'in veri önkoşulu VF-01'dir. İş sırası ilk istasyon gösterimini bölmeden ilerlemek için seridir. Normal ürün yolu kurulum verisini kendisi üretir. Servis fixture'ları bu önkoşulları karşılamaz.
+Sıra **VF-01 → VF-02 → K1 → VF-03 → VF-04 → VF-05 → VF-06 → VF-07 → VF07-A → K2 operatör tekrarı → VF-08 → K3**. VF-03 ve VF-05'in veri önkoşulu VF-01'dir. İş sırası ilk istasyon gösterimini bölmeden ilerlemek için seridir. Normal ürün yolu kurulum verisini kendisi üretir. Servis fixture'ları bu önkoşulları karşılamaz.
 
 ## 4. Uygulama kartları
 
@@ -92,8 +92,16 @@ Sıra **VF-01 → VF-02 → K1 → VF-03 → VF-04 → VF-05 → VF-06 → VF-07
 - **Olumsuz:** Yanlış digest, eski seçim, timeout ve kopma. Otomatik yeni üretim isteği gönderilmez.
 - **Kanıt/devir:** Hedefli protokol testleri. Normal başlatıcı + bağımsız simülatörle, ekrandan hazırlanan istasyonda beklenen yüzey kararı ve exact ACK. Operatör adımları kendisi tekrar edebilir. **K2 geçmeden ikinci istasyon kabulüne geçilmez.**
 
+### VF07-A · K2 operatör akışı düzeltmeleri
+
+- **Durum:** Analiz/plan hazır; uygulama başlamadı. [Detaylı görev kartı](communication-v4/cards/VF07-A.md).
+- **Başlangıç:** VF-07 yazılım kanıtı korunur. Operatör ekranında Blob DONE/found=true iken Result seçimiyle NOT_EVALUATED/Acquire hatası; belirsiz yayın listesi ve Stop gerektiren reçete değişimi var.
+- **İşlem:** Result/çevrim önbelleğini Viewer seçiminden ayır; Publish Data'yı V4 şablon/slotlarına indir; Communication Stop/drain'i Dashboard'a **Stop** adıyla taşı. Stop tüm bağlı istasyonları kapsar. Yayın tarihini, son/yüklü etiketlerini göster; uyumluluk ile yüklemeye hazır durumunu ayır.
+- **Koruma:** Gerçek girdi değişiminde invalidation, legacy kayıt roundtrip'i, immutable revision/activation ve pending exact ACK korunur. Stop sırasında gerçek geçiş gösterilir; teslim silinmez, Auto yeniden açılmaz.
+- **Kanıt/devir:** Karttaki A–E matrisi, UI normal/küçük ekran, son kaynakta tam Release ON/OFF ve normal ürün K2 operatör tekrarı. **VF07-A kapanmadan ve K2 operatör teyidi olmadan VF-08 başlamaz.**
+
 ### VF-08 · İki istasyon, yeniden seçim ve kurtarma
-- **Başlangıç:** Geçmiş K2. İkinci istasyon, Ölçüm A ve alternatif Yüzey B normal ürün işlemleriyle hazırlanır.
+- **Başlangıç:** Kapanmış VF07-A ve operatörce tekrar edilmiş K2. İkinci istasyon, Ölçüm A ve alternatif Yüzey B normal ürün işlemleriyle hazırlanır.
 - **İşlem:** Aynı TCP oturumunda iki istasyonu ayrı tetikle. A→B geçişini, eski alanlarla isteği, kopmayı ve uygulama açılışını göster.
 - **Modüller:** Dashboard, seçim ve çalışma servisleri, V4 istemci, StationDeliveryLedger ve normal uygulama kabul düzeni. Mevcut kayıt formatı ve exact ACK davranışından yararlan.
 - **Koruma:** Diğer istasyonun seçimi, kamera, kayıt geçmişi ve mühürlenmiş terminal aynı kalır.
@@ -117,7 +125,7 @@ Sıra **VF-01 → VF-02 → K1 → VF-03 → VF-04 → VF-05 → VF-06 → VF-07
 |---|---|---|
 | K0 · Ürün ve kart incelemesi | Boş makineden iki terminale kadar bütün adımlar, sahipleri ve önkoşulları bulunur. | Açık kullanıcı davranışı varsa ilgili karta geçmeden plana işlenir. |
 | K1 · İlk kalıcı kurulum | VF-01/02 ile normal uygulamada oluşturulan istasyon, kamera ve dosya kapanıp açıldıktan sonra geri gelir. | Elle katalog oluşturulmamıştır. Çalışma izinleri kapalıdır. |
-| K2 · İlk gerçek çevrim | Kullanıcı normal uygulamada istasyonu kurar, A'yı yayımlar/yükler, istemciyi kaydeder, Auto açar ve beklenen yüzey sonucunu alır. | Beklenen içerik ve exact ACK kaydı görülür. Eksik ürün işlemi fixture ile geçilemez. |
+| K2 · İlk gerçek çevrim (VF07-A sonrası operatör tekrarı) | Kullanıcı normal uygulamada istasyonu kurar, A'yı yayımlar/yükler, istemciyi kaydeder, Auto açar ve beklenen yüzey sonucunu alır. | Beklenen içerik ve exact ACK kaydı görülür. Eksik ürün işlemi fixture ile geçilemez. VF07-A Result/Publish Data/Stop akışı kapanır; operatör teyidi ayrıca kaydedilir. |
 | K3 · Tam kabul | İki istasyon ve aşağıdaki matris izole temiz kurulumda tekrarlanır. | Hedefli testler, normal uygulama kanıtları ve son kaynakta tam Release ON/OFF regresyonu geçmiştir. |
 
 | Senaryo | Ölçülebilir beklenen sonuç | Sorumlu |

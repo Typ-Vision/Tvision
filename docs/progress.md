@@ -6,15 +6,18 @@
 
 ## Devam noktası
 
-**[VF-07](archive/2026-11-04-vf-07.md): tek istasyon TCP/exact ACK tamam.**
-Yüzey A OK/valid; bayat seçim, yanlış ACK, timeout/kopma kurtarma geçti.
-K2 yazılım kanıtı arşivde; operatör tekrarı hazır. Sonraki VF-08/K3.
-[VF-06](archive/2026-11-04-vf-06.md): toplu Run/Auto, ön kontrol/rollback/restart.
-[VF-05](archive/2026-11-03-vf-05.md): tek peer/epoch, profil HELLO; pending/Remote ret.
+**Sıradaki: [VF07-A](architecture/communication-v4/cards/VF07-A.md); yalnız plan hazır.**
+[Plan kaydı](archive/2026-11-04-vf07-a-plan.md): kapsam ve kabul.
+VF-08 için kart kapanışı ve K2 operatör teyidi gerekir.
 
-**[VF-04a](archive/2026-11-03-vf-04a.md): editor9 tek dosya provider düzeltildi.**
-[VF-04](archive/2026-11-03-vf-04.md) korunur;
-TCP A/B VF-08’de.
+**[VF-07](archive/2026-11-04-vf-07.md): TCP/exact ACK yazılım kanıtı tamam.**
+OK/valid, bayat seçim, yanlış ACK, timeout/kopma geçti; operatörde Result/UI açık.
+Önce VF07-A → K2 tekrarı → VF-08/K3.
+[VF-06](archive/2026-11-04-vf-06.md): toplu Auto/rollback.
+[VF-05](archive/2026-11-03-vf-05.md): istemci/HELLO.
+
+**[VF-04a](archive/2026-11-03-vf-04a.md): editor9 provider düzeldi.**
+[VF-04](archive/2026-11-03-vf-04.md) korunur; TCP A/B VF-08’de.
 
 **[VF-03](archive/2026-11-03-vf-03.md):** değişmez yayın; tam regresyon VF-04’te.
 **[VF-02](archive/2026-11-02-vf-02.md):** K1 geçti; tam ON/Pose UI VF-04’te.
@@ -82,19 +85,17 @@ görüntü/mm kabulü değildir.
 lens/düzlem ve belgeli fiziksel kabulü tamamlanmadı.
 
 **[CCUX-14](archive/2026-10-22-ccux-14.md):** yazılım/görsel tamam; fiziksel açık.
-CCUX-01–13 tamam; [arşiv](archive/README.md).
-Kamera kimliği/profil, oturum drain, kalibrasyon izni, typed köken/hash,
-Editor binding ve immutable Runtime [ayrıntıları](archive/2026-10-26-comm-plan-01.md#önceki-kamera-özetinden-korunan-ayrıntılar).
+CCUX-01–13 tamam; kamera/profil, drain, kalibrasyon, typed hash,
+Editor/Runtime [sözleşmeleri](archive/2026-10-26-comm-plan-01.md#önceki-kamera-özetinden-korunan-ayrıntılar).
 Restart üretim izni başlatmaz; PLC/robot çıkışı kapalı kalır.
 Arşiv rasteri karanlık/kısmen bulanık; **bağımsız fiziksel mm kabulü açık**.
-CCUX-14 fixture bunu kapatmaz. [CCUX planı](architecture/camera-setup/README.md) sürer;
+[CCUX](architecture/camera-setup/README.md) fiziksel kabulü açık; fixture kapatmaz.
 **Hand-eye kapsam dışı.** KMC/ICM/EXP yeniden başlatılmaz.
 
 ## Hazır olanlar
 
-- EXP-01–03, MUI-01–03/EUI-01–08 ve KMC/ICM/G2 yazılımı hazır;
-  [kanıt/korunan sınırlar](archive/2026-10-28-efr-plan-01.md).
-  **MUI-04 özgün raster/reçete/ROI açık**; fiziksel/optik/mm açık.
+- EXP-01–03, MUI-01–03/EUI-01–08, KMC/ICM/G2: [yazılım/kanıt](archive/2026-10-28-efr-plan-01.md).
+  **MUI-04 raster/reçete/ROI ve fiziksel/optik/mm açık.**
 
 ## Engeller ve kararlar
 
