@@ -6,6 +6,7 @@ görev” ifadeleri yazıldıkları tarihe aittir.
 
 | Dönem / görev | Kayıt |
 | --- | --- |
+| 5 Kasım 2026 — CAM-DLL-01 | [OECS ediniminde sistem MSVCR100 dosyasının yanlış SDK çakışması sayılması](2026-11-05-cam-dll-01.md) |
 | 5 Kasım 2026 — CAM-REG-01 | [Arşivlenen kamerayı Ekle ile geri alma ve hatırlanan yerel rota durumunu düzeltme](2026-11-05-cam-reg-01.md) |
 | 5 Kasım 2026 — ICM-BAS-03 | [Hedefli ürün kabulü, SDK ayarlı üretim ret testi ve H01–H08 açık engel matrisi; G1/G3 açık](2026-11-05-icm-bas-03.md) |
 | 5 Kasım 2026 — ICM-BAS-02b | [Basler owned stream, native önizleme, tek/100 tetik ve hedefli kabul; G1 açık](2026-11-05-icm-bas-02b.md) |

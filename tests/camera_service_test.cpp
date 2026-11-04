@@ -10,6 +10,9 @@
 #include <stdexcept>
 #include <thread>
 #include <chrono>
+#ifdef Q_OS_WIN
+#include <windows.h>
+#endif
 using namespace visionflow;
 namespace {
 void check(bool ok,const char* message){if(!ok)throw std::runtime_error(message);}
@@ -108,6 +111,16 @@ int main(int argc,char** argv) {
         dependentLibrary.unload();dependencyLoader.unload();
         RuntimeLibrary siblingLoader;
         check(siblingLoader.load(app.arguments()[3],{},dependencyError),"forward-slash Qt path resolves sibling DLLs without PATH changes");
+        const auto shared=directory.filePath("shared");check(QDir().mkpath(shared),"shared system dependency fixture");
+        const auto sharedRuntime=shared+"/runtime.dll";check(QFile::copy(incomplete,sharedRuntime),"shared runtime fixture");
+        wchar_t systemDirectory[32768]{};const auto systemSize=GetSystemDirectoryW(systemDirectory,32768);
+        check(systemSize>0 && systemSize<32768,"Windows system directory");
+        const auto systemDll=QString::fromWCharArray(systemDirectory,int(systemSize))+"/kernel32.dll";
+        check(QFile::copy(systemDll,shared+"/kernel32.dll"),"system DLL sibling copy");
+        RuntimeLibrary sharedLoader;check(sharedLoader.load(sharedRuntime,{},dependencyError),"already loaded system dependency is not a foreign SDK conflict");sharedLoader.unload();
+        check(!sharedLoader.load(shared+"/kernel32.dll",{},dependencyError),"explicit main runtime still requires its exact installation");
+        check(QFile::copy(QFileInfo(app.arguments()[3]).absolutePath()+"/camera_runtime_dependency.dll",shared+"/camera_runtime_dependency.dll"),"foreign vendor dependency copy");
+        check(!sharedLoader.load(sharedRuntime,{},dependencyError) && dependencyError.contains("camera_runtime_dependency.dll"),"foreign vendor dependency still rejected");
 #endif
 
         report=CameraService{}.discover({directory.filePath("missing.cti")});check(report.devices.isEmpty() && report.errors.size()==1,"missing producer");

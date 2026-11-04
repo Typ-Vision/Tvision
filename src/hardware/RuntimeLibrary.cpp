@@ -48,11 +48,16 @@ bool RuntimeLibrary::load(const QString& path,const QStringList& dependencies,QS
             if(QFileInfo(settings.value(key+"/path").toString()).canonicalFilePath()==QFileInfo(path).canonicalFilePath())dirs.append(settings.value(key+"/dependencies").toStringList());}
     }
     dirs.removeDuplicates();QVector<DLL_DIRECTORY_COOKIE> cookies;
+    wchar_t systemDirectory[32768]{};const auto systemSize=GetSystemDirectoryW(systemDirectory,32768);
+    const auto systemPath=systemSize && systemSize<32768?QFileInfo(QString::fromWCharArray(systemDirectory,int(systemSize))).canonicalFilePath():QString{};
     auto checkDirs=dirs;checkDirs.append(QFileInfo(path).absolutePath());
     for(const auto& dir:checkDirs)for(const auto& file:QDir(dir).entryInfoList({"*.dll"},QDir::Files)){
         const auto module=GetModuleHandleW(reinterpret_cast<LPCWSTR>(file.fileName().utf16()));
         if(module){wchar_t loaded[32768]{};const auto size=GetModuleFileNameW(module,loaded,32768);
             if(size && QFileInfo(QString::fromWCharArray(loaded,int(size))).canonicalFilePath().compare(file.canonicalFilePath(),Qt::CaseInsensitive)==0)continue;
+            // Shared Windows dependencies can already be loaded centrally (e.g. MSVCR100).
+            if(size && !systemPath.isEmpty() && file.canonicalFilePath()!=QFileInfo(path).canonicalFilePath() &&
+               QFileInfo(QString::fromWCharArray(loaded,int(size))).canonicalPath().compare(systemPath,Qt::CaseInsensitive)==0)continue;
             error="Başka kurulumdan aynı adlı DLL yüklü; uygulamayı yeniden başlatın: "+file.fileName();return false;}
     }
     for(const auto& dir:dirs){

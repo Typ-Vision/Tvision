@@ -6,12 +6,13 @@
 
 ## Devam noktası
 
-**[CAM-REG-01](archive/2026-11-05-cam-reg-01.md):** arşivden Ekle/rota durumu.
+[CAM-DLL-01](archive/2026-11-05-cam-dll-01.md): sistem DLL.
+[CAM-REG-01](archive/2026-11-05-cam-reg-01.md): Ekle/rota.
 [BAS-03](archive/2026-11-05-icm-bas-03.md): **G1/G3 açık**, production kapalı;
 VF-08 bekler. [02b](archive/2026-11-05-icm-bas-02b.md).
-[02a ayar/rollback](archive/2026-11-04-icm-bas-02a.md).
+[02a](archive/2026-11-04-icm-bas-02a.md).
 [ICM-BAS-01](archive/2026-11-04-icm-bas-01.md): pylon C/G0, Viewer busy/reopen.
-[CAM-OECS-01](archive/2026-11-04-cam-oecs-01.md): SDK/px/readback düzeltildi.
+[CAM-OECS-01](archive/2026-11-04-cam-oecs-01.md).
 
 [VF07-A](archive/2026-11-04-vf07-a.md): Result cache/V4 Properties/Stop/revizyon.
 [CAM-SDK-01](archive/2026-11-04-cam-sdk-01.md): çoklu CTI/runtime.
