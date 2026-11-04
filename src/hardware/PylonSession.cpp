@@ -35,7 +35,7 @@ bool matches(const QJsonObject& d,const PylonSelector& s){return d["vendor"]==s.
     X(PylonInitialize) X(PylonTerminate) X(PylonEnumerateDevices) X(PylonGetDeviceInfo) \
     X(PylonCreateDeviceByIndex) X(PylonDestroyDevice) X(PylonDeviceOpen) X(PylonDeviceClose) \
     X(PylonDeviceGetDeviceInfo) X(PylonDeviceGetNodeMap) X(GenApiGetLastErrorDetail) \
-    X(GenApiNodeMapGetNode) X(GenApiNodeGetAccessMode) X(GenApiNodeGetType) X(GenApiNodeToString) \
+    X(GenApiNodeMapGetNode) X(GenApiNodeGetAccessMode) X(GenApiNodeGetType) X(GenApiNodeToString) X(GenApiNodeFromString) X(GenApiBooleanGetValue) \
     X(GenApiIntegerGetMin) X(GenApiIntegerGetMax) X(GenApiIntegerGetInc) \
     X(GenApiFloatGetMin) X(GenApiFloatGetMax) X(GenApiFloatGetUnit) \
     X(GenApiEnumerationGetNumEntries) X(GenApiEnumerationGetEntryByIndex) X(GenApiEnumerationEntryGetSymbolic)
@@ -147,6 +147,7 @@ QJsonObject PylonSession::open(const QString& path,const QStringList& dependenci
         QJsonArray nodes;
         for(const char* name:{"DeviceVendorName","DeviceModelName","DeviceSerialNumber","DeviceID","DeviceFirmwareVersion","DeviceVersion",
             "Width","Height","OffsetX","OffsetY","WidthMax","HeightMax","SensorWidth","SensorHeight","PixelFormat",
+            "BinningHorizontal","BinningVertical","DecimationHorizontal","DecimationVertical","ReverseX","ReverseY",
             "ExposureTime","ExposureTimeAbs","ExposureAuto","Gain","GainRaw","GainAbs","GainAuto",
             "TriggerSelector","TriggerMode","TriggerSource","AcquisitionStatusSelector","AcquisitionStatus","SoftwareTriggerIsBusy",
             "CounterSelector","CounterValue","ChunkModeActive","ChunkSelector","ChunkFramecounter","ChunkFrameID","TimestampLatchValue",
@@ -160,6 +161,48 @@ QJsonObject PylonSession::open(const QString& path,const QStringList& dependenci
     }catch(...){const auto failure=std::current_exception();close();std::rethrow_exception(failure);}
 #else
     Q_UNUSED(path);Q_UNUSED(dependencies);throw std::runtime_error("Pylon C binding unavailable; configure VISIONFLOW_PYLON_INCLUDE_DIR");
+#endif
+}
+CameraFeature PylonSession::feature(const QString& name) const {
+    auto& p=*impl_;require(p.owner==std::this_thread::get_id(),"Pylon owner thread required");
+    CameraFeature f;f.name=name;
+#ifdef VISIONFLOW_WITH_PYLON_SDK
+    require(p.opened,"Pylon session not open");NODEMAP_HANDLE map=nullptr;
+    p.check(p.PylonDeviceGetNodeMap(p.device,&map),"PylonDeviceGetNodeMap");
+    const auto n=p.node(map,name.toUtf8().constData());const auto a=n["access"].toString();
+    f.access=a=="missing"?FeatureAccess::Missing:a=="RW"?FeatureAccess::ReadWrite:a=="RO"?FeatureAccess::ReadOnly:
+        a=="WO"?FeatureAccess::WriteOnly:FeatureAccess::Unavailable;
+    const auto type=n["type"].toString(),value=n["value"].toString();
+    f.type=type=="integer"?FeatureType::Integer:type=="float"?FeatureType::Float:type=="boolean"?FeatureType::Boolean:
+        type=="enumeration"?FeatureType::Enumeration:type=="string"?FeatureType::String:FeatureType::Unsupported;
+    if(!f.readable())return f;
+    bool ok=true;
+    if(f.type==FeatureType::Integer){f.value=value.toLongLong(&ok);f.minimum=n["min"].toString().toDouble();f.maximum=n["max"].toString().toDouble();f.increment=n["increment"].toString().toDouble();}
+    else if(f.type==FeatureType::Float){f.value=value.toDouble(&ok);f.minimum=n["min"].toDouble();f.maximum=n["max"].toDouble();f.unit=n["unit"].toString();}
+    else if(f.type==FeatureType::Boolean){NODE_HANDLE h=nullptr;_Bool actual=false;
+        p.check(p.GenApiNodeMapGetNode(map,name.toUtf8().constData(),&h),"GenApiNodeMapGetNode");
+        p.check(p.GenApiBooleanGetValue(h,&actual),"GenApiBooleanGetValue");f.value=bool(actual);}
+    else f.value=value;
+    require(ok,"Invalid pylon numeric readback");
+    for(const auto entry:n["entries"].toArray()){const auto e=entry.toObject();if(e["available"].toBool())f.entries.insert(e["symbol"].toString(),quint32(f.entries.size()));}
+#else
+    throw std::runtime_error("Pylon C binding unavailable");
+#endif
+    return f;
+}
+void PylonSession::writeFeature(const QString& name,const FeatureValue& value){
+    require(QStringList{"ExposureTime","Gain","ExposureAuto","GainAuto"}.contains(name),"Unsupported pylon basic setting");
+    const auto f=feature(name);validateFeatureWrite(f,value);if(featureEquivalent(f,value))return;
+#ifdef VISIONFLOW_WITH_PYLON_SDK
+    auto& p=*impl_;NODEMAP_HANDLE map=nullptr;NODE_HANDLE node=nullptr;
+    p.check(p.PylonDeviceGetNodeMap(p.device,&map),"PylonDeviceGetNodeMap");
+    p.check(p.GenApiNodeMapGetNode(map,name.toUtf8().constData(),&node),"GenApiNodeMapGetNode");
+    const auto text=std::visit([](const auto& v)->QString{using T=std::decay_t<decltype(v)>;
+        if constexpr(std::is_same_v<T,QString>)return v;
+        else if constexpr(std::is_same_v<T,double>)return QString::number(v,'g',17);
+        else return QString::number(v);},value).toUtf8();
+    p.check(p.GenApiNodeFromString(node,text.constData()),"GenApiNodeFromString");
+    require(featureEquivalent(feature(name),value),"Pylon settings readback mismatch");
 #endif
 }
 void PylonSession::close(){

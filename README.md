@@ -18,7 +18,8 @@ Kamera/kalibrasyon/Runtime: [başlatıcı/restart](docs/architecture/camera-inte
   kayıtları, restart geçmişi, Logs/CSV ve vf.socket2 scalar mapping.
 - Image File/Webcam; Camera Manager keşif/kayıt ve Mono8 profil taslağı.
   Industrial kaynak kayıtlı kamera/setup/profile bağlanır; edinim ortak worker/provider
-  yolundadır. Opto/OECS ayarları gerçek readback ile kaydedilir; edinim izni ayrıdır.
+  yolundadır. Opto/OECS ve Basler acA1920-40um USB ayarları gerçek readback ile
+  kaydedilir; Basler ayar yolu pylon C kullanır, edinim izni ayrıdır.
   Industrial Load çevrimdışıdır. Tam native kabul olmadan production kapalıdır;
   COE-U komutları OECS edinim yolunu seçer.
 
@@ -30,8 +31,7 @@ Running olur. Çevrimler bağlantıyı paylaşır; Stop kapanışı bekler, disk
 kamerayı tutmaz. Kalibrasyon listesi bağlantı açmaz;
 canlı sihirbaz bağlantıyı paylaşır, Dosya/Stop/İptal/Kaydet-kullan kapatır.
 
-Hazırlık üretim kabulü değildir; kanıtsız PASS/skor/pose gösterilmez.
-Fiziksel/native/CUDA/dağıtım sınırları [devir özetindedir](docs/progress.md).
+Kanıtsız PASS/skor/pose yok. [Fiziksel/native/CUDA/dağıtım sınırları](docs/progress.md).
 
 ## Yerel derleme ve test — PowerShell
 

@@ -1,5 +1,6 @@
 #include "CameraSettingsService.hpp"
 #include "AcquisitionPolicy.hpp"
+#include "BaslerCameraSettings.hpp"
 #include <cmath>
 #include <exception>
 #include <QFileInfo>
@@ -58,7 +59,9 @@ QString CameraSettingsService::unavailableReason(const DiscoveredDevice& d,const
     if(factory.injected_){const auto caps=factory.capabilities(d);
         if(caps.open && caps.configure)return {};
         return caps.unavailableReason.isEmpty()?"Ayar backend'i desteklenmiyor":caps.unavailableReason;}
-    return OecsCameraSettings::unavailableReason(d,runtime);
+    const auto backend=d.identity.vendor=="Basler"?"basler":"oecs";
+    const auto path=runtime.isEmpty()?CameraLocalConfiguration::defaultRuntime(backend):runtime;
+    return d.identity.vendor=="Basler"?BaslerCameraSettings::unavailableReason(d,path):OecsCameraSettings::unavailableReason(d,path);
 }
 bool CameraSettingsService::available(const DiscoveredDevice& d,const CameraProviderFactory& factory,const QString& runtime){return unavailableReason(d,factory,runtime).isEmpty();}
 std::unique_ptr<CameraSettingsSession> CameraSettingsService::open(MeasurementEnvironmentRepository repo,
@@ -81,6 +84,9 @@ std::unique_ptr<CameraSettingsSession> CameraSettingsService::open(MeasurementEn
     for(auto i:routes)if(hint && discovery.devices[i].route==*hint)matches=true;
     if(!matches)hint.reset();
     r.device=CameraService::resolveIndustrial(r.camera,discovery,hint);
+    const bool basler=r.device.identity.vendor=="Basler";
+    const auto location=local.runtime(basler?"basler":"oecs",runtime);
+    if(!factory.injected_ && (basler || runtime.isEmpty())){require(location.error.isEmpty(),qPrintable(location.error));runtime=location.path;}
     require(available(r.device,factory,runtime),"Camera settings backend unavailable / unsupported");
     auto session=std::unique_ptr<CameraSettingsSession>(new CameraSettingsSession);
     session->shared_=std::make_shared<CameraSettingsSession::Shared>();
@@ -171,8 +177,8 @@ std::unique_ptr<CameraSettingsSession> CameraSettingsService::open(MeasurementEn
         void shutdown() override {backend_->shutdown();}
     };
     session->worker_=std::make_unique<CameraWorkerSession>(r.device.identity,CameraLeaseUse::Editor,r.sourceId,FrameQueueMode::ProductionFifo,
-        [provider=factory.injected_,r,repo,e,shared=session->shared_,fault,runtime,api]{
-            auto backend=provider?provider->createSettings(r.camera,r.device):OecsCameraSettings::create(r.device,runtime,api);
+        [provider=factory.injected_,r,repo,e,shared=session->shared_,fault,runtime,api,basler,dependencies=location.dependencies]{
+            auto backend=provider?provider->createSettings(r.camera,r.device):basler?BaslerCameraSettings::create(r.device,runtime,dependencies):OecsCameraSettings::create(r.device,runtime,api);
             return std::make_unique<Transaction>(std::move(backend),r,repo,e,shared,fault);},2,PreviewAcquisitionKind::SequentialSingleFrame,CameraLeaseArbiter::Ticket{},r.camera.id.value);
     return session;
 }

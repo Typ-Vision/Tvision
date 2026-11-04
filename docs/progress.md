@@ -1,14 +1,16 @@
 # VisionFlow — devir
 
-[Arşiv](archive/README.md). [MCP](archive/2026-10-24-mcp-01.md),
-[MCP-02](archive/2026-11-03-mcp-02.md): Context7 kuruldu.
+[Arşiv](archive/README.md).
+[MCP-02](archive/2026-11-03-mcp-02.md): Context7.
 [LIC-01](archive/2026-11-02-lic-01.md): lisans; SDK/paket açık.
 
 ## Devam noktası
 
-**[ICM-BAS-01](archive/2026-11-04-icm-bas-01.md):** pylon C/G0, Viewer
-busy/reopen geçti; ON 6 + startup, OFF 10. Tam suite koşulmadı.
-Sonraki ICM-BAS-02a; VF-08 bekler.
+**[ICM-BAS-02a](archive/2026-11-04-icm-bas-02a.md):** Basler ayar/rollback;
+ON 7/OFF 5 hedefli; fiziksel restore/iki boyut UI geçti.
+Decimation unknown; edinim/kalibrasyon izni yok. Tam suite yok (kullanıcı).
+Sıradaki ICM-BAS-02b; VF-08 bekler.
+[ICM-BAS-01](archive/2026-11-04-icm-bas-01.md): pylon C/G0, Viewer busy/reopen.
 [CAM-OECS-01](archive/2026-11-04-cam-oecs-01.md): SDK/px/readback düzeltildi.
 
 [VF07-A](archive/2026-11-04-vf07-a.md): Result cache/V4 Properties/Stop/revizyon.
@@ -18,8 +20,8 @@ Sonraki ICM-BAS-02a; VF-08 bekler.
 [VF-06](archive/2026-11-04-vf-06.md): toplu Auto/rollback.
 [VF-05](archive/2026-11-03-vf-05.md): istemci/HELLO.
 
-[VF-04a](archive/2026-11-03-vf-04a.md): provider;
-[VF-04](archive/2026-11-03-vf-04.md): TCP A/B.
+[VF-04a provider](archive/2026-11-03-vf-04a.md);
+[VF-04 TCP A/B](archive/2026-11-03-vf-04.md).
 
 [VF-03](archive/2026-11-03-vf-03.md): değişmez yayın.
 [VF-02](archive/2026-11-02-vf-02.md): K1; ON/Pose UI VF-04’te.
@@ -56,9 +58,9 @@ UI 39/OFF 19 test. Native wheel/pan yakalama hatası ve fiziksel kabul açık.
 ([restart devri](architecture/camera-integration-handoff.md)).
 [INT-08](archive/2026-10-25-int-08.md): üç medyan aşımı ve fiziksel
 E2/mm/native açık; gerçek proje/reçete/kaynak/model gerekli.
-**[CCUX-23b-1–6 yazılım tamam](archive/2026-10-24-ccux-23b-6.md).**
-Canlı proje/2448×2048 kabulü açık; fixture fiziksel kabul değildir.
-Kullanıcı plaka kalibrasyonunu başardı; bağımsız mm kabulü ayrıdır.
+**[CCUX-23b-1–6](archive/2026-10-24-ccux-23b-6.md):** yazılım tamam;
+canlı proje/2448×2048 açık. Kullanıcı plaka kalibrasyonunu başardı;
+fixture fiziksel/bağımsız mm kabulü değildir.
 **[CCUX-15j fiziksel kabul açık](archive/2026-10-23-ccux-15j.md):**
 Exact SDK raw/sidecar 56000 µs/0 dB karanlık/odak dışı, 0 merkez; model yok
 (`build/ccux/ccux-15j/`). Devam: ışık/odak/düzlem; referans/tolerans ve operatör.
@@ -66,9 +68,8 @@ Exact SDK raw/sidecar 56000 µs/0 dB karanlık/odak dışı, 0 merkez; model yok
 Missing result açık. [15f](archive/2026-10-23-ccux-15f.md): eski kare 50→49;
 fiziksel eksen/mm açık.
 
-**[CCUX-22e yazılımı tamamlandı](archive/2026-10-23-ccux-22e.md):** Kalibrasyon
-bağlantı ömrü, dosya/iptal/SaveUse drain. Kanıt: `build/ccux/ccux-22e/`.
-SDK kayıtlı kamerayı bulamadı; kare/mm kabulü yok. 22f açık.
+**[CCUX-22e](archive/2026-10-23-ccux-22e.md):** bağlantı ömrü,
+dosya/iptal/SaveUse drain. SDK cihazı bulamadı; kare/mm yok, 22f açık.
 [22d](archive/2026-10-23-ccux-22d.md), [22c](archive/2026-10-23-ccux-22c.md),
 [API/ömür](architecture/camera-setup/acquisition-sessions.md).
 `multi_source_production_contract` 22d kapanış hatası korunur.

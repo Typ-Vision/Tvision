@@ -57,6 +57,6 @@ public:
         const CameraProviderFactory&,std::function<bool()> gate,
         std::function<void()> invalidate,
         MeasurementEnvironmentRepository::Fault=MeasurementEnvironmentRepository::Fault::None,
-        QString runtime=OecsCameraSettings::installedRuntime(),OecsCameraSettings::ApiFactory=makeOecsCApi);
+        QString runtime={},OecsCameraSettings::ApiFactory=makeOecsCApi);
 };
 }

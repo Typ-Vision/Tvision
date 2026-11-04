@@ -147,7 +147,7 @@ public:
     CameraDefaults cameraDefaults(const CameraId& id){return environment().defaults(id);}
     std::unique_ptr<CameraSettingsSession> cameraSettings(const CameraId& id,int expectedRevision,
         const CameraLocalConfiguration& local,const CameraProviderFactory& factory,std::function<bool()> ownerGate={},
-        QString runtime=OecsCameraSettings::installedRuntime(),OecsCameraSettings::ApiFactory api=makeOecsCApi){
+        QString runtime={},OecsCameraSettings::ApiFactory api=makeOecsCApi){
         // Opening uses the full workspace gate. The owning controller may supply
         // an in-flight gate that excludes only its own CameraSession reservation.
         if(!changeAllowed())throw std::runtime_error("Workspace busy");

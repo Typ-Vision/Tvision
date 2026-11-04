@@ -1,6 +1,8 @@
 # ICM-BAS-02a — Basler ayar/readback ve rollback
 
-Durum: Planlandı. Bağlı: [ICM-BAS-01](ICM-BAS-01.md)/G0.
+Durum: Uygulandı; hedefli kabul ve fiziksel geri yükleme geçti.
+[Kapanış](../../archive/2026-11-04-icm-bas-02a.md). Tam suite güncel kullanıcı
+talimatıyla koşulmadı. Bağlı: [ICM-BAS-01](ICM-BAS-01.md)/G0.
 Sonraki: [ICM-BAS-02b](ICM-BAS-02b.md).
 
 ## Oku

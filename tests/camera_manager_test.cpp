@@ -43,18 +43,19 @@ int main(int argc,char** argv){QApplication app(argc,argv);try{
     app.setStyle("Fusion");QFile theme(":/resources/theme.qss");check(theme.open(QIODevice::ReadOnly),"product theme resource");app.setStyleSheet(QString::fromUtf8(theme.readAll()));
     QTemporaryDir dir(QDir::currentPath()+"/icm-camera-ui-XXXXXX");check(dir.isValid(),"UI artifact directory");
     const auto evidence=qEnvironmentVariable("VISIONFLOW_TEST_ARTIFACTS",QDir::currentPath()+"/../ccux/ccux-05")+"/camera";QDir().mkpath(evidence);
-    if(app.arguments().contains("--physical-settings")){
+    if(app.arguments().contains("--physical-settings") || app.arguments().contains("--physical-basler-settings")){
+        const bool basler=app.arguments().contains("--physical-basler-settings");
         const auto path=dir.filePath("physical.vfproject");QFile file(path);check(file.open(QIODevice::WriteOnly),"physical temporary project");file.write("{}");file.close();
         CameraSession jobs;MeasurementWorkspace ws(path,"physical-settings",[&]{return !jobs.busy();});
         CameraManager view([&]{return &ws;},[]{return true;},jobs,dir.filePath("physical.ini"));view.resize(1400,900);view.show();view.scan();waitUi([&]{return !jobs.busy();});
         auto* table=view.findChild<QTableWidget*>("cameraDevices");int selected=-1;
-        for(int i=0;i<table->rowCount();++i)if(table->item(i,2)->text()=="02A2220000627")selected=i;
-        check(selected>=0,"physical Opto row discovered");table->selectRow(selected);
+        for(int i=0;i<table->rowCount();++i)if(table->item(i,2)->text()==(basler?"23102780":"02A2220000627"))selected=i;
+        check(selected>=0,"exact physical camera row discovered");table->selectRow(selected);
         auto* add=view.findChild<QPushButton*>("cameraRegister");check(add->isEnabled(),"physical Ekle enabled");add->click();
         auto* read=view.findChild<QPushButton*>("cameraSettingsRead");check(read->isEnabled(),"physical settings read enabled without native acquisition");read->click();waitUi([&]{return !jobs.busy();});
         auto* apply=view.findChild<QPushButton*>("cameraApply");check(apply->isEnabled(),qPrintable(view.findChild<QLabel*>("cameraStatus")->text()));
         apply->click();waitUi([&]{return !jobs.busy();});check(view.findChild<QLabel*>("cameraStatus")->text().contains("doğrulandı ve kaydedildi"),qPrintable(view.findChild<QLabel*>("cameraStatus")->text()));
-        for(const auto size:{QSize(1400,900),QSize(850,600)}){view.resize(size);QApplication::processEvents();view.findChild<QScrollArea*>()->ensureWidgetVisible(read);QApplication::processEvents();check(CameraFlowSmokeAudit::save(view,evidence+QString("/physical-settings-%1.png").arg(size.width())),"physical settings screenshot");}
+        for(const auto size:{QSize(1400,900),QSize(850,600)}){view.resize(size);QApplication::processEvents();view.findChild<QScrollArea*>()->ensureWidgetVisible(read);QApplication::processEvents();check(CameraFlowSmokeAudit::save(view,evidence+QString("/physical-%1-settings-%2.png").arg(basler?"basler":"opto").arg(size.width())),"physical settings screenshot");}
         QTextStream(stdout)<<"PASS physical Camera Manager: scan -> select -> Ekle -> read -> current-value apply/save; temporary project only; "<<view.findChild<QLabel*>("cameraReadback")->text()<<'\n';return 0;
     }
     bool gate=true;int count=0;bool missing=false;bool ambiguous=false;bool reversed=false;bool multiRoute=false;bool attributed=false;bool partialProducer=false;

@@ -141,8 +141,10 @@ script adaptörü veya bütün markalar için baştan yeni framework yapılmayac
 ## 6. Basler geometri ve feature farkları
 
 [Model belgesi](https://docs.baslerweb.com/aca1920-40um): default 1920×1200,
-full 1936×1216. Canlı Width/Height/Offset readback henüz yok. İlk uygulama aktif
-ROI'yi okuyup gösterecek; otomatik full-sensor değişikliği yapmayacak. İleride
+full 1936×1216. ICM-BAS-02a fiziksel readback: aktif 1920×1200, offset 8/8,
+sensör 1936×1216. Ayar yolu aktif ROI'yi okur; otomatik full-sensor değişikliği yapmaz.
+Binning/reverse reported, mevcut decimation erişimi unknown kalır; bu bilgi
+kalibrasyon/edinim izni oluşturmaz. İleride
 ROI düzenleme gerekiyorsa ayrıca açık uygulama/readback ve model invalidation ister.
 
 Geometri alanları px etiketi, gerçek/istenen ayrımı ve uyuşmazlık denetimi ister.

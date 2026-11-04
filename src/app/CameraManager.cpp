@@ -226,7 +226,8 @@ void CameraManager::controls(){
     bool expAvailable=false,settingsAvailable=false;QString settingsReason;
     if(route){const auto& device=rows_[row].discovery->industrial->routes[routes_->currentIndex()];
         expAvailable=ExperimentalOecsAcquisition::available(device,runtime_->text().trimmed());
-        settingsReason=CameraSettingsService::unavailableReason(device,factory_,runtime_->text().trimmed());
+        const auto settingsRuntime=device.identity.vendor=="Basler"?findChild<QLineEdit*>("cameraBaslerRuntime")->text().trimmed():runtime_->text().trimmed();
+        settingsReason=CameraSettingsService::unavailableReason(device,factory_,settingsRuntime);
         settingsAvailable=settingsReason.isEmpty();}
     runtime_->setEnabled(idle);
     for(const auto& name:QStringList{"cameraProducers","cameraProducerEnable","cameraProducerDisable","cameraProducerRemove","cameraBaslerRuntime","cameraRuntimeDependencies_oecs","cameraRuntimeDependencies_basler","cameraRuntimeChoose_oecs","cameraRuntimeChoose_basler","cameraRuntimeSave_oecs","cameraRuntimeSave_basler"})findChild<QWidget*>(name)->setEnabled(idle);
@@ -364,7 +365,7 @@ void CameraManager::settings(bool apply){
     clearFrame();
     desired_={};if(apply){bool a=false,b=false;double us=exposure_->text().toDouble(&a),db=gain_->text().toDouble(&b);if(!a || !b || !std::isfinite(us) || !std::isfinite(db))throw std::runtime_error("Sayısal exposure/gain gerekli.");desired_={us,db};}
     if(rows_[i].discovery && rows_[i].discovery->industrial && routes_->currentIndex()>=0)local_.setRoute(rows_[i].discovery->industrial->identity,rows_[i].discovery->industrial->routes[routes_->currentIndex()].route);
-    settings_=ws->cameraSettings(rows_[i].camera->id,ws->environment().revision,local_,factory_,gate_,runtime_->text().trimmed(),experimentalApi_);
+    settings_=ws->cameraSettings(rows_[i].camera->id,ws->environment().revision,local_,factory_,gate_,rows_[i].camera->physical->vendor=="Basler"?findChild<QLineEdit*>("cameraBaslerRuntime")->text().trimmed():runtime_->text().trimmed(),experimentalApi_);
     settingsApply_=apply;settingsClosing_=false;settings_->connect(timeout_->value());job_=jobs_.begin(SessionJob::Connection);status_->setText("Gerçek kamera ayarları okunuyor…");controls();
 }
 void CameraManager::settingsReadback(){
