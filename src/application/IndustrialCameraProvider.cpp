@@ -1,5 +1,7 @@
 #include "IndustrialCameraProvider.hpp"
 #include "WebcamAdapter.hpp"
+#include "BaslerCameraSettings.hpp"
+#include "CameraLocalConfiguration.hpp"
 #include <stdexcept>
 namespace visionflow {
 std::unique_ptr<AcquisitionAdapter> CameraProviderFactory::webcam(const MeasurementCamera& camera,
@@ -11,6 +13,21 @@ std::unique_ptr<AcquisitionAdapter> CameraProviderFactory::webcam(const Measurem
 }
 namespace {
 void require(bool ok,const char* reason){if(!ok)throw std::runtime_error(reason);}
+class BaslerPreviewProvider final:public IndustrialCameraProvider {
+    CameraRuntimeLocation runtime_=CameraLocalConfiguration(qEnvironmentVariable("VISIONFLOW_CAMERA_CONFIGURATION")).runtime("basler");
+public:
+    IndustrialCameraCapabilities capabilities(const DiscoveredDevice& d) const override {
+        const auto reason=runtime_.error.isEmpty()?BaslerCameraSettings::unavailableReason(d,runtime_.path):runtime_.error;
+        if(!reason.isEmpty())return {false,false,false,false,false,false,reason};
+        return {true,true,true,false,true,true,"Basler G1 trigger correlation not verified; production disabled",true};
+    }
+    std::unique_ptr<IndustrialCameraBackend> create(const IndustrialCameraRequest& r) const override {
+        return BaslerAcquisition::create(r,runtime_.path,runtime_.dependencies);
+    }
+};
+std::shared_ptr<const IndustrialCameraProvider> productProvider(const DiscoveredDevice& d){
+    return d.identity.vendor=="Basler"?std::make_shared<BaslerPreviewProvider>():nullptr;
+}
 class CheckedBackend final : public CameraWorkerBackend {
 public:
     CheckedBackend(std::shared_ptr<const IndustrialCameraProvider> provider,IndustrialCameraRequest request,bool configurationOnly=false)
@@ -32,7 +49,7 @@ public:
         if(ticket.operation==CameraOperation::Grab){
             require(result.frame.has_value(),"Industrial grab has no owned frame.");
             const auto& f=*result.frame;
-            require(f.image.metadata().experimentalAcquisition.isEmpty(),"Experimental frame cannot enter admitted acquisition.");
+            require(!request_.profile.requested.trigger.enabled || f.image.metadata().experimentalAcquisition.isEmpty(),"Experimental frame cannot enter admitted acquisition.");
             require(f.sourceId==request_.sourceId && f.image.size()==request_.setup.geometry.resolution &&
                     f.image.format()==PixelFormat::Gray8,"Industrial frame source/geometry/format mismatch.");
         }
@@ -70,25 +87,29 @@ std::unique_ptr<CameraWorkerSession> CameraProviderFactory::resolveOpen(Industri
 }
 IndustrialCameraCapabilities CameraProviderFactory::capabilities(const DiscoveredDevice& device) const {
     device.validate();if(injected_)return injected_->capabilities(device);
+    if(const auto provider=productProvider(device))return provider->capabilities(device);
     return {false,false,false,false,false,false,"Native backend edinimi doğrulanmadı / SDK adapter'ı kullanılamıyor."};
 }
 std::unique_ptr<CameraWorkerSession> CameraProviderFactory::configure(const IndustrialCameraRequest& request,CameraLeaseUse use) const {
     request.validate();const auto caps=capabilities(request.device);
-    require(injected_ && caps.open && caps.configure,"Industrial configuration backend unavailable.");
+    const auto provider=injected_?injected_:productProvider(request.device);
+    require(provider && caps.open && caps.configure,"Industrial configuration backend unavailable.");
     return std::make_unique<CameraWorkerSession>(request.device.identity,use,request.sourceId,FrameQueueMode::ProductionFifo,
-        [provider=injected_,request]{return std::make_unique<CheckedBackend>(provider,request,true);},2,PreviewAcquisitionKind::SequentialSingleFrame,CameraLeaseArbiter::Ticket{},request.camera.id.value);
+        [provider,request]{return std::make_unique<CheckedBackend>(provider,request,true);},2,PreviewAcquisitionKind::SequentialSingleFrame,CameraLeaseArbiter::Ticket{},request.camera.id.value);
 }
 std::unique_ptr<CameraWorkerSession> CameraProviderFactory::open(const IndustrialCameraRequest& request,
     CameraLeaseUse use,FrameQueueMode mode,size_t capacity,CameraLeaseArbiter::Ticket lease) const {
     request.validate();const auto caps=capabilities(request.device);
-    require(injected_ && caps.open && caps.configure,"Industrial backend unavailable; no admitted native factory.");
+    const auto provider=injected_?injected_:productProvider(request.device);
+    require(provider && caps.open && caps.configure,"Industrial backend unavailable; no admitted native factory.");
+    require(injected_ || (use!=CameraLeaseUse::Runtime && mode==FrameQueueMode::PreviewLatest),"Basler production/G1 admission unavailable");
     require(mode==FrameQueueMode::PreviewLatest ? caps.preview : caps.softwareTrigger,
             "Industrial preview/software trigger capability unavailable.");
     require(mode==FrameQueueMode::PreviewLatest ? !request.profile.requested.trigger.enabled :
             (request.profile.requested.trigger.enabled && request.profile.requested.trigger.source=="Software"),
             "Preview and software capture require separate profile/session admission.");
     return std::make_unique<CameraWorkerSession>(request.device.identity,use,request.sourceId,mode,
-        [provider=injected_,request]{return std::make_unique<CheckedBackend>(provider,request);},capacity,
+        [provider,request]{return std::make_unique<CheckedBackend>(provider,request);},capacity,
         mode==FrameQueueMode::PreviewLatest && caps.continuous ? PreviewAcquisitionKind::NativeContinuous : PreviewAcquisitionKind::SequentialSingleFrame,std::move(lease),request.camera.id.value);
 }
 }

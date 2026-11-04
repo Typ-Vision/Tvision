@@ -3,6 +3,7 @@
 #include <QSplitter>
 #include "application/ExperimentalOecsAcquisition.hpp"
 #include "application/AcquisitionPolicy.hpp"
+#include "hardware/PylonSession.hpp"
 #include <QCheckBox>
 #include <QComboBox>
 #include <QDoubleValidator>
@@ -114,11 +115,12 @@ CameraManager::CameraManager(std::function<MeasurementWorkspace*()> context,std:
     for(const auto& backend:QStringList{"oecs","basler"}){
         auto* field=backend=="oecs"?runtime_:baslerRuntime;
         auto* deps=new QLineEdit(local_.runtime(backend).dependencies.join(QDir::listSeparator()));deps->setObjectName("cameraRuntimeDependencies_"+backend);af->addRow(backend+" bağımlılık dizinleri (;)",deps);
-        auto* info=text((backend=="basler"?QString("Adaptör derlenmemiş. "):oecsSdkBindingCompiled()?QString{}:QString("Adaptör derlenmemiş. "))+local_.runtime(backend).error,"cameraRuntimeStatus_"+backend);av->addWidget(info);
+        const bool compiled=backend=="basler"?PylonSession::available():oecsSdkBindingCompiled();
+        auto* info=text((compiled?QString{}:QString("Adaptör derlenmemiş. "))+local_.runtime(backend).error,"cameraRuntimeStatus_"+backend);av->addWidget(info);
         auto* browse=button(av,backend+" DLL seç…","cameraRuntimeChoose_"+backend);
         connect(browse,&QPushButton::clicked,this,[this,field]{if(jobs_.busy() || previewActive_ || settings_ || !gate_())return;const auto path=QFileDialog::getOpenFileName(this,"Windows x64 runtime",field->text(),"Runtime (*.dll)");if(!path.isEmpty())field->setText(path);});
         auto* save=button(av,backend+" runtime yolunu hatırla","cameraRuntimeSave_"+backend);
-        connect(save,&QPushButton::clicked,this,[this,backend,field,deps,info]{attempt([&]{if(jobs_.busy() || previewActive_ || settings_ || !gate_())throw std::runtime_error("Önce Stop/close gerekli.");local_.setRuntime(backend,field->text().trimmed(),deps->text().split(QDir::listSeparator(),Qt::SkipEmptyParts));info->setText((backend=="basler" || !oecsSdkBindingCompiled()?QString("Adaptör derlenmemiş. "):QString{})+"Yerel kayıt saklandı. Bağımlılık değişikliğinde uygulamayı yeniden başlatın.");status_->setText("Runtime kaydedildi; Stop/close sonrası yeniden açın. Bağımlılık değişikliğinde yeniden başlatın.");});});
+        connect(save,&QPushButton::clicked,this,[this,backend,field,deps,info,compiled]{attempt([&]{if(jobs_.busy() || previewActive_ || settings_ || !gate_())throw std::runtime_error("Önce Stop/close gerekli.");local_.setRuntime(backend,field->text().trimmed(),deps->text().split(QDir::listSeparator(),Qt::SkipEmptyParts));info->setText((compiled?QString{}:QString("Adaptör derlenmemiş. "))+"Yerel kayıt saklandı. Bağımlılık değişikliğinde uygulamayı yeniden başlatın.");status_->setText("Runtime kaydedildi; Stop/close sonrası yeniden açın. Bağımlılık değişikliğinde yeniden başlatın.");});});
     }
     connect(runtime_,&QLineEdit::textChanged,this,[this]{settingsKnown_=false;exposure_->clear();gain_->clear();controls();});
     auto* commands=new QHBoxLayout;layout->addLayout(commands);settingsRead_=button(commands,"Ayarları oku","cameraSettingsRead");apply_=button(commands,"Uygula ve kaydet","cameraApply");

@@ -6,11 +6,14 @@
 #include <atomic>
 #include <thread>
 #include <stdexcept>
+#include <limits>
+#include <QMap>
+#include <optional>
 #ifdef VISIONFLOW_WITH_PYLON_SDK
 #include "PylonHeaders.hpp"
 #include <cstddef>
 #include <type_traits>
-// Only the ABI actually crossing this read-only boundary is admitted.
+// Only the ABI actually crossing this native boundary is admitted.
 static_assert(sizeof(void*)==8 && sizeof(size_t)==8 && sizeof(GENAPIC_RESULT)==4);
 static_assert(sizeof(_Bool)==1 && sizeof(EGenApiNodeType)==4 && sizeof(EGenApiAccessMode)==4);
 static_assert(PYLONC_PACKING==8 && GENAPIC_PACKING==8 && FILENAME_MAX==260);
@@ -39,6 +42,14 @@ bool matches(const QJsonObject& d,const PylonSelector& s){return d["vendor"]==s.
     X(GenApiIntegerGetMin) X(GenApiIntegerGetMax) X(GenApiIntegerGetInc) \
     X(GenApiFloatGetMin) X(GenApiFloatGetMax) X(GenApiFloatGetUnit) \
     X(GenApiEnumerationGetNumEntries) X(GenApiEnumerationGetEntryByIndex) X(GenApiEnumerationEntryGetSymbolic)
+  #define STREAM_FUNCTIONS(X) \
+      X(PylonDeviceGetStreamGrabber) X(PylonStreamGrabberOpen) X(PylonStreamGrabberClose) \
+      X(PylonStreamGrabberGetWaitObject) X(PylonStreamGrabberSetMaxNumBuffer) X(PylonStreamGrabberSetMaxBufferSize) \
+      X(PylonStreamGrabberGetPayloadSize) X(PylonStreamGrabberPrepareGrab) X(PylonStreamGrabberFinishGrab) \
+      X(PylonStreamGrabberRegisterBuffer) X(PylonStreamGrabberDeregisterBuffer) X(PylonStreamGrabberQueueBuffer) \
+      X(PylonStreamGrabberStartStreamingIfMandatory) X(PylonStreamGrabberStopStreamingIfMandatory) \
+      X(PylonStreamGrabberFlushBuffersToOutput) X(PylonStreamGrabberRetrieveResult) X(PylonWaitObjectWait) \
+      X(PylonDeviceExecuteCommandFeature) X(PylonDeviceFeatureFromString)
 #endif
 }
 struct PylonSession::Impl {
@@ -49,8 +60,18 @@ struct PylonSession::Impl {
     QLibrary library;
     bool initialized=false,opened=false;
     PYLON_DEVICE_HANDLE device=nullptr;
+      PYLON_STREAMGRABBER_HANDLE stream=nullptr;
+      PYLON_STREAMBUFFER_HANDLE buffer=nullptr;
+      PYLON_WAITOBJECT_HANDLE wait=nullptr;
+      bool streamOpen=false,prepared=false,streaming=false,acquiring=false,software=false,fault=false;
+      QByteArray storage;
+      QSize size;QPoint offset;
+      std::optional<uint64_t> lastBlock;
+      QMap<QString,QString> original;
+      QString originalSelector;
 #define DECLARE(name) decltype(&::name) name=nullptr;
     PYLON_FUNCTIONS(DECLARE)
+      STREAM_FUNCTIONS(DECLARE)
 #undef DECLARE
     void check(GENAPIC_RESULT result,const char* stage){
         if(result==GENAPI_E_OK)return;
@@ -157,7 +178,7 @@ QJsonObject PylonSession::open(const QString& path,const QStringList& dependenci
             const auto n=p.node(map,pair.first);require(n["value"]==pair.second,"Pylon remote identity mismatch");}
         auto serial=p.node(map,"DeviceSerialNumber");if(!serial.contains("value"))serial=p.node(map,"DeviceID");
         require(serial["value"]==selector.serial,"Pylon remote serial mismatch");
-        return {{"identity",actualId},{"enumerated",devices},{"nodes",nodes},{"abi",abi()},{"exclusive",true},{"featureWrites",false},{"acquisitionImplemented",false}};
+        return {{"identity",actualId},{"enumerated",devices},{"nodes",nodes},{"abi",abi()},{"exclusive",true},{"featureWrites",false},{"acquisitionImplemented",true},{"triggerAssociationVerified",false}};
     }catch(...){const auto failure=std::current_exception();close();std::rethrow_exception(failure);}
 #else
     Q_UNUSED(path);Q_UNUSED(dependencies);throw std::runtime_error("Pylon C binding unavailable; configure VISIONFLOW_PYLON_INCLUDE_DIR");
@@ -170,7 +191,8 @@ CameraFeature PylonSession::feature(const QString& name) const {
     require(p.opened,"Pylon session not open");NODEMAP_HANDLE map=nullptr;
     p.check(p.PylonDeviceGetNodeMap(p.device,&map),"PylonDeviceGetNodeMap");
     const auto n=p.node(map,name.toUtf8().constData());const auto a=n["access"].toString();
-    f.access=a=="missing"?FeatureAccess::Missing:a=="RW"?FeatureAccess::ReadWrite:a=="RO"?FeatureAccess::ReadOnly:
+    // GenApi NI means not implemented; NA remains unknown/unavailable.
+    f.access=(a=="missing" || a=="NI")?FeatureAccess::Missing:a=="RW"?FeatureAccess::ReadWrite:a=="RO"?FeatureAccess::ReadOnly:
         a=="WO"?FeatureAccess::WriteOnly:FeatureAccess::Unavailable;
     const auto type=n["type"].toString(),value=n["value"].toString();
     f.type=type=="integer"?FeatureType::Integer:type=="float"?FeatureType::Float:type=="boolean"?FeatureType::Boolean:
@@ -191,7 +213,7 @@ CameraFeature PylonSession::feature(const QString& name) const {
     return f;
 }
 void PylonSession::writeFeature(const QString& name,const FeatureValue& value){
-    require(QStringList{"ExposureTime","Gain","ExposureAuto","GainAuto"}.contains(name),"Unsupported pylon basic setting");
+    require(QStringList{"ExposureTime","Gain","ExposureAuto","GainAuto","TriggerSelector","TriggerMode","TriggerSource","AcquisitionMode"}.contains(name),"Unsupported pylon setting");
     const auto f=feature(name);validateFeatureWrite(f,value);if(featureEquivalent(f,value))return;
 #ifdef VISIONFLOW_WITH_PYLON_SDK
     auto& p=*impl_;NODEMAP_HANDLE map=nullptr;NODE_HANDLE node=nullptr;
@@ -208,12 +230,119 @@ void PylonSession::writeFeature(const QString& name,const FeatureValue& value){
 void PylonSession::close(){
     auto& p=*impl_;require(p.owner==std::this_thread::get_id(),"Pylon owner thread required");
 #ifdef VISIONFLOW_WITH_PYLON_SDK
+    stop();
     if(p.opened){p.check(p.PylonDeviceClose(p.device),"PylonDeviceClose");p.opened=false;}
     if(p.device){p.check(p.PylonDestroyDevice(p.device),"PylonDestroyDevice");p.device=nullptr;}
     if(p.initialized){p.check(p.PylonTerminate(true),"PylonTerminate");p.initialized=false;}
     // QLibrary returns false while another binding still references the same DLL.
     if(p.library.isLoaded())p.library.unload();
     p.runtime.unload();if(p.claimed){p.claimed=false;sdkBusy.clear();}
+#endif
+}
+
+void PylonSession::start(bool software,const std::function<int()>& budget){
+    auto& p=*impl_;require(p.owner==std::this_thread::get_id(),"Pylon owner thread required");
+#ifdef VISIONFLOW_WITH_PYLON_SDK
+    require(p.opened && !p.streamOpen && !p.fault,"Pylon idle healthy session required");
+    try{
+        require(budget()>0,"Pylon acquisition cancelled/expired");
+#define BIND_STREAM(name) p.name=reinterpret_cast<decltype(p.name)>(p.library.resolve(#name));require(p.name!=nullptr,"Missing pylon stream export: " #name);
+        STREAM_FUNCTIONS(BIND_STREAM)
+#undef BIND_STREAM
+        const auto value=[&](const char* n){const auto f=feature(n);require(f.readable(),"Pylon acquisition feature unreadable");return std::get<QString>(f.value);};
+        const auto set=[&](const char* n,const QString& v){if(!p.original.contains(n))p.original[n]=value(n);
+            p.check(p.PylonDeviceFeatureFromString(p.device,n,v.toUtf8().constData()),n);require(value(n)==v,"Pylon acquisition readback differs");};
+        require(value("PixelFormat")=="Mono8","Pylon requires clean Mono8");
+        const auto chunk=feature("ChunkModeActive");require(chunk.access==FeatureAccess::Missing || (chunk.readable() && chunk.type==FeatureType::Boolean && !std::get<bool>(chunk.value)),"Pylon chunk payload unsupported");
+        p.originalSelector=value("TriggerSelector");
+        const auto selector=feature("TriggerSelector");
+        require(selector.entries.contains("FrameStart"),"Pylon FrameStart required");
+        for(const auto& bank:selector.entries.keys()){
+            p.check(p.PylonDeviceFeatureFromString(p.device,"TriggerSelector",bank.toUtf8().constData()),"Select trigger bank");
+            if(bank!="FrameStart")require(value("TriggerMode")=="Off","Other pylon trigger banks must be disabled");
+        }
+        p.check(p.PylonDeviceFeatureFromString(p.device,"TriggerSelector","FrameStart"),"Select FrameStart");
+        set("TriggerMode","Off");set("TriggerSource","Software");set("AcquisitionMode","Continuous");
+        if(software){set("AcquisitionStatusSelector","FrameTriggerWait");set("TriggerMode","On");}
+        const auto integer=[&](const char* n){const auto f=feature(n);require(f.readable() && f.type==FeatureType::Integer,"Pylon geometry integer required");return std::get<qint64>(f.value);};
+        const auto w=integer("Width"),h=integer("Height"),x=integer("OffsetX"),y=integer("OffsetY");
+        require(w>0 && h>0 && w<=65536 && h<=65536 && x>=0 && y>=0 && x<=65536 && y<=65536,"Invalid pylon geometry");
+        p.size=QSize(int(w),int(h));p.offset=QPoint(int(x),int(y));
+        p.check(p.PylonDeviceGetStreamGrabber(p.device,0,&p.stream),"Get stream");require(p.stream,"Null pylon stream");
+        p.check(p.PylonStreamGrabberOpen(p.stream),"Open stream");p.streamOpen=true;
+        size_t payload=0;p.check(p.PylonStreamGrabberGetPayloadSize(p.device,p.stream,&payload),"Payload size");
+        require(payload>=quint64(w)*quint64(h) && payload<=512ULL*1024*1024,"Invalid pylon payload bound");
+        p.storage.resize(qsizetype(payload));
+        p.check(p.PylonStreamGrabberSetMaxNumBuffer(p.stream,1),"Buffer count");
+        p.check(p.PylonStreamGrabberSetMaxBufferSize(p.stream,payload),"Buffer capacity");
+        p.check(p.PylonStreamGrabberPrepareGrab(p.stream),"Prepare stream");p.prepared=true;
+        p.check(p.PylonStreamGrabberRegisterBuffer(p.stream,p.storage.data(),payload,&p.buffer),"Register buffer");require(p.buffer,"Null pylon buffer");
+        p.check(p.PylonStreamGrabberGetWaitObject(p.stream,&p.wait),"Get stream wait");require(p.wait,"Null pylon wait");
+        p.check(p.PylonStreamGrabberQueueBuffer(p.stream,p.buffer,&p),"Queue buffer");
+        p.check(p.PylonStreamGrabberStartStreamingIfMandatory(p.stream),"Start transport");p.streaming=true;
+        p.acquiring=true;p.check(p.PylonDeviceExecuteCommandFeature(p.device,"AcquisitionStart"),"AcquisitionStart");
+        p.software=software;p.lastBlock.reset();require(budget()>0,"Pylon start cancelled/expired");
+    }catch(...){p.fault=true;throw;}
+#else
+    Q_UNUSED(software);Q_UNUSED(budget);throw std::runtime_error("Pylon stream binding unavailable");
+#endif
+}
+PylonFrame PylonSession::grab(const std::function<int()>& budget){
+    auto& p=*impl_;require(p.owner==std::this_thread::get_id(),"Pylon owner thread required");
+#ifdef VISIONFLOW_WITH_PYLON_SDK
+    require(p.acquiring && !p.fault,"Pylon stream not healthy/started");
+    try{
+        const auto remaining=[&]{const int n=budget();require(n>0,"Pylon grab cancelled/timeout; close required");return n;};
+        remaining();
+        if(p.software){
+            PylonGrabResult_t unexpected{};_Bool ready=false;
+            p.check(p.PylonStreamGrabberRetrieveResult(p.stream,&unexpected,&ready),"Check unsolicited frame");
+            require(!ready,"Unsolicited pylon frame; epoch ambiguous");
+            while(true){remaining();const auto status=feature("AcquisitionStatus");
+                require(status.readable() && status.type==FeatureType::Boolean,"Pylon trigger-ready unavailable");
+                if(std::get<bool>(status.value))break;
+                std::this_thread::sleep_for(std::chrono::milliseconds(1));}
+            remaining();p.check(p.PylonDeviceExecuteCommandFeature(p.device,"TriggerSoftware"),"TriggerSoftware");
+        }
+        _Bool signalled=false;
+        while(!signalled)p.check(p.PylonWaitObjectWait(p.wait,uint32_t(std::min(20,remaining())),&signalled),"Wait frame");
+        remaining();PylonGrabResult_t r{};_Bool ready=false;
+        p.check(p.PylonStreamGrabberRetrieveResult(p.stream,&r,&ready),"Retrieve frame");
+        require(ready && r.Status==Grabbed && r.ErrorCode==0,"Incomplete/failed pylon frame");
+        require(r.hBuffer==p.buffer && r.pBuffer==p.storage.constData() && r.Context==&p,"Foreign pylon buffer/source");
+        require(r.PayloadType==PayloadType_Image && r.PixelType==PixelType_Mono8,"Packed/chunk/non-Mono8 pylon payload rejected");
+        require(QSize(r.SizeX,r.SizeY)==p.size && QPoint(r.OffsetX,r.OffsetY)==p.offset && r.PaddingX>=0 && r.PaddingY==0,"Pylon frame geometry differs");
+        const quint64 stride=quint64(r.SizeX)+quint64(r.PaddingX),bytes=stride*quint64(r.SizeY);
+        require(bytes==r.PayloadSize && bytes<=quint64(p.storage.size()),"Pylon stride/payload overflow/mismatch");
+        require(r.BlockID!=std::numeric_limits<uint64_t>::max() && (!p.lastBlock || r.BlockID>*p.lastBlock),"Pylon invalid/duplicate/reset/wrapped BlockID");
+        // USB BlockID starts at zero; increasing IDs detect duplicates, never prove freshness.
+        PylonFrame frame{QByteArray(p.storage.constData(),qsizetype(bytes)),p.size,p.offset,r.BlockID,r.TimeStamp,size_t(stride)};
+        p.lastBlock=r.BlockID;remaining();
+        p.check(p.PylonStreamGrabberQueueBuffer(p.stream,p.buffer,&p),"Return pylon buffer");remaining();return frame;
+    }catch(...){p.fault=true;throw;}
+#else
+    Q_UNUSED(budget);throw std::runtime_error("Pylon stream binding unavailable");
+#endif
+}
+void PylonSession::stop(){
+    auto& p=*impl_;require(p.owner==std::this_thread::get_id(),"Pylon owner thread required");
+#ifdef VISIONFLOW_WITH_PYLON_SDK
+    if(p.acquiring){p.check(p.PylonDeviceExecuteCommandFeature(p.device,"AcquisitionStop"),"AcquisitionStop");p.acquiring=false;}
+    if(p.streaming){p.check(p.PylonStreamGrabberStopStreamingIfMandatory(p.stream),"Stop transport");p.streaming=false;}
+    if(p.prepared){
+        p.check(p.PylonStreamGrabberFlushBuffersToOutput(p.stream),"Flush host buffers (not freshness evidence)");
+        _Bool ready=true;int count=0;while(ready){require(++count<=2,"Pylon drain exceeded registered buffer count");PylonGrabResult_t r{};p.check(p.PylonStreamGrabberRetrieveResult(p.stream,&r,&ready),"Drain returned buffers");}
+        p.check(p.PylonStreamGrabberFinishGrab(p.stream),"Finish stream");p.prepared=false;
+    }
+    if(p.buffer){p.check(p.PylonStreamGrabberDeregisterBuffer(p.stream,p.buffer),"Deregister buffer");p.buffer=nullptr;}
+    if(p.streamOpen){p.check(p.PylonStreamGrabberClose(p.stream),"Close stream");p.streamOpen=false;}
+    if(!p.originalSelector.isEmpty()){
+        const auto set=[&](const char* n,const QString& v){p.check(p.PylonDeviceFeatureFromString(p.device,n,v.toUtf8().constData()),"Restore pylon acquisition setting");require(featureEquivalent(feature(n),v),"Pylon restore readback mismatch");};
+        set("TriggerSelector","FrameStart");if(p.original.contains("TriggerMode"))set("TriggerMode","Off");
+        for(const auto& n:QStringList{"TriggerSource","AcquisitionMode","AcquisitionStatusSelector","TriggerMode"})if(p.original.contains(n))set(n.toUtf8().constData(),p.original[n]);
+        set("TriggerSelector",p.originalSelector);p.original.clear();p.originalSelector.clear();
+    }
+    p.storage.clear();
 #endif
 }
 }

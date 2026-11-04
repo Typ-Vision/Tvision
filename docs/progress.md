@@ -6,10 +6,10 @@
 
 ## Devam noktası
 
-**[ICM-BAS-02a](archive/2026-11-04-icm-bas-02a.md):** Basler ayar/rollback;
-ON 7/OFF 5 hedefli; fiziksel restore/iki boyut UI geçti.
-Decimation unknown; edinim/kalibrasyon izni yok. Tam suite yok (kullanıcı).
-Sıradaki ICM-BAS-02b; VF-08 bekler.
+**[ICM-BAS-02b](archive/2026-11-05-icm-bas-02b.md):** Basler edinim/önizleme;
+G1 açık, production kapalı. Kanıt arşivde.
+Tam suite yok (kullanıcı). Devam: G1 sahne/USB/bariyer; BAS-03/VF-08 bekler.
+[02a ayar/rollback](archive/2026-11-04-icm-bas-02a.md).
 [ICM-BAS-01](archive/2026-11-04-icm-bas-01.md): pylon C/G0, Viewer busy/reopen.
 [CAM-OECS-01](archive/2026-11-04-cam-oecs-01.md): SDK/px/readback düzeltildi.
 

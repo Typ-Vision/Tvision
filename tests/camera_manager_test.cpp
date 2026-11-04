@@ -4,6 +4,7 @@
 #include "app/CalibrationOverview.hpp"
 #include "CameraSettingsFixture.hpp"
 #include "OecsExperimentalFixture.hpp"
+#include "hardware/PylonSession.hpp"
 #include <QFile>
 #include <QGroupBox>
 #include <QComboBox>
@@ -43,8 +44,10 @@ int main(int argc,char** argv){QApplication app(argc,argv);try{
     app.setStyle("Fusion");QFile theme(":/resources/theme.qss");check(theme.open(QIODevice::ReadOnly),"product theme resource");app.setStyleSheet(QString::fromUtf8(theme.readAll()));
     QTemporaryDir dir(QDir::currentPath()+"/icm-camera-ui-XXXXXX");check(dir.isValid(),"UI artifact directory");
     const auto evidence=qEnvironmentVariable("VISIONFLOW_TEST_ARTIFACTS",QDir::currentPath()+"/../ccux/ccux-05")+"/camera";QDir().mkpath(evidence);
-    if(app.arguments().contains("--physical-settings") || app.arguments().contains("--physical-basler-settings")){
-        const bool basler=app.arguments().contains("--physical-basler-settings");
+    if(app.arguments().contains("--physical-settings") || app.arguments().contains("--physical-basler-settings") || app.arguments().contains("--physical-basler-preview") || app.arguments().contains("--physical-basler-unplug")){
+        const bool unplug=app.arguments().contains("--physical-basler-unplug");
+        const bool preview=unplug || app.arguments().contains("--physical-basler-preview");
+        const bool basler=preview || app.arguments().contains("--physical-basler-settings");
         const auto path=dir.filePath("physical.vfproject");QFile file(path);check(file.open(QIODevice::WriteOnly),"physical temporary project");file.write("{}");file.close();
         CameraSession jobs;MeasurementWorkspace ws(path,"physical-settings",[&]{return !jobs.busy();});
         CameraManager view([&]{return &ws;},[]{return true;},jobs,dir.filePath("physical.ini"));view.resize(1400,900);view.show();view.scan();waitUi([&]{return !jobs.busy();});
@@ -55,6 +58,29 @@ int main(int argc,char** argv){QApplication app(argc,argv);try{
         auto* read=view.findChild<QPushButton*>("cameraSettingsRead");check(read->isEnabled(),"physical settings read enabled without native acquisition");read->click();waitUi([&]{return !jobs.busy();});
         auto* apply=view.findChild<QPushButton*>("cameraApply");check(apply->isEnabled(),qPrintable(view.findChild<QLabel*>("cameraStatus")->text()));
         apply->click();waitUi([&]{return !jobs.busy();});check(view.findChild<QLabel*>("cameraStatus")->text().contains("doğrulandı ve kaydedildi"),qPrintable(view.findChild<QLabel*>("cameraStatus")->text()));
+        if(preview){
+            auto e=ws.environment();auto s=ws.cameraSettings(e.current.cameras.first().id,e.revision,CameraLocalConfiguration(dir.filePath("physical.ini")),{});s->connect();
+            waitUi([&]{s->poll();return s->state()==CameraState::Connected || s->state()==CameraState::Fault;});check(s->state()==CameraState::Connected,qPrintable(s->error()));
+            const auto actual=s->snapshot().actual;s->stop();waitUi([&]{return s->shutdownState()==ShutdownState::Ready;});s.reset();
+            // Temporary acceptance descriptor only; no physical lens/plane or mm admission.
+            auto& setup=e.current.setups.first();const auto previous=setup;setup.pending=false;setup.opticalProfile="unverified acceptance fixture";setup.workingPlane="unverified acceptance fixture";setup.geometry=actual.geometry.descriptor();setup=previous.revised(setup);
+            ws.replace(e.current,e.revision);view.refresh();
+            auto* live=view.findChild<QPushButton*>("cameraLive");check(live && live->isEnabled(),"Basler native preview enabled");live->click();
+            auto* image=static_cast<ImageViewer*>(view.findChild<QGraphicsView*>("cameraPreviewImage"));
+            waitUi([&]{return image->hasImage() || !jobs.busy();});check(image->hasImage(),qPrintable(view.findChild<QLabel*>("cameraStatus")->text()));
+            for(const auto size:{QSize(1400,900),QSize(850,600)}){view.resize(size);QApplication::processEvents();check(CameraFlowSmokeAudit::save(view,evidence+QString("/physical-basler-preview-%1.png").arg(size.width())),"Basler preview screenshot");}
+            if(unplug){
+                QTextStream(stdout)<<"READY_FOR_UNPLUG: exact Basler native preview running"<<Qt::endl;
+                QElapsedTimer unplugBudget;unplugBudget.start();while(jobs.busy() && unplugBudget.elapsed()<180000){QApplication::processEvents();QTest::qWait(10);}
+                check(!jobs.busy(),"unplug cleanup must finish within observation window");
+                const auto status=view.findChild<QLabel*>("cameraStatus")->text();check(status.contains("Görüntü alınamadı") && !image->hasImage(),qPrintable(status));
+                check(CameraFlowSmokeAudit::save(view,evidence+"/physical-basler-unplug-error.png"),"unplug screenshot");
+                QTextStream(stdout)<<"PASS physical unplug: preview failed and drained; raster cleared; "<<status<<Qt::endl;return 0;
+            }
+            view.stop();waitUi([&]{return !jobs.busy();});check(!image->hasImage(),"Basler Stop clears preview");
+            live->click();waitUi([&]{return image->hasImage() || !jobs.busy();});check(image->hasImage(),"Basler explicit preview reopen");view.stop();waitUi([&]{return !jobs.busy();});
+            QTextStream(stdout)<<"PASS physical Basler: native continuous preview, two sizes, Stop, explicit reopen; temporary unverified optical fixture; no production/mm admission\n";return 0;
+        }
         for(const auto size:{QSize(1400,900),QSize(850,600)}){view.resize(size);QApplication::processEvents();view.findChild<QScrollArea*>()->ensureWidgetVisible(read);QApplication::processEvents();check(CameraFlowSmokeAudit::save(view,evidence+QString("/physical-%1-settings-%2.png").arg(basler?"basler":"opto").arg(size.width())),"physical settings screenshot");}
         QTextStream(stdout)<<"PASS physical Camera Manager: scan -> select -> Ekle -> read -> current-value apply/save; temporary project only; "<<view.findChild<QLabel*>("cameraReadback")->text()<<'\n';return 0;
     }
@@ -85,7 +111,7 @@ int main(int argc,char** argv){QApplication app(argc,argv);try{
     view.findChild<QLineEdit*>("cameraBaslerRuntime")->setText(runtimeFixture);
     view.findChild<QPushButton*>("cameraRuntimeSave_basler")->click();
     check(CameraLocalConfiguration(dir.filePath("local.ini")).runtime("basler").path==QFileInfo(runtimeFixture).canonicalFilePath(),"runtime UI saves only machine-local path");
-    check(view.findChild<QLabel*>("cameraRuntimeStatus_basler")->text().contains("derlenmemiş"),"runtime found does not grant an uncompiled adapter");
+    check(view.findChild<QLabel*>("cameraRuntimeStatus_basler")->text().contains("derlenmemiş")==!PylonSession::available(),"runtime selection preserves real build capability");
     for(const auto size:{QSize(1400,900),QSize(850,600)}){
         view.resize(size);QApplication::processEvents();
         auto* sdkScroll=view.findChild<QScrollArea*>();sdkScroll->ensureWidgetVisible(view.findChild<QPushButton*>("cameraRuntimeSave_basler"));QApplication::processEvents();

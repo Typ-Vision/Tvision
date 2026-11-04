@@ -19,7 +19,7 @@ Kamera/kalibrasyon/Runtime: [başlatıcı/restart](docs/architecture/camera-inte
 - Image File/Webcam; Camera Manager keşif/kayıt ve Mono8 profil taslağı.
   Industrial kaynak kayıtlı kamera/setup/profile bağlanır; edinim ortak worker/provider
   yolundadır. Opto/OECS ve Basler acA1920-40um USB ayarları gerçek readback ile
-  kaydedilir; Basler ayar yolu pylon C kullanır, edinim izni ayrıdır.
+  kaydedilir; Basler pylon C önizleme var, G1/production kapalıdır.
   Industrial Load çevrimdışıdır. Tam native kabul olmadan production kapalıdır;
   COE-U komutları OECS edinim yolunu seçer.
 

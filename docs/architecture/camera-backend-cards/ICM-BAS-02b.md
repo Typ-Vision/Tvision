@@ -1,6 +1,8 @@
 # ICM-BAS-02b — Basler edinim, preview, trigger ve G1
 
-Durum: Planlandı. Bağlı: [ICM-BAS-02a](ICM-BAS-02a.md).
+Durum: Yazılım/önizleme uygulandı; fiziksel G1 açık.
+[Kapanış ve kanıt](../../archive/2026-11-05-icm-bas-02b.md).
+Bağlı: [ICM-BAS-02a](ICM-BAS-02a.md).
 Sonraki: [ICM-BAS-03](ICM-BAS-03.md).
 
 ## Oku
@@ -42,3 +44,27 @@ Kanıt: `build/icm/bas-02b/`. Belirsiz korelasyon G1'i açık bırakır.
 
 Kapsam dışı: hardware trigger/PTP, renk/packed dönüşüm, GigE, eşzamanlı kamera,
 OECS engelini kapatma, G3/G4/robot/PLC fiziksel kabulü.
+
+## Basler korelasyon kararı — 5 Kasım 2026
+
+Exact exclusive acA1920-40um USB oturumunda tek kayıtlı buffer ve worker üzerinde
+tek bekleyen komut kullanılır. FrameStart/Software, diğer tetik bankalarının Off
+olması ve FrameTriggerWait readback'i denetlenir. Preview Continuous/Trigger Off
+ayrı oturumdur; her kare untrusted provenance taşır. Etkin ROI/geometri zaten
+setup ile eşleşmelidir; edinim yolu ROI değiştirmez. Settings-only giriş yalnız
+exposure/gain/auto yazar.
+
+USB BlockID 0 geçerlidir; UINT64_MAX, duplicate, geriye gidiş/reset ve wrap ret
+verir. Artan ID yalnız bu negatifleri yakalar, command→frame kanıtı değildir.
+Timeout, cancel, command/queue hatası veya unsolicited frame oturumu zehirler;
+Stop başarılı olsa bile aynı hatalı nesnede Start/Grab yapılamaz. Ortak worker
+generation'ı geç başarıyı eler, gerçek close/drain ve lease karantinasını taşır.
+Host flush yalnız buffer temizliğidir; yeniden Start/reopen G1 sağlamaz.
+
+[Üretici C rehberi](https://docs.baslerweb.com/pylonapi/c/programmingguide)
+USB kamera FIFO'sunun eski kareleri önce verdiğini, stream restart'ta BlockID'nin
+0'a döndüğünü ve flush sonrası ID'nin invalid olabildiğini açıklar. Bu nedenle
+device-side eski exposure/command/FIFO bariyeri exact firmware için belgelenip
+sahne/olay ve kopma kabulüyle doğrulanana kadar **softwareTrigger capability ve
+Runtime production kapalıdır**. Manuel tek/100 tetik başarısı bu açığı kapatmaz;
+ICM-BAS-03 önkoşulu henüz sağlanmadı.

@@ -1,6 +1,6 @@
 # Kamera SDK ve Basler uygulama kartları
 
-4 Kasım 2026 · CAM-PLAN-03. Durum: **ICM-BAS-02a ayar/readback/rollback ve fiziksel geri yükleme geçti; tam suite kullanıcı isteğiyle koşulmadı**.
+5 Kasım 2026 · CAM-PLAN-03. Durum: **ICM-BAS-02b edinim/önizleme uygulandı; G1 açık, production kapalı. Tam suite kullanıcı isteğiyle koşulmadı**.
 Kullanıcı kararı: Basler **pylon C API**; uygulama C++20/Qt/MinGW olarak kalır.
 [Ana plan](../camera-backend-activation-plan.md),
 [önceki analiz](../../archive/2026-11-04-cam-analysis-01.md).
@@ -11,7 +11,7 @@ Kullanıcı kararı: Basler **pylon C API**; uygulama C++20/Qt/MinGW olarak kal�
 | 2 | [CAM-OECS-01](CAM-OECS-01.md) | CAM-SDK-01 | Uygulandı; hedefli ON/OFF geçti |
 | 3 | [ICM-BAS-01](ICM-BAS-01.md) | Önceki iki kart; Basler fiziksel erişimi | Uygulandı; native G0, ON 6 + startup, OFF 10 geçti |
 | 4 | [ICM-BAS-02a](ICM-BAS-02a.md) | ICM-BAS-01/G0 | Uygulandı; ON 7/OFF 5 hedefli, fiziksel scalar restore ve iki boyut UI |
-| 5 | [ICM-BAS-02b](ICM-BAS-02b.md) | ICM-BAS-02a | Planlandı |
+| 5 | [ICM-BAS-02b](ICM-BAS-02b.md) | ICM-BAS-02a | Yazılım/önizleme uygulandı; tek/100 tetik geçti; G1 açık |
 | 6 | [ICM-BAS-03](ICM-BAS-03.md) | ICM-BAS-02b/G1 + mevcut ortak G2 | Planlandı |
 
 ## Ortak uygulama ve kabul
