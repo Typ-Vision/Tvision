@@ -7,20 +7,23 @@
 ## Devam noktası
 
 **[VF07-A](archive/2026-11-04-vf07-a.md):** Result cache, V4 Properties,
-Dashboard global Stop ve revizyon etiketleri uygulandı; hedefli kabul kayıtta.
-Tam ON/OFF kullanıcı talimatıyla atlandı. K2 operatör teyidi açık → VF-08.
+Dashboard Stop/revizyon; hedefli kabul kayıtta.
+Tam ON/OFF kullanıcı talimatıyla atlandı. K2 kullanıcı teyidi tamam → VF-08.
 [Kart](architecture/communication-v4/cards/VF07-A.md).
 
-[VF-07](archive/2026-11-04-vf-07.md): TCP/exact ACK yazılımı arşivde.
+[Kamera analizi](archive/2026-11-04-cam-analysis-01.md): SDK'sız build, px/1×1.
+Devam: kamera planı; VF-08 bekler.
+
+[VF-07](archive/2026-11-04-vf-07.md): TCP/exact ACK.
 [VF-06](archive/2026-11-04-vf-06.md): toplu Auto/rollback.
 [VF-05](archive/2026-11-03-vf-05.md): istemci/HELLO.
 
-[VF-04a](archive/2026-11-03-vf-04a.md): editor9 provider düzeldi;
-[VF-04](archive/2026-11-03-vf-04.md) arşivde, TCP A/B VF-08’de.
+[VF-04a](archive/2026-11-03-vf-04a.md): provider;
+[VF-04](archive/2026-11-03-vf-04.md): TCP A/B → VF-08.
 
-[VF-03](archive/2026-11-03-vf-03.md): değişmez yayın; regresyon VF-04’te.
+[VF-03](archive/2026-11-03-vf-03.md): değişmez yayın.
 [VF-02](archive/2026-11-02-vf-02.md): K1; ON/Pose UI VF-04’te.
-[VF-01](archive/2026-11-02-vf-01.md): şablon/restart/küçük ekran.
+[VF-01](archive/2026-11-02-vf-01.md): şablon/restart/UI.
 
 [COMM4-26](archive/2026-11-02-comm4-26.md): yazılım/ON/OFF/Qt arşivde.
 [Fiziksel devir](architecture/communication-v4/acceptance-comm4-26.md):
