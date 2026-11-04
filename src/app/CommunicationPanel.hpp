@@ -36,7 +36,7 @@ private:
     QLabel* clientStatus_;
     QLineEdit* clientLabel_;
     QString clientSignature_{"<unset>"};
-    QPushButton *run_,*automatic_,*manual_,*stop_;
+    QPushButton *run_,*automatic_,*manual_;
     std::optional<CommunicationMigrationInput> reviewedInput_;
     QString reviewedRequest_,workspacePath_,packagePath_;
     QByteArray planDigest_,manifestDigest_,pointerDigest_,ledgerDigest_;

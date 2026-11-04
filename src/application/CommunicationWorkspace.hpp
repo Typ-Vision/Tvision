@@ -75,6 +75,10 @@ public:
     void saveProfile(const CommunicationServerProfile&);
     void command(const QUuid&,const QUuid& expectedActivation,const QString&);
     void startAutomaticProduction();
+    void stopAll();
+    bool stopping() const {return stopping_;}
+    bool canSelectRecipe(const QUuid&) const;
+    QString recipeReadiness(const QUuid&) const;
     bool automaticProductionBusy() const {return batchActive_;}
     QString automaticProductionStatus() const {return batchStatus_;}
     void poll();
@@ -95,6 +99,9 @@ private:
     int batchIndex_=0;
     bool batchActive_=false, batchRollback_=false, batchEnabling_=false;
     QString batchStatus_;
+    bool stopping_=false;
+    QStringList stopErrors_;
+    void finishStop();
     QElapsedTimer batchTimer_;
     void owner() const;
     void maintenance() const;

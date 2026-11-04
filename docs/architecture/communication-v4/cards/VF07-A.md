@@ -1,10 +1,25 @@
 # VF07-A · K2 operatör akışı: Result, V4 Publish Data ve Dashboard Stop
 
-Durum: **analiz ve uygulama planı hazır; kodlama başlamadı**.
+Durum: **A–D uygulandı; hedefli yazılım kabulü kayıtta, K2 gerçek operatör teyidi açık**.
 Tarih: 4 Kasım 2026. Planı hazırlayan: Codex.
 Çalışma kökü: `D:/TVision`. İncelenen HEAD: `4505106` (VF-07).
 Önkoşul: VF-01–07 yazılım zinciri. Sonraki: **bu kart kapanışı ve K2 operatör tekrarı → VF-08/K3**.
 Kimlik: kullanıcının istediği **VF07-A**; VF-07'nin düzeltme/operatör kullanılabilirliği kartıdır.
+
+## Güncel teslim ve doğrulama kararı · 4 Kasım 2026
+
+Uygulayıcı: Codex. [Uygulama/kabul kaydı](../../../archive/2026-11-04-vf07-a.md).
+Kullanıcının bu oturumdaki açık talimatı: tüm ON/OFF testleri yapılmayacak.
+Bu talimat aşağıdaki planın tam ON/OFF yükümlülüğünü bu teslim için değiştirir;
+hedefli Release davranış/negatif/UI testleri ve iki boyutta görsel kontrol uygulanır.
+Geçmiş suite başarıları yeni koşum olarak sunulmaz. Native/fiziksel ve gerçek
+K2 operatör teyidi ayrıca açıktır; VF-08 otomatik başlatılmadı.
+
+Result seçimi/refresh ve target-only düzeltildi. Publish Data V4-only oldu;
+legacy veri roundtrip ve görünmeyen enabled korundu. Dashboard Stop tüm sahipleri
+kapsar, pending'i silmez. Revizyon seçici tarih/son/yüklü bilgisini taşır.
+Eski TCP NOK, aynı recipe11'de farklı dosyalardan tekrar üretildi (rice.jpg OK,
+P1.bmp NOK); kullanıcı makine kaydı değiştirilmedi.
 
 ## 1. Amaç ve kapsam
 
@@ -134,7 +149,7 @@ Bu, bildirilen aynı reçete değişim akışının tamamlayıcı düzeltmesidir
 | B | `PublishDataEditor.*`, MainWindow Properties commit, ProjectService yayın/assignment sınırı | V4-only UI, legacy no-op, atomic Apply ve typed slot testleri |
 | C | `CommunicationWorkspace.*`, `MainWindow.cpp/.hpp`, `MainWindowCommunication.cpp`, `CommunicationPanel.*`; mevcut StationRunController/RuntimeCoordinator portları | İki istasyon, batch iptal, drain/pending/ret yarış testleri |
 | D | `PublicationPublisher.*` mevcut metadata, `StationSavedRecipe`, composition liste portu ve Dashboard seçici | Tarih/son/yüklü etiketleri, stabil seçim, eski revizyon korunumu |
-| Kabul | `tests/multi_source_execution_test.cpp`, `tests/editor_publication_ui.cpp`, `tests/communication_workspace_ui_test.cpp`, `tests/dashboard_station_ui.cpp`, ilgili UI smoke'lar ve `CMakeLists.txt` | Hedefli ve tam ON/OFF sonuçları, iki viewport görselleri, K2 operatör akışı |
+| Kabul | `tests/multi_source_execution_test.cpp`, `tests/editor_publication_ui.cpp`, `tests/communication_workspace_ui_test.cpp`, `tests/dashboard_station_ui.cpp`, ilgili UI smoke'lar ve `CMakeLists.txt` | Hedefli Release sonuçları, iki viewport görselleri; tam ON/OFF istisnası ve K2 operatör kapısı kayıtta |
 
 Tek uygulayıcıyla sırayla yürüt. Önce hatayı testle sabitle; sonra A, B, C, D; ardından birleşik kabul. Dosya listesi ilk kodlama keşfinde bütün çağıranlarla kesinleştirilir. Yeni bağımlılık veya paralel uygulayıcı gerekmez.
 
@@ -164,16 +179,16 @@ Tek uygulayıcıyla sırayla yürüt. Önce hatayı testle sabitle; sonra A, B, 
 
 ## 9. Test ve kanıt planı
 
-Bu belge çalışmasında build/test yapılmaz. Uygulama kapanışında depo working-protocol gereği son kaynakta hedefli kontroller ve **tam Release UI ON/OFF** zorunludur. Mevcut test isimlerini `ctest -N` ile doğrula; regex'in gerçekten test seçtiğini kontrol et.
+Plan aşamasında build/test yapılmadı; uygulama kanıtı kapanış kaydındadır. Bu teslimde güncel kullanıcı talimatıyla tam Release ON/OFF çalıştırılmaz; son kaynakta etkilenen hedefli kontroller uygulanır. Mevcut test isimlerini `ctest -N` ile doğrula; regex'in gerçekten test seçtiğini kontrol et.
 
 İlk hedefler: `result_execution_contract`, `multi_source_execution`, `multi_source_target_only`, `multi_source_graph_contract`, `editor_target_only`, `ui_result_editor`, `ui_multi_source_editor`, `ui_assignment_editor`, `ui_publication_editor`, `ui_publication_v4`, `fixed_slot_publication_contract`, `publication_assignment_contract`, `publication_publish_contract`, `station_control_contract`, `station_recipe_selection_contract`, `station_recipe_selection_editor9_contract`, `ui_station_dashboard`, `ui_station_tcp`. Değişen çağıranların ek hedefleri de dahil edilir; eski legacy testler sessizce kapatılmaz.
 
 ```powershell
-cmake --build build/reference-ui -j 6
-cmake --build build/kmc9-core-off -j 6
-# Hedefli yeni/değişen testler geçtikten sonra:
-ctest --test-dir build/reference-ui --output-on-failure
-ctest --test-dir build/kmc9-core-off --output-on-failure
+cmake --build build/reference-ui --target visionflow result_execution_test communication_workspace_test -j 6
+# Mevcut hedefleri listele; göreve özel izole CTest girdilerini kullan:
+ctest --test-dir build/reference-ui -N -R 'result_execution|publication|station|multi_source'
+# Gerçek koşum dizinleri ve hedef/kanıt eşlemesi: build/vf07-a/acceptance.json
+# Tam ON/OFF ve OFF build bu teslimde kullanıcı talimatıyla atlandı.
 ```
 
 Yeni test INI, örnekler, hash manifesti, JSONL, ekran görüntüleri ve otomatik sonuç/checkpoint `build/vf07-a/` altında koşuma özel tutulur. Kullanıcının `config/local.ui.ini`, gerçek projeleri, makine kataloğu ve peer/state dosyaları değiştirilmez. Kullanıcı ekranındaki rice/88 örneği yalnız önceden tanımlanmış girdi/hash ile tekrarlandığında kabul kanıtıdır; yalnız ekran sayısı beklenen oracle sayılmaz.
@@ -190,7 +205,7 @@ Yeni test INI, örnekler, hash manifesti, JSONL, ekran görüntüleri ve otomati
 
 ## 10. Kapanış ve VF-08 kapısı
 
-**Kod kartı**, A–E kabulü, normal/küçük ekran kontrolü ve tam ON/OFF bitmeden kapatılmaz. Offscreen yazılım kanıtı native operatör veya fiziksel cihaz kabulü olarak sunulmaz. Bu kartın kapanışı ve K2 operatör teyidi olmadan VF-08'e geçilmez; VF-07'nin geçmiş yazılım kanıtı silinmez veya yeni koşum diye sunulmaz.
+**Yazılım teslimi**, güncel talimata göre hedefli kabul ve normal/küçük ekran kontrolüyle kaydedilir; tam ON/OFF istisnası yukarıdadır. K2 operatör kapısı ayrı açık tutulur. Offscreen yazılım kanıtı native operatör veya fiziksel cihaz kabulü olarak sunulmaz. Bu kartın kapanışı ve K2 operatör teyidi olmadan VF-08'e geçilmez; VF-07'nin geçmiş yazılım kanıtı silinmez veya yeni koşum diye sunulmaz.
 
 Uygulama kapanışında ayrı ayrı `uygulandı / hedefli test geçti / normal kullanıcı akışında doğrulandı` raporlanır. Kart, ana plan, güncel workspace kullanım sözleşmesi, simulator rehberi ve gerekiyorsa README kullanım adımları final davranışa göre güncellenir. Tarihli arşiv, progress ve arşiv indeksi; `python scripts/check-context-docs.py`, diff/link kontrolü ve tek `VF07-A: …` uygulama commit'i; push yok.
 

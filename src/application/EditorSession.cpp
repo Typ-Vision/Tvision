@@ -63,10 +63,16 @@ QString EditorSession::sourceForTool(const EditorContext& c,const QString& tool)
     return graph.toolSources.value(tool);
 }
 bool EditorSession::selectSource(const QString& source) {
+    if(source.isEmpty())return false; // Cycle tools do not select a camera.
     const auto it=sourceFrames.constFind(source);if(it==sourceFrames.cend()){frame.reset();return false;}frame=*it;return true;
 }
 QByteArray EditorSession::evaluationScope(const EditorContext& c,const QString& source) const {
     const bool multi=c.definition["editor"].toObject()["schemaVersion"].toInt()==9;
+    if(multi && source.isEmpty()) {
+        QCryptographicHash hash(QCryptographicHash::Sha256);
+        for(auto it=sourceFrames.cbegin();it!=sourceFrames.cend();++it){hash.addData(it.key().toUtf8());hash.addData(evaluationScope(c,it.key()));}
+        return sourceFrames.isEmpty()?QByteArray{}:hash.result();
+    }
     const auto selected=multi && !source.isEmpty() ? (sourceFrames.contains(source) ? std::optional<ImageFrame>(sourceFrames[source]):std::nullopt):frame;
     if(!selected)return {};
     const auto& m=selected->metadata();
@@ -99,9 +105,14 @@ TargetEvaluation EditorSession::evaluation(const EditorContext& c,const QString&
     const auto source=tool.isEmpty() ? (frame ? frame->metadata().sourceId:QString{}):sourceForTool(c,tool);
     const bool multi=c.definition["editor"].toObject()["schemaVersion"].toInt()==9;
     const auto selected=multi && !source.isEmpty() ? (sourceFrames.contains(source) ? std::optional<ImageFrame>(sourceFrames[source]):std::nullopt):frame;
-    if(!selected)throw std::runtime_error("Acquire this source first");
-    TargetEvaluation e{*selected,evaluationScope(c,source),{}};
-    for(auto it=cache_.cbegin();it!=cache_.cend();++it)if(it->signature==ExecutionService::toolSignature(c.definition,QFileInfo(c.path).absolutePath(),it.key(),evaluationScope(c,sourceForTool(c,it.key()))))e.cache[it.key()]=*it;
+    const auto raw=multi && source.isEmpty() && !sourceFrames.isEmpty()?std::optional<ImageFrame>(sourceFrames.first()):selected;
+    if(!raw)throw std::runtime_error("Önce Run Flow ile gerekli kaynakları ve araçları çalıştırın.");
+    TargetEvaluation e{*raw,evaluationScope(c,source),{}};
+    if(multi)e.sourceFrames=sourceFrames;
+    for(auto it=cache_.cbegin();it!=cache_.cend();++it){
+        const auto scope=evaluationScope(c,sourceForTool(c,it.key()));
+        if(it->signature==ExecutionService::toolSignature(c.definition,QFileInfo(c.path).absolutePath(),it.key(),scope)){e.cache[it.key()]=*it;e.scopes[it.key()]=scope;}
+    }
     return e;
 }
 void EditorSession::reconcile(const EditorContext& c) {

@@ -115,15 +115,17 @@ CycleResult ExecutionService::run(const QJsonObject& definition,const QString& d
         cycle.state=ExecutionState::Busy;QMap<QString,ToolResult> completed;bool error=false,stopped=false;MeasurementExecutionContext measurement;
         QMap<QString,QString> frameIds;QMap<QString,MeasurementExecutionContext> measurements;
         quint64 retainedBytes=0;
-        if(multi)for(const auto& source:graph.requiredSources)frameIds[source]=targetOnly ? targetOnly->frame.metadata().frameId:QUuid::createUuid().toString(QUuid::WithoutBraces);
+        if(multi)for(const auto& source:graph.requiredSources)frameIds[source]=targetOnly ? (targetOnly->sourceFrames.contains(source)?targetOnly->sourceFrames[source].metadata().frameId:targetOnly->frame.metadata().frameId):QUuid::createUuid().toString(QUuid::WithoutBraces);
         if(multi && graph.requiredSources.size()==1)cycle.frameId=frameIds.first();
         if(multi && frameSnapshot && graph.requiredSources.size()!=1)throw std::runtime_error("A single frame snapshot cannot represent multiple sources");
         if(targetOnly) {
-            if(multi && (graph.requiredSources.size()>1 || (!graph.requiredSources.isEmpty() && targetOnly->frame.metadata().sourceId!=graph.requiredSources.first())))throw std::runtime_error("Target raw frame source mismatch");
-            if(cycle.frameId.isEmpty() || cycle.cycleId.isEmpty())throw std::runtime_error("Önce görüntü al.");
-            if(resolver)measurement=resolver(targetOnly->frame);
+            const bool cycleTarget=multi && graph.toolSources.value(targetTool).isEmpty();
+            if(!cycleTarget && multi && (graph.requiredSources.size()>1 || (!graph.requiredSources.isEmpty() && targetOnly->frame.metadata().sourceId!=graph.requiredSources.first())))throw std::runtime_error("Target raw frame source mismatch");
+            if((!cycleTarget && cycle.frameId.isEmpty()) || cycle.cycleId.isEmpty())throw std::runtime_error("Önce görüntü al.");
+            if(cycleTarget)cycle.frameId.clear();
+            if(resolver && !cycleTarget)measurement=resolver(targetOnly->frame);
             for(auto it=targetOnly->cache.cbegin();it!=targetOnly->cache.cend();++it)
-                if(it->signature==toolSignature(definition,directory,it.key(),targetOnly->scope)){
+                if(it->signature==toolSignature(definition,directory,it.key(),targetOnly->scopes.value(it.key(),targetOnly->scope))){
                     auto cached=it->result;
                     // A matching transitive signature recertifies this immutable cached
                     // value for the current Editor request; no upstream tool is rerun.
@@ -134,11 +136,14 @@ CycleResult ExecutionService::run(const QJsonObject& definition,const QString& d
                     }
                     completed[it.key()]=cached;
                 }
-            if(multi && !graph.requiredSources.isEmpty()){
-                const auto raw=completed.value(graph.requiredSources.first()).outputs.value("image");
+            if(multi)for(const auto& source:graph.requiredSources){
+                const auto raw=completed.value(source).outputs.value("image");
                 const auto* image=std::get_if<ImageFrame>(&raw.data);
-                if(!raw.valid || !image || image->contentId()!=targetOnly->frame.contentId() ||
-                   image->processingId()!=targetOnly->frame.processingId() || raw.frameId!=cycle.frameId || raw.cycleId!=cycle.cycleId)
+                const auto expected=cycleTarget ? targetOnly->sourceFrames.constFind(source):targetOnly->sourceFrames.cend();
+                if(cycleTarget && expected==targetOnly->sourceFrames.cend())throw std::runtime_error(("Önce Run Flow ile gerekli kaynakları ve araçları çalıştırın: "+source).toStdString());
+                const auto& frame=cycleTarget?*expected:targetOnly->frame;
+                if(!raw.valid || !image || image->contentId()!=frame.contentId() ||
+                   image->processingId()!=frame.processingId() || raw.frameId!=frame.metadata().frameId || raw.cycleId!=cycle.cycleId)
                     throw std::runtime_error("Target raw frame differs from cached acquisition");
             }
         }
@@ -159,12 +164,12 @@ CycleResult ExecutionService::run(const QJsonObject& definition,const QString& d
                 QMap<QString,PortValue> inputs;bool unavailable=false;QStringList missing;
                 for(const auto& c:connections)if(c.targetTool==id) {
                     const auto source=completed.value(c.sourceTool);const auto value=source.outputs.value(c.sourcePort);
-                    if(t.kind!="result" && (source.state!=ExecutionState::Done || !value.valid || (value.port.frame!="cycle" && value.port.type!=PortType::AssignmentBundle && value.frameId!=(t.kind=="set_variables" && targetOnly ? targetOnly->frame.metadata().frameId:toolFrameId) && (t.kind!="set_variables" || targetOnly)) || value.cycleId!=cycle.cycleId)) {
+                    if(t.kind!="result" && (source.state!=ExecutionState::Done || !value.valid || (value.port.frame!="cycle" && value.port.type!=PortType::AssignmentBundle && value.frameId!=(t.kind=="set_variables" && targetOnly ? targetOnly->frame.metadata().frameId:toolFrameId) && (t.kind!="set_variables" || (targetOnly && !multi))) || value.cycleId!=cycle.cycleId)) {
                         unavailable=true;for(const auto& upstream:tools)if(upstream.id==c.sourceTool)missing.append(upstream.name);
                     }
                     else inputs[c.targetPort]=value;
                 }
-                if(unavailable) {r.state=ExecutionState::Skipped;r.message=targetOnly ? ("Girdi güncel değil: "+missing.join(", ")+". Önce görüntü al veya bağlı üst aracı çalıştır.") : "Upstream sonucu geçersiz/ERROR/SKIPPED";}
+                if(unavailable) {r.state=ExecutionState::Skipped;r.message=targetOnly ? ("Önce Run Flow ile gerekli kaynakları ve araçları çalıştırın: "+missing.join(", ")) : "Upstream sonucu geçersiz/ERROR/SKIPPED";}
                 else try {
                     if(t.kind=="publish_data") {
                         if(!publication_)throw std::runtime_error("Publication profile unresolved; load a profile snapshot");
@@ -189,6 +194,10 @@ CycleResult ExecutionService::run(const QJsonObject& definition,const QString& d
                         }
                         const auto evaluated=DecisionEvaluator::evaluate(rule,view);
                         r.state=ExecutionState::Done;r.message=decisionReasonKey(evaluated.reason);
+                        if(targetOnly && evaluated.decision==ResultDecision::NotEvaluated && evaluated.row>=0 && evaluated.row<rule.required.size()){
+                            const auto id=rule.required[evaluated.row].toolId;QString name=id;for(const auto& producer:tools)if(producer.id==id)name=producer.name;
+                            r.message+=" · Önce Run Flow ile gerekli kaynakları ve araçları çalıştırın: "+name;
+                        }
                         for(const auto& declared:outputPorts(t.kind)) {
                             PortValue p;p.port=declared;p.valid=true;p.cycleId=cycle.cycleId;p.evaluationId=cycle.evaluationId;p.method="result-boolean";p.methodVersion=1;
                             if(declared.id=="decision")p.data=resultDecisionKey(evaluated.decision);else p.data=evaluated.decision!=ResultDecision::NotEvaluated;

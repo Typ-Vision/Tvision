@@ -31,6 +31,18 @@ int main(int argc,char** argv){QCoreApplication app(argc,argv);try{
     // A second source is a legal cycle-level join, without pretending its geometry shares a frame.
     auto source2=p.addTool("image_file");auto blob2=p.addTool("blob");p.setConnections({{source,"image",blob,"image"},{source2,"image",blob2,"image"}});update(source2,[&](auto& t){t.parameters["path"]="part.png";});
     update(result,[&](auto& t){t.parameters=encodeResultConfig({ResultOperator::Any,{{blob,"found",4},{blob2,"found",4}}});});c=run();check(c.state==ExecutionState::Done && c.acquisitions==2 && c.decision()==ResultDecision::Ok,"ANY over two actual source Booleans");
+    context={p.project().id,p.path(),recipe,p.activeRecipe()->definition,{}};
+    check(session.acceptCycle(c,session.signature(context),context),"Accept two-source decision");
+    for(int i=0;i<20;++i){session.selectSource(session.sourceForTool(context,result));session.reconcile(context);}
+    check(session.cycle && session.cycle->decision()==ResultDecision::Ok,"Result survives selection and repeated refresh");
+    session.frame.reset();
+    partial=ExecutionService{}.runTool(context.definition,dir.path(),recipe,session.signature(context),{},result,session.evaluation(context,result));
+    check(partial.state==ExecutionState::Done && partial.decision()==ResultDecision::Ok && partial.acquisitions==0 && partial.frameId.isEmpty() && partial.cycleId==c.cycleId,"Cycle target uses both original sources without acquisition or Viewer frame");
+    auto stale=session.evaluation(context,result);stale.cache[blob].result.outputs["found"].cycleId="old-cycle";
+    check(ExecutionService{}.runTool(context.definition,dir.path(),recipe,session.signature(context),{},result,stale).decision()==ResultDecision::NotEvaluated,"Old Boolean cycle cannot become OK");
+    session.invalidateTool(context,blob);
+    partial=ExecutionService{}.runTool(context.definition,dir.path(),recipe,session.signature(context),{},result,session.evaluation(context,result));
+    check(partial.decision()==ResultDecision::NotEvaluated && partial.acquisitions==0,"Missing producer does not reacquire or reuse OK");
     for(auto type:{ApplicationType::DefectInspection,ApplicationType::Measurement,ApplicationType::RobotGuidance}) {
         auto frozen=*p.activeRecipe();frozen.applicationType=type;
         RuntimeService runtime(dir.filePath("runtime-"+typeKey(type)),dir.filePath("catalog.json"),RuntimeIdentity::localEngineer(),{},{},{},[](const Recipe& r){MultiSourceDependencies d;for(const auto& t:editorTools(r.definition))if(t.enabled && t.kind=="image_file")d.sources[t.id]={};return d;});
@@ -38,5 +50,13 @@ int main(int argc,char** argv){QCoreApplication app(argc,argv);try{
     }
     update(blob2,[](auto& t){t.enabled=false;});c=run();check(c.decision()==ResultDecision::NotEvaluated,"ANY true never hides later skipped source");
     auto wrong=editorTools(p.activeRecipe()->definition);for(auto& t:wrong)if(t.id==result)t.parameters=encodeResultConfig({ResultOperator::All,{{blob,"count",4}}});check(!validateGraph(wrong,editorConnections(p.activeRecipe()->definition)).valid(),"non Boolean picker bypass rejected");
+    update(blob2,[](auto& t){t.enabled=true;});
+    VariableDefinition first;first.name="First";first.type=VariableType::Boolean;const auto firstId=p.addVariable(first);first.name="Second";const auto secondId=p.addVariable(first);
+    const auto assignments=p.addTool("set_variables");update(assignments,[&](auto& t){t.parameters=encodeAssignmentConfig({assignments,1,{{firstId,ToolOutputAssignmentSource{blob,"found",4}},{secondId,ToolOutputAssignmentSource{blob2,"found",4}}}});});
+    context={p.project().id,p.path(),recipe,p.activeRecipe()->definition,{}};c=run();check(c.state==ExecutionState::Done && session.acceptCycle(c,session.signature(context),context),"Accept two-source assignment cycle");session.frame.reset();
+    partial=ExecutionService{}.runTool(context.definition,dir.path(),recipe,session.signature(context),{},assignments,session.evaluation(context,assignments));
+    check(partial.state==ExecutionState::Done && partial.acquisitions==0 && partial.tools.first().outputs["bundle"].valid,"Set Variables target-only joins real outputs from both sources without Viewer");
+    partial=ExecutionService{}.runTool(context.definition,dir.path(),recipe,session.signature(context),std::make_shared<std::atomic_bool>(true),assignments,session.evaluation(context,assignments));
+    check(partial.state==ExecutionState::Skipped && partial.tools.first().outputs.isEmpty(),"Cancelled cycle target does not expose outputs");
     QTextStream(stdout)<<"PASS: Result graph, actual control, save/reopen, missing, cancel, multi-source ANY, port codec\n";return 0;
 }catch(const std::exception& e){QTextStream(stderr)<<e.what()<<'\n';return 1;}}

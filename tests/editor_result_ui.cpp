@@ -13,6 +13,8 @@
 #include <QTemporaryDir>
 #include <QTextStream>
 #include <QKeyEvent>
+#include <QElapsedTimer>
+#include <QThread>
 #include <QTabWidget>
 #include <QStackedWidget>
 #include <stdexcept>
@@ -37,6 +39,18 @@ bool MainWindow::verifyResultUi(const QString& artifacts){
     w.selectPage("runtime");check(w.pages_->currentIndex()==w.pageIds_.indexOf("runtime"),"Runtime page actually selected");
     w.runtime_=std::make_unique<RuntimeService>(dir.filePath("production"),dir.filePath("calibrations.json"),RuntimeIdentity::localEngineer());w.runtimeCoordinator_=std::make_unique<RuntimeCoordinator>(*w.runtime_);w.runtimeCoordinator_->load(*w.service_.activeRecipe(),dir.path());w.runtimeCoordinator_->start();auto lease=w.runtimeCoordinator_->begin(RuntimeTrigger::Manual);auto c=RuntimeService::execute(lease,dir.filePath("calibrations.json"),{});check(c.decision()==ResultDecision::Ok,"actual Runtime decision");w.runtimeCoordinator_->finish(lease.ticket,c);ProductionResultCodec::validate(w.runtime_->records().first());w.runtimeResult_=c;w.runtimePath_=w.service_.path();w.runtimeWorkspaceKey_=w.measurementWorkspaceKey_;w.runtimeProjectId_=w.service_.project().id;w.refreshRuntime();w.showRuntimeResult();check(w.runtimeSummary_->text().contains("Genel karar: OK"),"Runtime read-only general decision");
     for(const auto size:{QSize(1400,900),QSize(850,600)}){w.resize(size);for(int i=0;i<3;++i)QApplication::processEvents();w.resize(size);QApplication::processEvents();check(w.size()==size,"exact Runtime capture size");check(w.grab().save(QDir(artifacts).filePath(QString("result-runtime-%1.png").arg(size.width()))),"Runtime screenshot");}
-    w.runtimeCoordinator_->stop();w.runtimeResult_.reset();w.showRuntimeResult();check(!w.runtimeSummary_->text().contains("Genel karar: OK"),"Stop clears old summary");w.close();QTextStream(stdout)<<"PASS: Result UI, Boolean picker, keyboard, empty rule, missing source, save/reopen, Editor/Runtime and two sizes\n";return true;
+    w.runtimeCoordinator_->stop();w.runtimeResult_.reset();w.showRuntimeResult();check(!w.runtimeSummary_->text().contains("Genel karar: OK"),"Stop clears old summary");w.selectPage("editor");w.service_.enableMultiSource();QString source;for(const auto& t:w.service_.tools())if(t.kind=="image_file")source=t.id;
+    const auto secondSource=w.service_.addTool("image_file"),secondBlob=w.service_.addTool("blob");w.service_.setImageFile(dir.filePath("part.png"),secondSource);
+    w.service_.setConnections({{source,"image",blob,"image"},{secondSource,"image",secondBlob,"image"}});
+    for(auto t:w.service_.tools())if(t.id==result){t.parameters=encodeResultConfig({ResultOperator::All,{{blob,"found",4},{secondBlob,"found",4}}});w.service_.updateTool(t);}
+    w.refreshWorkspace();w.selectTool(result);
+    w.runExecution({});QElapsedTimer wait;wait.start();while(w.editorSession_.busy() && wait.elapsed()<10000){QApplication::processEvents();QThread::msleep(1);}
+    check(!w.editorSession_.busy() && w.editorSession_.cycle && w.editorSession_.cycle->decision()==ResultDecision::Ok,"Schema9 Run Flow with Result selected");
+    for(int i=0;i<20;++i){w.selectTool(result);w.refreshEditor();w.refreshFlow();}
+    check(w.editorSession_.cycle && w.editorSession_.cycle->decision()==ResultDecision::Ok && w.matchInfo_->text().contains("Genel karar: OK"),"Result selection/20 refresh preserve displayed decision");
+    check(w.findChild<QComboBox*>("editorSourceSelector")->currentData().toString()==w.editorSession_.frame->metadata().sourceId,"Cycle tool preserves Viewer source selector identity");
+    const auto frameId=w.editorSession_.frame->metadata().frameId;w.runExecution(result);wait.restart();while(w.editorSession_.busy() && wait.elapsed()<10000){QApplication::processEvents();QThread::msleep(1);}
+    check(!w.editorSession_.busy() && w.editorSession_.cycle->decision()==ResultDecision::Ok && w.editorSession_.cycle->acquisitions==0 && w.editorSession_.frame->metadata().frameId==frameId,"Result Run Tool keeps acquired image and decision");
+    w.close();QTextStream(stdout)<<"PASS: Result UI, Boolean picker, keyboard, empty rule, missing source, save/reopen, Editor/Runtime and two sizes\n";return true;
 }
 }

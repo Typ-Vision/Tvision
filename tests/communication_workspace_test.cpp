@@ -53,6 +53,18 @@ int main(int argc,char** argv){QCoreApplication app(argc,argv);try{
     autoWorkspace.startAutomaticProduction();settle();check(run.drained() && run2.drained(),"Second-station failure rolls back all newly started owners");
     failSecond=false;autoWorkspace.startAutomaticProduction();settle();check(run.automatic() && run2.automatic(),"Batch prepares both actual station owners");
     autoWorkspace.command(station2,{},"stop");autoWorkspace.poll();failSecond=true;autoWorkspace.startAutomaticProduction();settle();check(run.automatic() && run2.drained(),"Failed batch preserves previously automatic station");autoWorkspace.command(station,{},"stop");autoWorkspace.poll();
+    failSecond=false;autoWorkspace.startAutomaticProduction();settle();
+    const auto beforeStop=snapshot->activation, beforeStop2=snapshot2->activation;
+    autoWorkspace.stopAll();autoWorkspace.poll();
+    check(run.drained() && run2.drained() && !run.automatic() && !run2.automatic(),"Global Stop includes both pre-existing automatic owners");
+    check(autoWorkspace.automaticProductionStatus()=="Durduruldu" && snapshot->activation==beforeStop && snapshot2->activation==beforeStop2,"Stop completes after real drain and preserves selections");
+    autoWorkspace.stopAll();autoWorkspace.poll();check(run.drained() && run2.drained(),"Repeated Stop is safe");
+    autoWorkspace.command(station,snapshot->activation,"run");autoWorkspace.poll();
+    check(!autoWorkspace.canSelectRecipe(station) && autoWorkspace.recipeReadiness(station).contains("Dashboard"),"Running selection blocked with correction");
+    autoWorkspace.startAutomaticProduction();autoWorkspace.stopAll();autoWorkspace.poll();
+    check(!autoWorkspace.automaticProductionBusy() && run.drained() && run2.drained() && !run.automatic() && !run2.automatic(),"Global Stop cancels batch including previously manual Run");
+    const auto missingStation=QUuid::createUuid();StationSourceSetup(identities).save(identities.load().revision,missingStation,"Unbound station",QUuid::createUuid(),"Unbound camera",imagePath);
+    autoWorkspace.stopAll();autoWorkspace.poll();check(run.drained() && run2.drained() && autoWorkspace.automaticProductionStatus().contains("Unbound station") && autoWorkspace.automaticProductionStatus().contains("tamamlanamadı"),"Unbound owner prevents false machine-wide Stop success");
     const auto generation=server.listenerGeneration();profile.port=53317;profile.enabled=true;workspace.saveProfile(profile);check(server.state()==CommunicationServerState::Disabled && server.port()==0 && server.listenerGeneration()==generation && profiles.load()->port==53317,"Next-start profile never alters live listener");
     check(workspace.history().contains("["),"Read-only empty history");server.beginShutdown(0);check(server.pollShutdown(),"Bounded close");
     CommunicationServerLifecycle badSelection(profiles,root.filePath("bad-selection-checkpoint"),nullptr,"Invalid migration pointer");check(badSelection.state()==CommunicationServerState::Fault && badSelection.port()==0 && profiles.load()->enabled,"Bad selection never opens enabled profile or overwrites its file");

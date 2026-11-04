@@ -39,11 +39,16 @@ bool MainWindow::verifyVf04Dashboard(const QString& artifacts){
         if(vf07){auto profile=communicationWorkspace_->profile();profile.enabled=true;profile.address="127.0.0.1";{QTcpServer probe;check(probe.listen(QHostAddress::LocalHost,0),"Available isolated listener port");profile.port=probe.serverPort();}communicationWorkspace_->saveProfile(profile);}
         bool restartNotice=false;try{communicationWorkspace_->previewRecipe(row().station.id,0);}catch(const std::exception& e){restartNotice=QString::fromUtf8(e.what()).contains("yeniden açın");}check(restartNotice,"Preview before restart explains required restart");
         const auto t=MachineSetup::defaults(communicationWorkspace_->sourceCatalogue().installation)[0];
-        image.fill(0);const auto recipePath=root.filePath("vf04-recipe.png");check(image.save(recipePath),"Distinct recipe raster");
+        image.fill(vf07?255:0);const auto recipePath=root.filePath("vf04-recipe.png");check(image.save(recipePath),"Distinct recipe raster");
         for(const auto& name:{QString("Yüzey A"),QString("Yüzey B"),QString("Uyumsuz C")}){
             service_.createProject(name,"",root.filePath(name+".vfproject"),"file");service_.createRecipe(name,"",ApplicationType::DefectInspection,"file");service_.enableMultiSource();service_.setImageFile(recipePath);
             if(vf07){const auto blob=service_.addTool("blob"),result=service_.addTool("result");for(auto tool:service_.tools())if(tool.id==blob){tool.parameters["minArea"]=1;service_.updateTool(tool);}else if(tool.id==result){tool.enabled=true;tool.parameters=encodeResultConfig({ResultOperator::All,{{blob,"found",4}}});service_.updateTool(tool);}}
             if(name=="Uyumsuz C"){service_.enableMultiSource();const auto extra=service_.addTool("image_file");service_.setImageFile(recipePath,extra);}
+            if(vf07 && name!="Uyumsuz C"){
+                const auto context=editorContext();const auto signature=editorSession_.signature(context);const auto expected=ExecutionService{}.run(context.definition,root.path(),context.recipeId,signature,{});
+                check(expected.state==ExecutionState::Done && expected.decision()==ResultDecision::Ok,"Same white image Editor oracle is OK before publication");
+                QTextStream(stdout)<<"VF07-A same-input oracle: recipe="<<name<<" Editor=OK; station/editor pixels both white 40x24; TCP must match OK\n";
+            }
             service_.setPublicationAssignments(PublicationAssignments{t.id,t.revision,{}});service_.save();refreshWorkspace();selectPage("editor");
             findChild<QPushButton*>("publishRecipeV4")->click();check(!communicationWorkspace_->recipes().isEmpty(),"Published through actual editor action");
         }
@@ -54,9 +59,9 @@ bool MainWindow::verifyVf04Dashboard(const QString& artifacts){
     check(dashboardStations_->rowCount()==1 && dashboardPublished_->count()==3,"Dashboard product catalogue");
     if(stage=="select"){
         check(!row().snapshot && dashboardLoad_->text()=="Reçete yükle","First selection label");
-        auto choose=[&](QString name){int index=-1;for(int n=0;n<dashboardPublished_->count();++n)if(dashboardPublished_->itemText(n).startsWith(name+" /"))index=n;check(index>=0,"Published choice");dashboardPublished_->setCurrentIndex(index);};
-        choose("Yüzey A");findChild<QPushButton*>("dashboardCheckRecipe")->click();check(dashboardStationMessage_->text().contains("Uyumlu"),"Read-only compatibility preview");
-        dashboardLoad_->click();check(row().snapshot && row().snapshot->selection.recipe.name=="Yüzey A","Dashboard loads A");check(row().snapshot->selection.recipe.definition["editor"].toObject()["schemaVersion"]==9,"Dashboard loads unchanged editor9 publication");const auto a=row().snapshot;
+        auto choose=[&](QString name){int index=-1;for(int n=0;n<dashboardPublished_->count();++n)if(dashboardPublished_->itemText(n).startsWith(name+" ·"))index=n;check(index>=0,"Published choice");dashboardPublished_->setCurrentIndex(index);};
+        choose("Yüzey A");findChild<QPushButton*>("dashboardCheckRecipe")->click();check(dashboardStationMessage_->text().contains("uyumlu",Qt::CaseInsensitive),"Read-only compatibility preview");
+        dashboardLoad_->click();check(row().snapshot && row().snapshot->selection.recipe.name=="Yüzey A","Dashboard loads A");check(row().snapshot->selection.recipe.definition["editor"].toObject()["schemaVersion"]==9,"Dashboard loads unchanged editor9 publication");const auto a=row().snapshot;refreshDashboardStations();check(dashboardPublished_->currentText().contains("Yüklü") && dashboardPublished_->currentText().contains("Son yayımlanan"),"Loaded and latest revision marked together");
         if(vf07){
             selectPage("communication");auto* panel=communicationPanel_;check(panel,"Normal Communication panel");findChild<QPushButton*>("clientEnroll")->click();
             const auto profilePath=root.filePath("vf07-client.json");panel->saveFile=[&](const QString&,const QString&,const QString&){return profilePath;};findChild<QPushButton*>("clientExport")->click();panel->saveFile={};check(QFile::exists(profilePath),"Profile exported through the normal panel");
@@ -79,7 +84,8 @@ bool MainWindow::verifyVf04Dashboard(const QString& artifacts){
         check(row().automatic && !communicationWorkspace_->remoteEnabled(),"Dashboard single action enables actual Run/Auto without Remote");refreshDashboardStations();
         check(dashboardAutoStatus_->text().contains("doğrulandı"),"Actual Auto completion displayed");
         for(const auto size:{QSize(1400,900),QSize(850,600)}){resize(size);QApplication::processEvents();check(grab().save(root.filePath(QString("vf04-dashboard-%1x%2.png").arg(size.width()).arg(size.height()))),"Dashboard visual");check(dashboardLoad_->isVisible() && dashboardLoad_->geometry().width()>100,"Load action reachable");}
-        communicationWorkspace_->command(row().station.id,{},"stop");communicationWorkspace_->poll();
+        check(!dashboardLoad_->isEnabled(),"Recipe change disabled during Auto");choose("Yüzey B");findChild<QPushButton*>("dashboardCheckRecipe")->click();check(dashboardStationMessage_->text().contains("Stop"),"Compatible running recipe explains Stop");
+        findChild<QPushButton*>("dashboardStop")->click();communicationWorkspace_->poll();refreshDashboardStations();check(row().runtime.mode==StationMode::Stopped && !row().automatic && dashboardLoad_->isEnabled(),"Dashboard Stop drains and enables load");
         const auto sourcePath=row().source->path;check(QFile::rename(sourcePath,sourcePath+".vf06-held"),"Hide product source");start->click();
         check(!row().automatic && row().runtime.mode==StationMode::Stopped && dashboardAutoStatus_->text().contains("Kaynak"),"Missing source explains correction and does not start");
         check(grab().save(root.filePath("vf06-dashboard-missing-source.png")),"Missing source visual");check(QFile::rename(sourcePath+".vf06-held",sourcePath),"Restore product source");

@@ -6,25 +6,23 @@
 
 ## Devam noktası
 
-**Sıradaki: [VF07-A](architecture/communication-v4/cards/VF07-A.md); yalnız plan hazır.**
-[Plan kaydı](archive/2026-11-04-vf07-a-plan.md): kapsam ve kabul.
-VF-08 için kart kapanışı ve K2 operatör teyidi gerekir.
+**[VF07-A](archive/2026-11-04-vf07-a.md):** Result cache, V4 Properties,
+Dashboard global Stop ve revizyon etiketleri uygulandı; hedefli kabul kayıtta.
+Tam ON/OFF kullanıcı talimatıyla atlandı. K2 operatör teyidi açık → VF-08.
+[Kart](architecture/communication-v4/cards/VF07-A.md).
 
-**[VF-07](archive/2026-11-04-vf-07.md): TCP/exact ACK yazılım kanıtı tamam.**
-OK/valid, bayat seçim, yanlış ACK, timeout/kopma geçti; operatörde Result/UI açık.
-Önce VF07-A → K2 tekrarı → VF-08/K3.
+[VF-07](archive/2026-11-04-vf-07.md): TCP/exact ACK yazılımı arşivde.
 [VF-06](archive/2026-11-04-vf-06.md): toplu Auto/rollback.
 [VF-05](archive/2026-11-03-vf-05.md): istemci/HELLO.
 
-**[VF-04a](archive/2026-11-03-vf-04a.md): editor9 provider düzeldi.**
-[VF-04](archive/2026-11-03-vf-04.md) korunur; TCP A/B VF-08’de.
+[VF-04a](archive/2026-11-03-vf-04a.md): editor9 provider düzeldi;
+[VF-04](archive/2026-11-03-vf-04.md) arşivde, TCP A/B VF-08’de.
 
-**[VF-03](archive/2026-11-03-vf-03.md):** değişmez yayın; tam regresyon VF-04’te.
-**[VF-02](archive/2026-11-02-vf-02.md):** K1 geçti; tam ON/Pose UI VF-04’te.
-**[VF-01](archive/2026-11-02-vf-01.md):** şablonlar; restart/küçük ekran geçti.
+[VF-03](archive/2026-11-03-vf-03.md): değişmez yayın; regresyon VF-04’te.
+[VF-02](archive/2026-11-02-vf-02.md): K1; ON/Pose UI VF-04’te.
+[VF-01](archive/2026-11-02-vf-01.md): şablon/restart/küçük ekran.
 
-**[COMM4-26](archive/2026-11-02-comm4-26.md)**: yazılım tamam;
-ON/OFF ve Qt kanıtı arşivde.
+[COMM4-26](archive/2026-11-02-comm4-26.md): yazılım/ON/OFF/Qt arşivde.
 [Fiziksel devir](architecture/communication-v4/acceptance-comm4-26.md):
 COMM4-PHYS-01/02 ve UI-NATIVE-01 açık. COMM4-21–25 arşivdedir.
 COMM4-17–20 geçmişi/kalıcı kararları COMM4-26 ve arşivdedir.

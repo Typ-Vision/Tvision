@@ -1,5 +1,6 @@
 #include "MainWindow.hpp"
 #include <QFormLayout>
+#include <algorithm>
 #include <QTableWidget>
 #include <QGridLayout>
 #include <QScrollArea>
@@ -102,9 +103,9 @@ bool MainWindow::verifyEndpointProfiles(const QString& artifacts) {
 void MainWindow::refreshDashboardStations(){
     if(!dashboardStations_ || !communicationWorkspace_)return;
     try{
-        dashboardAuto_->setEnabled(!communicationWorkspace_->automaticProductionBusy());
+        dashboardAuto_->setEnabled(!communicationWorkspace_->automaticProductionBusy() && !communicationWorkspace_->stopping());
         if(!communicationWorkspace_->automaticProductionStatus().isEmpty())dashboardAutoStatus_->setText(communicationWorkspace_->automaticProductionStatus());
-        const auto rows=communicationWorkspace_->stations();const int selected=dashboardStations_->currentRow();
+        const auto rows=communicationWorkspace_->stations();dashboardStop_->setEnabled(!rows.isEmpty());const int selected=dashboardStations_->currentRow();
         const QSignalBlocker block(dashboardStations_);dashboardStations_->setRowCount(rows.size());
         const auto catalogue=communicationWorkspace_->sourceCatalogue();
         for(int n=0;n<rows.size();++n){const auto& row=rows[n];QString camera="Eşleşmedi";
@@ -117,14 +118,33 @@ void MainWindow::refreshDashboardStations(){
         }
         if(!rows.isEmpty())dashboardStations_->selectRow(qBound(0,selected,int(rows.size())-1));
         dashboardStations_->resizeRowsToContents();
-        const auto recipes=communicationWorkspace_->recipes();QStringList signature;for(const auto& saved:recipes)if(saved.publicationOnly)signature<<QString::number(saved.selection.recipeKey)+saved.selection.revision.toString();
+        auto recipes=communicationWorkspace_->recipes();
+        std::sort(recipes.begin(),recipes.end(),[](const auto& a,const auto& b){
+            if(a.selection.recipe.id!=b.selection.recipe.id)return a.selection.recipe.id<b.selection.recipe.id;
+            if(a.publishedAt!=b.publishedAt)return a.publishedAt>b.publishedAt;
+            return a.selection.recipeKey>b.selection.recipeKey;
+        });
+        const int row=dashboardStations_->currentRow();const auto station=row>=0?QUuid(dashboardStations_->item(row,0)->data(Qt::UserRole).toString()):QUuid{};
+        quint32 loadedKey=0;for(const auto& view:rows)if(view.station.id==station && view.snapshot)loadedKey=view.snapshot->selection.recipeKey;
+        QStringList signature;for(const auto& saved:recipes)if(saved.publicationOnly)signature<<QString::number(saved.selection.recipeKey)+saved.selection.revision.toString()+saved.publishedAt.toString(Qt::ISODateWithMs)+saved.selection.recipe.name;
+        signature<<QString::number(loadedKey);
         if(signature.join('/')!=dashboardRecipeSignature_){
             dashboardRecipeSignature_=signature.join('/');const QSignalBlocker recipeBlock(dashboardPublished_);const auto recipeKey=dashboardPublished_->currentData().toUInt();dashboardPublished_->clear();
-            for(const auto& saved:recipes)if(saved.publicationOnly){dashboardPublished_->addItem(saved.selection.recipe.name+" / "+saved.selection.revision.toString(QUuid::WithoutBraces),saved.selection.recipeKey);dashboardPublished_->setItemData(dashboardPublished_->count()-1,saved.templateKey,Qt::UserRole+1);}
+            QSet<QString> seen;
+            for(const auto& saved:recipes)if(saved.publicationOnly){
+                const auto& selection=saved.selection;const auto time=saved.publishedAt.isValid()?saved.publishedAt.toLocalTime().toString("yyyy-MM-dd HH:mm:ss t"):QString("Tarih bilinmiyor");
+                QString text=selection.recipe.name+" · "+time+" · #"+QString::number(selection.recipeKey)+" · "+selection.revision.toString(QUuid::WithoutBraces).left(8);
+                if(!seen.contains(selection.recipe.id) && saved.publishedAt.isValid())text+=" · Son yayımlanan";
+                seen.insert(selection.recipe.id);if(selection.recipeKey==loadedKey)text+=" · Yüklü";
+                dashboardPublished_->addItem(text,selection.recipeKey);const int index=dashboardPublished_->count()-1;
+                dashboardPublished_->setItemData(index,saved.templateKey,Qt::UserRole+1);
+                dashboardPublished_->setItemData(index,selection.revision.toString(QUuid::WithoutBraces)+"\n"+saved.publishedAt.toUTC().toString(Qt::ISODateWithMs)+" UTC",Qt::ToolTipRole);
+            }
             const int index=dashboardPublished_->findData(recipeKey);if(index>=0)dashboardPublished_->setCurrentIndex(index);
         }
-        const int row=dashboardStations_->currentRow();const bool loaded=row>=0 && !dashboardStations_->item(row,0)->data(Qt::UserRole+1).toString().isEmpty();
-        dashboardLoad_->setText(loaded?"Reçete değiştir":"Reçete yükle");dashboardLoad_->setEnabled(row>=0 && dashboardPublished_->count()>0);
+        const bool loaded=loadedKey!=0;
+        dashboardLoad_->setText(loaded?"Reçete değiştir":"Reçete yükle");dashboardLoad_->setEnabled(row>=0 && dashboardPublished_->count()>0 && communicationWorkspace_->canSelectRecipe(station));
+        dashboardLoad_->setToolTip(communicationWorkspace_->recipeReadiness(station));
     }catch(const std::exception& e){dashboardStationMessage_->setText(QString::fromUtf8(e.what()));}
 }
 void MainWindow::loadDashboardRecipe(){
@@ -133,7 +153,7 @@ void MainWindow::loadDashboardRecipe(){
         const auto* row=dashboardStations_->item(n,0);
         communicationWorkspace_->selectRecipe(QUuid(row->data(Qt::UserRole).toString()),QUuid(row->data(Qt::UserRole+1).toString()),dashboardPublished_->currentData().toUInt(),dashboardPublished_->currentData(Qt::UserRole+1).toUInt());
         dashboardStationMessage_->setText("Uyumluluk doğrulandı. Reçete yüklendi; Auto kapalı, istasyon durduruldu.");
-    }catch(const std::exception& e){dashboardStationMessage_->setText("Reçete yüklenemedi: "+QString::fromUtf8(e.what()));}
+    }catch(const std::exception& e){dashboardStationMessage_->setText("Reçete yüklenemedi: "+QString::fromUtf8(e.what()).replace("STATION_NOT_DRAINED","Önce Dashboard → Stop; durdurmanın tamamlanmasını bekleyin").replace("PENDING_ACK","Bekleyen teslimi exact ACK / reconcile ile tamamlayın"));}
     refreshDashboardStations();
 }
 void MainWindow::refreshCommunication() {if(communicationPanel_)communicationPanel_->refresh();}

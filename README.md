@@ -1,8 +1,7 @@
 # VisionFlow Industrial Vision Suite
 
 C++20 / Qt Widgets / OpenCV endüstriyel görüntü işleme uygulaması.
-Üç applicationType aynı Editor, yürütme ve Runtime'ı kullanır.
-UI algoritma veya donanım SDK'sını doğrudan çağırmaz.
+Ortak Editor/Runtime; UI SDK çağırmaz.
 
 **Güncel görev, son doğrulama ve açık engeller [devir özetindedir](docs/progress.md).**
 
@@ -26,14 +25,13 @@ Kamera/kalibrasyon/Runtime: [başlatıcı/restart](docs/architecture/camera-inte
 
 Editor reçetesini açık düzenleme komutuyla açmak kameraları worker'da hazırlar;
 Görüntü al/Run Flow bağlantıyı paylaşır, Save korur, Stop ve kabul edilen çıkış kapatır.
-Program/proje/ekran restore bağlantı açmaz. Runtime Load çevrimdışıdır; Run kamera
-kümesini hazırlar, tümü hazırsa Running olur. Çevrimler bağlantıyı paylaşır; Stop
-kapanışı bekler, disk retry kamerayı tutmaz. Kalibrasyon listesi bağlantı açmaz;
+Restore bağlantı açmaz. Runtime Load çevrimdışıdır; Run tüm kameralar hazırsa
+Running olur. Çevrimler bağlantıyı paylaşır; Stop kapanışı bekler, disk retry
+kamerayı tutmaz. Kalibrasyon listesi bağlantı açmaz;
 canlı sihirbaz bağlantıyı paylaşır, Dosya/Stop/İptal/Kaydet-kullan kapatır.
 
-Hazırlık/keşif üretim kabulü değildir; gerçek sonuç olmadan PASS, skor veya
-robot pose gösterilmez. Robot ekranları hazırlıktır. Yazılım testleri fiziksel
-kamera, PLC/robot, lens, DPI, CUDA ve dağıtım kabulünü kapatmaz.
+Hazırlık üretim kabulü değildir; kanıtsız PASS/skor/pose gösterilmez.
+Fiziksel/native/CUDA/dağıtım sınırları [devir özetindedir](docs/progress.md).
 
 ## Yerel derleme ve test — PowerShell
 
@@ -56,13 +54,13 @@ cmake --build build/kmc9-core-off -j 6
 ctest --test-dir build/kmc9-core-off --output-on-failure
 ```
 
-CTest `-N` listeler; `-R` tam suite değildir. Socket testleri localhost ister.
+CTest `-N` listeler; `-R` hedeflidir. Socket testleri localhost ister.
 UI değişikliğinde Release, ilgili CTest ve iki boyutta görsel kontrol gerekir.
 
 `run-local.ps1` DLL yollarını yalnız başlattığı sürece ekler. Başka build için
 `-BuildDirectory build`, offscreen smoke için `-SmokeTest` verilebilir.
 Günlük giriş `./VisionFlow.cmd` veya Explorer çift tıklamasıdır; aynı betiği çağırır.
-Dal geçişi mevcut EXE'yi derlemez; kaynakla eşleştirmek için önce yukarıdaki build gerekir.
+Dal geçişi EXE'yi derlemez; önce build gerekir.
 EXE'yi tek başına kopyalamak doğrulanmış dağıtım değildir.
 
 OECS / GenTL probe komutları, sandbox sınırları ve kanıt bağlantıları
@@ -78,7 +76,8 @@ OECS / GenTL probe komutları, sandbox sınırları ve kanıt bağlantıları
 3. Reçeteyi Editor'da kur; kaynak/araçları bağla, görüntü al ve Run Flow çalıştır.
    Variables ve Set Variables kullanımı [değişken rehberindedir](docs/variables-usage.md).
    Toolbox → Result: Boolean kaynakları açıkça seçip ALL/ANY kuralını uygula,
-   ardından Enabled aç. Tek etkin Result genel OK/NOK/NOT_EVALUATED kararını
+   ardından Enabled aç. Result seçimi kararı silmez; Run Tool yeniden edinmez.
+   Tek etkin Result genel OK/NOK/NOT_EVALUATED kararını
    üretir; execution DONE/ERROR ve eski Measurement PASS/FAIL ayrı kalır.
    Eksik/atlanan kaynak önceki OK sonucunu korumaz. Editor dışarı göndermez.
    Properties → Çıkışlar sonuç listesinde gösterilecek portları seçer; tercih yerel
@@ -96,12 +95,13 @@ peer/epoch); Epoch yenile eskisini emekliye ayırır.
 
 Dashboard → Otomatik üretimi başlat: tüm istasyonlar ön kontrolden geçer, sırayla
 Run/Auto açılır. Eksiklerin düzeltme yolu gösterilir; hatada yeni başlayanlar durur.
-Remote Enable ayrıdır.
+Remote Enable ayrıdır. Yanındaki **Stop**, satır seçiminden bağımsız bütün istasyonları
+durdurur; bekleyen sonuçları silmez. Durdurma ve exact ACK tamamlanınca reçete değiştirilebilir.
 
 [V4 simülatörü](docs/architecture/communication-v4/simulator.md): `--stations`,
 `--trigger`, kopmada `--recover`. Kalıcı sayaç korunur; teslim exact ACKED ile biter.
 
-Communication tek V4 listener, station Run/Auto/Stop, aktif revision, kamera
+Communication tek V4 listener, station Run/Auto, aktif revision, kamera
 sahibi ve pending ACK durumunu gösterir. Restart Run/Auto açmaz; Remote Enable
 açılışta kapalıdır. V2/V3 sayfaları kaldırıldı; geçmiş salt okunurdur.
 [Kullanım/migration](docs/architecture/communication-v4/communication-workspace.md);
@@ -109,14 +109,12 @@ açılışta kapalıdır. V2/V3 sayfaları kaldırıldı; geçmiş salt okunurdu
 
 Profil bağlama, PGM+JSON, kalibrasyon, Runtime ve panel
 kullanımı [kısa kullanım rehberinde](docs/camera-runtime-usage.md). Restart
-edinim/Run başlatmaz; PLC/robot çıkışı kapalıdır. Test INI/görselleri
-build altında, yerel panel ayarları config/local.ui.ini içindedir.
+edinim/Run başlatmaz; PLC/robot çıkışı kapalıdır. Test INI/görselleri build/, yerel ayarlar config/local.ui.ini içindedir.
 
 ## Göreve göre okuma
 
 - Güncel görev ve engeller: [progress](docs/progress.md).
-- Aktif geliştirme: [CCUX plan indeksi](docs/architecture/camera-setup/README.md),
-  ortak sözleşme ve yalnız seçili kart. Hand-eye bu paketin dışında.
+- [CCUX planı](docs/architecture/camera-setup/README.md): seçili kart/sözleşme; Hand-eye dışarıda.
 - Yeni haberleşme fazı: [uygulama kartları ve başlatma mesajı](docs/architecture/communication/README.md).
 - Kamera backend/kimlik: [ICM](docs/architecture/industrial-camera-plan.md).
 - UI/ürün kuralları: [UI gereksinimleri](docs/requirements/02_machine_vision_ui_gereksinimleri.md).

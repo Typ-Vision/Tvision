@@ -103,6 +103,7 @@ void MainWindow::refreshFlowView(const EditorContext& context,const std::optiona
     findChild<QPushButton*>("runFlow")->setEnabled(service_.activeRecipe() && !editorSession_.busy(SessionJob::Execution) && !editorSession_.busy(SessionJob::Teaching) && !editorSession_.busy(SessionJob::Image));
     if(auto* run=findChild<QPushButton*>("runTool")) {
         bool source=false,unavailable=false;if(service_.activeRecipe())for(const auto& t:service_.tools())if(t.id==selectedToolId_){source=ToolRegistry::get(t.kind).acquisitionSource;unavailable=t.kind=="industrial_camera" && !t.parameters["sourceReference"].isObject();}
+        bool publisher=false;if(service_.activeRecipe())for(const auto& t:service_.tools())if(t.id==selectedToolId_)publisher=t.kind=="publish_data";run->setVisible(!publisher);
         run->setText(source ? "Görüntü al" : "Run Tool");run->setEnabled(!selectedToolId_.isEmpty() && !editorSession_.busy() && !unavailable);
     }
     findChild<QPushButton*>("stopFlow")->setEnabled(editorSession_.busy() || !pendingDrawTool_.isEmpty() || imageViewer_->drawingActive() || editorSession_.cycle.has_value() || editorCameras_.hasTargets() || editorCameras_.draining());
@@ -150,7 +151,7 @@ void MainWindow::showExecutionResultView(const EditorContext& context) {
     edgeProfile_->setDiagnostics({});
     imageViewer_->setToolOverlay({},{});
     std::optional<ImageFrame> displayImage=drawingImage_ ? drawingImage_:editorSession_.frame;
-    QString missingInput;
+    QString missingInput;bool cycleTool=false;if(service_.activeRecipe())for(const auto& tool:service_.tools())if(tool.id==selectedToolId_)cycleTool=tool.kind=="result" || tool.kind=="set_variables" || tool.kind=="publish_data";
     if(!drawingImage_ && service_.activeRecipe())for(const auto& tool:service_.tools())if(tool.id==selectedToolId_) {
         bool imageInput=false;for(const auto& port:inputPorts(tool.kind))if(port.id=="image")imageInput=true;
         if(imageInput)try{displayImage=editorSession_.toolImage(context,tool.id);}catch(const std::exception& e){displayImage.reset();missingInput=QString::fromUtf8(e.what());}
@@ -165,6 +166,7 @@ void MainWindow::showExecutionResultView(const EditorContext& context) {
         QString sourceLabel=image.metadata().sourceId;for(const auto& source:service_.tools())if(source.id==image.metadata().sourceId){sourceLabel=source.name;break;}
         imageViewer_->setPreviewPixels(image.preview(),editorRecipeId_+"|"+image.metadata().sourceId+"|"+image.metadata().coordinateSystemId);
         imageInfo_->setText(QString("%1 · %2 × %3 px · Frame %4 · bağlı kaynak: %5").arg(drawingImage_ ? "Düzenleme: giriş görüntüsü":image.geometry().cropDepth()>0 ? "ROI kırpılmış görüntü":!image.processing().isEmpty() ? "İşlenmiş görüntü":"Giriş / tam görüntü").arg(image.size().width()).arg(image.size().height()).arg(image.metadata().frameId,sourceLabel));
+        if(cycleTool)imageInfo_->setText(imageInfo_->text()+"\nÇevrim aracının kendi görüntüsü yok; Viewer son açık kaynağı gösterir.");
         refreshMatchOverlayView(context);
     }else {imageViewer_->clearImage(missingInput.isEmpty() ? "Bu kaynak için güncel kare yok.":missingInput,editorSession_.busy());imageInfo_->setText("Görüntü yok. Kaynağı bağlayıp çalıştırın.");}
     if(!editorSession_.cycle){matchInfo_->clear();return;}

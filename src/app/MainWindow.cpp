@@ -139,7 +139,12 @@ QWidget* MainWindow::makePlaceholder(const QString& title, const QString& text) 
 QWidget* MainWindow::makeDashboard() {
     auto* page = new QWidget; auto* layout = new QVBoxLayout(page);
     layout->addWidget(card("İstasyonlar","Yayımlanmış reçeteyi seçin ve istasyona yükleyin. Yükleme sonrası otomatik çalışma kapalıdır."));
-    dashboardAuto_=new QPushButton("Otomatik üretimi başlat");dashboardAuto_->setObjectName("dashboardStartAutomatic");layout->addWidget(dashboardAuto_);
+    dashboardAuto_=new QPushButton("Otomatik üretimi başlat");dashboardAuto_->setObjectName("dashboardStartAutomatic");
+    auto* productionButtons=new QHBoxLayout;productionButtons->addWidget(dashboardAuto_);
+    dashboardStop_=new QPushButton("Stop");dashboardStop_->setObjectName("dashboardStop");
+    dashboardStop_->setToolTip("Tüm istasyonları durdurur; bekleyen sonuçları silmez.");dashboardStop_->setAccessibleDescription(dashboardStop_->toolTip());
+    productionButtons->addWidget(dashboardStop_);layout->addLayout(productionButtons);
+    connect(dashboardStop_,&QPushButton::clicked,this,[this]{if(!communicationWorkspace_)return;try{communicationWorkspace_->stopAll();}catch(const std::exception& e){dashboardAutoStatus_->setText(QString::fromUtf8(e.what()));}refreshDashboardStations();});
     dashboardAutoStatus_=label("Run / Auto açar. Remote Enable ayrı izindir; kapatılması istasyonlara Stop verir.");dashboardAutoStatus_->setObjectName("dashboardAutomaticStatus");layout->addWidget(dashboardAutoStatus_);
     connect(dashboardAuto_,&QPushButton::clicked,this,[this]{if(!communicationWorkspace_)return;try{communicationWorkspace_->startAutomaticProduction();}catch(const std::exception& e){dashboardAutoStatus_->setText(QString::fromUtf8(e.what()));}refreshDashboardStations();});
     auto* fix=new QPushButton("Kaynak ayarları / teslim ve çalışma durumu");fix->setObjectName("dashboardFixAutomatic");layout->addWidget(fix);connect(fix,&QPushButton::clicked,this,[this]{selectPage("communication");});
@@ -151,11 +156,11 @@ QWidget* MainWindow::makeDashboard() {
     layout->addWidget(dashboardStations_,1);
     dashboardPublished_=new QComboBox;dashboardPublished_->setObjectName("dashboardPublishedRecipe");dashboardPublished_->setMinimumContentsLength(16);dashboardPublished_->setSizeAdjustPolicy(QComboBox::AdjustToMinimumContentsLengthWithIcon);layout->addWidget(dashboardPublished_);
     auto* preview=new QPushButton("Uyumluluğu denetle");preview->setObjectName("dashboardCheckRecipe");layout->addWidget(preview);
-    connect(preview,&QPushButton::clicked,this,[this]{const int n=dashboardStations_->currentRow();if(!communicationWorkspace_ || n<0)return;try{communicationWorkspace_->previewRecipe(QUuid(dashboardStations_->item(n,0)->data(Qt::UserRole).toString()),dashboardPublished_->currentData().toUInt());dashboardStationMessage_->setText(dashboardStations_->item(n,1)->text()+" • "+dashboardPublished_->currentText()+" • Uyumlu; yüklemeye hazır.");}catch(const std::exception& e){dashboardStationMessage_->setText("Uyumsuz: "+QString::fromUtf8(e.what()));}});
+    connect(preview,&QPushButton::clicked,this,[this]{const int n=dashboardStations_->currentRow();if(!communicationWorkspace_ || n<0)return;try{communicationWorkspace_->previewRecipe(QUuid(dashboardStations_->item(n,0)->data(Qt::UserRole).toString()),dashboardPublished_->currentData().toUInt());dashboardStationMessage_->setText(dashboardStations_->item(n,1)->text()+" • "+dashboardPublished_->currentText()+" • Reçete uyumlu; "+communicationWorkspace_->recipeReadiness(QUuid(dashboardStations_->item(n,0)->data(Qt::UserRole).toString())));}catch(const std::exception& e){dashboardStationMessage_->setText("Uyumsuz: "+QString::fromUtf8(e.what()));}});
     dashboardLoad_=new QPushButton("Reçete yükle");dashboardLoad_->setObjectName("dashboardLoadRecipe");layout->addWidget(dashboardLoad_);
     dashboardStationMessage_=label("");dashboardStationMessage_->setObjectName("dashboardStationMessage");layout->addWidget(dashboardStationMessage_);
     connect(dashboardLoad_,&QPushButton::clicked,this,&MainWindow::loadDashboardRecipe);
-    connect(dashboardStations_,&QTableWidget::itemSelectionChanged,this,[this]{const auto row=dashboardStations_->currentRow();const bool loaded=row>=0 && !dashboardStations_->item(row,0)->data(Qt::UserRole+1).toString().isEmpty();dashboardLoad_->setText(loaded?"Reçete değiştir":"Reçete yükle");});
+    connect(dashboardStations_,&QTableWidget::itemSelectionChanged,this,&MainWindow::refreshDashboardStations);
     auto* stationTimer=new QTimer(this);stationTimer->setInterval(500);connect(stationTimer,&QTimer::timeout,this,[this]{if(dashboardStations_->isVisible())refreshDashboardStations();});stationTimer->start();
     auto* projects = new QPushButton("Project Manager'a git"); projects->setObjectName("primary"); layout->addWidget(projects);
     connect(projects,&QPushButton::clicked,this,[this]{selectPage("projects");}); layout->addStretch(); return page;

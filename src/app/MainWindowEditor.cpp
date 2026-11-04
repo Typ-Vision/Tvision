@@ -255,7 +255,7 @@ void MainWindow::refreshEditor() {
     for(const auto& t:tools)if(t.kind=="webcam") {webcamSource=true;binding+="|"+t.id+"|"+QString::fromUtf8(QJsonDocument(t.parameters).toJson(QJsonDocument::Compact))+"|"+QString::number(t.enabled);}
     const bool multi=recipe && recipe->definition["editor"].toObject()["schemaVersion"]==9;
     if(auto* button=findChild<QPushButton*>("enableMultiSource")){button->setVisible(!multi);button->setEnabled(recipe && !editorSession_.busy());}
-    if(auto* picker=findChild<QComboBox*>("editorSourceSelector")){const QSignalBlocker guard(picker);picker->clear();for(const auto& t:tools)if(ToolRegistry::get(t.kind).acquisitionSource)picker->addItem(t.name,t.id);picker->setVisible(multi);picker->setEnabled(!editorSession_.busy());const auto source=editorSession_.sourceForTool(context,selectedToolId_);picker->setCurrentIndex(picker->findData(source));}
+    if(auto* picker=findChild<QComboBox*>("editorSourceSelector")){const QSignalBlocker guard(picker);picker->clear();for(const auto& t:tools)if(ToolRegistry::get(t.kind).acquisitionSource)picker->addItem(t.name,t.id);picker->setVisible(multi);picker->setEnabled(!editorSession_.busy());auto source=editorSession_.sourceForTool(context,selectedToolId_);if(source.isEmpty() && editorSession_.frame)source=editorSession_.frame->metadata().sourceId;if(!source.isEmpty())picker->setCurrentIndex(picker->findData(source));}
     if(multi){editorSession_.reconcile(context);if(!selectedToolId_.isEmpty())editorSession_.selectSource(editorSession_.sourceForTool(context,selectedToolId_));imageBinding_=binding;}
     if (!multi && binding!=imageBinding_) {
         ++editorSession_.generation; invalidateMatch();
@@ -290,7 +290,8 @@ void MainWindow::selectTool(const QString& id) {
     }
     if(id!=selectedToolId_){pendingDrawTool_.clear();imageViewer_->cancelRoi();imageViewer_->resetRoiHistory();}
     selectedToolId_=id;
-    if(service_.activeRecipe() && service_.activeRecipe()->definition["editor"].toObject()["schemaVersion"]==9){const auto source=editorSession_.sourceForTool(editorContext(),id);editorSession_.selectSource(source);if(auto* picker=findChild<QComboBox*>("editorSourceSelector")){const QSignalBlocker guard(picker);picker->setCurrentIndex(picker->findData(source));}}
+    if(service_.activeRecipe())for(const auto& t:service_.tools())if(t.id==id)findChild<QPushButton*>("runTool")->setVisible(t.kind!="publish_data");
+    if(service_.activeRecipe() && service_.activeRecipe()->definition["editor"].toObject()["schemaVersion"]==9){const auto source=editorSession_.sourceForTool(editorContext(),id);editorSession_.selectSource(source);if(auto* picker=findChild<QComboBox*>("editorSourceSelector")){const QSignalBlocker guard(picker);if(!source.isEmpty())picker->setCurrentIndex(picker->findData(source));}}
     imageViewer_->drawRegion(false);
     const QSignalBlocker blocker(flowTools_); flowTools_->clearSelection(); flowTools_->setCurrentItem(nullptr);
     for (int i=0;i<flowTools_->count();++i) if (flowTools_->item(i)->data(Qt::UserRole).toString()==id) flowTools_->setCurrentRow(i);
@@ -331,9 +332,9 @@ void MainWindow::showToolPropertiesView(const EditorContext& context,const std::
     form->setRowWrapPolicy(QFormLayout::WrapAllRows);
     auto* name=new QLineEdit(tool.name); name->setObjectName("toolName"); name->setMaxLength(64); form->addRow("Name",name);
     auto* description=new QLineEdit(tool.description); description->setObjectName("toolDescription"); description->setMaxLength(2048); form->addRow("Description",description);
-    auto* enabled=new QCheckBox("Enabled"); enabled->setObjectName("toolEnabled"); enabled->setChecked(tool.enabled); form->addRow(enabled);
+    if(tool.kind!="publish_data"){auto* enabled=new QCheckBox("Enabled"); enabled->setObjectName("toolEnabled"); enabled->setChecked(tool.enabled); form->addRow(enabled);}
     auto* drawHint=note("");drawHint->setObjectName("newToolDrawHint");drawHint->hide();form->addRow(drawHint);
-    if(tool.kind!="template_match") {
+    if(tool.kind!="template_match" && tool.kind!="publish_data") {
         auto* run=new QPushButton(ToolRegistry::get(tool.kind).acquisitionSource ? "Görüntü al" : "Run Tool");run->setObjectName("runSelectedTool");form->addRow(run);
         connect(run,&QPushButton::clicked,this,[this,tool]{runExecution(tool.id);});
     }
@@ -382,7 +383,7 @@ void MainWindow::showToolPropertiesView(const EditorContext& context,const std::
     } else if (tool.kind=="publish_data") {
         const auto* cycle=editorSession_.cycle && editorSession_.accepts(editorSession_.cycle->configId,context) && !editorSession_.busy() ? &*editorSession_.cycle:nullptr;
         form->addRow(new PublishDataEditor(tool,context.definition,QFileInfo(settingsFile_).absolutePath()+"/communication-profiles.json",communicationTemplatePath(),cycle));
-        auto* apply=new QPushButton("Paketi uygula");apply->setObjectName("publishApply");form->addRow(apply);
+        auto* apply=new QPushButton("Atamaları uygula");apply->setObjectName("publishApply");form->addRow(apply);
         connect(apply,&QPushButton::clicked,this,[this]{if(applyToolProperties())QTimer::singleShot(0,this,&MainWindow::showToolProperties);});
         auto* reset=new QPushButton("Taslağı geri al");reset->setObjectName("publishCancel");form->addRow(reset);
         connect(reset,&QPushButton::clicked,this,[this]{QTimer::singleShot(0,this,&MainWindow::showToolProperties);});
@@ -700,7 +701,7 @@ void MainWindow::showToolPropertiesView(const EditorContext& context,const std::
     connect(name,&QLineEdit::textEdited,this,[this]{applyToolProperties();});
     connect(description,&QLineEdit::editingFinished,this,[this]{applyToolProperties();});
     connect(description,&QLineEdit::textEdited,this,[this]{applyToolProperties();});
-    connect(enabled,&QCheckBox::toggled,this,[this]{applyToolProperties();});
+    if(auto* enabled=propertiesBody_->findChild<QCheckBox*>("toolEnabled"))connect(enabled,&QCheckBox::toggled,this,[this]{applyToolProperties();});
     auto* remove=new QPushButton("Remove Tool"); remove->setObjectName("removeTool"); layout->addWidget(remove);
     const auto removeRecipe=editorRecipeId_,removeId=tool.id;
     remove->setEnabled(!editorSession_.busy() && !editorCameraPendingExecution_);
@@ -710,7 +711,7 @@ void MainWindow::showToolPropertiesView(const EditorContext& context,const std::
 }
 ToolDefinition MainWindow::readToolProperties(ToolDefinition tool) const {
     tool.name=propertiesBody_->findChild<QLineEdit*>("toolName")->text().trimmed(); tool.description=propertiesBody_->findChild<QLineEdit*>("toolDescription")->text();
-    tool.enabled=propertiesBody_->findChild<QCheckBox*>("toolEnabled")->isChecked();
+    if(auto* enabled=propertiesBody_->findChild<QCheckBox*>("toolEnabled"))tool.enabled=enabled->isChecked();
     if(tool.kind=="publish_data")if(auto* settings=dynamic_cast<PublishDataEditor*>(propertiesBody_->findChild<QWidget*>("publishDataEditor")))tool.parameters=settings->parameters();
     if(tool.kind=="result")if(auto* settings=dynamic_cast<ResultEditor*>(propertiesBody_->findChild<QWidget*>("resultEditor")))tool.parameters=settings->parameters();
     if(tool.kind=="set_variables")if(auto* settings=dynamic_cast<SetVariablesEditor*>(propertiesBody_->findChild<QWidget*>("setVariablesEditor")))tool.parameters=settings->parameters();
@@ -767,7 +768,7 @@ MainWindow::PropertyCommit MainWindow::commitToolProperties() {
             if(tool.kind=="set_variables")if(auto* settings=dynamic_cast<SetVariablesEditor*>(propertiesBody_->findChild<QWidget*>("setVariablesEditor")))settings->validateDraft();
             if(tool.kind=="publish_data")if(auto* settings=dynamic_cast<PublishDataEditor*>(propertiesBody_->findChild<QWidget*>("publishDataEditor"))){
                 const auto before=service_.activeRecipe()->definition;
-                auto candidate=service_;candidate.updatePublication(tool,settings->groups());
+                auto candidate=service_;candidate.updateTool(tool);
                 // Slot assignment is a recipe-level authority; the machine
                 // template itself stays read-only.
                 if(settings->assignmentsEdited())candidate.setPublicationAssignments(settings->assignments());

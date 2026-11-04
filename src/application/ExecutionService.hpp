@@ -72,7 +72,7 @@ private:
     std::shared_ptr<const ProductionSnapshot> completionSnapshot_;
 };
 struct CachedToolResult {QByteArray signature;ToolResult result;};
-struct TargetEvaluation {ImageFrame frame;QByteArray scope;QMap<QString,CachedToolResult> cache;};
+struct TargetEvaluation {ImageFrame frame;QByteArray scope;QMap<QString,CachedToolResult> cache;QMap<QString,ImageFrame> sourceFrames;QMap<QString,QByteArray> scopes;};
 struct ExecutionLimits { qint64 deadlineMs=30000; quint64 imageBytes=512ull*1024*1024; };
 class ExecutionService {
 public:

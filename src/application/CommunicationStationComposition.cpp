@@ -107,7 +107,7 @@ CommunicationStationComposition::~CommunicationStationComposition(){sessions_.se
 std::optional<StationSavedRecipe> CommunicationStationComposition::recipe(quint32 k) const {
     if(published_.contains(k)){
         const auto& p=published_[k];StationSavedRecipe saved;
-        saved.selection={p.revision,p.recipeKey,p.recipe,p.projectDirectory,{}};saved.templateKey=p.templateKey;saved.publicationOnly=true;
+        saved.selection={p.revision,p.recipeKey,p.recipe,p.projectDirectory,{}};saved.templateKey=p.templateKey;saved.publicationOnly=true;saved.publishedAt=p.publishedAt;
         try {const auto c=identities_.load();need(key(c,CatalogueCategory::RecipeRevision,p.recipeId,p.revision)==k,"Retired recipe");
             const auto a=recipePublicationAssignments(p.recipe.definition);need(bool(a) && templates_.contains(p.templateKey),"Missing template");
             need(key(c,CatalogueCategory::TemplateRevision,a->templateId,a->templateRevision)==p.templateKey,"Retired template");return saved;
@@ -197,7 +197,7 @@ void CommunicationStationComposition::attach(CommunicationServerLifecycle& serve
             entry.selection.recipe=it->recipe;
             entry.selection.projectDirectory=it->projectDirectory;
             entry.templateKey=it->templateKey;
-            entry.publicationOnly=true;
+            entry.publicationOnly=true;entry.publishedAt=it->publishedAt;
             values.append(entry);
         }
         return values;

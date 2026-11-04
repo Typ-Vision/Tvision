@@ -447,3 +447,41 @@ Hedefli kanıt: `communication_workspace_contract` (tek/iki istasyon, ön kontro
 ikinci istasyon hatası, rollback, önceki Run/Auto korunması, tekrarlı eylem, Stop ve
 kaynak kaybı); `ui_station_dashboard` (normal ürün düğmesi, eksik kaynak ve restart).
 İki istasyonlu normal ürün kabulü VF-08'e, TCP terminal/exact ACK VF-07'ye aittir.
+
+
+## VF07-A · Operatör düzeltmeleri
+
+Dashboard'daki **Stop**, seçili satırdan bağımsız tüm bağlı istasyonları durdurur;
+toplu başlatmayı iptal eder, önceden çalışan Run/Auto sahiplerini de kapsar.
+Communication'daki Stop/drain kaldırıldı. Gerçek coordinator/camera drain bitene
+kadar **Durduruluyor** gösterilir; bir istasyon hatası diğerlerine Stop iletimini
+engellemez. Bağlanmamış istasyon varsa toplu başarı verilmez. Listener, seçim,
+activation, Remote Enable ve pending terminal byte'ları korunur. **Durduruldu · ACK
+bekliyor**, teslimin tamamlandığı anlamına gelmez; exact ACK/reconcile bitene kadar
+reçete değişimi kapalıdır. Yeniden Run/Auto açık kullanıcı eylemi ister.
+
+Uyumluluğu denetle yalnız yapılandırmayı sınar; çalışan istasyonda önce Dashboard
+→ Stop, pending varken teslimi tamamlama yolu gösterilir. UI yüklemeyi kapatsa da
+backend drained/pending/activation bariyerlerini yeniden denetler. Yayın seçicisinde
+ad, yerel tarih/saat ve zaman dilimi, #recipeKey ve kısa UUID; tooltip'te tam UUID
+ve UTC bulunur. Son yayımlanan recipeId başınadır; Yüklü seçili istasyona göredir.
+Tarihi olmayan kayıt bunu açıkça belirtir. Yenileme seçilen anahtarı korur; otomatik
+yükleme, geçmiş temizleme veya yeni persistence şeması yoktur.
+
+Publish Data Properties yalnız makine şablonunu ve typed V4 slotlarını düzenler.
+**Atamaları uygula** atomiktir; Yüzey ek slotsuz olabilir, Ölçüm Number[0] ister.
+Şablon salt okunur; önizleme göndermez. Legacy group/endpoint düzenlemesi ve
+Enabled/Run Tool kontrolleri kaldırıldı. Eski groups/parameters/enabled aç/kaydet
+ve slot-only Apply sırasında korunur; etkin legacy gönderim bağı varsa V4 Apply
+açık geçiş gerektirir. Gizli legacy enabled sessizce değiştirilmez.
+
+Result ve Set Variables çevrim araçlarıdır; tek kameraya atanmaz. Cache scope'u
+Viewer seçimine değil gerçek kaynak/frame/cycle/config/dependency kimliklerine
+bağlıdır. Result Run Tool yalnız mevcut güncel üreticileri kullanır; eksik girdide
+NOT_EVALUATED ve Run Flow düzeltmesi gösterilir. Gerçek girdi değişimi eski kanıtı
+geçersiz kılar. Viewer son açık kaynağı gösterebilir; bunun çevrim aracının kendi
+görüntüsü olmadığı açıklanır.
+
+Uygulama/kanıt ve kullanıcı talimatıyla daraltılmış test profili:
+[VF07-A kapanış kaydı](../../archive/2026-11-04-vf07-a.md).
+K2 gerçek operatör tekrarı ve VF-08 kapısı bu yazılım kabulünden ayrıdır.

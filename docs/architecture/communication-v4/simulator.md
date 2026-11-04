@@ -193,3 +193,18 @@ cancel/drain/frame correlation ve bağımsız reference/tolerans kabulü **BLOCK
 Simulator/fixture gerçek accuracy, robot motion veya üretim izni vermez. Son
 koşum sonuçlarının otoritesi [tarihli kapanış](../../archive/2026-11-02-comm4-25.md)
 ve `build/comm4/COMM4-25/` kanıtıdır.
+
+
+## VF07-A · Girdi ve Stop kontrolü
+
+Editor'da açılan dosya ile istasyonun kalıcı kamera/dosya eşlemesi farklı olabilir.
+Beklenen kararı belirlerken aynı immutable revizyonu ve aynı görüntü içeriğini
+kullanın; sadece reçete adı eşitliği yeterli değildir. 4 Kasım tanısında recipeKey
+11 için rice.jpg (512×512, Blob count=88/found=true, OK) ile İstasyon 1'in
+P1.bmp dosyası (2448×2048, count=0/found=false, NOK) ayrıldı. Bu eski TCP kaydı
+cache arızası veya yeni TCP kabulü sayılmaz; ayrıntı [VF07-A kaydında](../../archive/2026-11-04-vf07-a.md).
+
+Reçete değiştirmek için Dashboard → **Stop** kullanın; tüm istasyonların gerçek
+durdurmasını bekleyin. ACK bekleniyorsa mevcut sonucu exact ACK/reconcile ile
+tamamlayın. Stop terminali silmez veya teslim edilmiş saymaz. Yeni yayını tarih,
+#recipeKey, Son yayımlanan/Yüklü işaretlerinden seçin; yükleme Auto açmaz.

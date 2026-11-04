@@ -94,11 +94,11 @@ Sıra **VF-01 → VF-02 → K1 → VF-03 → VF-04 → VF-05 → VF-06 → VF-07
 
 ### VF07-A · K2 operatör akışı düzeltmeleri
 
-- **Durum:** Analiz/plan hazır; uygulama başlamadı. [Detaylı görev kartı](communication-v4/cards/VF07-A.md).
+- **Durum:** A–D uygulandı; hedefli yazılım kabulü ve sınırlar [kapanış kaydında](../archive/2026-11-04-vf07-a.md). [Görev kartı](communication-v4/cards/VF07-A.md); K2 operatör teyidi açık.
 - **Başlangıç:** VF-07 yazılım kanıtı korunur. Operatör ekranında Blob DONE/found=true iken Result seçimiyle NOT_EVALUATED/Acquire hatası; belirsiz yayın listesi ve Stop gerektiren reçete değişimi var.
 - **İşlem:** Result/çevrim önbelleğini Viewer seçiminden ayır; Publish Data'yı V4 şablon/slotlarına indir; Communication Stop/drain'i Dashboard'a **Stop** adıyla taşı. Stop tüm bağlı istasyonları kapsar. Yayın tarihini, son/yüklü etiketlerini göster; uyumluluk ile yüklemeye hazır durumunu ayır.
 - **Koruma:** Gerçek girdi değişiminde invalidation, legacy kayıt roundtrip'i, immutable revision/activation ve pending exact ACK korunur. Stop sırasında gerçek geçiş gösterilir; teslim silinmez, Auto yeniden açılmaz.
-- **Kanıt/devir:** Karttaki A–E matrisi, UI normal/küçük ekran, son kaynakta tam Release ON/OFF ve normal ürün K2 operatör tekrarı. **VF07-A kapanmadan ve K2 operatör teyidi olmadan VF-08 başlamaz.**
+- **Kanıt/devir:** Hedefli Release/UI kontrolleri ve normal/küçük ekran kanıtı. 4 Kasım güncel kullanıcı talimatıyla tam ON/OFF suite atlandı; normal ürün K2 operatör teyidi ayrı açık. **VF07-A kapanmadan ve K2 operatör teyidi olmadan VF-08 başlamaz.**
 
 ### VF-08 · İki istasyon, yeniden seçim ve kurtarma
 - **Başlangıç:** Kapanmış VF07-A ve operatörce tekrar edilmiş K2. İkinci istasyon, Ölçüm A ve alternatif Yüzey B normal ürün işlemleriyle hazırlanır.

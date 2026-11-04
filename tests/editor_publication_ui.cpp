@@ -1,5 +1,6 @@
 #include "app/MainWindow.hpp"
 #include "app/PublishDataEditor.hpp"
+#include "app/SetVariablesEditor.hpp"
 #include "application/MachineSetup.hpp"
 #include "application/PublicationPublisher.hpp"
 #include "application/CommunicationWorkspace.hpp"
@@ -54,25 +55,16 @@ bool MainWindow::verifyPublicationUi(const QString& artifacts){
     physical->item(1,0)->setText("field0");panel.findChild<QPushButton*>("endpoint_save")->click();check(panel.findChild<QLabel*>("endpointStatus")->text().contains("Duplicate") && store.load()[profile.id].fieldMapping.size()==3,"duplicate mapping atomic rejection");panel.findChild<QPushButton*>("endpoint_cancel")->click();
     const auto publisher=w.service_.addTool("publish_data");w.service_.save();w.refreshWorkspace();w.selectPage("editor");w.selectTool(publisher);
     const auto untouched=w.service_.activeRecipe()->definition;check(w.commitToolProperties()==PropertyCommit::Unchanged && w.service_.activeRecipe()->definition==untouched,"new disabled draft no-op");
-    w.findChild<QPushButton*>("publishAddGroup")->click();w.findChild<QComboBox*>("publishProducer")->setCurrentIndex(1);w.findChild<QComboBox*>("publishEndpoint")->setCurrentIndex(1);
-    auto* fields=w.findChild<QTableWidget*>("publishFields");for(int i=0;i<3;++i){w.findChild<QPushButton*>("publishAddField")->click();fields->item(i,0)->setText("field"+QString::number(i));static_cast<QComboBox*>(fields->cellWidget(i,1))->setCurrentIndex(i+1);}
-    w.findChild<QPushButton*>("publishPreview")->click();check(w.findChild<QLabel*>("publishStatus")->text().startsWith("RESOLVED"),"three field resolved preview");
-    check(w.applyToolProperties(),"group and publisher atomic apply");w.showToolProperties();w.findChild<QCheckBox*>("toolEnabled")->setChecked(true);check(w.applyToolProperties(),"enable publisher");w.showToolProperties();w.findChild<QCheckBox*>("publishRequired")->setChecked(false);check(w.applyToolProperties() && !w.service_.outputGroups().first().required,"optional binding UI");w.showToolProperties();w.findChild<QCheckBox*>("publishRequired")->setChecked(true);check(w.applyToolProperties() && w.service_.outputGroups().first().required,"required binding UI");w.service_.save();const auto saved=w.service_.activeRecipe()->definition;const auto group=w.service_.outputGroups().first();
-    w.service_.openProject(w.service_.path());w.service_.selectRecipe(recipe);w.refreshWorkspace();w.selectTool(publisher);check(saved==w.service_.activeRecipe()->definition && w.commitToolProperties()==PropertyCommit::Unchanged,"UUID save reopen no-op");
-    fields=w.findChild<QTableWidget*>("publishFields");fields->item(1,0)->setText("field0");check(w.commitToolProperties()==PropertyCommit::Failed && saved==w.service_.activeRecipe()->definition,"duplicate logical field rejected atomically");w.showToolProperties();
-    fields=w.findChild<QTableWidget*>("publishFields");fields->item(1,0)->setText("missingMapping");w.findChild<QPushButton*>("publishPreview")->click();check(w.findChild<QLabel*>("publishStatus")->text().contains("unresolved"),"missing physical mapping visible");
-    for(auto size:{QSize(1400,900),QSize(850,600)}){w.resize(size);QApplication::processEvents();auto* scroll=w.findChild<QScrollArea*>("propertiesScroll");scroll->ensureWidgetVisible(w.findChild<QLabel*>("publishStatus"));QApplication::processEvents();check(w.grab().save(QDir(artifacts).filePath(QString("publish-error-%1.png").arg(size.width()))),"error visual");}
-    w.showToolProperties();w.workspaceError_->clear();w.workspaceError_->hide();w.statusBar()->clearMessage();
-    auto* sourcePicker=w.findChild<QComboBox*>("publishProducer");sourcePicker->setFocus();QKeyEvent tab(QEvent::KeyPress,Qt::Key_Tab,Qt::NoModifier);QApplication::sendEvent(sourcePicker,&tab);check(QApplication::focusWidget()!=sourcePicker,"Publish keyboard traversal");
-    for(auto size:{QSize(1400,900),QSize(850,600)}){w.resize(size);QApplication::processEvents();w.findChild<QPushButton*>("publishPreview")->click();auto* scroll=w.findChild<QScrollArea*>("propertiesScroll");scroll->verticalScrollBar()->setValue(0);QApplication::processEvents();if(scroll->horizontalScrollBar()->maximum()!=0){QTextStream(stdout)<<"WIDTH DEBUG max="<<scroll->horizontalScrollBar()->maximum()<<" viewport="<<scroll->viewport()->width()<<" content="<<scroll->widget()->minimumSizeHint().width()<<" hint="<<scroll->widget()->sizeHint().width()<<"\n";
-            if(auto* editor=w.findChild<QWidget*>("publishDataEditor")){QTextStream(stdout)<<"  editor min="<<editor->minimumSizeHint().width()<<"\n";for(auto* child:editor->findChildren<QWidget*>())if(child->minimumSizeHint().width()>=120)QTextStream(stdout)<<"   child: "<<child->objectName()<<" "<<child->metaObject()->className()<<" min="<<child->minimumSizeHint().width()<<" hint="<<child->sizeHint().width()<<" h="<<child->height()<<"\n";}}check(scroll->horizontalScrollBar()->maximum()==0 && sourcePicker->height()>=27,"Publish panel fits without horizontal clipping");check(w.grab().save(QDir(artifacts).filePath(QString("publish-editor-%1.png").arg(size.width()))),"Editor visual");scroll->verticalScrollBar()->setValue(scroll->verticalScrollBar()->maximum());QApplication::processEvents();check(w.grab().save(QDir(artifacts).filePath(QString("publish-controls-%1.png").arg(size.width()))),"controls visual");}
-    auto incompatible=[&](const QJsonObject& definition,const QString& reason){
-        ToolDefinition tool;for(const auto& t:editorTools(definition))if(t.id==publisher)tool=t;
-        PublishDataEditor editor(tool,definition,dir.filePath("communication-profiles.json"));bool rejected=false;
-        try{editor.validateDraft(tool);}catch(const std::exception& e){rejected=QString::fromUtf8(e.what()).contains(reason);}
-        check(rejected,"incompatible type/unit/frame preview rejected");
-        editor.findChild<QPushButton*>("publishPreview")->click();check(!editor.findChild<QLabel*>("publishStatus")->text().isEmpty(),"incompatible preview error visible");
-    };
+    check(!w.findChild<QComboBox*>("publishGroup") && !w.findChild<QPushButton*>("publishPreview") && !w.findChild<QCheckBox*>("toolEnabled") && !w.findChild<QPushButton*>("runTool")->isVisible(),"V4 properties contain no legacy editing/execution controls");
+    check(w.findChild<QPushButton*>("publishApply")->text()=="Atamaları uygula","V4 apply label");
+    // Historical data remains readable/executable through the existing backend.
+    OutputGroup group;group.id=QUuid::createUuid().toString(QUuid::WithoutBraces);group.producerId=producer;group.producerRevision=1;group.profileId=profile.id;group.contractRevision=profile.contractRevision;group.required=true;
+    for(int i=0;i<3;++i)group.fields.append({"field"+QString::number(i),variables[i].id});
+    for(auto tool:w.service_.tools())if(tool.id==publisher){tool.enabled=true;tool.parameters=encodePublishConfig({{group.id}});w.service_.updatePublication(tool,{group});}
+    w.service_.save();const auto saved=w.service_.activeRecipe()->definition;
+    w.service_.openProject(w.service_.path());w.service_.selectRecipe(recipe);w.refreshWorkspace();w.selectTool(publisher);
+    check(saved==w.service_.activeRecipe()->definition && w.commitToolProperties()==PropertyCommit::Unchanged,"Legacy UUID/parameters/groups open and save no-op");
+    auto incompatible=[&](const QJsonObject& definition,const QString& reason){bool rejected=false;try{for(const auto& tool:editorTools(definition))if(tool.kind=="set_variables")SetVariablesEditor::validateConfiguration(tool,recipeVariables(definition),editorTools(definition));PublicationService::capture(definition,store);}catch(const std::exception& e){rejected=QString::fromUtf8(e.what()).contains(reason);}check(rejected,"Legacy incompatible type/unit/frame still rejected");};
     auto changeSource=[&](QJsonObject definition,const VariableDefinition& variable,const AssignmentValue& value){
         auto vars=recipeVariables(definition);vars[0]=variable;definition=withRecipeVariables(definition,vars);auto tools=editorTools(definition);
         for(auto& t:tools)if(t.id==producer){auto config=decodeAssignmentConfig(t.parameters,t.id);config.rows[0].source=ConstantAssignmentSource{value};t.parameters=encodeAssignmentConfig(config);}
@@ -140,6 +132,9 @@ bool MainWindow::verifyPublicationUi(const QString& artifacts){
     w.selectTool(publisher);
     check(w.service_.activeRecipe()->id==recipe && w.selectedToolId_==publisher,
           "slot fixture restores publisher recipe and tool");
+    // Explicitly retire the fixture's legacy execution before editing V4 bindings.
+    for(auto tool:w.service_.tools())if(tool.id==publisher){tool.enabled=false;w.service_.updateTool(tool);}
+    w.showToolProperties();
     // ---- v4 fixed-slot assignment (COMM4-17) ----
     // Machine template manifests are an explicit machine artifact; this fixture
     // writes one revision and only edits the recipe-level source binding.
@@ -162,20 +157,25 @@ bool MainWindow::verifyPublicationUi(const QString& artifacts){
     auto pickSource=[&](int row,const QString& prefix){auto* picker=qobject_cast<QComboBox*>(slotTable->cellWidget(row,1));check(picker,"slot picker");for(int i=0;i<picker->count();++i)if(picker->itemText(i).startsWith(prefix)){picker->setCurrentIndex(i);return;}throw std::runtime_error("slot source option missing");};
     templateSelector->setCurrentIndex(1);
     check(slotTable->rowCount()==53,"fixed 16/32/4/1 slot capacity listed");
+    ToolDefinition activeLegacy;for(const auto& t:w.service_.tools())if(t.id==publisher)activeLegacy=t;
+    activeLegacy.enabled=true;auto* legacyGuard=dynamic_cast<PublishDataEditor*>(w.findChild<QWidget*>("publishDataEditor"));bool legacyRejected=false;
+    try{legacyGuard->validateDraft(activeLegacy);}catch(const std::exception& e){legacyRejected=QString::fromUtf8(e.what()).contains("legacy");}
+    check(legacyRejected,"Active legacy binding requires explicit transition without data deletion");
     check(slotRow("AcceptedFlag")>=0,"custom slot name from machine template shown");
     // Required slot missing blocks Apply with the field name; nothing is written.
     const auto beforeSlotDraft=w.service_.activeRecipe()->definition;
     check(!w.applyToolProperties() && beforeSlotDraft==w.service_.activeRecipe()->definition,"required missing blocks apply atomically");
-    check(w.findChild<QLabel*>("publishStatus")->text().contains("AcceptedFlag"),"required slot named in error");
+    check(w.findChild<QLabel*>("publishSlotStatus")->text().contains("AcceptedFlag"),"required slot named in error");
     // Variable and direct source produce the same metadata preview path.
     pickSource(slotRow("AcceptedFlag"),"Accepted0 • Variable • Boolean");
-    if(!w.applyToolProperties())QTextStream(stdout)<<"SLOT APPLY DEBUG: "<<w.findChild<QLabel*>("publishStatus")->text()<<" | "<<w.findChild<QLabel*>("publishSlotStatus")->text()<<"\n";
+    if(!w.applyToolProperties())QTextStream(stdout)<<"SLOT APPLY DEBUG: "<<w.findChild<QLabel*>("publishSlotStatus")->text()<<" | "<<w.findChild<QLabel*>("publishSlotStatus")->text()<<"\n";
     check(w.applyToolProperties(),"Boolean variable assigned to flag slot");
     // Apply rebuilds the properties panel; re-acquire the widgets.
     slotTable=w.findChild<QTableWidget*>("publishSlots");slotStatus=w.findChild<QLabel*>("publishSlotStatus");
     check(slotTable && slotStatus,"slot editor restored after apply");
-    const auto savedV4=w.service_.activeRecipe()->definition;
+    const auto savedV4=w.service_.activeRecipe()->definition;for(const auto& t:w.service_.tools())if(t.id==publisher)check(!t.enabled && t.parameters==activeLegacy.parameters,"V4 Apply preserves hidden enabled and parameters");
     const auto assignments=recipePublicationAssignments(savedV4);
+    check(recipeOutputGroups(savedV4).size()==1 && recipeOutputGroups(savedV4).first().id==group.id,"Slot-only Apply preserves legacy groups");
     check(assignments && assignments->templateId==machineTemplate.id && assignments->templateRevision==machineTemplate.revision && assignments->rows.size()==1,"template revision + one assignment persisted");
     check(assignments->rows.first().kind==PublicationSlotKind::Flag && assignments->rows.first().index==0 && assignments->rows.first().source.kind==PublicationSourceKind::Variable,"variable slot source recorded");
     w.findChild<QPushButton*>("publishSlotPreview")->click();
@@ -273,6 +273,21 @@ bool MainWindow::verifyVf03Publication(const QString& artifacts){
     publish=findChild<QPushButton*>("publishRecipeV4");publish->click();
     check(communicationWorkspace_->recipes().size()==recipesAfter,"Identical content is a no-op revision");
     check(statusBar()->currentMessage().contains("zaten") || statusBar()->currentMessage().contains("Yayım"),"Publish result reported");
+    check(published.publishedAt.isValid(),"Published time reaches saved recipe DTO");
+    const auto originalKey=published.selection.recipeKey;refreshDashboardStations();dashboardPublished_->setCurrentIndex(dashboardPublished_->findData(originalKey));
+    for(int n=0;n<2;++n){service_.editRecipeMetadata(recipe,"Ölçüm A",QString("revision %1").arg(n));service_.save();publishEditingRecipe();}
+    refreshDashboardStations();check(dashboardPublished_->currentData().toUInt()==originalKey,"Catalogue refresh preserves selected key");
+    int sameRecipe=0,latest=0;for(int n=0;n<dashboardPublished_->count();++n){if(dashboardPublished_->itemText(n).startsWith("Ölçüm A ·")){++sameRecipe;latest+=dashboardPublished_->itemText(n).contains("Son yayımlanan");}check(dashboardPublished_->itemText(n).contains("#") && dashboardPublished_->itemData(n,Qt::ToolTipRole).toString().contains("UTC"),"Revision label includes key and full UTC tooltip");}
+    check(sameRecipe==3 && latest==1,"Three immutable publications keep one latest label");
+    const auto surface=MachineSetup::defaults(catalogue.installation)[0];
+    service_.createProject("Duplicate name","",QDir(root).filePath("duplicate.vfproject"),"file");service_.createRecipe("Ölçüm A","",ApplicationType::DefectInspection,"file");service_.setImageFile(imagePath);service_.setPublicationAssignments(PublicationAssignments{surface.id,surface.revision,{}});service_.save();refreshWorkspace();publishEditingRecipe();refreshDashboardStations();
+    latest=0;for(int n=0;n<dashboardPublished_->count();++n)latest+=dashboardPublished_->itemText(n).contains("Son yayımlanan");
+    check(latest==2 && dashboardPublished_->count()==4 && dashboardPublished_->currentData().toUInt()==originalKey,"Same name with different recipeId keeps separate latest labels and selection");
+    auto displayFixture=communicationWorkspace_->recipes();const auto sameTime=QDateTime::fromString("2026-11-04T12:00:00Z",Qt::ISODate);
+    quint32 highest=0;for(auto& entry:displayFixture)if(entry.selection.recipe.id==published.selection.recipe.id){entry.publishedAt=entry.selection.recipeKey==originalKey?QDateTime{}:sameTime;highest=qMax(highest,entry.selection.recipeKey);}
+    communicationWorkspace_->setRecipeControl([displayFixture]{return displayFixture;},{});refreshDashboardStations();
+    const int unknown=dashboardPublished_->findData(originalKey);check(dashboardPublished_->itemText(unknown).contains("Tarih bilinmiyor") && !dashboardPublished_->itemText(unknown).contains("Son yayımlanan"),"Unknown legacy date never claims latest");
+    check(dashboardPublished_->itemText(dashboardPublished_->findData(highest)).contains("Son yayımlanan"),"Equal date order is deterministic by key");
     const auto status=communicationWorkspace_->publicationStatus();
     check(status.contains("Yayımlanmış reçete"),"Machine catalogue status visible");
     QTextStream(stdout)<<"PASS VF-03 normal UI: editor publish + Communication recipe list + unsaved rejection\n";

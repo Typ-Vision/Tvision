@@ -1,32 +1,25 @@
 #pragma once
 #include "application/ProjectService.hpp"
-#include "application/CommunicationProfiles.hpp"
 #include "application/ExecutionService.hpp"
 #include "application/PublicationAssignmentCatalog.hpp"
 #include "domain/PublicationTemplate.hpp"
 #include <QWidget>
 #include <optional>
-class QComboBox; class QCheckBox; class QTableWidget; class QLabel;
+class QComboBox; class QTableWidget; class QLabel;
 namespace visionflow {
-// Bundle (v3 OutputGroup) editor plus the v4 fixed-slot assignment editor.
-// The machine template manifest is read-only here; only the recipe-level
-// source binding is edited.
+// V4 recipe bindings; machine templates and legacy publication data stay unchanged.
 class PublishDataEditor final:public QWidget {
 public:
     PublishDataEditor(const ToolDefinition&,const QJsonObject&,QString profilePath,
                       QString templateDirectory={},const CycleResult* cycle=nullptr);
     QJsonObject parameters() const;
-    QVector<OutputGroup> groups() const;
     std::optional<PublicationAssignments> assignments() const;
     bool assignmentsEdited() const{return assignmentsEdited_;}
     void validateAssignments() const;
     void error(const QString&);
     void validateDraft(const ToolDefinition&) const;
 private:
-    ToolDefinition tool_;QJsonObject definition_;CommunicationProfiles profiles_;
-    QVector<OutputGroup> groups_;QStringList selected_;QString current_;
-    QComboBox *group_,*producer_,*endpoint_;QCheckBox* required_;QTableWidget* fields_;QLabel *status_,*fieldInfo_;
-    void load();void store();void refresh(const QString&);void addField(const PublicationField& = {});void preview();
+    ToolDefinition tool_;QJsonObject definition_;
     // v4 slot assignment
     void loadTemplates();void startAssignment(int templateIndex);void refreshSlots();
     void slotChanged(int row,int column);void slotSelectionChanged();void slotPreview();
